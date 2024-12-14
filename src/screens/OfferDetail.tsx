@@ -1,5 +1,5 @@
+"use client";
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import { ref, get } from "firebase/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,14 +8,14 @@ import { Clock, MapPin, Tag, Loader2 } from "lucide-react";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { useAuthStore } from "@/store/authStore";
 import { OfferTicket } from "@/components/OfferTicket";
-import { Helmet } from "react-helmet-async";
 import Share from "@/components/Share";
 import { rtdb } from "@/lib/firebase";
 import { Offer } from "@/store/offerStore";
+import { useParams, useRouter } from "next/navigation";
 
 export default function OfferDetail() {
   const { id: offerId } = useParams();
-  const navigate = useNavigate();
+  const navigate = useRouter();
   const { user } = useAuthStore();
 
   const [offer, setOffer] = useState<Offer>();
@@ -27,7 +27,7 @@ export default function OfferDetail() {
     const fetchOfferDetails = async () => {
       try {
         if (!offerId) {
-          navigate("/offers");
+          navigate.push("/offers");
           return;
         }
         setLoading(true);
@@ -51,7 +51,7 @@ export default function OfferDetail() {
 
   const handleClaimOffer = () => {
     if (!user) {
-      navigate("/login");
+      navigate.push("/login");
       return;
     }
 
@@ -95,18 +95,16 @@ export default function OfferDetail() {
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-8">
-      <Helmet>
-        <title>
-          {offer.dishName} - {offer.hotelName}
-        </title>
-        <meta name="description" content={offer.description} />
-        <meta property="og:title" content="Cravings" />
-        <meta
-          property="og:description"
-          content={`Get ${discount}% off on ${offer.dishName} at Cravings`}
-        />
-        <meta property="og:image" content={offer.dishImage} />
-      </Helmet>
+      <title>
+        {offer.dishName} - {offer.hotelName}
+      </title>
+      <meta name="description" content={offer.description} />
+      <meta property="og:title" content="Cravings" />
+      <meta
+        property="og:description"
+        content={`Get ${discount}% off on ${offer.dishName} at Cravings`}
+      />
+      <meta property="og:image" content={offer.dishImage} />
       <div className="max-w-4xl mx-auto">
         <Card className="overflow-hidden hover:shadow-xl transition-shadow">
           <img

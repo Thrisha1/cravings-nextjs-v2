@@ -1,9 +1,11 @@
+"use client";
+
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UtensilsCrossed } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -12,7 +14,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { signIn, signUp, error } = useAuthStore();
-  const navigate = useNavigate();
+  const navigate = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +24,7 @@ export default function Login() {
       } else {
         await signIn(email, password);
       }
-      navigate('/offers');
+      navigate.push('/offers');
     } catch (error) {
       console.error('Authentication error:', error);
     }

@@ -1,5 +1,5 @@
+"use client";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Share from "@/components/Share";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function Offers() {
-  const navigate = useNavigate();
+  const navigate = useRouter();
   const { user } = useAuthStore();
   const {
     offers,
@@ -122,7 +124,7 @@ export default function Offers() {
 
   const handleOfferClick = (offer: Offer) => {
     if (!user) {
-      navigate("/login");
+      navigate.push("/login");
       return;
     }
     setSelectedOffer(offer);
@@ -227,7 +229,7 @@ export default function Offers() {
                       key={offer.id}
                       className="overflow-hidden hover:shadow-xl transition-shadow"
                     >
-                      <Link to={`/offers/${offer.id}`}>
+                      <Link href={`/offers/${offer.id}`}>
                         <img
                           src={offer.dishImage}
                           alt={offer.dishName}
