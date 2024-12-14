@@ -1,7 +1,8 @@
+"use client";
 import { Button } from "@/components/ui/button";
 import { UtensilsCrossed } from "lucide-react";
 import { PartnerDialog } from "@/components/PartnerDialog";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 
 export default function HomePage() {
   const navigate = useRouter();

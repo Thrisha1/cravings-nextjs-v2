@@ -21,7 +21,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useLocationStore } from '@/store/locationStore';
 import { MapPin } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 
 export function PartnerDialog() {
   const navigate = useRouter();
