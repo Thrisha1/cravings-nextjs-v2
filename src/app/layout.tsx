@@ -21,7 +21,6 @@ export const metadata: Metadata = {
     title: "Cravings",
     description: "Find the best food deals in your area",
     type: "website",
-    url: "https://cravings.vercel.app",
     images: [
       {
         url: "/og-image.png",

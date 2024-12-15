@@ -14,41 +14,13 @@ import { Offer } from "@/store/offerStore";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 
-export default function OfferDetail() {
+export default function OfferDetail({ offer } : { offer: Offer }) {
   const { id: offerId } = useParams();
   const navigate = useRouter();
   const { user } = useAuthStore();
-
-  const [offer, setOffer] = useState<Offer>();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTicket, setShowTicket] = useState(false);
-
-  useEffect(() => {
-    const fetchOfferDetails = async () => {
-      try {
-        if (!offerId) {
-          navigate.push("/offers");
-          return;
-        }
-        setLoading(true);
-        const offerRef = ref(rtdb, `offers/${offerId}`);
-        const snapshot = await get(offerRef);
-        if (snapshot.exists()) {
-          setOffer(snapshot.val());
-        } else {
-          setError("Offer not found.");
-        }
-      } catch (err) {
-        setError("Failed to fetch offer details.");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOfferDetails();
-  }, [offerId, navigate]);
 
   const handleClaimOffer = () => {
     if (!user) {
