@@ -1,15 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
-import { ref, get } from "firebase/database";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, Tag, Loader2 } from "lucide-react";
+import { Clock, MapPin, Tag } from "lucide-react";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { useAuthStore } from "@/store/authStore";
 import { OfferTicket } from "@/components/OfferTicket";
 import Share from "@/components/Share";
-import { rtdb } from "@/lib/firebase";
 import { Offer } from "@/store/offerStore";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
@@ -18,8 +16,6 @@ export default function OfferDetail({ offer } : { offer: Offer }) {
   const { id: offerId } = useParams();
   const navigate = useRouter();
   const { user } = useAuthStore();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showTicket, setShowTicket] = useState(false);
 
   const handleClaimOffer = () => {
@@ -34,32 +30,16 @@ export default function OfferDetail({ offer } : { offer: Offer }) {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-w-full bg-gradient-to-b from-orange-50 to-orange-100 flex items-center justify-center">
-        <div className="flex items-center gap-2 overflow-hidden">
-          <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
-          <span className="text-lg text-gray-600">
-            Loading offer details...
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
+  if (!offer) {
     return (
       <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 flex items-center justify-center">
         <div className="bg-red-50 text-red-600 p-4 rounded-lg max-w-md text-center">
-          <p>Error loading offer details: {error}</p>
+          <p>Error loading offer details</p>
         </div>
       </div>
     );
   }
 
-  if (!offer) {
-    return null;
-  }
 
   const isUpcoming = new Date(offer.fromTime) > new Date();
   const discount = Math.round(

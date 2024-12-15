@@ -17,18 +17,12 @@ export const metadata: Metadata = {
   title: "Cravings",
   description: "Find the best food deals in your area",
   icons: ["/icon-192x192.png", "/icon-512x512.png", "/icon-64x64.png"],
+  metadataBase: new URL("http://cravings.vercel.app"),
   openGraph: {
     title: "Cravings",
     description: "Find the best food deals in your area",
     type: "website",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Cravings",
-      },
-    ],
+    images: ["/ogImage.jpeg"],
   },
 };
 

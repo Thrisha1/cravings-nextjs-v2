@@ -2,7 +2,7 @@ import { rtdb } from "@/lib/firebase";
 import OfferDetail from "@/screens/OfferDetail";
 import { Offer } from "@/store/offerStore";
 import { get, ref } from "firebase/database";
-import { Metadata, ResolvingMetadata } from "next";
+import { Metadata } from "next";
 import { redirect } from "next/navigation";
 import React from "react";
 
@@ -25,8 +25,7 @@ const fetchOfferDetails = async (offerId: string) => {
 };
 
 export async function generateMetadata(
-  { params }: Props,
-  parent: ResolvingMetadata
+  { params }: Props
 ): Promise<Metadata> {
   const id = (await params).id;
   const product = await fetchOfferDetails(id);
