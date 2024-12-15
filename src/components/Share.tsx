@@ -6,7 +6,7 @@ interface ShareProps {
 }
 const Share = ({ offerId , className }: ShareProps) => {
   const handleShare = () => {
-    const offerLink = `${window.location.origin}/offer/${offerId}`;
+    const offerLink = `${window.location.origin}/offers/${offerId}`;
     navigator.clipboard.writeText(offerLink);
     alert("Link copied to clipboard!");
 
