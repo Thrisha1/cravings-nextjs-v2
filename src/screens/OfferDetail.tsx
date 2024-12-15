@@ -96,6 +96,7 @@ export default function OfferDetail() {
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-8">
+{/*       
       <title>
         {offer.dishName} - {offer.hotelName}
       </title>
@@ -105,7 +106,8 @@ export default function OfferDetail() {
         property="og:description"
         content={`Get ${discount}% off on ${offer.dishName} at Cravings`}
       />
-      <meta property="og:image" content={offer.dishImage} />
+      <meta property="og:image" content={offer.dishImage} /> */}
+
       <div className="max-w-4xl mx-auto">
         <Card className="overflow-hidden hover:shadow-xl transition-shadow">
           <Image
