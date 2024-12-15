@@ -22,6 +22,7 @@ import {
 import Share from "@/components/Share";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Offers() {
   const navigate = useRouter();
@@ -160,7 +161,7 @@ export default function Offers() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div className="flex flex-col space-y-4">
             <h1 className="text-4xl font-bold text-gray-900">
-              Today's Special Offers
+              Today&apos;s Special Offers
             </h1>
           </div>
           <div className="w-full md:w-64">
@@ -230,9 +231,11 @@ export default function Offers() {
                       className="overflow-hidden hover:shadow-xl transition-shadow"
                     >
                       <Link href={`/offers/${offer.id}`}>
-                        <img
+                        <Image
                           src={offer.dishImage}
                           alt={offer.dishName}
+                          width={300}
+                          height={300}
                           className="w-full h-48 object-cover"
                         />
                         <CardHeader>
@@ -395,9 +398,11 @@ export default function Offers() {
                       key={offer.id}
                       className="overflow-hidden hover:shadow-xl transition-shadow"
                     >
-                      <img
+                      <Image
                         src={offer.dishImage}
                         alt={offer.dishName}
+                        width={300}
+                        height={300}
                         className="w-full h-48 object-cover"
                       />
                       <CardHeader>

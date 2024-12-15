@@ -26,7 +26,7 @@ export default function HomePage() {
             onClick={() => navigate.push("/offers")}
             className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-6 text-lg rounded-full transition-all duration-300 shadow-lg hover:shadow-xl"
           >
-            Let's Go
+            Let&apos;s Go
           </Button>
           <PartnerDialog />
         </div>

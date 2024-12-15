@@ -12,6 +12,7 @@ import Share from "@/components/Share";
 import { rtdb } from "@/lib/firebase";
 import { Offer } from "@/store/offerStore";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function OfferDetail() {
   const { id: offerId } = useParams();
@@ -107,9 +108,11 @@ export default function OfferDetail() {
       <meta property="og:image" content={offer.dishImage} />
       <div className="max-w-4xl mx-auto">
         <Card className="overflow-hidden hover:shadow-xl transition-shadow">
-          <img
+          <Image
             src={offer.dishImage}
             alt={offer.dishName}
+            width={500}
+            height={500}
             className="w-full h-64 object-cover"
           />
           <CardHeader>

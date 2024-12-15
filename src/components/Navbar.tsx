@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PartnerDialog } from "./PartnerDialog";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -16,9 +16,13 @@ export function Navbar() {
   const location = pathname.split("?")[0];
   const { user, userData, signOut } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState(
-    Notification.permission
-  );
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
 
   const links = [
     { href: "/offers", label: "Offers" },

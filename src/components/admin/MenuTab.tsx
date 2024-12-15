@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useMenuStore } from '@/store/menuStore';
+import Image from 'next/image';
 
 export function MenuTab() {
   const { items, addItem, updateItem, deleteItem } = useMenuStore();
@@ -159,7 +160,7 @@ export function MenuTab() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map((item) => (
           <Card key={item.id}>
-            <img src={item.image} alt={item.name} className="w-full h-48 object-cover" />
+            <Image src={item.image} alt={item.name} width={300} height={300} className="w-full h-48 object-cover" />
             <CardHeader>
               <CardTitle>{item.name}</CardTitle>
             </CardHeader>

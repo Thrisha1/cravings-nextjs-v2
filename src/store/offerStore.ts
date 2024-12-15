@@ -101,7 +101,13 @@ export const useOfferStore = create<OfferState>((set) => {
 
         const userData = userDocSnap.data();
         const menuItems = userData.menu || [];
-        const menuItem = menuItems.find((item: any) => item.id === offer.menuItemId);
+        const menuItem: {
+          id: string;
+          name: string;
+          image: string;
+          price: number;
+          description?: string;
+        } | undefined = menuItems.find((item: { id: string }) => item.id === offer.menuItemId);
 
         if (!menuItem) {
           throw new Error('Menu item not found');

@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 
 interface ShareProps {
-  offerId: String | String[];
+  offerId: string | string[];
   className?: string;
 }
 const Share = ({ offerId , className }: ShareProps) => {

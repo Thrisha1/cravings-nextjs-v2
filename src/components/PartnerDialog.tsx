@@ -91,7 +91,7 @@ export function PartnerDialog() {
               </Label>
               <Select
                 value={formData.category}
-                onValueChange={(value: any) => setFormData({ ...formData, category: value })}
+                onValueChange={(value) => setFormData({ ...formData, category: value })}
               >
                 <SelectTrigger id="category" className="w-full">
                   <SelectValue placeholder="Select your category" />
@@ -142,13 +142,13 @@ export function PartnerDialog() {
               </Label>
               <Select
                 value={formData.area}
-                onValueChange={(value : any) => setFormData({ ...formData, area: value })}
+                onValueChange={(value) => setFormData({ ...formData, area: value })}
               >
                 <SelectTrigger id="area" className="w-full">
                   <SelectValue placeholder="Select your area" />
                 </SelectTrigger>
                 <SelectContent>
-                  {locations.map((location : any) => (
+                  {locations.map((location) => (
                     <SelectItem key={location} value={location}>
                       {location}
                     </SelectItem>
