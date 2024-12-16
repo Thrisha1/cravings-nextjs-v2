@@ -41,10 +41,11 @@ export function Navbar() {
     }
 
     // Check if the user needs to provide full name and phone
-    if (user && (!userData?.fullName || !userData?.phone)) {
+    if (user && userData && (!userData?.fullName || !userData?.phone)) {
+      console.log("user 2", userData);
       setShowModal(true);
     }
-  }, [user, userData]);
+  }, [user, userData ]);
 
   const handleFormSubmit = () => {
     const phoneRegex = /^\d{10}$/;
