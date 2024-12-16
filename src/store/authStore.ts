@@ -6,7 +6,7 @@ import {
   onAuthStateChanged,
   type User 
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, getFirestore } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
 
 interface UserData {
@@ -39,6 +39,7 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   fetchUserData: (uid: string) => Promise<void>;
+  updateUserData: (uid: string, updates: Partial<UserData>) => Promise<void>;
 }
 
 const db = getFirestore();
@@ -117,6 +118,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await firebaseSignOut(auth);
       set({ user: null, userData: null, error: null });
+    } catch (error) {
+      set({ error: (error as Error).message });
+      throw error;
+    }
+  },
+
+  updateUserData: async (uid, updates) => {
+    try {
+      const docRef = doc(db, 'users', uid);
+      await updateDoc(docRef, updates);
+      await get().fetchUserData(uid);
     } catch (error) {
       set({ error: (error as Error).message });
       throw error;
