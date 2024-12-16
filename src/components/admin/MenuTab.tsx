@@ -1,23 +1,37 @@
-import { useState, useMemo } from 'react';
-import { Plus, Pencil, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useMenuStore } from '@/store/menuStore';
-import Image from 'next/image';
+import { useState, useMemo } from "react";
+import { Plus, Pencil, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useMenuStore } from "@/store/menuStore";
+import Image from "next/image";
+import { useOfferStore } from '@/store/offerStore';
 
 export function MenuTab() {
   const { items, addItem, updateItem, deleteItem } = useMenuStore();
+  const { offers } = useOfferStore();
   const [isOpen, setIsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [newItem, setNewItem] = useState({
-    name: '',
-    price: '',
-    image: '',
-    description: '',
+    name: "",
+    price: "",
+    image: "",
+    description: "",
   });
   const [editingItem, setEditingItem] = useState<{
     id: string;
@@ -28,7 +42,7 @@ export function MenuTab() {
   } | null>(null);
 
   const filteredItems = useMemo(() => {
-    return items.filter(item =>
+    return items.filter((item) =>
       item.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [items, searchQuery]);
@@ -41,7 +55,7 @@ export function MenuTab() {
       image: newItem.image,
       description: newItem.description,
     });
-    setNewItem({ name: '', price: '', image: '', description: '' });
+    setNewItem({ name: "", price: "", image: "", description: "" });
     setIsOpen(false);
   };
 
@@ -59,13 +73,19 @@ export function MenuTab() {
     }
   };
 
-  const openEditModal = (item: { id: string; name: string; price: number; image: string; description: string }) => {
+  const openEditModal = (item: {
+    id: string;
+    name: string;
+    price: number;
+    image: string;
+    description: string;
+  }) => {
     setEditingItem({
       id: item.id,
       name: item.name,
       price: item.price.toString(),
       image: item.image,
-      description: item.description || '',
+      description: item.description || "",
     });
     setIsEditOpen(true);
   };
@@ -88,25 +108,35 @@ export function MenuTab() {
               <Input
                 placeholder="Product Name"
                 value={newItem.name}
-                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                onChange={(e) =>
+                  setNewItem({ ...newItem, name: e.target.value })
+                }
               />
               <Input
                 type="number"
                 placeholder="Price in ₹"
                 value={newItem.price}
-                onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+                onChange={(e) =>
+                  setNewItem({ ...newItem, price: e.target.value })
+                }
               />
               <Input
                 placeholder="Image URL"
                 value={newItem.image}
-                onChange={(e) => setNewItem({ ...newItem, image: e.target.value })}
+                onChange={(e) =>
+                  setNewItem({ ...newItem, image: e.target.value })
+                }
               />
               <Textarea
                 placeholder="Product Description"
                 value={newItem.description}
-                onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                onChange={(e) =>
+                  setNewItem({ ...newItem, description: e.target.value })
+                }
               />
-              <Button type="submit" className="w-full">Add Item</Button>
+              <Button type="submit" className="w-full">
+                Add Item
+              </Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -133,25 +163,38 @@ export function MenuTab() {
               <Input
                 placeholder="Product Name"
                 value={editingItem.name}
-                onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                onChange={(e) =>
+                  setEditingItem({ ...editingItem, name: e.target.value })
+                }
               />
               <Input
                 type="number"
                 placeholder="Price in ₹"
                 value={editingItem.price}
-                onChange={(e) => setEditingItem({ ...editingItem, price: e.target.value })}
+                onChange={(e) =>
+                  setEditingItem({ ...editingItem, price: e.target.value })
+                }
               />
               <Input
                 placeholder="Image URL"
                 value={editingItem.image}
-                onChange={(e) => setEditingItem({ ...editingItem, image: e.target.value })}
+                onChange={(e) =>
+                  setEditingItem({ ...editingItem, image: e.target.value })
+                }
               />
               <Textarea
                 placeholder="Product Description"
                 value={editingItem.description}
-                onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                onChange={(e) =>
+                  setEditingItem({
+                    ...editingItem,
+                    description: e.target.value,
+                  })
+                }
               />
-              <Button type="submit" className="w-full">Save Changes</Button>
+              <Button type="submit" className="w-full">
+                Save Changes
+              </Button>
             </form>
           )}
         </DialogContent>
@@ -160,7 +203,13 @@ export function MenuTab() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.map((item) => (
           <Card key={item.id}>
-            <Image src={item.image} alt={item.name} width={300} height={300} className="w-full h-48 object-cover" />
+            <Image
+              src={item.image}
+              alt={item.name}
+              width={300}
+              height={300}
+              className="w-full h-48 object-cover"
+            />
             <CardHeader>
               <CardTitle>{item.name}</CardTitle>
             </CardHeader>
@@ -173,14 +222,34 @@ export function MenuTab() {
             <CardFooter className="flex justify-end space-x-2">
               <Button
                 variant="outline"
-                onClick={() => openEditModal({ ...item, description: item.description || '' })}
+                onClick={() =>
+                  openEditModal({
+                    ...item,
+                    description: item.description || "",
+                  })
+                }
               >
                 <Pencil className="h-4 w-4 mr-2" />
                 Edit
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => deleteItem(item.id)}
+                onClick={() => {
+                  // Check if there are any active offers associated with the menu item
+                  const isOfferActive = offers.some(
+                    (offer) => offer.menuItemId === item.id
+                  );
+
+                  if (isOfferActive) {
+                    alert(
+                      `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
+                    );
+                    return;
+                  }
+
+                  // If no active offers, proceed with item deletion
+                  deleteItem(item.id);
+                }}
               >
                 Delete
               </Button>
