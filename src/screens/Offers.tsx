@@ -150,7 +150,7 @@ export default function Offers() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 px-8 py-3 relative">
+    <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 px-8 py-3 relative pb-10">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 my-4">
           <div className="flex flex-col ">
@@ -190,10 +190,6 @@ export default function Offers() {
             className="pl-10 w-full"
           />
         </div>
-
-        {/* <Tabs defaultValue="filter" className="w-full border-1 my-4 border-t-[1.5px]">
-          
-        </Tabs>          */}
 
         <Tabs defaultValue="foodie" className="w-full ">
           <TabsList className="fixed bottom-0 left-0 w-full grid grid-cols-2 bg-orange-100 shadow-lg z-50 h-12 border-t-2 border-orange-200">
