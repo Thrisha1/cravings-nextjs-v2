@@ -15,7 +15,11 @@ const fetchOfferDetails = async (offerId: string) => {
     const offerRef = ref(rtdb, `offers/${offerId}`);
     const snapshot = await get(offerRef);
     if (snapshot.exists()) {
-      return snapshot.val();
+      const offer = snapshot.val();
+      if (offer.toTime <= Date.now()) {
+        throw new Error("Offer expired.");
+      }
+      return offer;
     } else {
       throw new Error("Offer not found.");
     }
@@ -29,6 +33,14 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const id = (await params).id;
   const product = await fetchOfferDetails(id);
+  
+  if (!product) {
+    return {
+      title: "Offer Not Found",
+      description: "Offer not found or expired.",
+    };
+  }
+
   return {
     title: product.dishName,
     icons: [product.dishImage],
