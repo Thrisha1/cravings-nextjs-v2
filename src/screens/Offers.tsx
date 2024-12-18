@@ -44,7 +44,12 @@ export default function Offers() {
     foodie: Offer[];
     mart: Offer[];
   }>({ foodie: [], mart: [] });
-  const [activeTab, setActiveTab] = useState<'all' | 'popular' | 'moneySaver' | 'foodie' | 'mart'>('all');
+  const [activeMainTab, setActiveMainTab] = useState<"foodie" | "mart">(
+    "foodie"
+  );
+  const [activeSubTab, setActiveSubTab] = useState<
+    "all" | "popular" | "moneySaver"
+  >("all");
 
   useEffect(() => {
     subscribeToOffers();
@@ -74,12 +79,17 @@ export default function Offers() {
       { foodie: [] as Offer[], mart: [] as Offer[] }
     );
 
-    let sortedFiltered = { foodie: [...filtered.foodie], mart: [...filtered.mart] };
+    let sortedFiltered = {
+      foodie: [...filtered.foodie],
+      mart: [...filtered.mart],
+    };
 
-    switch (activeTab) {
+    switch (activeSubTab) {
       case "popular":
         sortedFiltered = {
-          foodie: [...filtered.foodie].sort((a, b) => b.enquiries - a.enquiries),
+          foodie: [...filtered.foodie].sort(
+            (a, b) => b.enquiries - a.enquiries
+          ),
           mart: [...filtered.mart].sort((a, b) => b.enquiries - a.enquiries),
         };
         break;
@@ -87,13 +97,17 @@ export default function Offers() {
       case "moneySaver":
         sortedFiltered = {
           foodie: [...filtered.foodie].sort((a, b) => {
-            const discountA = ((a.originalPrice - a.newPrice) / a.originalPrice) * 100;
-            const discountB = ((b.originalPrice - b.newPrice) / b.originalPrice) * 100;
+            const discountA =
+              ((a.originalPrice - a.newPrice) / a.originalPrice) * 100;
+            const discountB =
+              ((b.originalPrice - b.newPrice) / b.originalPrice) * 100;
             return discountB - discountA; // Sorting in descending order
           }),
           mart: [...filtered.mart].sort((a, b) => {
-            const discountA = ((a.originalPrice - a.newPrice) / a.originalPrice) * 100;
-            const discountB = ((b.originalPrice - b.newPrice) / b.originalPrice) * 100;
+            const discountA =
+              ((a.originalPrice - a.newPrice) / a.originalPrice) * 100;
+            const discountB =
+              ((b.originalPrice - b.newPrice) / b.originalPrice) * 100;
             return discountB - discountA; // Sorting in descending order
           }),
         };
@@ -114,8 +128,7 @@ export default function Offers() {
     }
 
     setFilteredOffers(sortedFiltered);
-  }, [offers, selectedLocation, searchQuery, activeTab]);
-
+  }, [offers, selectedLocation, searchQuery, activeSubTab]);
 
   const handleOfferClick = (offer: Offer) => {
     if (!user) {
@@ -153,7 +166,7 @@ export default function Offers() {
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 px-8 py-3 relative pb-10">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 my-4">
-          <div className="flex flex-col ">
+          <div className="flex flex-col">
             <h1 className="text-3xl font-bold text-gray-900">
               Today&apos;s Special Offers
             </h1>
@@ -191,649 +204,392 @@ export default function Offers() {
           />
         </div>
 
-        <Tabs defaultValue="foodie" className="w-full ">
+        <Tabs defaultValue="foodie" className="w-full">
           <TabsList className="fixed bottom-0 left-0 w-full grid grid-cols-2 bg-orange-100 shadow-lg z-50 h-12 border-t-2 border-orange-200">
-            <TabsTrigger value="foodie"
-              onClick={() => setActiveTab('foodie')}
-              className={activeTab === 'foodie' ? 'bg-white' : ''}
-            >
-              Foodie Offers</TabsTrigger>
-            <TabsTrigger value="mart"
-              onClick={() => setActiveTab('mart')}
-              className={activeTab === 'mart' ? 'bg-white' : ''}
-            >
-              Crave Mart</TabsTrigger>
-          </TabsList>
-
-          <TabsList className="w-full grid grid-cols-3 shadow-lg z-50 h-12 bg-orange-50">
             <TabsTrigger
-              value="all"
-              onClick={() => setActiveTab('all')}
-              className={activeTab === 'all' ? 'bg-white' : ''}
+              value="foodie"
+              onClick={() => {
+                setActiveMainTab("foodie");
+                setActiveSubTab("all");
+              }}
+              className={activeMainTab === "foodie" ? "bg-white" : ""}
             >
-              All
+              Foodie Offers
             </TabsTrigger>
-            <TabsTrigger value="popular"
-              onClick={() => setActiveTab('popular')}
-              className={activeTab === 'popular' ? 'bg-white' : ''}
+            <TabsTrigger
+              value="mart"
+              onClick={() => {
+                setActiveMainTab("mart");
+                setActiveSubTab("all");
+              }}
+              className={activeMainTab === "mart" ? "bg-white" : ""}
             >
-              Popular</TabsTrigger>
-            <TabsTrigger value="moneySaver"
-              onClick={() => setActiveTab('moneySaver')}
-              className={activeTab === 'moneySaver' ? 'bg-white' : ''}
-            >
-              Money Saver</TabsTrigger>
+              Crave Mart
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="foodie">
-            {filteredOffers.foodie.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-xl text-gray-600">
-                  {searchQuery
-                    ? `No matching food offers found for "${searchQuery}"`
-                    : selectedLocation
-                      ? `No active food offers in ${selectedLocation} at the moment.`
-                      : "No active food offers at the moment."}
-                </p>
-              </div>
-            ) : (
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList className="w-full grid grid-cols-3 shadow-lg z-50 h-12 bg-orange-50">
+                <TabsTrigger
+                  value="all"
+                  onClick={() => setActiveSubTab("all")}
+                  className={activeSubTab === "all" ? "bg-white" : ""}
+                >
+                  All
+                </TabsTrigger>
+                <TabsTrigger
+                  value="popular"
+                  onClick={() => setActiveSubTab("popular")}
+                  className={activeSubTab === "popular" ? "bg-white" : ""}
+                >
+                  Popular
+                </TabsTrigger>
+                <TabsTrigger
+                  value="moneySaver"
+                  onClick={() => setActiveSubTab("moneySaver")}
+                  className={activeSubTab === "moneySaver" ? "bg-white" : ""}
+                >
+                  Money Saver
+                </TabsTrigger>
+              </TabsList>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredOffers.foodie.map((offer) => {
-                  const isUpcoming = new Date(offer.fromTime) > new Date();
-                  const discount = Math.round(
-                    ((offer.originalPrice - offer.newPrice) / offer.originalPrice) * 100
-                  );
-                  const claimed = isOfferClaimed(offer.id);
+                {filteredOffers.foodie.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-xl text-gray-600">
+                      {searchQuery
+                        ? `No matching food offers found for "${searchQuery}"`
+                        : selectedLocation
+                        ? `No active food offers in ${selectedLocation} at the moment.`
+                        : "No active food offers at the moment."}
+                    </p>
+                  </div>
+                ) : (
+                  filteredOffers.foodie.map((offer) => {
+                    const isUpcoming = new Date(offer.fromTime) > new Date();
+                    const discount = Math.round(
+                      ((offer.originalPrice - offer.newPrice) /
+                        offer.originalPrice) *
+                        100
+                    );
+                    const claimed = isOfferClaimed(offer.id);
 
-                  return (
-                    <Card
-                      key={offer.id}
-                      className="overflow-hidden hover:shadow-xl transition-shadow"
-                    >
-                      <Link href={`/offers/${offer.id}`}>
-                        <Image
-                          src={offer.dishImage}
-                          alt={offer.dishName}
-                          width={300}
-                          height={300}
-                          className="w-full h-48 object-cover"
-                        />
-                        <CardHeader>
-                          <div className="flex justify-between items-start">
-                            <div className="space-y-2">
-                              <CardTitle className="text-xl font-bold">
-                                {offer.dishName}
-                              </CardTitle>
-                              {offer.description && (
-                                <p className="text-sm text-gray-600 leading-snug">
-                                  {offer.description}
+                    return (
+                      <Card
+                        key={offer.id}
+                        className="overflow-hidden hover:shadow-xl transition-shadow"
+                      >
+                        <Link href={`/offers/${offer.id}`}>
+                          <Image
+                            src={offer.dishImage}
+                            alt={offer.dishName}
+                            width={300}
+                            height={300}
+                            className="w-full h-48 object-cover"
+                          />
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <div className="space-y-2">
+                                <CardTitle className="text-xl font-bold">
+                                  {offer.dishName}
+                                </CardTitle>
+                                {offer.description && (
+                                  <p className="text-sm text-gray-600 leading-snug">
+                                    {offer.description}
+                                  </p>
+                                )}
+                                <p className="text-base font-medium text-gray-700">
+                                  {offer.hotelName}
                                 </p>
-                              )}
-                              <p className="text-base font-medium text-gray-700">
-                                {offer.hotelName}
-                              </p>
+                              </div>
+                              <Badge
+                                variant="destructive"
+                                className="bg-orange-600"
+                              >
+                                {discount}% OFF
+                              </Badge>
                             </div>
-                            <Badge variant="destructive" className="bg-orange-600">
-                              {discount}% OFF
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                      </Link>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-500 line-through">
-                              ₹{offer.originalPrice.toFixed(2)}
-                            </span>
-                            <span className="text-2xl font-bold text-orange-600">
-                              ₹{offer.newPrice.toFixed(2)}
-                            </span>
-                          </div>
-
-                          <div className="space-y-3">
-                            <div className="flex justify-between">
-                              <div className="flex flex-col gap-3">
-                                {!isUpcoming && (
+                          </CardHeader>
+                        </Link>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-500 line-through">
+                                ₹{offer.originalPrice.toFixed(2)}
+                              </span>
+                              <span className="text-2xl font-bold text-orange-600">
+                                ₹{offer.newPrice.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="space-y-3">
+                              <div className="flex justify-between">
+                                <div className="flex flex-col gap-3">
+                                  {!isUpcoming && (
+                                    <div className="flex items-center text-sm text-gray-500">
+                                      <Clock className="w-4 h-4 mr-2" />
+                                      <CountdownTimer
+                                        endTime={offer.toTime}
+                                        upcomming={false}
+                                      />
+                                    </div>
+                                  )}
                                   <div className="flex items-center text-sm text-gray-500">
-                                    <Clock className="w-4 h-4 mr-2" />
-                                    <CountdownTimer
-                                      endTime={offer.toTime}
-                                      upcomming={false}
-                                    />
+                                    <MapPin className="w-4 h-4 mr-2" />
+                                    {offer.area}
+                                  </div>
+                                </div>
+                                <Share offerId={offer.id} />
+                              </div>
+                              <div className="flex gap-3">
+                                <div className="flex flex-wrap gap-2 mt-4">
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-orange-100 text-orange-800"
+                                  >
+                                    <Tag className="w-3 h-3 mr-1" />
+                                    {offer.itemsAvailable} items{" "}
+                                    {isUpcoming ? "left" : "available"}
+                                  </Badge>
+                                </div>
+                                {claimed && (
+                                  <div className="flex flex-wrap gap-2 mt-4">
+                                    <Badge
+                                      variant="secondary"
+                                      className="bg-green-600 text-white"
+                                    >
+                                      Claimed
+                                    </Badge>
                                   </div>
                                 )}
-                                <div className="flex items-center text-sm text-gray-500">
-                                  <MapPin className="w-4 h-4 mr-2" />
-                                  {offer.area}
-                                </div>
+                                {offer.enquiries > 0 && (
+                                  <div className="flex flex-wrap gap-2 mt-4">
+                                    <Badge
+                                      variant="secondary"
+                                      className={
+                                        offer.enquiries > offer.itemsAvailable
+                                          ? "bg-red-600 text-white"
+                                          : "bg-orange-500 text-white"
+                                      }
+                                    >
+                                      {offer.enquiries > offer.itemsAvailable
+                                        ? "High Demand"
+                                        : "In Demand"}
+                                    </Badge>
+                                  </div>
+                                )}
                               </div>
-                              <Share offerId={offer.id} />
-                            </div>
-                            <div className="flex gap-3">
-                              <div className="flex flex-wrap gap-2 mt-4">
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-orange-100 text-orange-800"
-                                >
-                                  <Tag className="w-3 h-3 mr-1" />
-                                  {offer.itemsAvailable} items{" "}
-                                  {isUpcoming ? "left" : "available"}
-                                </Badge>
-                              </div>
-                              {claimed && (
-                                <div className="flex flex-wrap gap-2 mt-4">
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-green-600 text-white"
-                                  >
-                                    Claimed
-                                  </Badge>
-                                </div>
-                              )}
-                              {offer.enquiries > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-4">
-                                  <Badge
-                                    variant="secondary"
-                                    className={
-                                      offer.enquiries > offer.itemsAvailable
-                                        ? "bg-red-600 text-white"
-                                        : "bg-orange-500 text-white"
-                                    }
-                                  >
-                                    {offer.enquiries > offer.itemsAvailable
-                                      ? "High Demand"
-                                      : "In Demand"}
-                                  </Badge>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-3">
-                            {/* Claim Button */}
-                            <Button
-                              disabled={isUpcoming}
-                              onClick={
-                                isUpcoming
-                                  ? undefined
-                                  : () => handleOfferClick(offer)
-                              }
-                              className={`w-full ${isUpcoming
-                                ? "bg-gray-100 disabled:opacity-100 text-[#E63946] font-bold shadow-xl border border-gray-200"
-                                : "bg-orange-600 hover:bg-orange-700"
+                            </div>{" "}
+                            <div className="flex flex-col gap-3">
+                              <Button
+                                disabled={isUpcoming}
+                                onClick={
+                                  isUpcoming
+                                    ? undefined
+                                    : () => handleOfferClick(offer)
+                                }
+                                className={`w-full ${
+                                  isUpcoming
+                                    ? "bg-gray-100 disabled:opacity-100 text-[#E63946] font-bold shadow-xl border border-gray-200"
+                                    : "bg-orange-600 hover:bg-orange-700"
                                 }`}
-                            >
-                              {claimed ? (
-                                "View Ticket"
-                              ) : isUpcoming ? (
-                                <div className="">
-                                  Offer Activates in :{" "}
-                                  <CountdownTimer
-                                    endTime={offer.fromTime}
-                                    upcomming={true}
-                                  />
-                                </div>
-                              ) : (
-                                "Claim Offer"
-                              )}
-                            </Button>
+                              >
+                                {claimed ? (
+                                  "View Ticket"
+                                ) : isUpcoming ? (
+                                  <div>
+                                    Offer Activates in :{" "}
+                                    <CountdownTimer
+                                      endTime={offer.fromTime}
+                                      upcomming={true}
+                                    />
+                                  </div>
+                                ) : (
+                                  "Claim Offer"
+                                )}
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
               </div>
-            )}
+            </Tabs>
           </TabsContent>
 
           <TabsContent value="mart">
-            {filteredOffers.mart.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-xl text-gray-600">
-                  {searchQuery
-                    ? `No matching supermarket offers found for "${searchQuery}"`
-                    : selectedLocation
-                      ? `No active supermarket offers in ${selectedLocation} at the moment.`
-                      : "No active supermarket offers at the moment."}
-                </p>
-              </div>
-            ) : (
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList className="w-full grid grid-cols-3 shadow-lg z-50 h-12 bg-orange-50">
+                <TabsTrigger
+                  value="all"
+                  onClick={() => setActiveSubTab("all")}
+                  className={activeSubTab === "all" ? "bg-white" : ""}
+                >
+                  All
+                </TabsTrigger>
+                <TabsTrigger
+                  value="popular"
+                  onClick={() => setActiveSubTab("popular")}
+                  className={activeSubTab === "popular" ? "bg-white" : ""}
+                >
+                  Popular
+                </TabsTrigger>
+                <TabsTrigger
+                  value="moneySaver"
+                  onClick={() => setActiveSubTab("moneySaver")}
+                  className={activeSubTab === "moneySaver" ? "bg-white" : ""}
+                >
+                  Money Saver
+                </TabsTrigger>
+              </TabsList>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredOffers.mart.map((offer) => {
-                  const isUpcoming = new Date(offer.fromTime) > new Date();
-                  const discount = Math.round(
-                    ((offer.originalPrice - offer.newPrice) /
-                      offer.originalPrice) *
-                    100
-                  );
-                  const claimed = isOfferClaimed(offer.id);
+                {filteredOffers.mart.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-xl text-gray-600">
+                      {searchQuery
+                        ? `No matching mart offers found for "${searchQuery}"`
+                        : selectedLocation
+                        ? `No active mart offers in ${selectedLocation} at the moment.`
+                        : "No active mart offers at the moment."}
+                    </p>
+                  </div>
+                ) : (
+                  filteredOffers.mart.map((offer) => {
+                    const isUpcoming = new Date(offer.fromTime) > new Date();
+                    const discount = Math.round(
+                      ((offer.originalPrice - offer.newPrice) /
+                        offer.originalPrice) *
+                        100
+                    );
+                    const claimed = isOfferClaimed(offer.id);
 
-                  return (
-                    <Card
-                      key={offer.id}
-                      className="overflow-hidden hover:shadow-xl transition-shadow"
-                    >
-                      <Image
-                        src={offer.dishImage}
-                        alt={offer.dishName}
-                        width={300}
-                        height={300}
-                        className="w-full h-48 object-cover"
-                      />
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div className="space-y-2">
-                            <CardTitle className="text-xl font-bold">
-                              {offer.dishName}
-                            </CardTitle>
-                            {offer.description && (
-                              <p className="text-sm text-gray-600 leading-snug">
-                                {offer.description}
-                              </p>
-                            )}
-                            <p className="text-base font-medium text-gray-700">
-                              {offer.hotelName}
-                            </p>
-                          </div>
-                          <Badge
-                            variant="destructive"
-                            className="bg-orange-600"
-                          >
-                            {discount}% OFF
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-500 line-through">
-                              ₹{offer.originalPrice.toFixed(2)}
-                            </span>
-                            <span className="text-2xl font-bold text-orange-600">
-                              ₹{offer.newPrice.toFixed(2)}
-                            </span>
-                          </div>
-
-                          <div className="space-y-3">
-                            {!isUpcoming && (
-                              <div className="flex items-center text-sm text-gray-500">
-                                <Clock className="w-4 h-4 mr-2" />
-                                <CountdownTimer
-                                  endTime={offer.toTime}
-                                  upcomming={false}
-                                />
+                    return (
+                      <Card
+                        key={offer.id}
+                        className="overflow-hidden hover:shadow-xl transition-shadow"
+                      >
+                        <Link href={`/offers/${offer.id}`}>
+                          <Image
+                            src={offer.dishImage}
+                            alt={offer.dishName}
+                            width={300}
+                            height={300}
+                            className="w-full h-48 object-cover"
+                          />
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <div className="space-y-2">
+                                <CardTitle className="text-xl font-bold">
+                                  {offer.dishName}
+                                </CardTitle>
+                                {offer.description && (
+                                  <p className="text-sm text-gray-600 leading-snug">
+                                    {offer.description}
+                                  </p>
+                                )}
+                                <p className="text-base font-medium text-gray-700">
+                                  {offer.hotelName}
+                                </p>
                               </div>
-                            )}
-                            <div className="flex items-center text-sm text-gray-500">
-                              <MapPin className="w-4 h-4 mr-2" />
-                              {offer.area}
+                              <Badge
+                                variant="destructive"
+                                className="bg-orange-600"
+                              >
+                                {discount}% OFF
+                              </Badge>
                             </div>
-                            <div className="flex gap-3">
-                              <div className="flex flex-wrap gap-2 mt-4">
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-orange-100 text-orange-800"
-                                >
-                                  <Tag className="w-3 h-3 mr-1" />
-                                  {offer.itemsAvailable} items{" "}
-                                  {isUpcoming ? "left" : "available"}
-                                </Badge>
-                              </div>
-                              {claimed && (
-                                <div className="flex flex-wrap gap-2 mt-4">
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-green-600 text-white"
-                                  >
-                                    Claimed
-                                  </Badge>
-                                </div>
-                              )}
-                              {offer.enquiries > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-4">
-                                  <Badge
-                                    variant="secondary"
-                                    className={
-                                      offer.enquiries > offer.itemsAvailable
-                                        ? "bg-red-600 text-white"
-                                        : "bg-orange-500 text-white"
-                                    }
-                                  >
-                                    {offer.enquiries > offer.itemsAvailable
-                                      ? "High Demand"
-                                      : "In Demand"}
-                                  </Badge>
-                                </div>
-                              )}
+                          </CardHeader>
+                        </Link>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-500 line-through">
+                                â¹{offer.originalPrice.toFixed(2)}
+                              </span>
+                              <span className="text-2xl font-bold text-orange-600">
+                                â¹{offer.newPrice.toFixed(2)}
+                              </span>
                             </div>
-                          </div>
 
-                          <Button
-                            disabled={isUpcoming}
-                            onClick={
-                              isUpcoming
-                                ? undefined
-                                : () => handleOfferClick(offer)
-                            }
-                            className={`w-full ${isUpcoming
-                              ? "bg-gray-100 disabled:opacity-100 text-[#E63946] font-bold shadow-xl border border-gray-200"
-                              : "bg-orange-600 hover:bg-orange-700"
-                              }`}
-                          >
-                            {claimed ? (
-                              "View Ticket"
-                            ) : isUpcoming ? (
-                              <div className="">
-                                Claim your offer in :{" "}
-                                <CountdownTimer
-                                  endTime={offer.fromTime}
-                                  upcomming={true}
-                                />
-                              </div>
-                            ) : (
-                              "Claim Offer"
-                            )}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="all">
-            {filteredOffers.foodie.length === 0 && filteredOffers.mart.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-xl text-gray-600">
-                  {searchQuery
-                    ? `No matching offers found for "${searchQuery}"`
-                    : selectedLocation
-                      ? `No active offers in ${selectedLocation} at the moment.`
-                      : "No active offers at the moment."}
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {[...filteredOffers.foodie, ...filteredOffers.mart].map((offer) => {
-                  const isUpcoming = new Date(offer.fromTime) > new Date();
-                  const discount = Math.round(
-                    ((offer.originalPrice - offer.newPrice) / offer.originalPrice) * 100
-                  );
-                  const claimed = isOfferClaimed(offer.id);
-
-                  return (
-                    <Card
-                      key={offer.id}
-                      className="overflow-hidden hover:shadow-xl transition-shadow"
-                    >
-                      <Link href={`/offers/${offer.id}`}>
-                        <Image
-                          src={offer.dishImage}
-                          alt={offer.dishName}
-                          width={300}
-                          height={300}
-                          className="w-full h-48 object-cover"
-                        />
-                        <CardHeader>
-                          <div className="flex justify-between items-start">
-                            <div className="space-y-2">
-                              <CardTitle className="text-xl font-bold">
-                                {offer.dishName}
-                              </CardTitle>
-                              <p className="text-base font-medium text-gray-700">
-                                {offer.hotelName}
-                              </p>
-                            </div>
-                            <Badge variant="destructive" className="bg-orange-600">
-                              {discount}% OFF
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                      </Link>
-                      <CardContent>
-                        <div className="space-y-4">
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-500 line-through">
-                              ₹{offer.originalPrice.toFixed(2)}
-                            </span>
-                            <span className="text-2xl font-bold text-orange-600">
-                              ₹{offer.newPrice.toFixed(2)}
-                            </span>
-                          </div>
-
-                          <div className="space-y-3">
-                            <div className="flex justify-between">
-                              <div className="flex flex-col gap-3">
-                                {!isUpcoming && (
+                            <div className="space-y-3">
+                              <div className="flex justify-between">
+                                <div className="flex flex-col gap-3">
+                                  {!isUpcoming && (
+                                    <div className="flex items-center text-sm text-gray-500">
+                                      <Clock className="w-4 h-4 mr-2" />
+                                      <CountdownTimer
+                                        endTime={offer.toTime}
+                                        upcomming={false}
+                                      />
+                                    </div>
+                                  )}
                                   <div className="flex items-center text-sm text-gray-500">
-                                    <Clock className="w-4 h-4 mr-2" />
-                                    <CountdownTimer
-                                      endTime={offer.toTime}
-                                      upcomming={false}
-                                    />
+                                    <MapPin className="w-4 h-4 mr-2" />
+                                    {offer.area}
+                                  </div>
+                                </div>
+                                <Share offerId={offer.id} />
+                              </div>
+                              <div className="flex gap-3">
+                                <div className="flex flex-wrap gap-2 mt-4">
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-orange-100 text-orange-800"
+                                  >
+                                    <Tag className="w-3 h-3 mr-1" />
+                                    {offer.itemsAvailable} items{" "}
+                                    {isUpcoming ? "left" : "available"}
+                                  </Badge>
+                                </div>
+                                {claimed && (
+                                  <div className="flex flex-wrap gap-2 mt-4">
+                                    <Badge
+                                      variant="secondary"
+                                      className="bg-green-600 text-white"
+                                    >
+                                      Claimed
+                                    </Badge>
                                   </div>
                                 )}
-                                <div className="flex items-center text-sm text-gray-500">
-                                  <MapPin className="w-4 h-4 mr-2" />
-                                  {offer.area}
-                                </div>
+                                {offer.enquiries > 0 && (
+                                  <div className="flex flex-wrap gap-2 mt-4">
+                                    <Badge
+                                      variant="secondary"
+                                      className={
+                                        offer.enquiries > offer.itemsAvailable
+                                          ? "bg-red-600 text-white"
+                                          : "bg-orange-500 text-white"
+                                      }
+                                    >
+                                      {offer.enquiries > offer.itemsAvailable
+                                        ? "High Demand"
+                                        : "In Demand"}
+                                    </Badge>
+                                  </div>
+                                )}
                               </div>
-                              <Share offerId={offer.id} />
                             </div>
-                            <div className="flex gap-3">
-                              <div className="flex flex-wrap gap-2 mt-4">
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-orange-100 text-orange-800"
-                                >
-                                  <Tag className="w-3 h-3 mr-1" />
-                                  {offer.itemsAvailable} items{" "}
-                                  {isUpcoming ? "left" : "available"}
-                                </Badge>
-                              </div>
-                              {claimed && (
-                                <div className="flex flex-wrap gap-2 mt-4">
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-green-600 text-white"
-                                  >
-                                    Claimed
-                                  </Badge>
-                                </div>
-                              )}
-                              {offer.enquiries > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-4">
-                                  <Badge
-                                    variant="secondary"
-                                    className={
-                                      offer.enquiries > offer.itemsAvailable
-                                        ? "bg-red-600 text-white"
-                                        : "bg-orange-500 text-white"
-                                    }
-                                  >
-                                    {offer.enquiries > offer.itemsAvailable
-                                      ? "High Demand"
-                                      : "In Demand"}
-                                  </Badge>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-3">
-                            {/* Claim Button */}
-                            <Button
-                              disabled={isUpcoming}
-                              onClick={
-                                isUpcoming
-                                  ? undefined
-                                  : () => handleOfferClick(offer)
-                              }
-                              className={`w-full ${isUpcoming
-                                ? "bg-gray-100 disabled:opacity-100 text-[#E63946] font-bold shadow-xl border border-gray-200"
-                                : "bg-orange-600 hover:bg-orange-700"
+                            <div className="flex flex-col gap-3">
+                              <Button
+                                disabled={isUpcoming}
+                                onClick={
+                                  isUpcoming
+                                    ? undefined
+                                    : () => handleOfferClick(offer)
+                                }
+                                className={`w-full ${
+                                  isUpcoming
+                                    ? "bg-gray-100 disabled:opacity-100 text-[#E63946] font-bold shadow-xl border border-gray-200"
+                                    : "bg-orange-600 hover:bg-orange-700"
                                 }`}
-                            >
-                              {claimed ? (
-                                "View Ticket"
-                              ) : isUpcoming ? (
-                                <div className="">
-                                  Offer Activates in :{" "}
-                                  <CountdownTimer
-                                    endTime={offer.fromTime}
-                                    upcomming={true}
-                                  />
-                                </div>
-                              ) : (
-                                "Claim Offer"
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="popular">
-            {filteredOffers.foodie.length === 0 && filteredOffers.mart.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-xl text-gray-600">
-                  No popular offers available at the moment.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {[...filteredOffers.foodie, ...filteredOffers.mart] // Only popular offers
-                  .map((offer) => {
-                    const isUpcoming = new Date(offer.fromTime) > new Date();
-                    const discount = Math.round(
-                      ((offer.originalPrice - offer.newPrice) / offer.originalPrice) * 100
-                    );
-                    const claimed = isOfferClaimed(offer.id);
-                    return (
-                      <Card
-                        key={offer.id}
-                        className="overflow-hidden hover:shadow-xl transition-shadow"
-                      >
-                        <Link href={`/offers/${offer.id}`}>
-                          <Image
-                            src={offer.dishImage}
-                            alt={offer.dishName}
-                            width={300}
-                            height={300}
-                            className="w-full h-48 object-cover"
-                          />
-                          <CardHeader>
-                            <div className="flex justify-between items-start">
-                              <div className="space-y-2">
-                                <CardTitle className="text-xl font-bold">
-                                  {offer.dishName}
-                                </CardTitle>
-                                <p className="text-base font-medium text-gray-700">
-                                  {offer.hotelName}
-                                </p>
-                              </div>
-                              <Badge variant="destructive" className="bg-orange-600">
-                                {discount}% OFF
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                        </Link>
-                        <CardContent>
-                          <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-500 line-through">
-                                ₹{offer.originalPrice.toFixed(2)}
-                              </span>
-                              <span className="text-2xl font-bold text-orange-600">
-                                ₹{offer.newPrice.toFixed(2)}
-                              </span>
-                            </div>
-
-                            <div className="space-y-3">
-                              <div className="flex justify-between">
-                                <div className="flex flex-col gap-3">
-                                  {!isUpcoming && (
-                                    <div className="flex items-center text-sm text-gray-500">
-                                      <Clock className="w-4 h-4 mr-2" />
-                                      <CountdownTimer
-                                        endTime={offer.toTime}
-                                        upcomming={false}
-                                      />
-                                    </div>
-                                  )}
-                                  <div className="flex items-center text-sm text-gray-500">
-                                    <MapPin className="w-4 h-4 mr-2" />
-                                    {offer.area}
-                                  </div>
-                                </div>
-                                <Share offerId={offer.id} />
-                              </div>
-                              <div className="flex gap-3">
-                                <div className="flex flex-wrap gap-2 mt-4">
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-orange-100 text-orange-800"
-                                  >
-                                    <Tag className="w-3 h-3 mr-1" />
-                                    {offer.itemsAvailable} items{" "}
-                                    {isUpcoming ? "left" : "available"}
-                                  </Badge>
-                                </div>
-                                {claimed && (
-                                  <div className="flex flex-wrap gap-2 mt-4">
-                                    <Badge
-                                      variant="secondary"
-                                      className="bg-green-600 text-white"
-                                    >
-                                      Claimed
-                                    </Badge>
-                                  </div>
-                                )}
-                                {offer.enquiries > 0 && (
-                                  <div className="flex flex-wrap gap-2 mt-4">
-                                    <Badge
-                                      variant="secondary"
-                                      className={
-                                        offer.enquiries > offer.itemsAvailable
-                                          ? "bg-red-600 text-white"
-                                          : "bg-orange-500 text-white"
-                                      }
-                                    >
-                                      {offer.enquiries > offer.itemsAvailable
-                                        ? "High Demand"
-                                        : "In Demand"}
-                                    </Badge>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex flex-col gap-3">
-                              {/* Claim Button */}
-                              <Button
-                                disabled={isUpcoming}
-                                onClick={
-                                  isUpcoming
-                                    ? undefined
-                                    : () => handleOfferClick(offer)
-                                }
-                                className={`w-full ${isUpcoming
-                                  ? "bg-gray-100 disabled:opacity-100 text-[#E63946] font-bold shadow-xl border border-gray-200"
-                                  : "bg-orange-600 hover:bg-orange-700"
-                                  }`}
                               >
                                 {claimed ? (
                                   "View Ticket"
                                 ) : isUpcoming ? (
-                                  <div className="">
+                                  <div>
                                     Offer Activates in :{" "}
                                     <CountdownTimer
                                       endTime={offer.fromTime}
@@ -849,177 +605,24 @@ export default function Offers() {
                         </CardContent>
                       </Card>
                     );
-                  })}
+                  })
+                )}
               </div>
-            )}
+            </Tabs>
           </TabsContent>
-
-          <TabsContent value="moneySaver">
-            {filteredOffers.foodie.length === 0 && filteredOffers.mart.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-xl text-gray-600">
-                  No money saver offers available at the moment.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {[...filteredOffers.foodie, ...filteredOffers.mart]
-                  .map((offer) => {
-                    const isUpcoming = new Date(offer.fromTime) > new Date();
-                    const discount = Math.round(
-                      ((offer.originalPrice - offer.newPrice) / offer.originalPrice) * 100
-                    );
-                    const claimed = isOfferClaimed(offer.id);
-                    return (
-                      <Card
-                        key={offer.id}
-                        className="overflow-hidden hover:shadow-xl transition-shadow"
-                      >
-                        <Link href={`/offers/${offer.id}`}>
-                          <Image
-                            src={offer.dishImage}
-                            alt={offer.dishName}
-                            width={300}
-                            height={300}
-                            className="w-full h-48 object-cover"
-                          />
-                          <CardHeader>
-                            <div className="flex justify-between items-start">
-                              <div className="space-y-2">
-                                <CardTitle className="text-xl font-bold">
-                                  {offer.dishName}
-                                </CardTitle>
-                                <p className="text-base font-medium text-gray-700">
-                                  {offer.hotelName}
-                                </p>
-                              </div>
-                              <Badge variant="destructive" className="bg-orange-600">
-                                {discount}% OFF
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                        </Link>
-                        <CardContent>
-                          <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-500 line-through">
-                                ₹{offer.originalPrice.toFixed(2)}
-                              </span>
-                              <span className="text-2xl font-bold text-orange-600">
-                                ₹{offer.newPrice.toFixed(2)}
-                              </span>
-                            </div>
-
-                            <div className="space-y-3">
-                              <div className="flex justify-between">
-                                <div className="flex flex-col gap-3">
-                                  {!isUpcoming && (
-                                    <div className="flex items-center text-sm text-gray-500">
-                                      <Clock className="w-4 h-4 mr-2" />
-                                      <CountdownTimer
-                                        endTime={offer.toTime}
-                                        upcomming={false}
-                                      />
-                                    </div>
-                                  )}
-                                  <div className="flex items-center text-sm text-gray-500">
-                                    <MapPin className="w-4 h-4 mr-2" />
-                                    {offer.area}
-                                  </div>
-                                </div>
-                                <Share offerId={offer.id} />
-                              </div>
-                              <div className="flex gap-3">
-                                <div className="flex flex-wrap gap-2 mt-4">
-                                  <Badge
-                                    variant="secondary"
-                                    className="bg-orange-100 text-orange-800"
-                                  >
-                                    <Tag className="w-3 h-3 mr-1" />
-                                    {offer.itemsAvailable} items{" "}
-                                    {isUpcoming ? "left" : "available"}
-                                  </Badge>
-                                </div>
-                                {claimed && (
-                                  <div className="flex flex-wrap gap-2 mt-4">
-                                    <Badge
-                                      variant="secondary"
-                                      className="bg-green-600 text-white"
-                                    >
-                                      Claimed
-                                    </Badge>
-                                  </div>
-                                )}
-                                {offer.enquiries > 0 && (
-                                  <div className="flex flex-wrap gap-2 mt-4">
-                                    <Badge
-                                      variant="secondary"
-                                      className={
-                                        offer.enquiries > offer.itemsAvailable
-                                          ? "bg-red-600 text-white"
-                                          : "bg-orange-500 text-white"
-                                      }
-                                    >
-                                      {offer.enquiries > offer.itemsAvailable
-                                        ? "High Demand"
-                                        : "In Demand"}
-                                    </Badge>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex flex-col gap-3">
-                              {/* Claim Button */}
-                              <Button
-                                disabled={isUpcoming}
-                                onClick={
-                                  isUpcoming
-                                    ? undefined
-                                    : () => handleOfferClick(offer)
-                                }
-                                className={`w-full ${isUpcoming
-                                  ? "bg-gray-100 disabled:opacity-100 text-[#E63946] font-bold shadow-xl border border-gray-200"
-                                  : "bg-orange-600 hover:bg-orange-700"
-                                  }`}
-                              >
-                                {claimed ? (
-                                  "View Ticket"
-                                ) : isUpcoming ? (
-                                  <div className="">
-                                    Offer Activates in :{" "}
-                                    <CountdownTimer
-                                      endTime={offer.fromTime}
-                                      upcomming={true}
-                                    />
-                                  </div>
-                                ) : (
-                                  "Claim Offer"
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-              </div>
-            )}
-          </TabsContent>
-
         </Tabs>
-
-        {selectedOffer && (
-          <OfferTicket
-            isOpen={!!selectedOffer}
-            onClose={() => setSelectedOffer(null)}
-            offer={selectedOffer}
-            claimedOffer={
-              selectedOffer ? getClaimedOffer(selectedOffer.id) : undefined
-            }
-          />
-        )}
       </div>
+
+      {selectedOffer && (
+        <OfferTicket
+          isOpen={!!selectedOffer}
+          onClose={() => setSelectedOffer(null)}
+          offer={selectedOffer}
+          claimedOffer={
+            selectedOffer ? getClaimedOffer(selectedOffer.id) : undefined
+          }
+        />
+      )}
     </div>
   );
 }
