@@ -1,26 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, Tag, Loader2, Search } from "lucide-react";
-import { useOfferStore, type Offer } from "@/store/offerStore";
+import { Clock, MapPin, Tag } from "lucide-react";
+import { type Offer } from "@/store/offerStore";
 import { CountdownTimer } from "@/components/CountdownTimer";
-import { OfferTicket } from "@/components/OfferTicket";
-import { useClaimedOffersStore } from "@/store/claimedOffersStore";
-import { useLocationStore } from "@/store/locationStore";
-import { useAuthStore } from "@/store/authStore";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import Share from "@/components/Share";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 
