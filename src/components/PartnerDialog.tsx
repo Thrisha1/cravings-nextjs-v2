@@ -34,7 +34,7 @@ export function PartnerDialog() {
     location: '',
     email: '',
     password: '',
-    category: '',
+    category: 'hotel',
     phone: '',
   });
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +85,7 @@ export function PartnerDialog() {
               </div>
             )}
 
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label htmlFor="category" className="text-sm font-medium text-gray-700">
                 Category
               </Label>
@@ -101,7 +101,7 @@ export function PartnerDialog() {
                   <SelectItem value="supermarket">Supermarket</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </div> */}
 
             <div className="space-y-2">
               <Label htmlFor="hotelName" className="text-sm font-medium text-gray-700">

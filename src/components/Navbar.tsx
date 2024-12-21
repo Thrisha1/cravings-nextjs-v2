@@ -1,28 +1,14 @@
 "use client";
-import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
-} from "./ui/dialog";
-import { Input } from "./ui/input";
+import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { UtensilsCrossed, LogOut, Menu, X, Bell } from "lucide-react";
-import {
-  TooltipProvider,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "./ui/tooltip";
+import { UtensilsCrossed, LogOut, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "./ui/sheet";
 import { PartnerDialog } from "./PartnerDialog";
+import AskPhoneAndNameModal from "./AskPhoneAndNameModal";
 
 export function Navbar() {
   const router = useRouter();
@@ -30,46 +16,13 @@ export function Navbar() {
   const location = pathname.split("?")[0];
   const { user, userData, signOut, updateUserData } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
-  const [notificationPermission, setNotificationPermission] =
-    useState<NotificationPermission | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({ fullname: "", phone: "" });
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      setNotificationPermission(Notification.permission);
-    }
-
-    // Check if the user needs to provide full name and phone
-    if (user && userData && (!userData?.fullName || !userData?.phone)) {
-      console.log("user 2", userData);
+    if (user && userData && (!userData?.phone || !userData?.fullName)) {
       setShowModal(true);
     }
-  }, [user, userData ]);
-
-  const handleFormSubmit = () => {
-    const phoneRegex = /^\d{10}$/;
-    if (formData.fullname && phoneRegex.test(formData.phone)) {
-      if (user) {
-        try {
-          updateUserData(user.uid, {
-            fullName: formData.fullname,
-            phone: formData.phone,
-          });
-        } catch (error) {
-          console.error(error);
-        }
-      }
-      setShowModal(false);
-    } else {
-      alert("Please enter a valid 10-digit phone number.");
-    }
-  };
-
-  const requestNotificationPermission = async () => {
-    const permission = await Notification.requestPermission();
-    setNotificationPermission(permission);
-  };
+  }, [user, userData]);
 
   const NavLinks = () => (
     <>
@@ -129,24 +82,6 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-5">
-              {notificationPermission !== "granted" && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <div
-                        onClick={requestNotificationPermission}
-                        className="text-red-500 hover:text-gray-700 relative group"
-                      >
-                        <Bell className="h-5 w-5 animate-bounce group-hover:animate-none transition-all" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="text-gray-400">Enable notification</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-
               {!user && (
                 <Button
                   onClick={() => router.push("/login")}
@@ -200,44 +135,12 @@ export function Navbar() {
       </nav>
 
       {showModal && (
-        <Dialog open={showModal} onOpenChange={setShowModal}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="text-orange-600">
-                Complete Your Profile
-              </DialogTitle>
-              <DialogDescription>
-                Please provide your full name and phone number to continue.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Input
-                placeholder="Full Name"
-                value={formData.fullname}
-                className="focus-visible:ring-orange-600"
-                onChange={(e) =>
-                  setFormData({ ...formData, fullname: e.target.value })
-                }
-              />
-              <Input
-                placeholder="Phone Number"
-                value={formData.phone}
-                className="focus-visible:ring-orange-600"
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                className="bg-orange-600 hover:bg-orange-500"
-                onClick={handleFormSubmit}
-              >
-                Save
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <AskPhoneAndNameModal
+          setShowModal={setShowModal}
+          showModal={showModal}
+          updateUserData={updateUserData}
+          user={user}
+        />
       )}
     </>
   );
