@@ -12,9 +12,7 @@ interface LocationSelectionProps {
   locations: string[];
 }
 
-const LocationSelection: React.FC<LocationSelectionProps> = ({
-  locations,
-}) => {
+const LocationSelection: React.FC<LocationSelectionProps> = ({ locations }) => {
   const searchParams = useSearchParams();
   const location = searchParams.get("location");
   const router = useRouter();
@@ -26,21 +24,18 @@ const LocationSelection: React.FC<LocationSelectionProps> = ({
     } else {
       params.delete("location");
     }
-    
+
     window.scrollTo({ top: 0, behavior: "smooth" });
     router.replace("?" + params.toString());
-
   };
 
   return (
-    <div className="w-full md:w-64">
+    <div className="w-40 md:w-64">
       <Select
         value={location || "all"}
-        onValueChange={(value) =>
-          setLocation(value === "all" ? null : value)
-        }
+        onValueChange={(value) => setLocation(value === "all" ? null : value)}
       >
-        <SelectTrigger>
+        <SelectTrigger className="bg-white focus:ring-orange-600">
           <SelectValue placeholder="Select location" />
         </SelectTrigger>
         <SelectContent>

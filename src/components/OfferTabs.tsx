@@ -21,13 +21,13 @@ const OfferTabs = () => {
   };
 
   return (
-    <div className="w-full my-5">
+    <div className="w-full my-5 md:my-10">
       <Tabs
         onValueChange={handleValueChange}
         defaultValue={filter}
         className="w-full "
       >
-        <TabsList className="w-full h-fit p-2 m-0">
+        <TabsList className="w-full h-fit p-2 m-0 bg-orange-100">
           {tabs.map((tab) => (
             <TabsTrigger className="capitalize w-full " key={tab} value={tab}>
               {tab}

@@ -30,14 +30,14 @@ const SearchBox = () => {
   };
 
   return (
-    <div className="relative">
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+    <div className="relative group">
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-orange-600" />
       <Input
         type="text"
-        placeholder="Search dishes or hotels"
+        placeholder="Search Dishes or Hotels"
         value={query}
         onChange={handleInputChange}
-        className="pl-10 w-full"
+        className="pl-10 w-full bg-white group-focus-within:ring-orange-600"
       />
     </div>
   );
