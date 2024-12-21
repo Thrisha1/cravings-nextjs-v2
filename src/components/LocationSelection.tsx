@@ -16,7 +16,7 @@ const LocationSelection: React.FC<LocationSelectionProps> = ({
   locations,
 }) => {
   const searchParams = useSearchParams();
-  let location = searchParams.get("location");
+  const location = searchParams.get("location");
   const router = useRouter();
 
   const setLocation = (location: string | null) => {

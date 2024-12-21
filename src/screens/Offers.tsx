@@ -14,6 +14,11 @@ import OfferTabs from "@/components/OfferTabs";
 import OfferCard from "@/components/OfferCard";
 
 export default function Offers() {
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams?.get("query") || "";
+  const location = searchParams?.get("location") || "";
+  const activeTab = searchParams?.get("filter") || "all";
+
   const navigate = useRouter();
   const { user } = useAuthStore();
   const {
@@ -26,11 +31,6 @@ export default function Offers() {
   } = useOfferStore();
   const { isOfferClaimed, getClaimedOffer } = useClaimedOffersStore();
   const { locations } = useLocationStore();
-
-  const searchParams = useSearchParams();
-  const searchQuery = searchParams.get("query");
-  const location = searchParams.get("location");
-  const activeTab = searchParams.get("filter") || "all";
 
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
   const [filteredOffers, setFilteredOffers] = useState<Offer[]>([]);
@@ -63,7 +63,7 @@ export default function Offers() {
       return isValid && matchesLocation && matchesSearch;
     });
 
-    let sortedOffers = [...currentOffers];
+    const sortedOffers = [...currentOffers];
 
     if (activeTab === "popular") {
       sortedOffers.sort((a: Offer, b: Offer) => b.enquiries - a.enquiries);

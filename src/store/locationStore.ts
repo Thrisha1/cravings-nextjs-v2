@@ -4,6 +4,6 @@ interface LocationState {
   locations: string[];
 }
 
-export const useLocationStore = create<LocationState>((set) => ({
+export const useLocationStore = create<LocationState>(() => ({
   locations: ["kakkanad", "kalamassery", "edapally"],
 }));
