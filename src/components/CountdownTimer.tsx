@@ -37,7 +37,7 @@ export function CountdownTimer({ endTime, upcomming }: CountdownTimerProps) {
   }, [endTime]);
 
   if (timeLeft.days === 0 && timeLeft.hours === 0 && timeLeft.minutes === 0) {
-    return;
+    return <span>Calculating...</span>;
   }
 
   return (
