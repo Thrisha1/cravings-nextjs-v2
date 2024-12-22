@@ -161,6 +161,7 @@ export const useOfferStore = create<OfferState>((set) => {
         set({ error: null });
         const offerRef = doc(db, "offers", id);
         await deleteDoc(offerRef);
+        await revalidateOffer();
       } catch (error) {
         set({ error: (error as Error).message });
         throw error;
