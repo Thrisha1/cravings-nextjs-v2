@@ -53,16 +53,6 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
     console.log(showTicket);
   }, [showTicket]);
 
-  if (!offer) {
-    return (
-      <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 flex items-center justify-center">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg max-w-md text-center">
-          <p>Error loading offer details</p>
-        </div>
-      </div>
-    );
-  }
-
   const isUpcoming = new Date(offer.fromTime) > new Date();
   const discount = Math.round(
     ((offer.originalPrice - offer.newPrice) / offer.originalPrice) * 100
@@ -78,6 +68,8 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
               alt={offer.dishName}
               width={500}
               height={500}
+              priority={false}
+              quality={60}
               className="w-full h-64 object-cover"
             />
 

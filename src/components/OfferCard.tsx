@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Offer } from "@/store/offerStore";
@@ -5,7 +6,6 @@ import Image from "next/image";
 import { Clock, MapPin, UtensilsCrossed } from "lucide-react";
 import { CountdownTimer } from "./CountdownTimer";
 import DiscountBadge from "./DiscountBadge";
-import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 
 const OfferCard = ({
@@ -19,25 +19,13 @@ const OfferCard = ({
 }) => {
   const router = useRouter();
   return (
-    <motion.div
+    <div
+      className="cursor-pointer"
       onClick={() => router.push(`/offers/${offer.id}`)}
-      initial={{
-        opacity: 0,
-        y: 20,
-      }}
-      whileInView={{
-        opacity: 1,
-        y: 0,
-      }}
-      transition={{
-        type: "spring",
-        bounce: 0.4,
-        duration: 0.8,
-      }}
     >
       <Card
         key={offer.id}
-        className="overflow-hidden hover:shadow-xl transition-shadow relative"
+        className="overflow-hidden hover:shadow-xl transition-shadow relative h-full pb-1"
       >
         {/* image container  */}
         <div className="relative">
@@ -46,6 +34,8 @@ const OfferCard = ({
             alt={offer.dishName}
             width={300}
             height={300}
+            priority={false}
+            quality={60}
             className="w-full h-48 object-cover"
           />
 
@@ -159,7 +149,7 @@ const OfferCard = ({
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </div>
   );
 };
 

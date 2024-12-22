@@ -1,42 +1,39 @@
-import { rtdb } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import OfferDetail from "@/screens/OfferDetail";
 import { Offer } from "@/store/offerStore";
-import { get, ref } from "firebase/database";
+import { doc, getDoc } from "firebase/firestore";
 import { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import React from "react";
 
 type Props = {
   params: Promise<{ id: string }>;
 };
 
-const fetchOfferDetails = async (offerId: string) => {
-  try {
-    const offerRef = ref(rtdb, `offers/${offerId}`);
-    const snapshot = await get(offerRef);
-    if (snapshot.exists()) {
-      const offer = snapshot.val();
-      if (offer.toTime <= Date.now()) {
-        throw new Error("Offer expired.");
-      }
-      return { id: offerId, ...offer };
-    } else {
-      throw new Error("Offer not found.");
-    }
-  } catch (err) {
-    console.error(err);
-  }
-};
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const id = (await params).id;
-  const product = await fetchOfferDetails(id);
+  const { id } = await params;
+
+  const getOffer = unstable_cache(
+    async (id: string) => {
+      const offerDocRef = doc(db, "offers", id);
+      const offerDoc = await getDoc(offerDocRef);
+      if (!offerDoc.exists()) {
+        throw new Error("Offer not found");
+      }
+      const offer = { id: offerDoc.id, ...offerDoc.data() } as Offer;
+
+      console.log(offer);
+
+      return offer;
+    },
+    [id],
+    { tags: [id] }
+  );
+
+  const product = await getOffer(id);
 
   if (!product) {
-    return {
-      title: "Offer Not Found",
-      description: "Offer not found or expired.",
-    };
+    throw new Error("Offer not found");
   }
 
   return {
@@ -53,9 +50,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 const page = async ({ params }: Props) => {
   const offerId = (await params).id;
-  if (!offerId) redirect("/offers");
 
-  const offerData: Offer = await fetchOfferDetails(offerId);
+  const getOffer = unstable_cache(
+    async (id: string) => {
+      const offerDocRef = doc(db, "offers", id);
+      const offerDoc = await getDoc(offerDocRef);
+      if (!offerDoc.exists()) {
+        throw new Error("Offer not found");
+      }
+      const offer = { id: offerDoc.id, ...offerDoc.data() } as Offer;
+
+      console.log(offer);
+
+      return offer;
+    },
+    [offerId],
+    { tags: [offerId] }
+  );
+
+  const offerData: Offer = await getOffer(offerId);
 
   return <OfferDetail offer={offerData} />;
 };

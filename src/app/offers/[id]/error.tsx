@@ -1,12 +1,14 @@
 "use client";
-import Image from "next/image";
+import { UtensilsCrossed } from "lucide-react";
 import React from "react";
 
 const Error = () => {
   return (
-    <div>
-      <Image src="./icon-192x192.png" alt="404" width={300} height={300} />
-      <h1>Offer Not-Found/Expired</h1>
+    <div className="grid place-content-center w-full min-h-[80vh] opacity-70">
+      <UtensilsCrossed className="text-orange-600 h-40 w-40 justify-self-center" />
+      <h1 className="text-center mt-2 font-bold text-xl text-orange-600">
+        Offer not found / expired!
+      </h1>
     </div>
   );
 };

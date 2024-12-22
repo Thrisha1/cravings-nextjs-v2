@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { useRouter, useSearchParams } from "next/navigation";

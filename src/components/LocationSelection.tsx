@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import {
   Select,
@@ -7,12 +8,11 @@ import {
   SelectValue,
 } from "./ui/select";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useLocationStore } from "@/store/locationStore";
 
-interface LocationSelectionProps {
-  locations: string[];
-}
 
-const LocationSelection: React.FC<LocationSelectionProps> = ({ locations }) => {
+const LocationSelection= () => {
+  const { locations } = useLocationStore();
   const searchParams = useSearchParams();
   const location = searchParams.get("location");
   const router = useRouter();
