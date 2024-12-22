@@ -1,4 +1,4 @@
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import Offers from "@/screens/Offers";
 import { unstable_cache } from "next/cache";
 import React from "react";
@@ -10,8 +10,10 @@ type SearchParams = Promise<{ [key: string]: string | undefined }>
 
 const getOffers = unstable_cache(
   async () => {
+    const now = new Date().toString();
     const offersCollection = collection(db, "offers");
-    const querySnapshot = await getDocs(offersCollection);
+    const offersQuery = query(offersCollection, where("toTime", "<", now));
+    const querySnapshot = await getDocs(offersQuery);
     const offers: Offer[] = [];
     querySnapshot.forEach((doc) => {
       offers.push({ id: doc.id, ...doc.data() } as Offer);

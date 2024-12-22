@@ -2,7 +2,7 @@ import OfferLoadinPage from "@/components/OfferLoadinPage";
 import React from "react";
 
 const Loading = () => {
-  return <OfferLoadinPage message="Loading cravings...." />;
+  return <OfferLoadinPage message="Loading...." />;
 };
 
 export default Loading;

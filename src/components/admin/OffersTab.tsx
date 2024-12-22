@@ -1,27 +1,64 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useMenuStore } from '@/store/menuStore';
-import { useOfferStore } from '@/store/offerStore';
-import { useAuthStore } from '@/store/authStore';
+import { useEffect, useState } from "react";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useMenuStore } from "@/store/menuStore";
+import { Offer, useOfferStore } from "@/store/offerStore";
+import { useAuthStore } from "@/store/authStore";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export function OffersTab() {
   const { items } = useMenuStore();
-  const { offers, addOffer, deleteOffer } = useOfferStore();
-  const { userData } = useAuthStore();
+  const { addOffer, deleteOffer } = useOfferStore();
+  const { user, userData } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [newOffer, setNewOffer] = useState({
-    menuItemId: '',
-    newPrice: '',
-    itemsAvailable: '',
-    fromTime: '',
-    toTime: '',
+    menuItemId: "",
+    newPrice: "",
+    itemsAvailable: "",
+    fromTime: "",
+    toTime: "",
   });
+  const [offers, setOffers] = useState<Offer[]>([]);
+
+  const getUserOffers = async () => {
+    const now = new Date().toString();
+    const offersCollection = collection(db, "offers");
+    const offersQuery = query(
+      offersCollection,
+      where("hotelId", "==", user?.uid),
+      where("toTime", "<", now)
+    );
+    const querySnapshot = await getDocs(offersQuery);
+    const offers: Offer[] = [];
+    querySnapshot.forEach((doc) => {
+      offers.push({ id: doc.id, ...doc.data() } as Offer);
+    });
+    setOffers(offers);
+  };
+
+  useEffect(() => {
+    (async () => {
+      await getUserOffers();
+    })();
+  }, [user, getUserOffers]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,10 +69,16 @@ export function OffersTab() {
       itemsAvailable: parseInt(newOffer.itemsAvailable),
       fromTime: new Date(newOffer.fromTime),
       toTime: new Date(newOffer.toTime),
-      category: userData?.category || 'hotel',
+      category: userData?.category || "hotel",
     });
 
-    setNewOffer({ menuItemId: '', newPrice: '', itemsAvailable: '', fromTime: '', toTime: '' });
+    setNewOffer({
+      menuItemId: "",
+      newPrice: "",
+      itemsAvailable: "",
+      fromTime: "",
+      toTime: "",
+    });
     setIsOpen(false);
   };
 
@@ -58,7 +101,9 @@ export function OffersTab() {
                 <Label htmlFor="menuItem">Select Menu Item</Label>
                 <Select
                   value={newOffer.menuItemId}
-                  onValueChange={(value) => setNewOffer({ ...newOffer, menuItemId: value })}
+                  onValueChange={(value) =>
+                    setNewOffer({ ...newOffer, menuItemId: value })
+                  }
                 >
                   <SelectTrigger id="menuItem">
                     <SelectValue placeholder="Select a product" />
@@ -80,18 +125,24 @@ export function OffersTab() {
                   type="number"
                   placeholder="Enter new price"
                   value={newOffer.newPrice}
-                  onChange={(e) => setNewOffer({ ...newOffer, newPrice: e.target.value })}
+                  onChange={(e) =>
+                    setNewOffer({ ...newOffer, newPrice: e.target.value })
+                  }
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="itemsAvailable">Number of Items Available</Label>
+                <Label htmlFor="itemsAvailable">
+                  Number of Items Available
+                </Label>
                 <Input
                   id="itemsAvailable"
                   type="number"
                   placeholder="Enter quantity"
                   value={newOffer.itemsAvailable}
-                  onChange={(e) => setNewOffer({ ...newOffer, itemsAvailable: e.target.value })}
+                  onChange={(e) =>
+                    setNewOffer({ ...newOffer, itemsAvailable: e.target.value })
+                  }
                 />
               </div>
 
@@ -101,7 +152,9 @@ export function OffersTab() {
                   id="fromTime"
                   type="datetime-local"
                   value={newOffer.fromTime}
-                  onChange={(e) => setNewOffer({ ...newOffer, fromTime: e.target.value })}
+                  onChange={(e) =>
+                    setNewOffer({ ...newOffer, fromTime: e.target.value })
+                  }
                 />
               </div>
 
@@ -111,7 +164,9 @@ export function OffersTab() {
                   id="toTime"
                   type="datetime-local"
                   value={newOffer.toTime}
-                  onChange={(e) => setNewOffer({ ...newOffer, toTime: e.target.value })}
+                  onChange={(e) =>
+                    setNewOffer({ ...newOffer, toTime: e.target.value })
+                  }
                 />
               </div>
 
@@ -125,6 +180,8 @@ export function OffersTab() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {offers.map((offer) => {
+          console.log(offer);
+
           const menuItem = items.find((item) => item.id === offer.menuItemId);
           if (!menuItem) return null;
 

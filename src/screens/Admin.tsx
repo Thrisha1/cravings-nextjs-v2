@@ -5,28 +5,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MenuTab } from "@/components/admin/MenuTab";
 import { OffersTab } from "@/components/admin/OffersTab";
 import { useMenuStore } from "@/store/menuStore";
-import { useOfferStore } from "@/store/offerStore";
 import { useAuthStore } from "@/store/authStore";
 
 export default function Admin() {
   const { fetchMenu, loading: menuLoading } = useMenuStore();
-  const { subscribeToOffers, unsubscribeFromOffers } = useOfferStore();
   const { user, userData, loading: authLoading, fetchUserData } = useAuthStore();
 
   useEffect(() => {
     if (user) {
-      fetchUserData(user.uid); // Fetch user data when user is logged in
+      fetchUserData(user.uid);
     }
 
-    fetchMenu(); // Fetch menu data
-    subscribeToOffers();
+    fetchMenu(); 
+  }, [user, fetchMenu, fetchUserData]);
 
-    return () => {
-      unsubscribeFromOffers();
-    };
-  }, [user, fetchMenu, fetchUserData, subscribeToOffers, unsubscribeFromOffers]);
-
-  // Show loading spinner if auth or menu data is loading
   if (authLoading || menuLoading) {
     return (
       <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 flex justify-center items-center">
@@ -78,7 +70,7 @@ export default function Admin() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100">
       <div className="max-w-7xl mx-auto p-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8">
+        <h1 className="text-4xl font-bold text-gray-900 capitalize mb-8">
           {userData.hotelName} Admin Dashboard
         </h1>
 
