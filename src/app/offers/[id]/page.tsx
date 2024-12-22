@@ -19,7 +19,7 @@ const fetchOfferDetails = async (offerId: string) => {
       if (offer.toTime <= Date.now()) {
         throw new Error("Offer expired.");
       }
-      return offer;
+      return { id: offerId, ...offer };
     } else {
       throw new Error("Offer not found.");
     }
@@ -28,12 +28,10 @@ const fetchOfferDetails = async (offerId: string) => {
   }
 };
 
-export async function generateMetadata(
-  { params }: Props
-): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const id = (await params).id;
   const product = await fetchOfferDetails(id);
-  
+
   if (!product) {
     return {
       title: "Offer Not Found",

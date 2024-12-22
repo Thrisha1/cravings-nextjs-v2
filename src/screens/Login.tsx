@@ -35,7 +35,7 @@ export default function Login() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
         <div className="flex flex-col items-center mb-8">
           <UtensilsCrossed className="h-12 w-12 text-orange-600 mb-4" />
-          <h1 className="text-3xl font-bold text-gray-900">Welcome to Cravings</h1>
+          <h1 className="text-3xl font-bold text-gray-900 text-center">Welcome to Cravings</h1>
           <p className="text-gray-600 mt-2">
             {isSignUp ? 'Create an account' : 'Sign in to your account'}
           </p>

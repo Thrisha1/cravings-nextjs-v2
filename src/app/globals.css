@@ -13,6 +13,12 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html,
+body,
+* {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -84,4 +90,8 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.badge-clip {
+  clip-path: polygon(100% 1%, 100% 100%, 50% 88%, 0 100%, 0 0);
 }

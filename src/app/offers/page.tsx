@@ -1,8 +1,13 @@
+import OfferLoadinPage from "@/components/OfferLoadinPage";
 import Offers from "@/screens/Offers";
-import React from "react";
+import React, { Suspense } from "react";
 
 const page = () => {
-  return <Offers />;
+  return (
+    <Suspense fallback={<OfferLoadinPage />}>
+      <Offers />
+    </Suspense>
+  );
 };
 
 export default page;

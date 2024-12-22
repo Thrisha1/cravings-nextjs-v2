@@ -7,9 +7,9 @@ interface CountdownTimerProps {
 
 export function CountdownTimer({ endTime, upcomming }: CountdownTimerProps) {
   const [timeLeft, setTimeLeft] = useState({
+    days: 0,
     hours: 0,
     minutes: 0,
-    seconds: 0,
   });
 
   useEffect(() => {
@@ -20,32 +20,33 @@ export function CountdownTimer({ endTime, upcomming }: CountdownTimerProps) {
 
       if (distance <= 0) {
         clearInterval(timer);
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0 });
+        setTimeLeft({ days: 0, hours: 0, minutes: 0 });
         return;
       }
 
-      const hours = Math.floor(distance / (1000 * 60 * 60));
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      );
       const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-      setTimeLeft({ hours, minutes, seconds });
+      setTimeLeft({ days, hours, minutes });
     }, 1000);
 
     return () => clearInterval(timer);
   }, [endTime]);
 
-  if (
-    timeLeft.hours === 0 &&
-    timeLeft.minutes === 0 &&
-    timeLeft.seconds === 0
-  ) {
-    return <span className="text-red-600">Expired</span>;
+  if (timeLeft.days === 0 && timeLeft.hours === 0 && timeLeft.minutes === 0) {
+    return <span>Calculating...</span>;
   }
 
   return (
     <span>
-      <span className="">{timeLeft.hours}h {timeLeft.minutes}m {timeLeft.seconds}s{" "}</span>
-      {!upcomming && <span>remaining</span>}
+      {timeLeft.days > 0 && <span>{timeLeft.days}d </span>}
+      <span>
+        {timeLeft.hours}h {timeLeft.days > 0 ? null : timeLeft.minutes + "m"}
+      </span>
+      {!upcomming && <span> remaining</span>}
     </span>
   );
 }
