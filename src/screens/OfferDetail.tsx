@@ -7,40 +7,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useEffect, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, Tag, UtensilsCrossed } from "lucide-react";
 import { Clock, MapPin, Tag, UtensilsCrossed } from "lucide-react";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { useAuthStore } from "@/store/authStore";
 import { OfferTicket } from "@/components/OfferTicket";
 import Share from "@/components/Share";
 import { Offer, useOfferStore } from "@/store/offerStore";
-import { Offer, useOfferStore } from "@/store/offerStore";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import DiscountBadge from "@/components/DiscountBadge";
-import { useClaimedOffersStore } from "@/store/claimedOffersStore";
-import DiscountBadge from "@/components/DiscountBadge";
 
-export default function OfferDetail({ offer }: { offer: Offer }) {
 export default function OfferDetail({ offer }: { offer: Offer }) {
   const { id: offerId } = useParams();
   const navigate = useRouter();
   const { user } = useAuthStore();
   const [showTicket, setShowTicket] = useState(false);
-  const [isCalimed, setClaimed] = useState(false);
-  const { isOfferClaimed, getClaimedOffer } = useClaimedOffersStore();
-  const { incrementEnquiry } = useOfferStore();
   const [isCalimed, setClaimed] = useState(false);
   const { isOfferClaimed, getClaimedOffer } = useClaimedOffersStore();
   const { incrementEnquiry } = useOfferStore();
@@ -103,17 +87,11 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
             <div className="flex justify-between items-start">
               <div className="space-y-4">
                 <CardTitle className="text-3xl font-bold">
-                <CardTitle className="text-3xl font-bold">
                   {offer.dishName}
                 </CardTitle>
                 {offer.description && (
                   <CardDescription>{offer.description}</CardDescription>
-                  <CardDescription>{offer.description}</CardDescription>
                 )}
-                <p className="text-lg text-gray-700 flex items-center gap-2">
-                  <UtensilsCrossed />
-                  <span>{offer.hotelName}</span>
-                </p>
                 <p className="text-lg text-gray-700 flex items-center gap-2">
                   <UtensilsCrossed />
                   <span>{offer.hotelName}</span>
@@ -126,12 +104,10 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
               <div className="space-y-3">
                 {!isUpcoming && (
                   <div className="flex items-center text-lg text-gray-500">
-                  <div className="flex items-center text-lg text-gray-500">
                     <Clock className="w-4 h-4 mr-2" />
                     <CountdownTimer endTime={offer.toTime} upcomming={false} />
                   </div>
                 )}
-                <div className="flex items-center text-lg text-gray-500">
                 <div className="flex items-center text-lg text-gray-500">
                   <MapPin className="w-4 h-4 mr-2" />
                   {offer.area}
@@ -172,18 +148,9 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
                       ? () => setShowTicket(true)
                       : handleClaimOffer
                   }
-                  onClick={
-                    isUpcoming
-                      ? undefined
-                      : isCalimed
-                      ? () => setShowTicket(true)
-                      : handleClaimOffer
-                  }
                   className={`w-full py-3 text-lg font-semibold transition-all ${
                     isUpcoming
                       ? "bg-gray-100 text-[#E63946] shadow-xl border border-gray-200"
-                      : isCalimed
-                      ? "bg-green-600 hover:bg-green-700"
                       : isCalimed
                       ? "bg-green-600 hover:bg-green-700"
                       : "bg-orange-600 hover:bg-orange-700"
@@ -197,8 +164,6 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
                         upcomming={true}
                       />
                     </>
-                  ) : isCalimed ? (
-                    "View Ticket"
                   ) : isCalimed ? (
                     "View Ticket"
                   ) : (
@@ -216,7 +181,6 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
             isOpen={showTicket}
             onClose={() => setShowTicket(false)}
             offer={offer}
-            claimedOffer={getClaimedOffer(offer.id)}
             claimedOffer={getClaimedOffer(offer.id)}
           />
         )}
