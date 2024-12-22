@@ -54,16 +54,21 @@ export function OffersTab() {
     setOffers(offers);
   };
 
+  const handleOfferDelete = (id: string) => async () => {
+    await deleteOffer(id);
+    await getUserOffers();
+  };
+
   useEffect(() => {
     (async () => {
       await getUserOffers();
     })();
   }, [user, getUserOffers]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    addOffer({
+    await addOffer({
       menuItemId: newOffer.menuItemId,
       newPrice: parseFloat(newOffer.newPrice),
       itemsAvailable: parseInt(newOffer.itemsAvailable),
@@ -80,6 +85,7 @@ export function OffersTab() {
       toTime: "",
     });
     setIsOpen(false);
+    await getUserOffers();
   };
 
   return (
@@ -208,7 +214,7 @@ export function OffersTab() {
                   <Button
                     variant="destructive"
                     className="w-full mt-2"
-                    onClick={() => deleteOffer(offer.id)}
+                    onClick={handleOfferDelete(offer.id)}
                   >
                     Delete Offer
                   </Button>
