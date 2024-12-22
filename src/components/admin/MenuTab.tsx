@@ -211,7 +211,7 @@ export function MenuTab() {
               className="w-full h-48 object-cover"
             />
             <CardHeader>
-              <CardTitle>{item.id}</CardTitle>
+              <CardTitle>{item.name}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">₹{item.price.toFixed(2)}</p>
