@@ -5,7 +5,8 @@ import React from "react";
 import { Offer } from "@/store/offerStore";
 import { db } from "@/lib/firebase";
 
-type SearchParams = { [key: string]: string | undefined };
+type SearchParams = Promise<{ [key: string]: string | undefined }>
+
 
 const getOffers = unstable_cache(
   async () => {
@@ -28,9 +29,9 @@ const filterAndSortOffers = async ({
   location = null,
 }: {
   offers: Offer[];
-  activeTab: string | undefined;
-  searchQuery: string | undefined;
-  location: string | null | undefined;
+  activeTab?: string;
+  searchQuery?: string;
+  location?: string | null;
 }) => {
   const currentOffers = offers.filter((offer) => {
     const isValid = new Date(offer.toTime) > new Date();
@@ -65,12 +66,13 @@ const filterAndSortOffers = async ({
   return sortedOffers;
 };
 
-const page = async ({ searchParams }: { searchParams: SearchParams }) => {
-  const {
-    query: searchQuery,
-    filter: activeTab,
-    location,
-  } = await searchParams;
+const page = async (props: {
+  searchParams: SearchParams
+}) => {
+
+  const searchParams = await props.searchParams
+  const { query: searchQuery, filter: activeTab, location } = searchParams;
+
   const offers: Offer[] = await getOffers();
   const filteredOffers = await filterAndSortOffers({
     offers,
@@ -79,11 +81,7 @@ const page = async ({ searchParams }: { searchParams: SearchParams }) => {
     location,
   });
 
-  return (
-    <>
-      <Offers offers={filteredOffers} />
-    </>
-  );
+  return <Offers offers={filteredOffers} />;
 };
 
 export default page;
