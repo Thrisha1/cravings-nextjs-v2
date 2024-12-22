@@ -180,8 +180,6 @@ export function OffersTab() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {offers.map((offer) => {
-          console.log(offer);
-
           const menuItem = items.find((item) => item.id === offer.menuItemId);
           if (!menuItem) return null;
 

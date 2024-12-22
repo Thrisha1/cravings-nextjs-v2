@@ -22,8 +22,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       }
       const offer = { id: offerDoc.id, ...offerDoc.data() } as Offer;
 
-      console.log(offer);
-
       return offer;
     },
     [id],
@@ -59,8 +57,6 @@ const page = async ({ params }: Props) => {
         throw new Error("Offer not found");
       }
       const offer = { id: offerDoc.id, ...offerDoc.data() } as Offer;
-
-      console.log(offer);
 
       return offer;
     },

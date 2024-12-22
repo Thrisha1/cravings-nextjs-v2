@@ -49,10 +49,6 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
     setClaimed(isCalimed);
   }, [offer.id, isOfferClaimed]);
 
-  useEffect(() => {
-    console.log(showTicket);
-  }, [showTicket]);
-
   const isUpcoming = new Date(offer.fromTime) > new Date();
   const discount = Math.round(
     ((offer.originalPrice - offer.newPrice) / offer.originalPrice) * 100
