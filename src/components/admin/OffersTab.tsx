@@ -64,7 +64,7 @@ export function OffersTab() {
     (async () => {
       await getUserOffers();
     })();
-  }, [user, getUserOffers]);
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
