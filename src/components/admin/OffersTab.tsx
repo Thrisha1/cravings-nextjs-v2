@@ -37,6 +37,7 @@ export function OffersTab() {
     toTime: "",
   });
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [isAdding, setAdding] = useState(false);
 
   const getUserOffers = async () => {
     const now = new Date().toString();
@@ -67,7 +68,7 @@ export function OffersTab() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    setAdding(true);
     await addOffer({
       menuItemId: newOffer.menuItemId,
       newPrice: parseFloat(newOffer.newPrice),
@@ -85,6 +86,7 @@ export function OffersTab() {
       toTime: "",
     });
     setIsOpen(false);
+    setAdding(false);
     await getUserOffers();
   };
 
@@ -176,8 +178,8 @@ export function OffersTab() {
                 />
               </div>
 
-              <Button type="submit" className="w-full">
-                Create Offer
+              <Button disabled={isAdding} type="submit" className="w-full bg-orange-600">
+                {isAdding ? "Creating..." : "Create Offer"}
               </Button>
             </form>
           </DialogContent>

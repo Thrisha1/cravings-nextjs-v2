@@ -128,8 +128,7 @@ export const useOfferStore = create<OfferState>((set) => {
           throw new Error("Menu item not found");
         }
 
-        const offersRef = collection(db, "offers");
-        await addDoc(offersRef, {
+        const offerData = {
           ...offer,
           hotelId: user.uid,
           hotelName: userData.hotelName,
@@ -144,9 +143,21 @@ export const useOfferStore = create<OfferState>((set) => {
           fromTime: offer.fromTime.toISOString(),
           toTime: offer.toTime.toISOString(),
           createdAt: new Date().toISOString(),
-        });
+        };
+
+        const offersRef = collection(db, "offers");
+        const addedOffer = await addDoc(offersRef, offerData);
 
         await revalidateOffer();
+        await fetch(`${process.env.NEXT_PUBLIC_WWJS_API_URL}/send-message`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            offer: { id: addedOffer.id, ...offerData },
+          }),
+        });
       } catch (error) {
         set({ error: (error as Error).message });
         throw error;
