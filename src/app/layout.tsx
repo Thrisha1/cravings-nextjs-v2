@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script"; // Import Script for Google Analytics
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
+import Snow from "@/components/Snow";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,13 +18,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Cravings",
   description: "Find the best food deals in your area",
-  icons: ["/icon-192x192.png", "/icon-512x512.png", "/icon-64x64.png"],
+  icons: ["/icon-64x64_christmas.png"],
   metadataBase: new URL("http://cravings.vercel.app"),
   openGraph: {
     title: "Cravings",
     description: "Find the best food deals in your area",
     type: "website",
-    images: ["/ogImage.jpeg"],
+    images: ["/ogImage_christmas.jpeg"],
   },
 };
 
@@ -56,6 +57,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Snow />
         <Navbar />
         {children}
       </body>

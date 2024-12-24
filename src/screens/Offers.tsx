@@ -1,15 +1,28 @@
-
 import { type Offer } from "@/store/offerStore";
 import SearchBox from "@/components/SearchBox";
 import LocationSelection from "@/components/LocationSelection";
 import OfferTabs from "@/components/OfferTabs";
 import OfferCard from "@/components/OfferCard";
 import NoOffersFound from "@/components/NoOffersFound";
+import Image from "next/image";
 
 export default async function Offers({ offers }: { offers: Offer[] }) {
-
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 px-3 py-3 relative pb-10">
+      {/* christmas lights  */}
+      <div className="absolute top-0 gap-7 left-0 flex items-center max-w-screen overflow-hidden pointer-events-none">
+        {[...Array(6)].map((_, i) => (
+          <Image
+            key={i}
+            src="/christmas-lights.png"
+            alt="christmas lights"
+            width={400}
+            height={400}
+            className="scale-[110%]"
+          />
+        ))}
+      </div>
+
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-start md:items-center gap-3 my-4">
           <div className="flex flex-col">
@@ -17,7 +30,7 @@ export default async function Offers({ offers }: { offers: Offer[] }) {
               Today&apos;s Special Offers
             </h1>
           </div>
-          <LocationSelection/>
+          <LocationSelection />
         </div>
 
         <SearchBox />

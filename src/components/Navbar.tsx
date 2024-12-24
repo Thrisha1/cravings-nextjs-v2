@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { PartnerDialog } from "./PartnerDialog";
 import AskPhoneAndNameModal from "./AskPhoneAndNameModal";
+import Image from "next/image";
 
 export function Navbar() {
   const router = useRouter();
@@ -75,9 +76,19 @@ export function Navbar() {
             <div className="flex items-center">
               <Link href="/offers" className="flex items-center space-x-2">
                 <UtensilsCrossed className="h-6 w-6 text-orange-600" />
-                <span className="text-xl font-bold text-gray-900">
-                  Cravings
-                </span>
+
+                <div className="relative">
+                  <span className="text-xl font-bold text-gray-900">
+                    Cravings
+                  </span>
+                  <Image
+                    src={"/christmas-hat.webp"}
+                    alt="christmas hat"
+                    width={30}
+                    height={30}
+                    className="absolute -top-2 -left-4 "
+                  />
+                </div>
               </Link>
             </div>
 
