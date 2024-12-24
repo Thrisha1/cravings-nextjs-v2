@@ -38,6 +38,7 @@ export function OffersTab() {
   });
   const [offers, setOffers] = useState<Offer[]>([]);
   const [isAdding, setAdding] = useState(false);
+  const [isDeleting, setDeleting] = useState(false);
 
   const getUserOffers = async () => {
     const now = new Date().toString();
@@ -56,8 +57,10 @@ export function OffersTab() {
   };
 
   const handleOfferDelete = (id: string) => async () => {
+    setDeleting(true);
     await deleteOffer(id);
     await getUserOffers();
+    setDeleting(false);
   };
 
   useEffect(() => {
@@ -178,7 +181,11 @@ export function OffersTab() {
                 />
               </div>
 
-              <Button disabled={isAdding} type="submit" className="w-full bg-orange-600">
+              <Button
+                disabled={isAdding}
+                type="submit"
+                className="w-full bg-orange-600"
+              >
                 {isAdding ? "Creating..." : "Create Offer"}
               </Button>
             </form>
@@ -214,11 +221,14 @@ export function OffersTab() {
                     Created At: {new Date(offer.createdAt).toLocaleString()}
                   </p>
                   <Button
+                    disabled={isDeleting}
                     variant="destructive"
                     className="w-full mt-2"
-                    onClick={handleOfferDelete(offer.id)}
+                    onClick={
+                      isDeleting ? undefined : handleOfferDelete(offer.id)
+                    }
                   >
-                    Delete Offer
+                    {isDeleting ? "Deleting..." : "Delete Offer"}
                   </Button>
                 </div>
               </CardContent>
