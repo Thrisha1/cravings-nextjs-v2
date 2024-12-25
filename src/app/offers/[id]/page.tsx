@@ -65,7 +65,7 @@ const page = async ({ params }: Props) => {
   );
 
   const offerData: Offer = await getOffer(offerId);
-
+  
   return <OfferDetail offer={offerData} />;
 };
 

@@ -19,6 +19,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import DiscountBadge from "@/components/DiscountBadge";
+import ScanButton from "@/components/ScanButton";
 
 export default function OfferDetail({ offer }: { offer: Offer }) {
   const { id: offerId } = useParams();
@@ -180,6 +181,7 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
             claimedOffer={getClaimedOffer(offer.id)}
           />
         )}
+
       </div>
     </div>
   );

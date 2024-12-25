@@ -12,20 +12,22 @@ const OfferCard = ({
   offer,
   discount,
   isUpcoming,
+  onClick,
 }: {
   offer: Offer;
   discount: number;
   isUpcoming: boolean;
+  onClick?: any;
 }) => {
   const router = useRouter();
   return (
     <div
-      className="cursor-pointer"
-      onClick={() => router.push(`/offers/${offer.id}`)}
+      className="cursor-pointer group-active:scale-95 h-full transition-all"
+      onClick={onClick ? onClick : () => router.push(`/offers/${offer.id}`)}
     >
       <Card
         key={offer.id}
-        className="overflow-hidden hover:shadow-xl transition-shadow relative h-full pb-1"
+        className="overflow-hidden hover:shadow-xl relative h-full pb-1 group-active:bg-orange-200 transition-all"
       >
         {/* image container  */}
         <div className="relative">
