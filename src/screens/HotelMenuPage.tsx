@@ -1,9 +1,7 @@
 "use client";
 import OfferCard from "@/components/OfferCard";
 import React, { useState } from "react";
-import Offers from "./Offers";
 import NoOffersFound from "@/components/NoOffersFound";
-import OfferTabs from "@/components/OfferTabs";
 import SearchBox from "@/components/SearchBox";
 import {
   Drawer,
@@ -17,18 +15,21 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { Offer } from "@/store/offerStore";
+import { UserData } from "@/store/authStore";
+
 
 const HotelMenuPage = ({
   offers,
   hoteldata,
 }: {
-  offers: any;
-  hoteldata: any;
+  offers: Offer[];
+  hoteldata: UserData;
 }) => {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<Offer[]>([]);
   const [totalPrice, setTotalPrice] = useState<number>(0);
 
-  const addItems = (item: any) => {
+  const addItems = (item: Offer) => {
     setItems((prev) => {
       const existingItemIndex = prev.findIndex((i) => i.id === item.id); // Assuming each item has a unique `id`.
 
@@ -72,7 +73,7 @@ const HotelMenuPage = ({
               <>
                 {/* offer list  */}
                 <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
-                  {offers.map((offer: any) => {
+                  {offers.map((offer: Offer) => {
                     const discount = Math.round(
                       ((offer.originalPrice - offer.newPrice) /
                         offer.originalPrice) *
@@ -125,7 +126,7 @@ const HotelMenuPage = ({
                   </DrawerDescription>
                 </DrawerHeader>
                 <main className="px-5 py-10 grid gap-3 max-h-[60vh] overflow-scroll">
-                  {items.map((item: any) => (
+                  {items.map((item: Offer) => (
                     <div
                       key={`${item.id}_checkout_item`}
                       className="flex items-center justify-between gap-3"
@@ -143,7 +144,7 @@ const HotelMenuPage = ({
                       </p>
                       <div className="text-center">
                         <p className="font-semibold">
-                          ₹{item.newPrice * item.qty}
+                          ₹{item.newPrice * (item.qty ?? 1)}
                         </p>
                         <p className="text-[12px] text-gray-400">
                           QTY : {item.qty}

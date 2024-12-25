@@ -10,12 +10,14 @@ import {
 } from "firebase/firestore";
 import { unstable_cache } from "next/cache";
 import React from "react";
+import { Offer } from "@/store/offerStore";
+import { UserData } from "@/store/authStore";
 
-const page = async ({
-  searchParams,
-}: {
-  searchParams: { id: string | undefined; query: string | undefined };
-}) => {
+type SearchParams = Promise<{ [key: string]: string | undefined }>;
+
+const page = async (props: { searchParams: SearchParams }) => {
+  
+  const searchParams = await props.searchParams;
   const { id, query: search } = searchParams;
 
   const getHotelOffers = unstable_cache(
@@ -26,10 +28,10 @@ const page = async ({
           where("hotelId", "==", id)
         );
         const offers = await getDocs(offersQuery);
-        const offersData = offers.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const offersData = offers.docs.map((doc) => {
+          const data = doc.data();
+          return data as Offer;
+        });
         return offersData;
       } catch (error) {
         console.error(error);
@@ -49,7 +51,7 @@ const page = async ({
         const user = await getDoc(usersCollection);
         const userData = user.data();
 
-        return userData;
+        return userData as UserData;
       } catch (error) {
         console.error("Error fetching hoteldata:", error);
         return null;
@@ -69,7 +71,7 @@ const page = async ({
   }
 
   // Filter offers based on the search query
-  const filteredOffers = search
+  const filteredOffers: Offer[] = search
     ? offers.filter((offer) =>
         Object.values(offer).some((value) =>
           String(value).toLowerCase().includes(search.trim().toLowerCase())

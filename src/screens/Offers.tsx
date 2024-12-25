@@ -5,7 +5,6 @@ import OfferTabs from "@/components/OfferTabs";
 import OfferCard from "@/components/OfferCard";
 import NoOffersFound from "@/components/NoOffersFound";
 import Image from "next/image";
-import ScanButton from "@/components/ScanButton";
 
 export default async function Offers({ offers }: { offers: Offer[] }) {
   return (

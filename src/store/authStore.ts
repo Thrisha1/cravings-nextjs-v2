@@ -9,7 +9,7 @@ import {
 import { doc, setDoc, getDoc, updateDoc, getFirestore } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
 
-interface UserData {
+export interface UserData {
   email: string;
   role: 'user' | 'hotel' | 'superadmin';
   fullName?: string;

@@ -17,7 +17,7 @@ const OfferCard = ({
   offer: Offer;
   discount: number;
   isUpcoming: boolean;
-  onClick?: any;
+  onClick?: ()=>void;
 }) => {
   const router = useRouter();
   return (
