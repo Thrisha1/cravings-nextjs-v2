@@ -16,7 +16,6 @@ import { UserData } from "@/store/authStore";
 type SearchParams = Promise<{ [key: string]: string | undefined }>;
 
 const page = async (props: { searchParams: SearchParams }) => {
-  
   const searchParams = await props.searchParams;
   const { id, query: search } = searchParams;
 
@@ -66,22 +65,33 @@ const page = async (props: { searchParams: SearchParams }) => {
   const offers = id ? await getHotelOffers(id) : null;
   const hoteldata = id ? await getHotelData(id) : null;
 
-  if (!offers || !hoteldata) {
+  if (!hoteldata) {
     throw new Error("Hotel not found!");
   }
 
   const menuItems = hoteldata?.menu || [];
 
   // Filter offers based on the search query
-  const filteredOffers: Offer[] = search
-    ? offers.filter((offer) =>
-        Object.values(offer).some((value) =>
-          String(value).toLowerCase().includes(search.trim().toLowerCase())
-        )
-      )
-    : offers;
 
-  return <HotelMenuPage offers={filteredOffers} hoteldata={hoteldata} menu={menuItems} />;
+  let filteredOffers: Offer[] = [];
+
+  if (offers) {
+    filteredOffers = search
+      ? offers.filter((offer) =>
+          Object.values(offer).some((value) =>
+            String(value).toLowerCase().includes(search.trim().toLowerCase())
+          )
+        )
+      : offers;
+  }
+
+  return (
+    <HotelMenuPage
+      offers={filteredOffers}
+      hoteldata={hoteldata}
+      menu={menuItems}
+    />
+  );
 };
 
 export default page;

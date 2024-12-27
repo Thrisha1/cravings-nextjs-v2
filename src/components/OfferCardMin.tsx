@@ -27,7 +27,7 @@ const OfferCardMin = ({
         {/* image container  */}
         <div className="relative">
           <Image
-            src={offer.dishImage}
+            src={offer.dishImage !== "" ? offer.dishImage : "/image_placeholder.webp"}
             alt={offer.dishName}
             width={300}
             height={300}

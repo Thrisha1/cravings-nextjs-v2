@@ -74,8 +74,8 @@ const HotelMenuPage = ({
       {/* banner Image  */}
       <div className="w-screen h-[200px] absolute top-0 z-0">
         <Image
-          src={offers[0].dishImage}
-          alt={offers[0].dishName}
+          src={offers[0]?.dishImage ?? menu[0].image}
+          alt={offers[0]?.dishName ?? menu[0].name}
           fill
           className="w-auto h-auto object-cover"
         />
@@ -88,7 +88,7 @@ const HotelMenuPage = ({
         {/* hotel name  */}
         <h1 className="text-lg relative flex lg:items-center max-w-[50%] md:text-3xl font-semibold py-5 md:py-10 capitalize">
           <span>{hoteldata.hotelName}</span>
-          <VerifiedIcon className="lg:static absolute bottom-6 right-0 translate-x-3 text-green-600" />
+          <VerifiedIcon className="ml-2 text-green-600" />
         </h1>
 
         <SearchBox />
@@ -116,7 +116,7 @@ const HotelMenuPage = ({
                         <OfferCardMin
                           discount={discount}
                           offer={offer}
-                          onClick={() => addItems(offer)}
+                          // onClick={() => addItems(offer)}
                         />
                       </div>
                     );
@@ -157,10 +157,10 @@ const HotelMenuPage = ({
       </div>
 
       {/* bottom tab  */}
-      <div className="bg-white rounded-t-xl lg:max-w-[70vw] left-1/2 -translate-x-1/2 w-full min-h-[70px] fixed bottom-0 shadow-md shadow-black flex items-center justify-between gap-2 px-5 py-4 z-[50]">
+      {/* <div className="bg-white rounded-t-xl lg:max-w-[70vw] left-1/2 -translate-x-1/2 w-full min-h-[70px] fixed bottom-0 shadow-md shadow-black flex items-center justify-between gap-2 px-5 py-4 z-[50]">
         {items.length > 0 ? (
           <>
-            {/* items and total price  */}
+
             <div className="grid">
               <p className="font-medium text-sm text-black/70">
                 Items selected : {items.length}
@@ -168,7 +168,7 @@ const HotelMenuPage = ({
               <p className="font-semibold">Total Price : ₹{totalPrice}</p>
             </div>
 
-            {/* drawer  */}
+
             <Drawer>
               <DrawerTrigger className="bg-orange-600 text-white font-medium px-3 py-2 rounded">
                 View
@@ -233,7 +233,7 @@ const HotelMenuPage = ({
             Please select the items
           </p>
         )}
-      </div>
+      </div> */}
     </main>
   );
 };
