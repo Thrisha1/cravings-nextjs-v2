@@ -95,3 +95,7 @@ body {
 .badge-clip {
   clip-path: polygon(100% 1%, 100% 100%, 50% 88%, 0 100%, 0 0);
 }
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+} 

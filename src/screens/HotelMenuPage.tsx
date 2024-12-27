@@ -1,5 +1,4 @@
 "use client";
-import OfferCard from "@/components/OfferCard";
 import React, { useState } from "react";
 import NoOffersFound from "@/components/NoOffersFound";
 import SearchBox from "@/components/SearchBox";
@@ -17,14 +16,28 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Offer } from "@/store/offerStore";
 import { UserData } from "@/store/authStore";
+import OfferCardMin from "@/components/OfferCardMin";
+import { VerifiedIcon } from "lucide-react";
+import MenuItemCard from "@/components/MenuItemCard";
+
+
+export type MenuItem = {
+  description: string;
+  id : string;
+  image : string;
+  name : string;
+  price : number;
+}
 
 
 const HotelMenuPage = ({
   offers,
   hoteldata,
+  menu
 }: {
   offers: Offer[];
   hoteldata: UserData;
+  menu : MenuItem[];
 }) => {
   const [items, setItems] = useState<Offer[]>([]);
   const [totalPrice, setTotalPrice] = useState<number>(0);
@@ -57,18 +70,36 @@ const HotelMenuPage = ({
   };
 
   return (
-    <main className="bg-gradient-to-b from-orange-50 to-orange-100">
+    <main className="bg-gradient-to-b overflow-x-hidden from-orange-50 to-orange-100 relative">
+      {/* banner Image  */}
+      <div className="w-screen h-[200px] absolute top-0 z-0">
+        <Image
+          src={offers[0].dishImage}
+          alt={offers[0].dishName}
+          fill
+          className="w-auto h-auto object-cover"
+        />
+      </div>
+
       {/* offers listing  */}
-      <div className="max-w-7xl mx-auto px-3 pb-[80px]">
+      <div className="relative max-w-7xl mx-auto px-3 pb-[80px] bg-gradient-to-b from-orange-50 to-orange-100 pt-[20px] mt-[160px] lg:mt-[200px] rounded-t-3xl">
+        <div className="lg:hidden bg-orange-200 h-2 w-[20%] rounded-full absolute top-4 left-1/2 -translate-x-1/2" />
+
+        {/* hotel name  */}
+        <h1 className="text-lg relative flex lg:items-center max-w-[50%] md:text-3xl font-semibold py-5 md:py-10 capitalize">
+          <span>{hoteldata.hotelName}</span>
+          <VerifiedIcon className="lg:static absolute bottom-6 right-0 translate-x-3 text-green-600" />
+        </h1>
+
+        <SearchBox />
+
         {/* available offer  */}
         <section>
-          <h1 className="text-xl md:text-3xl font-semibold py-5 text-center md:py-10 capitalize">
-            Select Offers In {hoteldata.hotelName}
+          <h1 className="text-lg relative flex max-w-[50%] md:text-3xl font-semibold pt-5 capitalize">
+            Available Offers
           </h1>
 
-          <SearchBox />
-
-          <section className="mt-5 md:mt-10">
+          <section className="my-5 md:my-10">
             {offers.length > 0 ? (
               <>
                 {/* offer list  */}
@@ -79,13 +110,11 @@ const HotelMenuPage = ({
                         offer.originalPrice) *
                         100
                     );
-                    const isUpcoming = new Date(offer.fromTime) > new Date();
 
                     return (
                       <div key={offer.id} className="group">
-                        <OfferCard
+                        <OfferCardMin
                           discount={discount}
-                          isUpcoming={isUpcoming}
                           offer={offer}
                           onClick={() => addItems(offer)}
                         />
@@ -99,10 +128,36 @@ const HotelMenuPage = ({
             )}
           </section>
         </section>
+
+        {/* Menu items  */}
+        <section className="border-t-2 border-orange-600/10">
+          <h1 className="text-lg relative flex max-w-[50%] md:text-3xl font-semibold pt-5 capitalize">
+            All Menu Items
+          </h1>
+
+          <section className="mt-5 md:mt-10">
+            {menu.length > 0 ? (
+              <>
+                {/* offer list  */}
+                <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
+                  {menu.map((menuItem: MenuItem) => {
+                    return (
+                      <div key={menuItem.id} className="group">
+                        <MenuItemCard menuItem={menuItem} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <NoOffersFound />
+            )}
+          </section>
+        </section>
       </div>
 
       {/* bottom tab  */}
-      <div className="bg-white w-full min-h-[70px] fixed bottom-0 left-0 shadow-md shadow-black flex items-center justify-between gap-2 px-5 py-4 z-[50]">
+      <div className="bg-white rounded-t-xl lg:max-w-[70vw] left-1/2 -translate-x-1/2 w-full min-h-[70px] fixed bottom-0 shadow-md shadow-black flex items-center justify-between gap-2 px-5 py-4 z-[50]">
         {items.length > 0 ? (
           <>
             {/* items and total price  */}
@@ -118,14 +173,14 @@ const HotelMenuPage = ({
               <DrawerTrigger className="bg-orange-600 text-white font-medium px-3 py-2 rounded">
                 View
               </DrawerTrigger>
-              <DrawerContent>
+              <DrawerContent className="lg:w-[60vw] lg:mx-auto">
                 <DrawerHeader>
                   <DrawerTitle>Selected Items</DrawerTitle>
                   <DrawerDescription className="grid">
                     View all the items you have selected
                   </DrawerDescription>
                 </DrawerHeader>
-                <main className="px-5 py-10 grid gap-3 max-h-[60vh] overflow-scroll">
+                <main className="px-5 py-10 grid gap-3 max-h-[60vh] overflow-scroll overflow-x-hidden scrollbar-hidden">
                   {items.map((item: Offer) => (
                     <div
                       key={`${item.id}_checkout_item`}
@@ -174,7 +229,9 @@ const HotelMenuPage = ({
             </Drawer>
           </>
         ) : (
-          <p className="font-medium text-black/70 text-center w-full">Please select the items</p>
+          <p className="font-medium text-black/70 text-center w-full">
+            Please select the items
+          </p>
         )}
       </div>
     </main>

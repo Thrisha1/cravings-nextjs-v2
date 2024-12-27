@@ -70,6 +70,8 @@ const page = async (props: { searchParams: SearchParams }) => {
     throw new Error("Hotel not found!");
   }
 
+  const menuItems = hoteldata?.menu || [];
+
   // Filter offers based on the search query
   const filteredOffers: Offer[] = search
     ? offers.filter((offer) =>
@@ -79,7 +81,7 @@ const page = async (props: { searchParams: SearchParams }) => {
       )
     : offers;
 
-  return <HotelMenuPage offers={filteredOffers} hoteldata={hoteldata} />;
+  return <HotelMenuPage offers={filteredOffers} hoteldata={hoteldata} menu={menuItems} />;
 };
 
 export default page;

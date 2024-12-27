@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, getFirestore } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
+import { MenuItem } from '@/screens/HotelMenuPage';
 
 export interface UserData {
   email: string;
@@ -19,6 +20,7 @@ export interface UserData {
   category?: string;
   phone?: string;
   verified?: boolean;
+  menu? : MenuItem[];
 }
 
 interface AuthState {
