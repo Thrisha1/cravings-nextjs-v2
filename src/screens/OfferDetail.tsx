@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, MapPin, Tag, UtensilsCrossed } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Tag, UtensilsCrossed } from "lucide-react";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { useAuthStore } from "@/store/authStore";
 import { OfferTicket } from "@/components/OfferTicket";
@@ -59,6 +59,10 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-8">
       <div className="max-w-4xl mx-auto">
         <Card className="overflow-hidden hover:shadow-xl transition-shadow relative">
+          <div onClick={()=>navigate.back()} className="absolute top-3 left-3 text-white z-[50] bg-orange-600 rounded-full p-2">
+            <ArrowLeft width={30} height={30} />
+          </div>
+
           <div className="relative">
             <Image
               src={offer.dishImage}
@@ -181,7 +185,6 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
             claimedOffer={getClaimedOffer(offer.id)}
           />
         )}
-
       </div>
     </div>
   );
