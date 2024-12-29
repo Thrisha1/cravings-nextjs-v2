@@ -72,6 +72,18 @@ export function OffersTab() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdding(true);
+
+    if (
+      !newOffer.menuItemId ||
+      !newOffer.newPrice ||
+      !newOffer.itemsAvailable ||
+      !newOffer.fromTime ||
+      !newOffer.toTime
+    ) {
+      alert("Please fill all the fields");
+      return;
+    }
+
     await addOffer({
       menuItemId: newOffer.menuItemId,
       newPrice: parseFloat(newOffer.newPrice),
@@ -111,6 +123,7 @@ export function OffersTab() {
               <div className="space-y-2">
                 <Label htmlFor="menuItem">Select Menu Item</Label>
                 <Select
+                  required
                   value={newOffer.menuItemId}
                   onValueChange={(value) =>
                     setNewOffer({ ...newOffer, menuItemId: value })
@@ -132,6 +145,7 @@ export function OffersTab() {
               <div className="space-y-2">
                 <Label htmlFor="newPrice">New Price in ₹</Label>
                 <Input
+                  required
                   id="newPrice"
                   type="number"
                   placeholder="Enter new price"
@@ -147,6 +161,7 @@ export function OffersTab() {
                   Number of Items Available
                 </Label>
                 <Input
+                  required
                   id="itemsAvailable"
                   type="number"
                   placeholder="Enter quantity"
@@ -160,6 +175,7 @@ export function OffersTab() {
               <div className="space-y-2">
                 <Label htmlFor="fromTime">From Time</Label>
                 <Input
+                  required
                   id="fromTime"
                   type="datetime-local"
                   value={newOffer.fromTime}
@@ -172,6 +188,7 @@ export function OffersTab() {
               <div className="space-y-2">
                 <Label htmlFor="toTime">To Time</Label>
                 <Input
+                  required
                   id="toTime"
                   type="datetime-local"
                   value={newOffer.toTime}
@@ -182,7 +199,14 @@ export function OffersTab() {
               </div>
 
               <Button
-                disabled={isAdding}
+                disabled={
+                  isAdding ||
+                  !newOffer.menuItemId ||
+                  !newOffer.newPrice ||
+                  !newOffer.itemsAvailable ||
+                  !newOffer.fromTime ||
+                  !newOffer.toTime
+                }
                 type="submit"
                 className="w-full bg-orange-600"
               >

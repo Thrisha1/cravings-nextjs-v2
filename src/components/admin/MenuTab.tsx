@@ -49,6 +49,12 @@ export function MenuTab() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!newItem.name || !newItem.price || !newItem.image || !newItem.description) {
+      alert("Please fill all the fields");
+      return;
+    }
+
     addItem({
       name: newItem.name,
       price: parseFloat(newItem.price),
@@ -106,6 +112,7 @@ export function MenuTab() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
+                required
                 placeholder="Product Name"
                 value={newItem.name}
                 onChange={(e) =>
@@ -113,6 +120,7 @@ export function MenuTab() {
                 }
               />
               <Input
+                required
                 type="number"
                 placeholder="Price in ₹"
                 value={newItem.price}
@@ -121,6 +129,7 @@ export function MenuTab() {
                 }
               />
               <Input
+                required
                 placeholder="Image URL"
                 value={newItem.image}
                 onChange={(e) =>
@@ -128,6 +137,7 @@ export function MenuTab() {
                 }
               />
               <Textarea
+                required
                 placeholder="Product Description"
                 value={newItem.description}
                 onChange={(e) =>
