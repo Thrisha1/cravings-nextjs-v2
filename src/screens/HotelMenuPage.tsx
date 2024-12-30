@@ -1,18 +1,18 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import NoOffersFound from "@/components/NoOffersFound";
 import SearchBox from "@/components/SearchBox";
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
+// import {
+//   Drawer,
+//   DrawerClose,
+//   DrawerContent,
+//   DrawerDescription,
+//   DrawerFooter,
+//   DrawerHeader,
+//   DrawerTitle,
+//   DrawerTrigger,
+// } from "@/components/ui/drawer";
+// import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Offer } from "@/store/offerStore";
 import { UserData } from "@/store/authStore";
@@ -37,35 +37,35 @@ const HotelMenuPage = ({
   hoteldata: UserData;
   menu: MenuItem[];
 }) => {
-  const [items, setItems] = useState<Offer[]>([]);
-  const [totalPrice, setTotalPrice] = useState<number>(0);
+  // const [items, setItems] = useState<Offer[]>([]);
+  // const [totalPrice, setTotalPrice] = useState<number>(0);
 
-  const addItems = (item: Offer) => {
-    setItems((prev) => {
-      const existingItemIndex = prev.findIndex((i) => i.id === item.id); // Assuming each item has a unique `id`.
+  // const addItems = (item: Offer) => {
+  //   setItems((prev) => {
+  //     const existingItemIndex = prev.findIndex((i) => i.id === item.id); // Assuming each item has a unique `id`.
 
-      if (existingItemIndex !== -1) {
-        // If the item already exists, update its qty
-        const updatedItems = [...prev];
-        const existingItem = updatedItems[existingItemIndex];
-        updatedItems[existingItemIndex] = {
-          ...existingItem,
-          qty: (existingItem.qty || 0) + 1, // Increment qty, default to 0 if undefined
-        };
-        return updatedItems;
-      }
+  //     if (existingItemIndex !== -1) {
+  //       // If the item already exists, update its qty
+  //       const updatedItems = [...prev];
+  //       const existingItem = updatedItems[existingItemIndex];
+  //       updatedItems[existingItemIndex] = {
+  //         ...existingItem,
+  //         qty: (existingItem.qty || 0) + 1, // Increment qty, default to 0 if undefined
+  //       };
+  //       return updatedItems;
+  //     }
 
-      // If the item does not exist, add it with qty = 1
-      return [...prev, { ...item, qty: 1 }];
-    });
+  //     // If the item does not exist, add it with qty = 1
+  //     return [...prev, { ...item, qty: 1 }];
+  //   });
 
-    setTotalPrice((prev) => prev + item.newPrice); // Update total price as normal
+  //   setTotalPrice((prev) => prev + item.newPrice); // Update total price as normal
 
-    // Use updated state in localStorage
-    setItems((prevItems) => {
-      return prevItems;
-    });
-  };
+  //   // Use updated state in localStorage
+  //   setItems((prevItems) => {
+  //     return prevItems;
+  //   });
+  // };
 
   return (
     <main className="bg-gradient-to-b overflow-x-hidden from-orange-50 to-orange-100 relative">

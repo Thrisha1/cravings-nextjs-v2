@@ -1,5 +1,5 @@
 import { MenuItem } from "@/screens/HotelMenuPage";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Card } from "./ui/card";
 import Image from "next/image";
 import placeHolderImage from "../../public/image_placeholder.webp";
