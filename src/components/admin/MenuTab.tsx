@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, ChangeEvent } from "react";
 import { Plus, Pencil, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { useMenuStore } from "@/store/menuStore";
 import Image from "next/image";
-import { useOfferStore } from '@/store/offerStore';
+import { useOfferStore } from "@/store/offerStore";
+import { deleteFileFromS3, uploadFileToS3 } from "@/app/actions/aws-s3";
 
 export function MenuTab() {
   const { items, addItem, updateItem, deleteItem } = useMenuStore();
@@ -27,6 +28,7 @@ export function MenuTab() {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [newItem, setNewItem] = useState({
     name: "",
     price: "",
@@ -40,6 +42,7 @@ export function MenuTab() {
     image: string;
     description: string;
   } | null>(null);
+  const [isImageUploaded, setImageUploaded] = useState(false);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) =>
@@ -50,7 +53,7 @@ export function MenuTab() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newItem.name || !newItem.price || !newItem.image || !newItem.description) {
+    if (!newItem.name || !newItem.price || !newItem.image) {
       alert("Please fill all the fields");
       return;
     }
@@ -62,6 +65,8 @@ export function MenuTab() {
       description: newItem.description,
     });
     setNewItem({ name: "", price: "", image: "", description: "" });
+    setImageUrl("");
+    setImageUploaded(false);
     setIsOpen(false);
   };
 
@@ -76,6 +81,8 @@ export function MenuTab() {
       });
       setEditingItem(null);
       setIsEditOpen(false);
+      setImageUploaded(false);
+      setImageUrl("");
     }
   };
 
@@ -96,6 +103,84 @@ export function MenuTab() {
     setIsEditOpen(true);
   };
 
+  const handleImageInput = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target?.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onloadend = () => {
+      if (isEditOpen) {
+        setEditingItem({ ...editingItem!, image: reader.result as string });
+      } else {
+        setImageUrl(reader.result as string);
+      }
+    };
+
+    if (file) reader.readAsDataURL(file);
+
+    const url = await uploadFileToS3(file);
+
+    if (url) {
+      if (isEditOpen) {
+        setEditingItem({ ...editingItem!, image: url });
+      } else {
+        setNewItem({ ...newItem, image: url });
+      }
+
+      setImageUploaded(true);
+    }
+  };
+
+  const handleImageRemove = async () => {
+    if (isEditOpen) {
+      await deleteFileFromS3(editingItem!.image);
+    } else {
+      await deleteFileFromS3(newItem.image);
+    }
+
+    setTimeout(() => {
+      setImageUrl("");
+      setNewItem({ ...newItem, image: "" });
+      if (isEditOpen) {
+        setEditingItem({ ...editingItem!, image: "" });
+      }
+      setImageUploaded(false);
+    }, 500);
+  };
+
+  useEffect(() => {
+    const urlregex = /^https:\/\//;
+
+    if (urlregex.test(newItem.image)) {
+      setImageUrl(newItem.image);
+      setImageUploaded(true);
+    } else {
+      setImageUrl("");
+      setImageUploaded(false);
+    }
+  }, [newItem.image]);
+
+  useEffect(() => {
+    const urlregex = /^https:\/\//;
+
+    if (editingItem && editingItem?.image) {
+      if (urlregex.test(editingItem!.image)) {
+        setImageUrl(editingItem!.image);
+        setImageUploaded(true);
+      } else {
+        setImageUrl("");
+        setImageUploaded(false);
+      }
+    }
+  }, [editingItem?.image]);
+
+  useEffect(() => {
+    if (isEditOpen) {
+      setImageUploaded(true);
+    }
+  }, [isEditOpen]);
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
@@ -111,6 +196,54 @@ export function MenuTab() {
               <DialogTitle>Add New Menu Item</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2 grid justify-items-center">
+                {imageUrl != "" && (
+                  <Image
+                    src={imageUrl}
+                    alt="upload-image"
+                    height={300}
+                    width={300}
+                  />
+                )}
+
+                <div className="flex items-center gap-2 w-full">
+                  {imageUrl == "" && (
+                    <Input
+                      className="w-full flex-1"
+                      required
+                      placeholder="Image URL"
+                      value={newItem.image}
+                      onChange={(e) =>
+                        setNewItem({ ...newItem, image: e.target.value })
+                      }
+                    />
+                  )}
+
+                  <label
+                    onClick={imageUrl != "" ? handleImageRemove : () => {}}
+                    htmlFor={imageUrl == "" ? "imageUpload" : ""}
+                    className={`cursor-pointer text-center transition-all text-white font-medium px-3 py-2 rounded-lg text-sm ${
+                      imageUrl != ""
+                        ? "bg-red-600 hover:bg-red-500 w-full"
+                        : " bg-black hover:bg-black/50 "
+                    }`}
+                  >
+                    {imageUrl == ""
+                      ? "Upload Image"
+                      : isImageUploaded
+                      ? "Change Image"
+                      : "Uploading...."}
+                  </label>
+
+                  <input
+                    onChange={handleImageInput}
+                    className="hidden"
+                    type="file"
+                    id="imageUpload"
+                  />
+                </div>
+              </div>
+
               <Input
                 required
                 placeholder="Product Name"
@@ -128,23 +261,18 @@ export function MenuTab() {
                   setNewItem({ ...newItem, price: e.target.value })
                 }
               />
-              <Input
-                required
-                placeholder="Image URL"
-                value={newItem.image}
-                onChange={(e) =>
-                  setNewItem({ ...newItem, image: e.target.value })
-                }
-              />
               <Textarea
-                required
                 placeholder="Product Description"
                 value={newItem.description}
                 onChange={(e) =>
                   setNewItem({ ...newItem, description: e.target.value })
                 }
               />
-              <Button type="submit" className="w-full">
+              <Button
+                disabled={!isImageUploaded || !newItem.name || !newItem.price}
+                type="submit"
+                className="w-full disabled:opacity-50"
+              >
                 Add Item
               </Button>
             </form>
@@ -170,7 +298,60 @@ export function MenuTab() {
           </DialogHeader>
           {editingItem && (
             <form onSubmit={handleEdit} className="space-y-4">
+              <div className="space-y-2 grid justify-items-center">
+                {editingItem.image != "" && (
+                  <Image
+                    src={editingItem.image}
+                    alt="upload-image"
+                    height={300}
+                    width={300}
+                  />
+                )}
+
+                <div className="flex items-center gap-2 w-full">
+                  {editingItem.image == "" && (
+                    <Input
+                      className="w-full flex-1"
+                      required
+                      placeholder="Image URL"
+                      value={editingItem.image}
+                      onChange={(e) =>
+                        setEditingItem({
+                          ...editingItem,
+                          image: e.target.value,
+                        })
+                      }
+                    />
+                  )}
+
+                  <label
+                    onClick={
+                      editingItem.image != "" ? handleImageRemove : () => {}
+                    }
+                    htmlFor={editingItem.image == "" ? "imageEdit" : ""}
+                    className={`cursor-pointer text-center transition-all text-white font-medium px-3 py-2 rounded-lg text-sm ${
+                      editingItem.image != ""
+                        ? "bg-red-600 hover:bg-red-500 w-full"
+                        : " bg-black hover:bg-black/50 "
+                    }`}
+                  >
+                    {editingItem.image == ""
+                      ? "Upload Image"
+                      : isImageUploaded
+                      ? "Change Image"
+                      : "Uploading...."}
+                  </label>
+
+                  <input
+                    onChange={handleImageInput}
+                    className="hidden"
+                    type="file"
+                    id="imageEdit"
+                  />
+                </div>
+              </div>
               <Input
+                required
                 placeholder="Product Name"
                 value={editingItem.name}
                 onChange={(e) =>
@@ -178,18 +359,12 @@ export function MenuTab() {
                 }
               />
               <Input
+                required
                 type="number"
                 placeholder="Price in ₹"
                 value={editingItem.price}
                 onChange={(e) =>
                   setEditingItem({ ...editingItem, price: e.target.value })
-                }
-              />
-              <Input
-                placeholder="Image URL"
-                value={editingItem.image}
-                onChange={(e) =>
-                  setEditingItem({ ...editingItem, image: e.target.value })
                 }
               />
               <Textarea
@@ -202,7 +377,11 @@ export function MenuTab() {
                   })
                 }
               />
-              <Button type="submit" className="w-full">
+              <Button
+                disabled={!editingItem.image || !isImageUploaded}
+                type="submit"
+                className="w-full"
+              >
                 Save Changes
               </Button>
             </form>
@@ -244,7 +423,7 @@ export function MenuTab() {
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => {
+                onClick={async() => {
                   // Check if there are any active offers associated with the menu item
                   const isOfferActive = offers.some(
                     (offer) => offer.menuItemId === item.id
@@ -257,8 +436,12 @@ export function MenuTab() {
                     return;
                   }
 
+                  setEditingItem(null);
+
+
                   // If no active offers, proceed with item deletion
                   deleteItem(item.id);
+                  await deleteFileFromS3(item.image);
                 }}
               >
                 Delete

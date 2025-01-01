@@ -43,6 +43,7 @@ export function OfferTicket({ isOpen, onClose, offer, claimedOffer }: OfferTicke
   const handleClaim = async () => {
     try {
       setIsLoading(true);
+      console.log(offer.hotelLocation);
       window.open(offer.hotelLocation, '_blank');
     } catch (error) {
       console.error('Failed to process claim:', error);
