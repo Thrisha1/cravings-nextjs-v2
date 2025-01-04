@@ -4,22 +4,33 @@ interface ShareProps {
   offerId: string | string[];
   className?: string;
 }
-const Share = ({ offerId , className }: ShareProps) => {
+const Share = ({ offerId, className }: ShareProps) => {
   const handleShare = () => {
     const offerLink = `${window.location.origin}/offers/${offerId}/`;
-    navigator?.clipboard?.writeText(offerLink);
-    alert("Link copied to clipboard!");
 
-    // Optional: Open WhatsApp share link
-    const whatsappMessage = `Check out this offer: ${offerLink}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
-      whatsappMessage
-    )}`;
-    window.open(whatsappUrl, "_blank");
+    if (navigator.share) {
+      navigator
+        .share({
+          title: "Check out this offer!",
+          text: "Check out this offer on our app!",
+          url: offerLink,
+        })
+        .then(() => console.log("Successfully shared"))
+        .catch((error) => console.error("Error sharing", error));
+    } else {
+      navigator.clipboard.writeText(offerLink).then(
+        () => alert("Share link copied to clipboard"),
+        (error) => console.error("Error copying to clipboard", error)
+      );
+      
+    }
   };
 
   return (
-    <Badge onClick={handleShare} className={`bg-orange-500 text-white cursor-pointer ${className}`}>
+    <Badge
+      onClick={handleShare}
+      className={`bg-orange-500 text-white cursor-pointer ${className}`}
+    >
       <div className="flex flex-row-reverse gap-2">
         <h1>Share</h1>
         <svg
