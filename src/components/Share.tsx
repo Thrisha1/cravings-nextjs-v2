@@ -28,6 +28,7 @@ const Share = ({ offerId, className }: ShareProps) => {
 
   return (
     <Badge
+      id="offer-share-btn"
       onClick={handleShare}
       className={`bg-orange-500 text-white cursor-pointer ${className}`}
     >
