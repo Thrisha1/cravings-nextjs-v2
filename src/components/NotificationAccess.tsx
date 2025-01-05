@@ -1,17 +1,24 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const NotificationAccess = () => {
-
-  const [loacationAccess , setLocationAccess] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           console.log("Location permission granted:", position);
-          setLocationAccess(true);
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+
+          const url = new URLSearchParams(searchParams.toString());
+          url.set("lat", latitude.toString());
+          url.set("lon", longitude.toString());
+          router.replace(`?${url.toString()}`);
         },
         (error) => {
           console.error("Location permission denied:", error);
@@ -21,9 +28,11 @@ const NotificationAccess = () => {
       console.error("Geolocation is not supported by this browser.");
     }
   }, []);
-  return <>
-    <div className={`w-2 aspect-square rounded-full ${loacationAccess ? 'bg-green-600' : 'bg-red-600'}`} />
-  </>;
+
+  useEffect(() => {
+    console.log("Location updated:", searchParams.get('lat'), searchParams.get('lon'));
+  },[]);
+  return <></>;
 };
 
 export default NotificationAccess;
