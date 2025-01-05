@@ -150,29 +150,39 @@ export function MenuTab() {
   };
 
   useEffect(() => {
+    if (!newItem || !newItem.image) {
+      return;
+    }
+
     const urlregex = /^https:\/\//;
 
-    if (urlregex.test(newItem.image)) {
+    if (!urlregex.test(newItem.image)) {
+      setNewItem({ ...newItem, image: "" });
+      alert("Please provide a valid URL or upload it as an image");
+      setImageUploaded(false);
+      return;
+    } else {
       setImageUrl(newItem.image);
       setImageUploaded(true);
-    } else {
-      setImageUrl("");
-      setImageUploaded(false);
     }
   }, [newItem.image]);
 
   useEffect(() => {
+    if (!editingItem || !editingItem.image) {
+      return;
+    }
+
     const urlregex = /^https:\/\//;
 
-    if (editingItem && editingItem?.image) {
-      if (urlregex.test(editingItem!.image)) {
-        setImageUrl(editingItem!.image);
-        setImageUploaded(true);
-      } else {
-        setImageUrl("");
-        setImageUploaded(false);
-      }
+    if (!urlregex.test(editingItem.image)) {
+      setEditingItem({ ...editingItem, image: "" });
+      alert("Please provide a valid URL or upload it as an image");
+      setImageUploaded(false);
+      return;
     }
+
+    setImageUrl(editingItem!.image);
+    setImageUploaded(true);
   }, [editingItem?.image]);
 
   useEffect(() => {
@@ -423,7 +433,7 @@ export function MenuTab() {
               </Button>
               <Button
                 variant="destructive"
-                onClick={async() => {
+                onClick={async () => {
                   // Check if there are any active offers associated with the menu item
                   const isOfferActive = offers.some(
                     (offer) => offer.menuItemId === item.id
@@ -437,7 +447,6 @@ export function MenuTab() {
                   }
 
                   setEditingItem(null);
-
 
                   // If no active offers, proceed with item deletion
                   deleteItem(item.id);

@@ -150,7 +150,7 @@ export const useOfferStore = create<OfferState>((set) => {
         const addedOffer = await addDoc(offersRef, offerData);
 
         await revalidateOffer();
-        await fetch(`${process.env.NEXT_PUBLIC_WWJS_API_URL}/send-message`, {
+        fetch(`${process.env.NEXT_PUBLIC_WWJS_API_URL}/send-message`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -158,6 +158,8 @@ export const useOfferStore = create<OfferState>((set) => {
           body: JSON.stringify({
             offer: { id: addedOffer.id, ...offerData },
           }),
+        }).catch((error) => {
+          console.error("Error sending message:", error);
         });
       } catch (error) {
         set({ error: (error as Error).message });
