@@ -22,6 +22,7 @@ import { useLocationStore } from '@/store/locationStore';
 import { MapPin } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter } from 'next/navigation';
+import { resolveShortUrl } from '@/app/actions/extractLatLonFromGoogleMapsUrl';
 
 export function PartnerDialog() {
   const navigate = useRouter();
@@ -42,12 +43,13 @@ export function PartnerDialog() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const urlWithCordinates = await resolveShortUrl(formData.location);
       await signUpAsPartner(
         formData.email,
         formData.password,
         formData.hotelName,
         formData.area,
-        formData.location,
+        urlWithCordinates,
         formData.category,
         formData.phone
       );

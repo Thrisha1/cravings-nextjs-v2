@@ -5,8 +5,7 @@ import React from "react";
 import { Offer } from "@/store/offerStore";
 import { db } from "@/lib/firebase";
 
-type SearchParams = Promise<{ [key: string]: string | undefined }>
-
+type SearchParams = Promise<{ [key: string]: string | undefined }>;
 
 const getOffers = unstable_cache(
   async () => {
@@ -29,11 +28,15 @@ const filterAndSortOffers = async ({
   activeTab = "all",
   searchQuery = "",
   location = null,
+  lat,
+  lon,
 }: {
   offers: Offer[];
   activeTab?: string;
   searchQuery?: string;
   location?: string | null;
+  lat?: number | null;
+  lon?: number | null;
 }) => {
   const currentOffers = offers.filter((offer) => {
     const isValid = new Date(offer.toTime) > new Date();
@@ -68,12 +71,15 @@ const filterAndSortOffers = async ({
   return sortedOffers;
 };
 
-const page = async (props: {
-  searchParams: SearchParams
-}) => {
-
-  const searchParams = await props.searchParams
-  const { query: searchQuery, filter: activeTab, location } = searchParams;
+const page = async (props: { searchParams: SearchParams }) => {
+  const searchParams = await props.searchParams;
+  const {
+    query: searchQuery,
+    filter: activeTab,
+    location,
+    lat,
+    lon,
+  } = searchParams;
 
   const offers: Offer[] = await getOffers();
   const filteredOffers = await filterAndSortOffers({
@@ -81,6 +87,8 @@ const page = async (props: {
     activeTab,
     searchQuery,
     location,
+    lat : Number(lat),
+    lon :Number(lon),
   });
 
   return <Offers offers={filteredOffers} />;

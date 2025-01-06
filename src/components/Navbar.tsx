@@ -20,7 +20,7 @@ export function Navbar() {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    if (user && userData && (!userData?.phone || !userData?.fullName)) {
+    if (user && userData && (!userData?.phone || (!userData?.fullName && !userData.hotelName))) {
       setShowModal(true);
     }
   }, [user, userData]);
