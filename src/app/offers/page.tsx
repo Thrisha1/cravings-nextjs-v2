@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 import React from "react";
 import { Offer } from "@/store/offerStore";
 import { db } from "@/lib/firebase";
+import { isHotelNear } from "../actions/isHotelNear";
 
 type SearchParams = Promise<{ [key: string]: string | undefined }>;
 
@@ -35,8 +36,8 @@ const filterAndSortOffers = async ({
   activeTab?: string;
   searchQuery?: string;
   location?: string | null;
-  lat?: number | null;
-  lon?: number | null;
+  lat: number;
+  lon: number;
 }) => {
   const currentOffers = offers.filter((offer) => {
     const isValid = new Date(offer.toTime) > new Date();
@@ -51,10 +52,25 @@ const filterAndSortOffers = async ({
 
   const sortedOffers = [...currentOffers];
 
+  // Add the distance to each offer
+  const offersWithDistance = sortedOffers.map((offer) => {
+    const distance = isHotelNear(offer.hotelLocation, { lat, lon });
+    return { ...offer, distance }; // Attach the distance to each offer
+  });
+
+  offersWithDistance.forEach((offer) => {
+    if (typeof offer.distance !== "number") {
+      console.error(`Invalid distance for offer ${offer.id}:`, offer.distance);
+    }
+  });
+  
+  // Sort offers by distance (ascending order)
+
+  // Sorting based on active tab options
   if (activeTab === "popular") {
-    sortedOffers.sort((a: Offer, b: Offer) => b.enquiries - a.enquiries);
+    offersWithDistance.sort((a: Offer, b: Offer) => b.enquiries - a.enquiries);
   } else if (activeTab === "money saver") {
-    sortedOffers.sort((a: Offer, b: Offer) => {
+    offersWithDistance.sort((a: Offer, b: Offer) => {
       const discountA =
         ((a.originalPrice - a.newPrice) / a.originalPrice) * 100;
       const discountB =
@@ -62,13 +78,14 @@ const filterAndSortOffers = async ({
       return discountB - discountA;
     });
   } else {
-    sortedOffers.sort(
+    offersWithDistance.sort(
       (a: Offer, b: Offer) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
+    offersWithDistance.sort((a, b) => a.distance - b.distance);
   }
 
-  return sortedOffers;
+  return offersWithDistance;
 };
 
 const page = async (props: { searchParams: SearchParams }) => {
@@ -87,8 +104,8 @@ const page = async (props: { searchParams: SearchParams }) => {
     activeTab,
     searchQuery,
     location,
-    lat : Number(lat),
-    lon :Number(lon),
+    lat: Number(lat),
+    lon: Number(lon),
   });
 
   return <Offers offers={filteredOffers} />;

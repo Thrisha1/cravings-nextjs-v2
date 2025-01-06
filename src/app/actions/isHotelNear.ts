@@ -1,9 +1,25 @@
-"use server";
-import { extractLatLonFromGoogleMapsUrl, resolveShortUrl } from "./extractLatLonFromGoogleMapsUrl";
-
 interface Coordinates {
   lat: number;
   lon: number;
+}
+
+export function extractLatLonFromGoogleMapsUrl(
+  url: string
+): Coordinates | null {
+  const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+
+  const match = url.match(regex);
+
+  if (match) {
+    const lat = parseFloat(match[1]);
+    const lon = parseFloat(match[2]);
+    return { lat, lon };
+  }
+
+  return {
+    lat: 0,
+    lon: 0,
+  };
 }
 
 function getDistanceBetweenPoints(
@@ -26,23 +42,34 @@ function getDistanceBetweenPoints(
   return earthRadiusKm * c;
 }
 
-export async function isHotelNear(
+export function isHotelNear(
   hotelLocation: string,
   userLocation: Coordinates,
-  distanceRange: number
-): Promise<boolean> {
+  // distanceRange: number = 10,
+) {
+  if (!userLocation.lat || !userLocation.lon) {
+    return 0;
+  }
 
-  const fullUrl = await resolveShortUrl(hotelLocation);
-  const hotelCoordinates = await extractLatLonFromGoogleMapsUrl(fullUrl);
+  const hotelCoordinates =  extractLatLonFromGoogleMapsUrl(hotelLocation);
 
   if (!hotelCoordinates) {
     console.error(
       "Unable to extract coordinates from the provided URL.",
       hotelLocation
     );
-    return false;
+    return 0;
   }
 
   const distance = getDistanceBetweenPoints(hotelCoordinates, userLocation);
-  return distance <= distanceRange;
+  // const distanceInKm = distance.toFixed(2);
+  // console.log({
+  //   hotelCoordinates,
+  //   userLocation,
+  //   isNear: distance <= distanceRange,
+  //   hotelLocation,
+  //   distanceInKm
+  // });
+
+  return distance;
 }

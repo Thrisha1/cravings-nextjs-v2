@@ -49,7 +49,7 @@ export function PartnerDialog() {
         formData.password,
         formData.hotelName,
         formData.area,
-        urlWithCordinates,
+        urlWithCordinates ?? formData.location,
         formData.category,
         formData.phone
       );
