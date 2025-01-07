@@ -6,39 +6,17 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { type Offer } from '@/store/offerStore';
-import { useClaimedOffersStore } from '@/store/claimedOffersStore';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 interface OfferTicketProps {
   isOpen: boolean;
   onClose: () => void;
   offer: Offer;
-  claimedOffer?: {
-    offerId: string;
-    token: string;
-    claimedAt: string;
-    offerDetails: {
-      dishName: string;
-      hotelName: string;
-      originalPrice: number;
-      newPrice: number;
-      hotelLocation: string;
-    };
-  };
+  token: string; // Token is now passed directly
 }
 
-export function OfferTicket({ isOpen, onClose, offer, claimedOffer }: OfferTicketProps) {
+export function OfferTicket({ isOpen, onClose, offer, token }: OfferTicketProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [token, setToken] = useState<string>('');
-  const { addClaimedOffer } = useClaimedOffersStore();
-
-  useEffect(() => {
-    if (claimedOffer) {
-      setToken(claimedOffer.token);
-    } else {
-      setToken(addClaimedOffer(offer));
-    }
-  }, [claimedOffer, offer, addClaimedOffer]);
 
   const handleClaim = async () => {
     try {
