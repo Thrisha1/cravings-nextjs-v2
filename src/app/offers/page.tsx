@@ -10,9 +10,9 @@ type SearchParams = Promise<{ [key: string]: string | undefined }>;
 
 const getOffers = unstable_cache(
   async () => {
-    const now = new Date().toString();
+    const now = new Date().toISOString();
     const offersCollection = collection(db, "offers");
-    const offersQuery = query(offersCollection, where("toTime", "<", now));
+    const offersQuery = query(offersCollection, where("toTime", ">", now));
     const querySnapshot = await getDocs(offersQuery);
     const offers: Offer[] = [];
     querySnapshot.forEach((doc) => {
