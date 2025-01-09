@@ -19,36 +19,50 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import DiscountBadge from "@/components/DiscountBadge";
-// import ScanButton from "@/components/ScanButton";
 
 export default function OfferDetail({ offer }: { offer: Offer }) {
   const { id: offerId } = useParams();
   const navigate = useRouter();
   const { user } = useAuthStore();
   const [showTicket, setShowTicket] = useState(false);
-  const [isCalimed, setClaimed] = useState(false);
-  const { isOfferClaimed, getClaimedOffer } = useClaimedOffersStore();
+  const [token, setToken] = useState<string>(""); // Add token state
+  const { isOfferClaimed, syncClaimedOffersWithFirestore, addClaimedOffer } =
+    useClaimedOffersStore();
   const { incrementEnquiry } = useOfferStore();
 
-  const handleClaimOffer = () => {
+  // Check if the offer is claimed
+  const isClaimed = isOfferClaimed(offer.id);
+
+  // Fetch claimed offers from Firestore when the component mounts
+  useEffect(() => {
+    if (user?.uid) {
+      const unsubscribe = syncClaimedOffersWithFirestore(user.uid);
+      return () => unsubscribe(); // Clean up the listener on unmount
+    }
+  }, [user, syncClaimedOffersWithFirestore]);
+
+  const handleClaimOffer = async () => {
     if (!user) {
       navigate.push("/login");
       return;
     }
 
     if (offer) {
-      setShowTicket(true);
-      setClaimed(true);
-      if (!isOfferClaimed(offer.id)) {
-        incrementEnquiry(offer.id, offer.hotelId);
+      try {
+        // Claim the offer and get the token
+        const newToken = await addClaimedOffer(offer, user.uid);
+        setToken(newToken); // Set the token in state
+        setShowTicket(true); // Show the ticket dialog
+
+        // Increment the enquiry count if the offer is not already claimed
+        if (!isClaimed) {
+          incrementEnquiry(offer.id, offer.hotelId);
+        }
+      } catch (error) {
+        console.error("Failed to claim offer:", error);
       }
     }
   };
-
-  useEffect(() => {
-    const isCalimed = isOfferClaimed(offer.id);
-    setClaimed(isCalimed);
-  }, [offer.id, isOfferClaimed]);
 
   const isUpcoming = new Date(offer.fromTime) > new Date();
   const discount = Math.round(
@@ -59,7 +73,10 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-8">
       <div className="max-w-4xl mx-auto">
         <Card className="overflow-hidden hover:shadow-xl transition-shadow relative">
-          <div onClick={()=>navigate.back()} className="absolute top-3 left-3 text-white z-[50] bg-orange-600 rounded-full p-2">
+          <div
+            onClick={() => navigate.back()}
+            className="absolute top-3 left-3 text-white z-[50] bg-orange-600 rounded-full p-2"
+          >
             <ArrowLeft width={30} height={30} />
           </div>
 
@@ -145,14 +162,14 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
                   onClick={
                     isUpcoming
                       ? undefined
-                      : isCalimed
+                      : isClaimed
                       ? () => setShowTicket(true)
                       : handleClaimOffer
                   }
                   className={`w-full py-3 text-lg font-semibold transition-all ${
                     isUpcoming
                       ? "bg-gray-100 text-[#E63946] shadow-xl border border-gray-200"
-                      : isCalimed
+                      : isClaimed
                       ? "bg-green-600 hover:bg-green-700"
                       : "bg-orange-600 hover:bg-orange-700"
                   }`}
@@ -165,7 +182,7 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
                         upcomming={true}
                       />
                     </>
-                  ) : isCalimed ? (
+                  ) : isClaimed ? (
                     "View Ticket"
                   ) : (
                     "Claim Offer"
@@ -182,7 +199,7 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
             isOpen={showTicket}
             onClose={() => setShowTicket(false)}
             offer={offer}
-            claimedOffer={getClaimedOffer(offer.id)}
+            token={token} // Pass the token directly
           />
         )}
       </div>
