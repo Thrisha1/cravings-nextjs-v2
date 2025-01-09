@@ -84,6 +84,31 @@ export function OffersTab() {
       return;
     }
 
+    if(new Date(newOffer.fromTime) > new Date(newOffer.toTime)) {
+      alert("From time cannot be greater than to time");
+      return;
+    }
+
+    if(new Date(newOffer.fromTime) < new Date()) {
+      alert("From time cannot be in the past");
+      return;
+    }
+
+    if(new Date(newOffer.toTime) < new Date()) {
+      alert("To time cannot be in the past");
+      return;
+    }
+
+    if(new Date(newOffer.toTime) < new Date(newOffer.fromTime)) {
+      alert("To time cannot be less than from time");
+      return;
+    }
+
+    if(new Date(newOffer.toTime).getTime() - new Date(newOffer.fromTime).getTime() < 1000 * 60 * 15) {
+      alert("Offer duration should be atleast 15 minutes");
+      return;
+    }
+
     await addOffer({
       menuItemId: newOffer.menuItemId,
       newPrice: parseFloat(newOffer.newPrice),
