@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/authStore"; // Import the auth store
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import { Button } from "@/components/ui/button"; // Import Button component
 import { deleteUser as deleteFirebaseUser } from "firebase/auth"; // Import Firebase Auth delete function
-import { auth, db } from "@/lib/firebase"; // Import Firebase Auth and Firestore instances
+import { db } from "@/lib/firebase"; // Import Firebase Auth and Firestore instances
 import { doc, deleteDoc } from "firebase/firestore"; // Import Firestore delete function
 import { useRouter } from "next/navigation"; // Import useRouter for navigation
 import { useState } from "react"; // Import useState for loading and error states

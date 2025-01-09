@@ -26,7 +26,7 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
   const { user } = useAuthStore();
   const [showTicket, setShowTicket] = useState(false);
   const [token, setToken] = useState<string>(""); // Add token state
-  const { isOfferClaimed, getClaimedOffer, syncClaimedOffersWithFirestore, addClaimedOffer } =
+  const { isOfferClaimed, syncClaimedOffersWithFirestore, addClaimedOffer } =
     useClaimedOffersStore();
   const { incrementEnquiry } = useOfferStore();
 
