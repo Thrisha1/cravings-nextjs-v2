@@ -4,14 +4,27 @@ import { Badge } from "@/components/ui/badge";
 import { UtensilsCrossed, Tag } from "lucide-react";
 import { useAuthStore } from "@/store/authStore"; // Import the auth store
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
+import { Button } from "@/components/ui/button"; // Import Button component
+import { deleteUser as deleteFirebaseUser } from "firebase/auth"; // Import Firebase Auth delete function
+import { auth, db } from "@/lib/firebase"; // Import Firebase Auth and Firestore instances
+import { doc, deleteDoc } from "firebase/firestore"; // Import Firestore delete function
+import { useRouter } from "next/navigation"; // Import useRouter for navigation
+import { useState } from "react"; // Import useState for loading and error states
 
 export default function ProfilePage() {
   // Fetch user data and loading state from the auth store
-  const { userData, loading: authLoading } = useAuthStore();
+  const { user, userData, loading: authLoading } = useAuthStore();
 
   // Fetch claimed offers and loading state from the claimed offers store
   const { claimedOffers, isLoading: claimedOffersLoading } =
     useClaimedOffersStore();
+
+  // Router for navigation after account deletion
+  const router = useRouter();
+
+  // State for loading and error during account deletion
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Combined loading state
   const isLoading = authLoading || claimedOffersLoading;
@@ -28,6 +41,34 @@ export default function ProfilePage() {
       originalPrice: offer.offerDetails.originalPrice,
       newPrice: offer.offerDetails.newPrice,
     })),
+  };
+
+  // Function to delete the user's account
+  const handleDeleteAccount = async () => {
+    if (!user) {
+      setError("No user is currently logged in.");
+      return;
+    }
+
+    setIsDeleting(true);
+    setError(null);
+
+    try {
+      // Delete the user's Firestore data
+      const userDocRef = doc(db, "users", user.uid);
+      await deleteDoc(userDocRef);
+
+      // Delete the user's Firebase Auth account
+      await deleteFirebaseUser(user);
+
+      // Redirect to the home page after deletion
+      router.push("/");
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      setError("Failed to delete account. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Show a loading spinner while data is being fetched
@@ -48,7 +89,6 @@ export default function ProfilePage() {
             d="M4.5 12a7.5 7.5 0 0 0 15 0m-15 0a7.5 7.5 0 1 1 15 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077 1.41-.513m14.095-5.13 1.41-.513M5.106 17.785l1.15-.964m11.49-9.642 1.149-.964M7.501 19.795l.75-1.3m7.5-12.99.75-1.3m-6.063 16.658.26-1.477m2.605-14.772.26-1.477m0 17.726-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205 12 12m6.894 5.785-1.149-.964M6.256 7.178l-1.15-.964m15.352 8.864-1.41-.513M4.954 9.435l-1.41-.514M12.002 12l-3.75 6.495"
           />
         </svg>
-        {/* Replace with your Spinner component */}
       </div>
     );
   }
@@ -114,6 +154,29 @@ export default function ProfilePage() {
                 </div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        {/* Danger Area */}
+        <Card className="overflow-hidden hover:shadow-xl transition-shadow border-red-500">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-red-600">
+              Danger Area
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-red-600">
+              Warning: Deleting your account is irreversible. All your data,
+              including claimed offers, will be permanently deleted.
+            </p>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete My Account"}
+            </Button>
+            {error && <p className="text-red-600">{error}</p>}
           </CardContent>
         </Card>
       </div>

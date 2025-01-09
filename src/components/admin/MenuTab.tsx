@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, ChangeEvent } from "react";
+import { useEffect, useState, useMemo, ChangeEvent } from "react";
 import { Plus, Pencil, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,13 +18,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useMenuStore } from "@/store/menuStore";
+import { useAdminOfferStore } from "@/store/useAdminOfferStore"; // Use the new store
+import { useAuthStore } from "@/store/authStore"; // To get the current user (hotel)
 import Image from "next/image";
-import { useOfferStore } from "@/store/offerStore";
 import { deleteFileFromS3, uploadFileToS3 } from "@/app/actions/aws-s3";
 
 export function MenuTab() {
   const { items, addItem, updateItem, deleteItem } = useMenuStore();
-  const { offers } = useOfferStore();
+  const { adminOffers, fetchAdminOffers } = useAdminOfferStore(); // Use adminOffers
+  const { user } = useAuthStore(); // Get the current user (hotel)
   const [isOpen, setIsOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,6 +45,13 @@ export function MenuTab() {
     description: string;
   } | null>(null);
   const [isImageUploaded, setImageUploaded] = useState(false);
+
+  // Fetch offers for the current hotel when the component mounts
+  useEffect(() => {
+    if (user?.uid) {
+      fetchAdminOffers(user.uid); // Pass the hotelId (user.uid) to fetchAdminOffers
+    }
+  }, [user, fetchAdminOffers]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) =>
@@ -435,7 +444,7 @@ export function MenuTab() {
                 variant="destructive"
                 onClick={async () => {
                   // Check if there are any active offers associated with the menu item
-                  const isOfferActive = offers.some(
+                  const isOfferActive = adminOffers.some(
                     (offer) => offer.menuItemId === item.id
                   );
 
