@@ -39,7 +39,7 @@ function getDistanceBetweenPoints(
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-  return earthRadiusKm * c;
+  return earthRadiusKm * c * 1000; 
 }
 
 export function isHotelNear(
@@ -62,14 +62,6 @@ export function isHotelNear(
   }
 
   const distance = getDistanceBetweenPoints(hotelCoordinates, userLocation);
-  // const distanceInKm = distance.toFixed(2);
-  // console.log({
-  //   hotelCoordinates,
-  //   userLocation,
-  //   isNear: distance <= distanceRange,
-  //   hotelLocation,
-  //   distanceInKm
-  // });
 
   return distance;
 }

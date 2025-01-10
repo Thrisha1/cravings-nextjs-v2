@@ -35,6 +35,7 @@ export interface Offer {
   category: string;
   description?: string;
   qty?: number;
+  distance?: number;
 }
 
 interface OfferState {

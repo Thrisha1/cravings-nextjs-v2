@@ -3,7 +3,7 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Offer } from "@/store/offerStore";
 import Image from "next/image";
-import { Clock, MapPin, UtensilsCrossed } from "lucide-react";
+import { Clock, MapPin, Route, UtensilsCrossed } from "lucide-react";
 import { CountdownTimer } from "./CountdownTimer";
 import DiscountBadge from "./DiscountBadge";
 import { useRouter } from "next/navigation";
@@ -76,10 +76,15 @@ const OfferCard = ({
                     <MapPin className="w-4 h-4 mr-2" />
                     {offer.area}
                   </div>
+                  <p className="text-sm text-gray-500 flex items-center gap-2">
+                    <Route className="w-4 h-4" />
+                    <span>{((offer.distance ?? 0) / 1000).toFixed(2)} km</span>
+                  </p>
                   <p className="text-sm text-gray-800 flex items-center gap-2">
                     <UtensilsCrossed className="w-4 h-4" />
                     <span>{offer.hotelName}</span>
                   </p>
+                  
                 </div>
               </div>
 
