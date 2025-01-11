@@ -141,9 +141,31 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
       syncUserOffersClaimable: async (userId: string) => {
         const userDocRef = doc(db, "users", userId);
         const userDoc = await getDoc(userDocRef);
+        const offersCalimableLessThan2 = get().offersClaimable < 2;
 
         if (userDoc.exists()) {
           const { offersClaimable } = userDoc.data();
+          const lastOfferClaimedAt = new Date(
+            localStorage.getItem("offersClaimableUpdatedAt") || 0
+          );
+          const minituesPassed =
+            (new Date().getTime() - lastOfferClaimedAt.getTime()) / 1000 / 60;
+
+          // console.log(
+          //   "how many minits have passed after latofferclaimedat",
+          //   minituesPassed,
+          //   offersCalimableLessThan2,
+          //   minituesPassed >= 1440
+          // );
+
+          if (offersCalimableLessThan2 && (minituesPassed >= 1440)) { //24HRS
+            set({ offersClaimable: 2 });
+            const updateDocRef = doc(db, "users", userId);
+            updateDoc(updateDocRef, {
+              offersClaimable: 2,
+            });
+            set({ offersClaimable: 2 });
+          }
           set({ offersClaimable });
         }
       },
@@ -153,7 +175,6 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
         isIncrement: boolean
       ) => {
         const userDocRef = doc(db, "users", userId);
-
         try {
           if (isIncrement) {
             await updateDoc(userDocRef, {
@@ -162,6 +183,10 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
             set({ offersClaimable: get().offersClaimable + 1 });
             console.log("User's claimable offers incremented");
           } else {
+            localStorage.setItem(
+              "offersClaimableUpdatedAt",
+              new Date().toISOString()
+            );
             await updateDoc(userDocRef, {
               offersClaimable: increment(-1),
             });
