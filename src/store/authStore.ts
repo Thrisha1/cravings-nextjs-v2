@@ -21,6 +21,7 @@ export interface UserData {
   phone?: string;
   verified?: boolean;
   menu? : MenuItem[];
+  offersClaimable? : number;
 }
 
 interface AuthState {

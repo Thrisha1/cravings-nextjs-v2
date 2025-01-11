@@ -1,9 +1,18 @@
 // claimedOffersStore.ts
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { type Offer } from './offerStore';
-import { db } from '../lib/firebase';
-import { arrayUnion, doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { type Offer } from "./offerStore";
+import { db } from "../lib/firebase";
+import {
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  increment,
+  onSnapshot,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
 
 interface ClaimedOffer {
   offerId: string;
@@ -26,6 +35,12 @@ interface ClaimedOffersState {
   isOfferClaimed: (offerId: string) => boolean;
   getClaimedOffer: (offerId: string) => ClaimedOffer | undefined;
   syncClaimedOffersWithFirestore: (userId: string) => () => void; // Returns unsubscribe function
+  offersClaimable: number;
+  updateUserOffersClaimable: (
+    userId: string,
+    isIncrement: boolean
+  ) => Promise<void>;
+  syncUserOffersClaimable: (userId: string) => Promise<void>;
 }
 
 export const useClaimedOffersStore = create<ClaimedOffersState>()(
@@ -33,7 +48,8 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
     (set, get) => ({
       claimedOffers: [],
       isLoading: false,
-      lastSynced: null, // Initialize lastSynced as null
+      lastSynced: null,
+      offersClaimable: 0,
 
       // Add a claimed offer
       addClaimedOffer: async (offer: Offer, userId: string) => {
@@ -53,7 +69,7 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
         };
 
         // Update Firestore
-        const userDocRef = doc(db, 'claimed_offers', userId);
+        const userDocRef = doc(db, "claimed_offers", userId);
         const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
@@ -101,9 +117,10 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
         // Only sync if data is stale (e.g., older than 5 minutes)
         if (
           !lastSynced ||
-          new Date(now).getTime() - new Date(lastSynced).getTime() > 5 * 60 * 1000 // 5 minutes
+          new Date(now).getTime() - new Date(lastSynced).getTime() >
+            5 * 60 * 1000 // 5 minutes
         ) {
-          const userDocRef = doc(db, 'claimed_offers', userId);
+          const userDocRef = doc(db, "claimed_offers", userId);
 
           // Set up a real-time listener
           const unsubscribe = onSnapshot(userDocRef, (doc) => {
@@ -120,9 +137,45 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
         // If data is not stale, return a no-op function
         return () => {};
       },
+
+      syncUserOffersClaimable: async (userId: string) => {
+        const userDocRef = doc(db, "users", userId);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const { offersClaimable } = userDoc.data();
+          set({ offersClaimable });
+        }
+      },
+
+      updateUserOffersClaimable: async (
+        userId: string,
+        isIncrement: boolean
+      ) => {
+        const userDocRef = doc(db, "users", userId);
+
+        try {
+          if (isIncrement) {
+            await updateDoc(userDocRef, {
+              offersClaimable: increment(1),
+            });
+            set({ offersClaimable: get().offersClaimable + 1 });
+            console.log("User's claimable offers incremented");
+          } else {
+            await updateDoc(userDocRef, {
+              offersClaimable: increment(-1),
+            });
+            set({ offersClaimable: get().offersClaimable - 1 });
+            console.log("User's claimable offers decremented");
+          }
+          console.log("User's claimable offers updated successfully");
+        } catch (error) {
+          console.error("Error updating user's claimable offers: ", error);
+        }
+      },
     }),
     {
-      name: 'claimed-offers-storage', // Local storage key
+      name: "claimed-offers-storage", // Local storage key
     }
   )
 );

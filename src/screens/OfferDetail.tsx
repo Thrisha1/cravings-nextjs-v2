@@ -8,7 +8,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ArrowLeft, Clock, MapPin, Tag, UtensilsCrossed } from "lucide-react";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { useAuthStore } from "@/store/authStore";
@@ -19,24 +18,30 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import DiscountBadge from "@/components/DiscountBadge";
+import ClaimOfferButton from "@/components/ClaimOfferButton";
 
 export default function OfferDetail({ offer }: { offer: Offer }) {
   const { id: offerId } = useParams();
   const navigate = useRouter();
-  const { user } = useAuthStore();
+  const { user, userData } = useAuthStore();
   const [showTicket, setShowTicket] = useState(false);
   const [token, setToken] = useState<string>(""); // Add token state
-  const { isOfferClaimed, syncClaimedOffersWithFirestore, addClaimedOffer } =
-    useClaimedOffersStore();
+  const {
+    isOfferClaimed,
+    syncClaimedOffersWithFirestore,
+    syncUserOffersClaimable,
+    addClaimedOffer,
+    updateUserOffersClaimable,
+    offersClaimable,
+  } = useClaimedOffersStore();
   const { incrementEnquiry } = useOfferStore();
 
-  // Check if the offer is claimed
   const isClaimed = isOfferClaimed(offer.id);
-
   // Fetch claimed offers from Firestore when the component mounts
   useEffect(() => {
     if (user?.uid) {
       const unsubscribe = syncClaimedOffersWithFirestore(user.uid);
+      syncUserOffersClaimable(user.uid);
       return () => unsubscribe(); // Clean up the listener on unmount
     }
   }, [user, syncClaimedOffersWithFirestore]);
@@ -58,6 +63,8 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
         if (!isClaimed) {
           incrementEnquiry(offer.id, offer.hotelId);
         }
+
+        await updateUserOffersClaimable(user.uid, false);
       } catch (error) {
         console.error("Failed to claim offer:", error);
       }
@@ -156,40 +163,23 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-[1fr,100px] w-[100%] gap-2">
-                <Button
-                  disabled={isUpcoming}
-                  onClick={
-                    isUpcoming
-                      ? undefined
-                      : isClaimed
-                      ? () => setShowTicket(true)
-                      : handleClaimOffer
-                  }
-                  className={`w-full py-3 text-lg font-semibold transition-all ${
-                    isUpcoming
-                      ? "bg-gray-100 text-[#E63946] shadow-xl border border-gray-200"
-                      : isClaimed
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "bg-orange-600 hover:bg-orange-700"
-                  }`}
+              {userData && (
+                <div
+                  className={`h-[36px] w-[100%] grid-cols-[1fr,100px] grid gap-2`}
                 >
-                  {isUpcoming ? (
-                    <>
-                      Offer Activates in:{" "}
-                      <CountdownTimer
-                        endTime={offer.fromTime}
-                        upcomming={true}
-                      />
-                    </>
-                  ) : isClaimed ? (
-                    "View Ticket"
-                  ) : (
-                    "Claim Offer"
-                  )}
-                </Button>
-                <Share offerId={offerId || ""} className={"w-[100px]"} />
-              </div>
+                  <ClaimOfferButton
+                    handleClaimOffer={handleClaimOffer}
+                    isClaimed={isClaimed}
+                    offer={offer}
+                    offersClaimable={offersClaimable}
+                    setShowTicket={setShowTicket}
+                  />
+                  <Share
+                    offerId={offerId || ""}
+                    className={"w-full flex justify-center"}
+                  />
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
