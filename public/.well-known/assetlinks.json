@@ -1,0 +1,13 @@
+[
+    {
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.notime.cravings",
+        "sha256_cert_fingerprints": [
+          "24:E1:1A:BB:91:4B:52:31:70:3C:2C:24:FF:FB:79:D2:23:C6:A3:68:F1:F6:F7:B2:B1:7B:57:E6:4C:37:50:0D"
+        ]
+      }
+    }
+  ]
+  

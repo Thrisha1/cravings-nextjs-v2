@@ -5,13 +5,21 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**", // Allow all hostnames with HTTPS protocol
+        hostname: "**", 
       },
       {
         protocol: "http",
-        hostname: "**", // Allow all hostnames with HTTP protocol
+        hostname: "**",
       },
     ],
+  },
+  async headers() {
+    return [
+      {
+        source: "/.well-known/:file*",
+        headers: [{ key: "Content-Type", value: "application/json" }],
+      },
+    ];
   },
 };
 
