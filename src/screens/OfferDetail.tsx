@@ -29,7 +29,6 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
   const {
     isOfferClaimed,
     syncClaimedOffersWithFirestore,
-    syncUserOffersClaimable,
     addClaimedOffer,
     updateUserOffersClaimable,
     offersClaimable,
@@ -41,7 +40,6 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
   useEffect(() => {
     if (user?.uid) {
       const unsubscribe = syncClaimedOffersWithFirestore(user.uid);
-      syncUserOffersClaimable(user.uid);
       return () => unsubscribe(); // Clean up the listener on unmount
     }
   }, [user, syncClaimedOffersWithFirestore]);

@@ -34,7 +34,7 @@ const buttonConfig = {
     disabled: false,
   },
   offerNotClaimable: {
-    text: "No Offer Coupon Left",
+    text: "No Coupon",
     className: "bg-red-400 cursor-not-allowed disabled:opacity-[70%]",
     disabled: true,
   },
@@ -71,7 +71,7 @@ const ClaimOfferButton: React.FC<ClaimOfferButtonProps> = ({
     <Button
       disabled={disabled}
       onClick={isClaimed ? () => setShowTicket(true) : offersClaimable > 0 ? handleClaimOffer : undefined}
-      className={`w-full py-3 text-lg font-semibold transition-all ${className}`}
+      className={`w-full py-3 text-[16px] font-semibold transition-all ${className}`}
     >
       {!isClaimed && (
         <>

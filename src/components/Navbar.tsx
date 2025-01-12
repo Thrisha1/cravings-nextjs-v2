@@ -4,18 +4,28 @@ import { Button } from "./ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { UtensilsCrossed, LogOut, Menu, X } from "lucide-react";
+import {
+  UtensilsCrossed,
+  Menu,
+  X,
+  Ticket,
+  Tickets,
+  TicketPercent,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { PartnerDialog } from "./PartnerDialog";
 import AskPhoneAndNameModal from "./AskPhoneAndNameModal";
 import Image from "next/image";
+import { Badge } from "./ui/badge";
+import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 
 export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const location = pathname.split("?")[0];
-  const { user, userData, signOut, updateUserData } = useAuthStore();
+  const { user, userData, updateUserData } = useAuthStore();
+  const { offersClaimable } = useClaimedOffersStore();
   const [isOpen, setIsOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [userLocation, setUserLocation] = useState("");
@@ -65,6 +75,7 @@ export function Navbar() {
         <div className="flex w-full">
           <div className="flex items-center gap-2 flex-col sm:flex-row justify-end">
             <Link
+              onClick={() => setIsOpen(false)}
               className="flex text-sm items-center gap-2 text-gray-500"
               href="/profile"
             >
@@ -82,20 +93,8 @@ export function Navbar() {
                   d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
                 />
               </svg>
-              <span>profile</span>
+              <span>{userData?.fullName ?? userData?.hotelName}</span>
             </Link>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                signOut();
-                setIsOpen(false);
-              }}
-              className="text-gray-500 hover:text-gray-700 flex gap-2 p-0 sm:p-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
           </div>
         </div>
       )}
@@ -127,6 +126,13 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-5">
+              {user && (
+                <div onClick={()=>router.push('/coupons')} className="text-orange-500 gap-1 font-bold flex items-center text-lg rounded-full">
+                  <span>{offersClaimable}</span>
+                  <TicketPercent className="w-8 h-8" />
+                </div>
+              )}
+
               {!user && (
                 <Button
                   onClick={() => router.push("/login")}

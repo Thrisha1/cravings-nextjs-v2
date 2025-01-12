@@ -63,7 +63,7 @@ const filterAndSortOffers = async ({
       console.error(`Invalid distance for offer ${offer.id}:`, offer.distance);
     }
   });
-  
+
   // Sort offers by distance (ascending order)
 
   // Sorting based on active tab options

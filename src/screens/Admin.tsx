@@ -6,6 +6,7 @@ import { MenuTab } from "@/components/admin/MenuTab";
 import { OffersTab } from "@/components/admin/OffersTab";
 import { useMenuStore } from "@/store/menuStore";
 import { useAuthStore } from "@/store/authStore";
+import { redirect } from "next/navigation";
 
 export default function Admin() {
   const { fetchMenu, loading: menuLoading } = useMenuStore();
@@ -19,36 +20,11 @@ export default function Admin() {
     fetchMenu(); 
   }, [user, fetchMenu, fetchUserData]);
 
-  if (authLoading || menuLoading) {
-    return (
-      <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 flex justify-center items-center">
-        <div className="max-w-2xl w-full p-6 bg-white border-4 border-orange-500 rounded-lg shadow-lg">
-          <h2 className="text-xl font-bold text-orange-600 mb-4">Loading...</h2>
-          <p className="text-gray-900 mb-4">
-            Please wait while we load your information.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
-  // Redirect to login if user is not logged in
   if (!user || !userData) {
-    return (
-      <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 flex justify-center items-center">
-        <div className="max-w-2xl w-full p-6 bg-white border-4 border-orange-500 rounded-lg shadow-lg">
-          <h2 className="text-xl font-bold text-orange-600 mb-4">
-            User Not Logged In
-          </h2>
-          <p className="text-gray-900 mb-4">
-            Please log in to access the admin dashboard.
-          </p>
-        </div>
-      </div>
-    );
+    return redirect("/login");
   }
 
-  // Show verification message if the hotel is not verified
   if (!userData.verified) {
     return (
       <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 flex justify-center items-center">
