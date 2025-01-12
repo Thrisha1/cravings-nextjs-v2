@@ -3,11 +3,13 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
-const NotificationAccess = () => {
+const LocationAccess = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    const userLocation = localStorage.getItem("loc");
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -18,21 +20,31 @@ const NotificationAccess = () => {
           const url = new URLSearchParams(searchParams.toString());
           url.set("lat", latitude.toString());
           url.set("lon", longitude.toString());
+          localStorage.setItem("loc", "?" + url.toString());
           router.replace(`?${url.toString()}`);
         },
         (error) => {
+          if (userLocation) {
+            router.replace(userLocation);
+          }
           console.error("Location permission denied:", error);
         }
       );
+    } else if (userLocation) {
+      router.replace(userLocation);
     } else {
       console.error("Geolocation is not supported by this browser.");
     }
   }, []);
 
   useEffect(() => {
-    console.log("Location updated:", searchParams.get('lat'), searchParams.get('lon'));
-  },[]);
+    console.log(
+      "Location updated:",
+      searchParams.get("lat"),
+      searchParams.get("lon")
+    );
+  }, []);
   return <></>;
 };
 
-export default NotificationAccess;
+export default LocationAccess;

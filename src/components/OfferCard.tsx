@@ -17,7 +17,7 @@ const OfferCard = ({
   offer: Offer;
   discount: number;
   isUpcoming: boolean;
-  onClick?: ()=>void;
+  onClick?: () => void;
 }) => {
   const router = useRouter();
   return (
@@ -76,15 +76,18 @@ const OfferCard = ({
                     <MapPin className="w-4 h-4 mr-2" />
                     {offer.area}
                   </div>
-                  <p className="text-sm text-gray-500 flex items-center gap-2">
-                    <Route className="w-4 h-4" />
-                    <span>{((offer.distance ?? 0) / 1000).toFixed(2)} km</span>
-                  </p>
+                  {(offer.distance ?? 0) > 0 && (
+                    <p className="text-sm text-gray-500 flex items-center gap-2">
+                      <Route className="w-4 h-4" />
+                      <span>
+                        {((offer.distance ?? 0) / 1000).toFixed(2)} km
+                      </span>
+                    </p>
+                  )}
                   <p className="text-sm text-gray-800 flex items-center gap-2">
                     <UtensilsCrossed className="w-4 h-4" />
                     <span>{offer.hotelName}</span>
                   </p>
-                  
                 </div>
               </div>
 

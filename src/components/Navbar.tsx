@@ -18,6 +18,7 @@ export function Navbar() {
   const { user, userData, signOut, updateUserData } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [userLocation, setUserLocation] = useState("");
 
   useEffect(() => {
     if (
@@ -27,12 +28,17 @@ export function Navbar() {
     ) {
       setShowModal(true);
     }
+
+    const location = localStorage.getItem("loc");
+    if (location) {
+      setUserLocation(location);
+    }
   }, [user, userData]);
 
   const NavLinks = () => (
     <>
       {[
-        { href: "/offers", label: "Offers" },
+        { href: `/offers${userLocation}`, label: "Offers" },
         ...(userData?.role === "hotel"
           ? [{ href: "/admin", label: "Admin" }]
           : []),
