@@ -1,18 +1,25 @@
-import { create } from 'zustand';
-import { 
-  createUserWithEmailAndPassword, 
+import { create } from "zustand";
+import {
+  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  type User 
-} from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, getFirestore } from 'firebase/firestore';
-import { auth } from '@/lib/firebase';
-import { MenuItem } from '@/screens/HotelMenuPage';
+  type User,
+} from "firebase/auth";
+import {
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  getFirestore,
+} from "firebase/firestore";
+import { auth } from "@/lib/firebase";
+import { MenuItem } from "@/screens/HotelMenuPage";
+import { useClaimedOffersStore } from "./claimedOffersStore";
 
 export interface UserData {
   email: string;
-  role: 'user' | 'hotel' | 'superadmin';
+  role: "user" | "hotel" | "superadmin";
   fullName?: string;
   hotelName?: string;
   area?: string;
@@ -20,8 +27,8 @@ export interface UserData {
   category?: string;
   phone?: string;
   verified?: boolean;
-  menu? : MenuItem[];
-  offersClaimable? : number;
+  menu?: MenuItem[];
+  offersClaimable?: number;
 }
 
 interface AuthState {
@@ -29,7 +36,12 @@ interface AuthState {
   userData: UserData | null;
   loading: boolean;
   error: string | null;
-  signUp: (email: string, password: string, fullName: string, phone: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    phone: string
+  ) => Promise<string>;
   signUpAsPartner: (
     email: string,
     password: string,
@@ -55,7 +67,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   fetchUserData: async (uid: string) => {
     try {
-      const docRef = doc(db, 'users', uid);
+      const docRef = doc(db, "users", uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         set({ userData: docSnap.data() as UserData });
@@ -68,33 +80,50 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signUp: async (email, password, fullName, phone) => {
     try {
       set({ error: null });
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      await setDoc(doc(db, "users", userCredential.user.uid), {
         email,
         fullName,
         phone,
-        role: 'user',
+        role: "user",
         createdAt: new Date().toISOString(),
       });
       await get().fetchUserData(userCredential.user.uid);
+      return userCredential.user.uid;
     } catch (error) {
       set({ error: (error as Error).message });
       throw error;
     }
   },
 
-  signUpAsPartner: async (email, password, hotelName, area, location, category, phone) => {
+  signUpAsPartner: async (
+    email,
+    password,
+    hotelName,
+    area,
+    location,
+    category,
+    phone
+  ) => {
     try {
       set({ error: null });
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      await setDoc(doc(db, "users", userCredential.user.uid), {
         email,
         hotelName,
         area,
         location,
         category,
         phone,
-        role: 'hotel',
+        role: "hotel",
         verified: false,
         enquiry: 0,
         createdAt: new Date().toISOString(),
@@ -109,7 +138,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signIn: async (email, password) => {
     try {
       set({ error: null });
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       await get().fetchUserData(userCredential.user.uid);
     } catch (error) {
       set({ error: (error as Error).message });
@@ -129,7 +162,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   updateUserData: async (uid, updates) => {
     try {
-      const docRef = doc(db, 'users', uid);
+      const docRef = doc(db, "users", uid);
       await updateDoc(docRef, updates);
       await get().fetchUserData(uid);
     } catch (error) {

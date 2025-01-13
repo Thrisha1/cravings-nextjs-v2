@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { UtensilsCrossed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
+import { User } from "firebase/auth";
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -20,16 +21,25 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let user = "";
     try {
       if (isSignUp) {
         const decryptedInviteToken = localStorage.getItem("token");
-        await signUp(email, password, fullName, phoneNumber);
+        user = await signUp(email, password, fullName, phoneNumber);
         if (decryptedInviteToken) {
           const inviteToken = JSON.parse(atob(decryptedInviteToken));
           if (inviteToken) {
             console.log("Invite token:", inviteToken);
             await updateUserOffersClaimable(inviteToken, true);
             localStorage.removeItem("token");
+          }
+        } else {
+          if (user) {
+            await new Promise<void>(async (resolve) => {
+              await updateUserOffersClaimable(user, true);
+              await updateUserOffersClaimable(user, true);
+              resolve();
+            });
           }
         }
       } else {
