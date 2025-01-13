@@ -20,7 +20,7 @@ const CouponsPage = () => {
 
     const encryptedData = btoa(JSON.stringify(shareData));
 
-    const shareUrl = `https://www.cravings.live/offers?token=${encryptedData}`;
+    const shareUrl = `${window.location.origin}/offers?token=${encryptedData}`;
 
     if (navigator.share) {
       navigator.share({
