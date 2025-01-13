@@ -5,7 +5,6 @@ import { type Offer } from "./offerStore";
 import { db } from "../lib/firebase";
 import {
   arrayUnion,
-  collection,
   doc,
   getDoc,
   increment,

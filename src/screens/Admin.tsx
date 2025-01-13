@@ -9,8 +9,8 @@ import { useAuthStore } from "@/store/authStore";
 import { redirect } from "next/navigation";
 
 export default function Admin() {
-  const { fetchMenu, loading: menuLoading } = useMenuStore();
-  const { user, userData, loading: authLoading, fetchUserData } = useAuthStore();
+  const { fetchMenu } = useMenuStore();
+  const { user, userData, fetchUserData } = useAuthStore();
 
   useEffect(() => {
     if (user) {

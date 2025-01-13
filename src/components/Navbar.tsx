@@ -8,8 +8,6 @@ import {
   UtensilsCrossed,
   Menu,
   X,
-  Ticket,
-  Tickets,
   TicketPercent,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,7 +15,6 @@ import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { PartnerDialog } from "./PartnerDialog";
 import AskPhoneAndNameModal from "./AskPhoneAndNameModal";
 import Image from "next/image";
-import { Badge } from "./ui/badge";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 
 export function Navbar() {
