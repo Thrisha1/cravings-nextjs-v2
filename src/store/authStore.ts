@@ -90,6 +90,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         fullName,
         phone,
         role: "user",
+        offersClaimable : 2,
         createdAt: new Date().toISOString(),
       });
       await get().fetchUserData(userCredential.user.uid);
@@ -126,6 +127,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         role: "hotel",
         verified: false,
         enquiry: 0,
+        offersClaimable : 2,
         createdAt: new Date().toISOString(),
       });
       await get().fetchUserData(userCredential.user.uid);

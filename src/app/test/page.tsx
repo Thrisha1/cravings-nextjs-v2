@@ -69,6 +69,31 @@ const page = async () => {
   //   changeHotelLocationUrl();
   // changeOfferLocationUrl();
 
+  // const addOffersClaimedToUsers = async() => {
+
+  //   const usrCollection = collection(db, "users");
+  //   const users = await getDocs(usrCollection); 
+  //   const userData = users.docs.map((doc) => {
+  //     return {
+  //       id: doc.id,
+  //       offersClaimable: 2
+  //     }
+  //   });
+
+  //   for (const user of userData) {
+  //     console.log("updating user offers claimed", user.id);
+  //     await updateDoc(doc(db, "users", user.id), {
+  //       offersClaimable: user.offersClaimable,
+  //     });
+
+  //     await new Promise((resolve) => setTimeout(resolve, 3000));
+  //     console.log("waiting");
+  //   }
+
+  // }
+
+  // await addOffersClaimedToUsers();
+
   return <div>page</div>;
 };
 

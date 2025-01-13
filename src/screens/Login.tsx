@@ -21,25 +21,16 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    let user = "";
     try {
       if (isSignUp) {
         const decryptedInviteToken = localStorage.getItem("token");
-        user = await signUp(email, password, fullName, phoneNumber);
+        await signUp(email, password, fullName, phoneNumber);
         if (decryptedInviteToken) {
           const inviteToken = JSON.parse(atob(decryptedInviteToken));
           if (inviteToken) {
             console.log("Invite token:", inviteToken);
             await updateUserOffersClaimable(inviteToken, true);
             localStorage.removeItem("token");
-          }
-        } else {
-          if (user) {
-            await new Promise<void>(async (resolve) => {
-              await updateUserOffersClaimable(user, true);
-              await updateUserOffersClaimable(user, true);
-              resolve();
-            });
           }
         }
       } else {

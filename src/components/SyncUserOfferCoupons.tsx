@@ -19,7 +19,7 @@ const SyncUserOfferCoupons = () => {
     if (token) {
       localStorage.setItem("token", token);
     }
-  }, [searchParams]);
+  }, [searchParams , user , user?.uid]);
 
   return <></>;
 };
