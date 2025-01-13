@@ -23,6 +23,7 @@ export default function Login() {
     try {
       if (isSignUp) {
         const decryptedInviteToken = localStorage.getItem("token");
+        await signUp(email, password, fullName, phoneNumber);
         if (decryptedInviteToken) {
           const inviteToken = JSON.parse(atob(decryptedInviteToken));
           if (inviteToken) {
@@ -31,7 +32,6 @@ export default function Login() {
             localStorage.removeItem("token");
           }
         }
-        await signUp(email, password, fullName, phoneNumber);
       } else {
         await signIn(email, password);
       }
