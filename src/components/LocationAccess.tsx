@@ -9,6 +9,7 @@ const LocationAccess = () => {
 
   useEffect(() => {
     const userLocation = localStorage.getItem("loc");
+    const url = new URLSearchParams(searchParams.toString());
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -17,17 +18,26 @@ const LocationAccess = () => {
           const latitude = position.coords.latitude;
           const longitude = position.coords.longitude;
 
-          const url = new URLSearchParams(searchParams.toString());
           url.set("lat", latitude.toString());
           url.set("lon", longitude.toString());
           localStorage.setItem("loc", "?" + url.toString());
           router.replace(`?${url.toString()}`);
         },
         (error) => {
+          const lat = searchParams.get("lat");
+          const lon = searchParams.get("lon");
+
+          if (lat && lon) {
+            localStorage.setItem("loc", "?" + url.toString());
+            return;
+          } else {
+            console.error("Location permission denied:", error);
+          }
+
           if (userLocation) {
             router.replace(userLocation);
           }
-          console.error("Location permission denied:", error);
+          
         }
       );
     } else if (userLocation) {
@@ -38,10 +48,12 @@ const LocationAccess = () => {
   }, []);
 
   useEffect(() => {
+    const localLoc = localStorage.getItem("loc");
     console.log(
       "Location updated:",
       searchParams.get("lat"),
-      searchParams.get("lon")
+      searchParams.get("lon"),
+      localLoc
     );
   }, []);
   return <></>;
