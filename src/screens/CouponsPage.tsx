@@ -29,8 +29,14 @@ const CouponsPage = () => {
         url: shareUrl,
       });
     } else {
-      alert('Share link copied to clipboard');
-      navigator.clipboard.writeText(shareUrl);
+      navigator.clipboard
+        .writeText(shareUrl)
+        .then(() => {
+          alert("Share link copied to clipboard");
+        })
+        .catch((error) => {
+          console.error("Error copying: ", error);
+        });
     }
   };
 
@@ -46,16 +52,23 @@ const CouponsPage = () => {
       </div>
 
       <div className="text-center py-3">
-        <h1 className="font-black text-2xl text-orange-600">Share & Earn Coupons</h1>
+        <h1 className="font-black text-2xl text-orange-600">
+          Share & Earn Coupons
+        </h1>
         <p className="text-sm text-black/50 pt-2">
           Love using Cravings? Share the joy with your friends and family! For
-          every successful signup of the new user, you&apos;ll receive 1 exclusive
-          coupon to enjoy delicious offers and more. Start sharing, start
-          saving!
+          every successful signup of the new user, you&apos;ll receive 1
+          exclusive coupon to enjoy delicious offers and more. Start sharing,
+          start saving!
         </p>
       </div>
 
-      <button className="text-white bg-orange-600 rounded-full px-4 py-2 mt-2 hover:bg-orange-500 active:scale-95" onClick={handleInvite}>Invite Friends</button>
+      <button
+        className="text-white bg-orange-600 rounded-full px-4 py-2 mt-2 hover:bg-orange-500 active:scale-95"
+        onClick={handleInvite}
+      >
+        Invite Friends
+      </button>
     </section>
   );
 };
