@@ -4,6 +4,7 @@ import Script from "next/script"; // Import Script for Google Analytics
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import Snow from "@/components/Snow";
+import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,6 +60,7 @@ export default function RootLayout({
       >
         <Snow />
         <Navbar />
+        <PwaInstallPrompt />
         {children}
       </body>
     </html>
