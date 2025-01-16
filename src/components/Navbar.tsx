@@ -124,7 +124,7 @@ export function Navbar() {
 
             <div className="flex items-center gap-5">
               {user && (
-                <div onClick={()=>router.push('/coupons')} className="text-orange-500 gap-1 font-bold flex items-center text-lg rounded-full">
+                <div onClick={()=>router.push('/coupons')} className="text-orange-500 gap-1 cursor-pointer font-bold flex items-center text-lg rounded-full">
                   <span>{offersClaimable}</span>
                   <TicketPercent className="w-8 h-8" />
                 </div>
