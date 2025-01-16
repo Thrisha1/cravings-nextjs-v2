@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { UtensilsCrossed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
-import { User } from "firebase/auth";
+
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);

@@ -149,7 +149,7 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
             "offersClaimableUpdatedAt"
           );
           const lastOfferClaimedAt = new Date(localStoreTime || 0);
-          let minituesPassed =
+          const minituesPassed =
             (new Date().getTime() - lastOfferClaimedAt.getTime()) / 1000 / 60;
 
           // if (!localStoreTime && (new Date(userDoc.data().createdAt).getTime() <= new Date().getTime() - 60000)) {

@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { auth } from "@/lib/firebase";
 import { MenuItem } from "@/screens/HotelMenuPage";
-import { useClaimedOffersStore } from "./claimedOffersStore";
+
 
 export interface UserData {
   email: string;
