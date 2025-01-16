@@ -15,7 +15,7 @@ export default async function Offers({ offers }: { offers: Offer[] }) {
       <SyncUserOfferCoupons />
       <LocationAccess />
       {/* christmas lights  */}
-      <div className="absolute top-0 gap-7 left-0 flex items-center max-w-screen overflow-hidden pointer-events-none">
+      {/* <div className="absolute top-0 gap-7 left-0 flex items-center max-w-screen overflow-hidden pointer-events-none">
         {[...Array(6)].map((_, i) => (
           <Image
             key={i}
@@ -26,7 +26,7 @@ export default async function Offers({ offers }: { offers: Offer[] }) {
             className="scale-[110%]"
           />
         ))}
-      </div>
+      </div> */}
 
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-start md:items-center gap-3 my-4">

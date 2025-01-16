@@ -111,13 +111,13 @@ export function Navbar() {
                   <span className="text-xl font-bold text-gray-900">
                     Cravings
                   </span>
-                  <Image
+                  {/* <Image
                     src={"/christmas-hat.webp"}
                     alt="christmas hat"
                     width={30}
                     height={30}
                     className="absolute -top-2 -left-4 "
-                  />
+                  /> */}
                 </div>
               </Link>
             </div>
