@@ -50,7 +50,7 @@ const LocationAccess = () => {
     } else {
       console.error("Geolocation is not supported by this browser.");
     }
-  }, []);
+  }, [searchParams.get("lat"), searchParams.get("lon")]);
 
   useEffect(() => {
     const localLoc = localStorage.getItem("loc");
@@ -60,7 +60,7 @@ const LocationAccess = () => {
       searchParams.get("lon"),
       localLoc
     );
-  }, []);
+  }, [searchParams.get("lat"), searchParams.get("lon")]);
   return <></>;
 };
 
