@@ -41,7 +41,7 @@ const CouponsPage = () => {
   };
 
   return (
-    <section className="bg-[#FFF6EB] min-h-screen grid place-content-center justify-items-center px-5 sm:px-[7.5%] lg:sm:px-[20%]">
+    <section className="bg-[#FFF6EB] min-h-[calc(100vh-64px)] grid place-content-center justify-items-center px-5 sm:px-[7.5%] lg:sm:px-[20%]">
       <div className="w-[250px] lg:w-[330px] aspect-square relative">
         <Image
           src={"/rewards.png"}
