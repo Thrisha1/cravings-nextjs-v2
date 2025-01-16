@@ -141,13 +141,15 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
         const userDocRef = doc(db, "users", userId);
         const userDoc = await getDoc(userDocRef);
         const offersCalimableLessThan2 = get().offersClaimable < 2;
-        console.log("offersCalimableLessThan2", offersCalimableLessThan2);
+        // console.log("offersCalimableLessThan2", offersCalimableLessThan2);
 
         if (userDoc.exists()) {
           const { offersClaimable } = userDoc.data();
           const localStoreTime = localStorage.getItem(
             "offersClaimableUpdatedAt"
           );
+          console.log("localStoreTime", localStoreTime);
+          
           const lastOfferClaimedAt = new Date(localStoreTime || 0);
           const minituesPassed =
             (new Date().getTime() - lastOfferClaimedAt.getTime()) / 1000 / 60;
