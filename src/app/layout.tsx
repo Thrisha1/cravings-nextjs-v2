@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script"; // Import Script for Google Analytics
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
-import Snow from "@/components/Snow";
+// import Snow from "@/components/Snow";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 
 const geistSans = Geist({

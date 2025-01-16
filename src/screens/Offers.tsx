@@ -4,7 +4,7 @@ import LocationSelection from "@/components/LocationSelection";
 import OfferTabs from "@/components/OfferTabs";
 import OfferCard from "@/components/OfferCard";
 import NoOffersFound from "@/components/NoOffersFound";
-import Image from "next/image";
+// import Image from "next/image";
 import LocationAccess from "@/components/LocationAccess";
 import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
 
