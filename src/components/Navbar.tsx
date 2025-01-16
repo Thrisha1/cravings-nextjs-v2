@@ -4,12 +4,7 @@ import { Button } from "./ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import {
-  UtensilsCrossed,
-  Menu,
-  X,
-  TicketPercent,
-} from "lucide-react";
+import { UtensilsCrossed, Menu, X, TicketPercent } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { PartnerDialog } from "./PartnerDialog";
@@ -104,7 +99,10 @@ export function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <Link href="/offers" className="flex items-center space-x-2">
+              <Link
+                href={userLocation ? `/offers${userLocation}` : "/offerss"}
+                className="flex items-center space-x-2"
+              >
                 <UtensilsCrossed className="h-6 w-6 text-orange-600" />
 
                 <div className="relative">
@@ -124,7 +122,10 @@ export function Navbar() {
 
             <div className="flex items-center gap-5">
               {user && (
-                <div onClick={()=>router.push('/coupons')} className="text-orange-500 gap-1 cursor-pointer font-bold flex items-center text-lg rounded-full">
+                <div
+                  onClick={() => router.push("/coupons")}
+                  className="text-orange-500 gap-1 cursor-pointer font-bold flex items-center text-lg rounded-full"
+                >
                   <span>{offersClaimable}</span>
                   <TicketPercent className="w-8 h-8" />
                 </div>

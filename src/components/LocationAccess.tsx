@@ -43,14 +43,10 @@ const LocationAccess = () => {
 
         }
       );
-    } else if (userLocation) {
-      router.replace(userLocation);
-      console.log("Location updated from local storage:", userLocation);
-      
     } else {
       console.error("Geolocation is not supported by this browser.");
     }
-  }, [searchParams.get("lat"), searchParams.get("lon")]);
+  }, []);
 
   useEffect(() => {
     const localLoc = localStorage.getItem("loc");

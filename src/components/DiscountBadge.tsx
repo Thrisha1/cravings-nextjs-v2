@@ -5,13 +5,13 @@ const DiscountBadge = ({ discount }: { discount: number }) => {
   return (
     <>
       {/* normal  */}
-      {/* <div className="badge-clip absolute top-0 right-0 text-white bg-red-600 grid text-center p-2 animate-in">
+      <div className="badge-clip absolute top-0 right-0 text-white bg-red-600 grid text-center p-2 animate-in">
         <span className="font-bold text-xl">{discount}%</span>
         <span className="font-medium text-sm">OFF</span>
-      </div> */}
+      </div>
 
       {/* christmas  */}
-      <div className="absolute top-0 right-0 text-white bg-red-600 grid text-center p-2 animate-in">
+      {/* <div className="absolute top-0 right-0 text-white bg-red-600 grid text-center p-2 animate-in">
         <span className="font-bold text-xl z-10">{discount}%</span>
         <span className="font-medium text-sm z-10">OFF</span>
 
@@ -23,7 +23,7 @@ const DiscountBadge = ({ discount }: { discount: number }) => {
           height={400}
           className=" absolute top-0 left-0"
         />
-      </div>
+      </div> */}
     </>
   );
 };
