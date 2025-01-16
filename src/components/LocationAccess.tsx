@@ -21,6 +21,8 @@ const LocationAccess = () => {
           url.set("lat", latitude.toString());
           url.set("lon", longitude.toString());
           localStorage.setItem("loc", "?" + url.toString());
+          console.log("Location updated from position:", url.toString()); 
+          
           router.replace(`?${url.toString()}`);
         },
         (error) => {
@@ -29,19 +31,22 @@ const LocationAccess = () => {
 
           if (lat && lon) {
             localStorage.setItem("loc", "?" + url.toString());
-            return;
+            console.log("Location updated from search params:", url.toString());
           } else {
             console.error("Location permission denied:", error);
+
+            if (userLocation) {
+              console.log("Location updated from local storage:", userLocation);
+              router.replace(userLocation);
+            }
           }
 
-          if (userLocation) {
-            router.replace(userLocation);
-          }
-          
         }
       );
     } else if (userLocation) {
       router.replace(userLocation);
+      console.log("Location updated from local storage:", userLocation);
+      
     } else {
       console.error("Geolocation is not supported by this browser.");
     }
