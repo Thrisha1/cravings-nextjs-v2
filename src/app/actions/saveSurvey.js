@@ -21,8 +21,8 @@ export const saveSurvey = async (formData) => {
         values: [
           [
             formData.district,
-            formData.favoriteHotel,
-            formData.favoriteFood,
+            formData.favoriteFoods,
+            formData.favoriteHotels,
             JSON.stringify(formData.hotelDetails),
           ],
         ],

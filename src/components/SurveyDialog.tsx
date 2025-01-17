@@ -76,12 +76,14 @@ const SurveyForm = ({
   setIsUserNearby: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
   const [selectedDistrict, setSelectedDistrict] = useState("");
-  const [favoriteHotel, setFavoriteHotel] = useState("");
+  const [favoriteHotels, setFavoriteHotels] = useState<string[]>([]);
+  const [hotelInput, setHotelInput] = useState("");
+  const [favoriteFoods, setFavoriteFoods] = useState<string[]>([]);
+  const [foodInput, setFoodInput] = useState("");
   const [hotelSuggestions, setHotelSuggestions] = useState<string[]>([]);
   const [allHotels, setAllHotels] = useState([]);
-  const [favoriteFood, setFavoriteFood] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isValid , setIsValid] = useState(false);
+  const [isValid, setIsValid] = useState(false);
 
   useEffect(() => {
     if (selectedDistrict) {
@@ -90,7 +92,7 @@ const SurveyForm = ({
           area["name"="${selectedDistrict}"]->.a;
           node(area.a)["amenity"="restaurant"];
           out body;
-          `;
+        `;
       const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(
         query
       )}`;
@@ -98,37 +100,78 @@ const SurveyForm = ({
       fetch(url)
         .then((response) => response.json())
         .then((data) => {
-          // Extract hotel names (restaurant names in this case) from Overpass API response
           const restaurants = data.elements
             .filter((element: { tags: { name: string } }) => element.tags.name)
             .map((element: { tags: { name: string } }) => element.tags.name);
-
-          setHotelSuggestions(restaurants); 
-          setAllHotels(data.elements); 
+          setHotelSuggestions(restaurants);
+          setAllHotels(data.elements);
         })
         .catch((error) => console.error("Error fetching hotels:", error));
     }
   }, [selectedDistrict]);
 
   useEffect(() => {
-    if (selectedDistrict && favoriteFood && favoriteFood) {
-      setIsValid(true);
+    setIsValid(
+      !!selectedDistrict &&
+        favoriteHotels.length > 0 &&
+        favoriteFoods.length > 0
+    );
+  }, [selectedDistrict, favoriteHotels, favoriteFoods]);
+
+  const handleHotelInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setHotelInput(e.target.value);
+  };
+
+  const addHotel = () => {
+    if (
+      hotelInput &&
+      favoriteHotels.length < 5 &&
+      !favoriteHotels.includes(hotelInput)
+    ) {
+      setFavoriteHotels([...favoriteHotels, hotelInput]);
+      setHotelInput("");
     }
-  }, [selectedDistrict, favoriteHotel, favoriteFood]);
+  };
+
+  const removeHotel = (hotel: string) => {
+    setFavoriteHotels(favoriteHotels.filter((h) => h !== hotel));
+  };
+
+  const handleFoodInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFoodInput(e.target.value);
+  };
+
+  const addFood = () => {
+    if (
+      foodInput &&
+      favoriteFoods.length < 5 &&
+      !favoriteFoods.includes(foodInput)
+    ) {
+      setFavoriteFoods([...favoriteFoods, foodInput]);
+      setFoodInput("");
+    }
+  };
+
+  const removeFood = (food: string) => {
+    setFavoriteFoods(favoriteFoods.filter((f) => f !== food));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    const selectedHotel = allHotels?.length > 0 && allHotels?.find(
-      (hotel: { tags: { name: string } }) => hotel.tags.name === favoriteHotel
+    const selectedHotelDetails = allHotels.filter(
+      (hotel: { tags: { name: string } }) =>
+        favoriteHotels.includes(hotel.tags.name)
     );
 
     const formData = {
       district: selectedDistrict,
-      favoriteHotel,
-      favoriteFood,
-      hotelDetails: selectedHotel ?? null,
+      favoriteHotels: favoriteHotels.join(", "),
+      favoriteFoods: favoriteFoods.join(", "),
+      hotelDetails: selectedHotelDetails,
     };
+
+    console.log("Survey data:", formData);
 
     try {
       await saveSurvey(formData);
@@ -144,17 +187,15 @@ const SurveyForm = ({
   };
 
   return (
-    <form
-      onSubmit={isLoading ? () => {} : handleSubmit}
-      className={`p-4 bg-white ${className}`}
-    >
+    <form className={`p-4 bg-white ${className}`}>
       <h2 className="text-lg font-semibold text-orange-600">Customer Survey</h2>
       <p className="mb-4 text-sm text-black/30">
-        Since you&apos;re too far to enjoy our offers, tell us your favorite food and restaurant so we can serve you better.
+        Since you&apos;re too far to enjoy our offers, tell us your favorite food and
+        restaurant so we can serve you better.
       </p>
 
       <label className="block mb-2">Select your district</label>
-      <Select onValueChange={(value) => setSelectedDistrict(value)}>
+      <Select onValueChange={setSelectedDistrict}>
         <SelectTrigger>{selectedDistrict || "Choose a district"}</SelectTrigger>
         <SelectContent>
           {districts.map((district) => (
@@ -165,32 +206,83 @@ const SurveyForm = ({
         </SelectContent>
       </Select>
 
-      <label className="block mt-4 mb-2">Favorite Hotel</label>
-      <Input
-        value={favoriteHotel}
-        onChange={(e) => setFavoriteHotel(e.target.value)}
-        list="hotelSuggestions"
-        placeholder="Type to search..."
-      />
+      <label className="block mt-4 mb-2">Favorite Hotels (up to 5)</label>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {favoriteHotels.map((hotel) => (
+          <span
+            key={hotel}
+            className="px-2 py-1 text-[12px] bg-orange-200 text-orange-800 rounded-full flex items-center space-x-2"
+          >
+            <span>{hotel}</span>
+            <button
+              type="button"
+              onClick={() => removeHotel(hotel)}
+              className="text-red-500 font-bold"
+            >
+              &times;
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <Input
+          value={hotelInput}
+          onChange={handleHotelInput}
+          placeholder="Type hotel name"
+          list="hotelSuggestions"
+        />
+        <Button
+          onClick={addHotel}
+          disabled={!hotelInput || favoriteHotels.length >= 5}
+        >
+          Add
+        </Button>
+      </div>
       <datalist id="hotelSuggestions">
         {hotelSuggestions.map((hotel, index) => (
           <option key={index} value={hotel} />
         ))}
       </datalist>
 
-      <label className="block mt-4 mb-2">Favorite Food</label>
-      <Input
-        value={favoriteFood}
-        onChange={(e) => setFavoriteFood(e.target.value)}
-        placeholder="Enter your favorite food"
-      />
+      <label className="block mt-4 mb-2">Favorite Foods (up to 5)</label>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {favoriteFoods.map((food) => (
+          <span
+            key={food}
+            className="px-2 py-1 text-[12px] bg-orange-200 text-orange-800 rounded-full flex items-center space-x-2"
+          >
+            <span>{food}</span>
+            <button
+              type="button"
+              onClick={() => removeFood(food)}
+              className="text-red-500 font-bold"
+            >
+              &times;
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <Input
+          value={foodInput}
+          onChange={handleFoodInput}
+          placeholder="Type food name"
+        />
+        <Button
+          onClick={addFood}
+          disabled={!foodInput || favoriteFoods.length >= 5}
+        >
+          Add
+        </Button>
+      </div>
 
       <Button
+        onClick={isLoading ? undefined : handleSubmit}
         disabled={isLoading || !isValid}
         type="submit"
         className="mt-6 w-full disabled:pointer-events-none disabled:opacity-50 bg-orange-600 hover:bg-orange-500 text-white font-medium"
       >
-        {isLoading && isValid ? "Submitting..." : "Submit"}
+        {isLoading ? "Submitting..." : "Submit"}
       </Button>
     </form>
   );
