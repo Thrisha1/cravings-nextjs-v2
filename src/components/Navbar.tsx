@@ -40,7 +40,7 @@ export function Navbar() {
   const NavLinks = () => (
     <>
       {[
-        { href: `/offers${userLocation}`, label: "Offers" },
+        { href: `${userLocation ? `/offers${userLocation}` : '/offers'}` , label: "Offers" },
         ...(userData?.role === "hotel"
           ? [{ href: "/admin", label: "Admin" }]
           : []),
@@ -100,7 +100,7 @@ export function Navbar() {
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <Link
-                href={userLocation ? `/offers${userLocation}` : "/offerss"}
+                href={userLocation ? `/offers${userLocation}` : "/offers"}
                 className="flex items-center space-x-2"
               >
                 <UtensilsCrossed className="h-6 w-6 text-orange-600" />

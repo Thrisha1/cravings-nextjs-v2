@@ -7,6 +7,7 @@ import NoOffersFound from "@/components/NoOffersFound";
 // import Image from "next/image";
 import LocationAccess from "@/components/LocationAccess";
 import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
+import SurveyDialog from "@/components/SurveyDialog";
 
 export default async function Offers({ offers }: { offers: Offer[] }) {
   return (
@@ -14,6 +15,7 @@ export default async function Offers({ offers }: { offers: Offer[] }) {
       {/* <ScanButton /> */}
       <SyncUserOfferCoupons />
       <LocationAccess />
+      <SurveyDialog offers={offers} />
       {/* christmas lights  */}
       {/* <div className="absolute top-0 gap-7 left-0 flex items-center max-w-screen overflow-hidden pointer-events-none">
         {[...Array(6)].map((_, i) => (
