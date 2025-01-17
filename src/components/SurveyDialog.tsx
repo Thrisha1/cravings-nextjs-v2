@@ -17,7 +17,8 @@ const SurveyDialog = ({ offers }: { offers: Offer[] }) => {
     const nearestOffer = offers[0];
 
     if (nearestOffer) {
-      const distance = nearestOffer.distance as number;
+      const distance = nearestOffer.distance || 0;
+      console.log("Distance from nearest offer:", distance);
       const hasSurveySubmitted =
         localStorage.getItem("surveySubmitted") === "1";
       if (distance >= 35 && !hasSurveySubmitted) {
