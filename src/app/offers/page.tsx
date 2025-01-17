@@ -88,7 +88,7 @@ const filterAndSortOffers = async ({
   return offersWithDistance;
 };
 
-const page = async (props: { searchParams: SearchParams }) => {
+const OfferMainPage = async (props: { searchParams: SearchParams }) => {
   const searchParams = await props.searchParams;
   const {
     query: searchQuery,
@@ -111,4 +111,4 @@ const page = async (props: { searchParams: SearchParams }) => {
   return <Offers offers={filteredOffers} />;
 };
 
-export default page;
+export default OfferMainPage;

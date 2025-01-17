@@ -1,10 +1,13 @@
-import HomePage from "@/screens/HomePage";
-import { redirect } from "next/navigation";
+// import HomePage from "@/screens/HomePage";
+// import { redirect } from "next/navigation";
+import OfferMainPage from "./offers/page";
 
 
-export default function Home() {
+type SearchParams = Promise<{ [key: string]: string | undefined }>;
 
-  redirect('/offers');
+export default function Home(props: { searchParams: SearchParams }) {
 
-  return <HomePage />;
+  // return <HomePage />;
+
+  return <OfferMainPage searchParams={props.searchParams} />
 }
