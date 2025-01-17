@@ -22,36 +22,36 @@ export function extractLatLonFromGoogleMapsUrl(
   };
 }
 
-function getDistanceBetweenPoints(
-  coord1: Coordinates,
-  coord2: Coordinates
-): number {
-  const toRadians = (degrees: number) => degrees * (Math.PI / 180);
-  const earthRadiusKm = 6371;
+// function getDistanceBetweenPoints(
+//   coord1: Coordinates,
+//   coord2: Coordinates
+// ): number {
+//   const toRadians = (degrees: number) => degrees * (Math.PI / 180);
+//   const earthRadiusKm = 6371;
 
-  const dLat = toRadians(coord2.lat - coord1.lat);
-  const dLon = toRadians(coord2.lon - coord1.lon);
-  const lat1 = toRadians(coord1.lat);
-  const lat2 = toRadians(coord2.lat);
+//   const dLat = toRadians(coord2.lat - coord1.lat);
+//   const dLon = toRadians(coord2.lon - coord1.lon);
+//   const lat1 = toRadians(coord1.lat);
+//   const lat2 = toRadians(coord2.lat);
 
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+//   const a =
+//     Math.sin(dLat / 2) ** 2 +
+//     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+//   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-  return earthRadiusKm * c * 1000; 
-}
+//   return earthRadiusKm * c * 1000;
+// }
 
-export function isHotelNear(
+export async function isHotelNear(
   hotelLocation: string,
-  userLocation: Coordinates,
+  userLocation: Coordinates
   // distanceRange: number = 10,
 ) {
   if (!userLocation.lat || !userLocation.lon) {
     return 0;
   }
 
-  const hotelCoordinates =  extractLatLonFromGoogleMapsUrl(hotelLocation);
+  const hotelCoordinates = extractLatLonFromGoogleMapsUrl(hotelLocation);
 
   if (!hotelCoordinates) {
     console.error(
@@ -61,7 +61,21 @@ export function isHotelNear(
     return 0;
   }
 
-  const distance = getDistanceBetweenPoints(hotelCoordinates, userLocation);
+  const distance = await fetchRouteDistance(hotelCoordinates, userLocation);
 
   return distance;
 }
+
+const fetchRouteDistance = async (start: Coordinates, end: Coordinates) => {
+  try {
+    const response = await fetch(
+      `https://api.mapbox.com/directions/v5/mapbox/driving/${start.lon},${start.lat};${end.lon},${end.lat}?access_token=pk.eyJ1IjoiYWJoaW4yazMiLCJhIjoiY20wbWh5ZHFwMDJwcjJqcHVjM3kyZjZlNyJ9.cagUWYMuMzLdJQhMbYB50A&overview=full`
+    );
+    const data = await response.json();
+    const distanceInMeters = data?.routes[0]?.distance; 
+    return distanceInMeters ;
+  } catch (e) {
+    console.error("Error fetching route distance:", e);
+    return 0;
+  }
+};
