@@ -17,11 +17,13 @@ const SurveyDialog = ({ offers }: { offers: Offer[] }) => {
     const nearestOffer = offers[0];
 
     if (nearestOffer) {
-      const distance = nearestOffer.distance || 0;
-      console.log("Distance from nearest offer:", distance);
+      const distance = ((Number(nearestOffer.distance) ?? 0) / 1000).toFixed(2);
+      const distanceNumber = Number(distance);
+
+      console.log("Distance from nearest offer:", distanceNumber);
       const hasSurveySubmitted =
         localStorage.getItem("surveySubmitted") === "1";
-      if (distance >= 35 && !hasSurveySubmitted) {
+      if (distanceNumber >= 35 && !hasSurveySubmitted) {
         setIsUserNearby(false);
       } else {
         setIsUserNearby(true);
@@ -191,8 +193,8 @@ const SurveyForm = ({
     <form className={`p-4 bg-white ${className}`}>
       <h2 className="text-lg font-semibold text-orange-600">Customer Survey</h2>
       <p className="mb-4 text-sm text-black/30">
-        Since you&apos;re too far to enjoy our offers, tell us your favorite food and
-        restaurant so we can serve you better.
+        Since you&apos;re too far to enjoy our offers, tell us your favorite
+        food and restaurant so we can serve you better.
       </p>
 
       <label className="block mb-2">Select your district</label>
