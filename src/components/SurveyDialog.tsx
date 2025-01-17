@@ -150,7 +150,7 @@ const SurveyForm = ({
     >
       <h2 className="text-lg font-semibold text-orange-600">Customer Survey</h2>
       <p className="mb-4 text-sm text-black/30">
-        Since you're too far to enjoy our offers, tell us your favorite food and restaurant so we can serve you better.
+        Since you&apos;re too far to enjoy our offers, tell us your favorite food and restaurant so we can serve you better.
       </p>
 
       <label className="block mb-2">Select your district</label>
