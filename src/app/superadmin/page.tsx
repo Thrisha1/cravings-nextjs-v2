@@ -3,10 +3,11 @@ import PartnerVerification from "@/components/superAdmin/PartnerVerification";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React from "react";
-import { PageProps } from "../../../.next/types/app/superadmin/page";
 
-const page = async ({ searchParams }: PageProps) => {
-  const page = (await searchParams).page;
+type SearchParams = Promise<{ [key: string]: string | undefined }>;
+
+const page = async (props : { searchParams : SearchParams  })=> {
+  const page = (await props.searchParams).page;
   const pages = [
     {
       name: "Partner Verification",
