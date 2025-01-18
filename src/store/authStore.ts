@@ -16,7 +16,6 @@ import {
 import { auth } from "@/lib/firebase";
 import { MenuItem } from "@/screens/HotelMenuPage";
 
-
 export interface UserData {
   email: string;
   role: "user" | "hotel" | "superadmin";
@@ -90,7 +89,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         fullName,
         phone,
         role: "user",
-        offersClaimable : 2,
+        offersClaimable: 2,
         createdAt: new Date().toISOString(),
       });
       await get().fetchUserData(userCredential.user.uid);
@@ -127,7 +126,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         role: "hotel",
         verified: false,
         enquiry: 0,
-        offersClaimable : 2,
+        offersClaimable: 2,
         createdAt: new Date().toISOString(),
       });
       await get().fetchUserData(userCredential.user.uid);
@@ -154,6 +153,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signOut: async () => {
     try {
+      localStorage.clear();
       await firebaseSignOut(auth);
       set({ user: null, userData: null, error: null });
     } catch (error) {
