@@ -5,6 +5,8 @@ import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 // import Snow from "@/components/Snow";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
+import RateUsModal from "@/components/RateUsModal";
+import '@smastrom/react-rating/style.css'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -60,6 +62,7 @@ export default function RootLayout({
       >
         {/* <Snow /> */}
         <Navbar />
+        <RateUsModal />
         <PwaInstallPrompt />
         {children}
       </body>
