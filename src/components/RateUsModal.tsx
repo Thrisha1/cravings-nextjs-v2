@@ -20,7 +20,7 @@ const RateUsModal = () => {
   } , []);
 
   return (
-    <Dialog open={false}>
+    <Dialog open={isOpen}>
       <DialogContent className="w-[90%] rounded-xl">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900">
