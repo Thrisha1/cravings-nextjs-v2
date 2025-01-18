@@ -70,7 +70,6 @@ const fetchRouteDistance = async (start: Coordinates, end: Coordinates) => {
   try {
     const distaceUrlParse = encodeURIComponent(`${start.lon},${start.lat};${end.lon},${end.lat}`);
     const url =  `https://api.mapbox.com/directions/v5/mapbox/driving/${distaceUrlParse}?alternatives=true&geometries=geojson&language=en&overview=full&steps=true&access_token=pk.eyJ1IjoiYWJoaW4yazMiLCJhIjoiY20wbWh5ZHFwMDJwcjJqcHVjM3kyZjZlNyJ9.cagUWYMuMzLdJQhMbYB50A`;
-    console.log("url", url);
     const response = await fetch(url);
     const data = await response.json();
     const distanceInMeters = data?.routes[0]?.distance; 

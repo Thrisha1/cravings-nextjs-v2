@@ -99,3 +99,18 @@ body {
 .scrollbar-hidden::-webkit-scrollbar {
   display: none;
 } 
+
+.animate-tooltip{
+  animation: animateTooltip 0.5s ease;
+}
+
+@keyframes animateTooltip {
+  0% {
+    opacity: 0;
+    transform: translate(-50%,100px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%,56px);
+  }
+}

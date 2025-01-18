@@ -1,98 +1,31 @@
+
 // import { db } from "@/lib/firebase";
-// import {
-//   collection,
-//   getDocs,
-//   query,
-//   where,
-//   doc,
-//   updateDoc,
-//   getDoc,
-// } from "firebase/firestore";
+// import { collection, getDocs, query, where } from "firebase/firestore";
 import React from "react";
-// import { resolveShortUrl } from "../actions/extractLatLonFromGoogleMapsUrl";
 
 const page = async () => {
-  // const changeHotelLocationUrl = async () => {
-  //   const usersCollection = collection(db, "users");
-  //   const hotelQuery = query(usersCollection, where("role", "==", "hotel"));
-  //   const hotelUsers = await getDocs(hotelQuery);
-  //   const hotelData = hotelUsers.docs.map((doc) => {
-  //     return {
-  //       hotelName: doc.data().hotelName,
-  //       location: doc.data().location,
-  //       id: doc.id,
-  //     };
-  //   });
 
-  //   for (const hotel of hotelData) {
-  //     console.log("updating hotel location url", hotel.hotelName);
-  //     const expandedUrl = await resolveShortUrl(hotel.location);
-  //     console.log(expandedUrl);
+  // const newUsers  = async(date : string) => {
 
-  //     const hotelDoc = doc(db, "users", hotel.id);
-  //     await updateDoc(hotelDoc, {
-  //       location: expandedUrl,
-  //     });
 
-  //     await new Promise((resolve) => setTimeout(resolve, 3000));
-  //     console.log("waiting");
-  //   }
-  // };
+  //   const usersCollection = await collection(db, "users");
+  //   const getQuery = query(usersCollection, where("createdAt", ">", date));
+  //   const users = await getDocs(getQuery);
 
-  // const changeOfferLocationUrl = async () => {
-  //   const offersCollection = collection(db, "offers");
-  //   const offers = await getDocs(offersCollection);
-  //   const offerData = offers.docs.map((doc) => {
-  //     return {
-  //       dishName: doc.data().dishName,
-  //       hotelId: doc.data().hotelId,
-  //       id: doc.id,
-  //     };
-  //   });
-
-  //   for (const offer of offerData) {
-  //     console.log("updating offer location url", offer.dishName);
-  //     const hotelDoc = doc(db, "users", offer.hotelId);
-  //     const hotelSnapshot = await getDoc(hotelDoc);
-  //     const hotelLocation = hotelSnapshot.data()?.location;
-  //     console.log("Hotel location:", hotelLocation);
-
-  //     await updateDoc(doc(db, "offers", offer.id), {
-  //       hotelLocation: hotelLocation,
-  //     });
-
-  //     await new Promise((resolve) => setTimeout(resolve, 3000));
-  //     console.log("waiting");
-  //   }
-  // };
-
-  //   changeHotelLocationUrl();
-  // changeOfferLocationUrl();
-
-  // const addOffersClaimedToUsers = async() => {
-
-  //   const usrCollection = collection(db, "users");
-  //   const users = await getDocs(usrCollection); 
-  //   const userData = users.docs.map((doc) => {
-  //     return {
-  //       id: doc.id,
-  //       offersClaimable: 2
-  //     }
-  //   });
-
-  //   for (const user of userData) {
-  //     console.log("updating user offers claimed", user.id);
-  //     await updateDoc(doc(db, "users", user.id), {
-  //       offersClaimable: user.offersClaimable,
-  //     });
-
-  //     await new Promise((resolve) => setTimeout(resolve, 3000));
-  //     console.log("waiting");
-  //   }
-
+  //   return users;
   // }
 
-  // await addOffersClaimedToUsers();
+  // const users = await newUsers("2025-01-16");
+  // const userDocs = users.docs.map((doc) => {
+  //   return {
+  //     email : doc.data().email,
+  //     createdAt : doc.data().createdAt,
+  //     name : doc.data().fullName ?? doc.data().hotelName,
+  //   }
+  // });
+
+  // console.table(userDocs);
+  
 
   return <div>page</div>;
 };
