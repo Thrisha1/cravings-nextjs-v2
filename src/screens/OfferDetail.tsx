@@ -26,19 +26,24 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
   const { user, userData } = useAuthStore();
   const [showTicket, setShowTicket] = useState(false);
   const [token, setToken] = useState<string>(""); // Add token state
+  const [isClaimed, setClaimed] = useState(false);
   const {
     isOfferClaimed,
     syncClaimedOffersWithFirestore,
     addClaimedOffer,
     updateUserOffersClaimable,
     offersClaimable,
+    claimedOffers,
   } = useClaimedOffersStore();
   const { incrementEnquiry } = useOfferStore();
 
-  const isClaimed = isOfferClaimed(offer.id);
   // Fetch claimed offers from Firestore when the component mounts
   useEffect(() => {
     if (user?.uid) {
+      const claimed = isOfferClaimed(offer.id);
+      setClaimed(claimed);
+      const claimedOffer = claimedOffers.find((o) => o.offerId === offer.id);
+      setToken(claimed ? claimedOffer?.token ?? "" : "");
       const unsubscribe = syncClaimedOffersWithFirestore(user.uid);
       return () => unsubscribe(); // Clean up the listener on unmount
     }
@@ -60,6 +65,7 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
         // Increment the enquiry count if the offer is not already claimed
         if (!isClaimed) {
           incrementEnquiry(offer.id, offer.hotelId);
+          setClaimed(true);
         }
 
         await updateUserOffersClaimable(user.uid, false);
