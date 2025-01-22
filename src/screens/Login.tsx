@@ -8,7 +8,6 @@ import { UtensilsCrossed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 
-
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -29,8 +28,25 @@ export default function Login() {
           const inviteToken = JSON.parse(atob(decryptedInviteToken));
           if (inviteToken) {
             console.log("Invite token:", inviteToken);
-            await updateUserOffersClaimable(inviteToken, true);
+            await updateUserOffersClaimable(inviteToken, 50); //give 50 offers to the user who invited
             localStorage.removeItem("token");
+
+            await fetch(
+              `${process.env.NEXT_PUBLIC_WWJS_API_URL}/whatsapp-to-user`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  to: inviteToken,
+                  messageType: "invite-reward",
+                  from : fullName
+                }),
+              }
+            ).catch((error) => {
+              console.error("Error:", error);
+            });
           }
         }
       } else {

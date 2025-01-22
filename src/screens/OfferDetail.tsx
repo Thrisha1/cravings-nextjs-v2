@@ -19,6 +19,8 @@ import Image from "next/image";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import DiscountBadge from "@/components/DiscountBadge";
 import ClaimOfferButton from "@/components/ClaimOfferButton";
+import Link from "next/link";
+import { toast } from "sonner";
 
 export default function OfferDetail({ offer }: { offer: Offer }) {
   const { id: offerId } = useParams();
@@ -45,6 +47,11 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
       const claimedOffer = claimedOffers.find((o) => o.offerId === offer.id);
       setToken(claimed ? claimedOffer?.token ?? "" : "");
       const unsubscribe = syncClaimedOffersWithFirestore(user.uid);
+
+      if((offersClaimable < offer.originalPrice - offer.newPrice) && !claimed) {
+        toast.error("You don't have enough cravings cash to claim this offer");
+        return;
+      }
       return () => unsubscribe(); // Clean up the listener on unmount
     }
   }, [user, syncClaimedOffersWithFirestore]);
@@ -54,6 +61,13 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
       navigate.push("/login");
       return;
     }
+
+    if(offersClaimable < offer.originalPrice - offer.newPrice) {
+      toast.error("You don't have enough cravings cash to claim this offer");
+      return;
+    }
+
+    const offerDiscount = offer.originalPrice - offer.newPrice;
 
     if (offer) {
       try {
@@ -68,7 +82,7 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
           setClaimed(true);
         }
 
-        await updateUserOffersClaimable(user.uid, false);
+        await updateUserOffersClaimable(user.uid, ( -1 * offerDiscount));
       } catch (error) {
         console.error("Failed to claim offer:", error);
       }
@@ -167,10 +181,10 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
                 </div>
               </div>
 
-              {userData && (
-                <div
-                  className={`h-[36px] w-[100%] grid-cols-[1fr,100px] grid gap-2`}
-                >
+              <div
+                className={`h-[36px] w-[100%] grid-cols-[1fr,100px] grid gap-2`}
+              >
+                {userData ? (
                   <ClaimOfferButton
                     handleClaimOffer={handleClaimOffer}
                     isClaimed={isClaimed}
@@ -178,12 +192,14 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
                     offersClaimable={offersClaimable}
                     setShowTicket={setShowTicket}
                   />
-                  <Share
-                    offerId={offerId || ""}
-                    className={"w-full flex justify-center"}
-                  />
-                </div>
-              )}
+                ) : (
+                  <Link  className={`w-full py-2 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm text-center`} href={"/login"}>Claim Offer</Link>
+                )}
+                <Share
+                  offerId={offerId || ""}
+                  className={"w-full flex justify-center"}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>

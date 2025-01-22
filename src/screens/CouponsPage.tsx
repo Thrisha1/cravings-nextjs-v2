@@ -57,8 +57,8 @@ const CouponsPage = () => {
         </h1>
         <p className="text-sm text-black/50 pt-2">
           Love using Cravings? Share the joy with your friends and family! For
-          every successful signup of the new user, you&apos;ll receive 1
-          exclusive coupon to enjoy delicious offers and more. Start sharing,
+          every successful signup of the new user, you&apos;ll receive 50Rs
+          exclusive Cravings cash to enjoy delicious offers and more. Start sharing,
           start saving!
         </p>
       </div>

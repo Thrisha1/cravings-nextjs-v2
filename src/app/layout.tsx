@@ -7,6 +7,7 @@ import { Navbar } from "@/components/Navbar";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 // import RateUsModal from "@/components/RateUsModal";
 import '@smastrom/react-rating/style.css'
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -60,6 +61,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Toaster richColors />
         {/* <Snow /> */}
         <Navbar />
         {/* <RateUsModal /> */}

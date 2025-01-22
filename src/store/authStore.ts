@@ -89,7 +89,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         fullName,
         phone,
         role: "user",
-        offersClaimable: 2,
+        offersClaimable: 100,
+        offersClaimableUpdatedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       });
       await get().fetchUserData(userCredential.user.uid);
