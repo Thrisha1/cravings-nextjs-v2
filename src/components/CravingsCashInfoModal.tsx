@@ -10,15 +10,40 @@ const CravingsCashInfoModal = () => {
   const { user } = useAuthStore();
 
   useEffect(() => {
-    setTimeout(() => {
-      if (!user) {
-        setOpen(true);
-      }
-    }, 2000);
+    const request = indexedDB.open("firebaseLocalStorageDb");
+
+    request.onsuccess = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      const transaction = db.transaction("firebaseLocalStorage", "readonly");
+      const store = transaction.objectStore("firebaseLocalStorage");
+      const getAllKeysRequest = store.getAllKeys();
+        
+      getAllKeysRequest.onsuccess = () => {
+        console.log(getAllKeysRequest.result);
+
+        const initialRun = localStorage.getItem("initialRun");
+        
+        if ((getAllKeysRequest.result.length === 0) && initialRun) {
+          setOpen(true);
+        }
+      };
+
+      getAllKeysRequest.onerror = () => {
+        console.error("Error fetching keys from firebaseLocalStorage");
+      };
+    };
+
+    request.onerror = () => {
+      console.error("Error opening firebaseLocalStorageDb");
+    };
+    
   }, [user]);
 
   return (
-    <Dialog open={open}>
+    <Dialog open={open} onOpenChange={(value :  boolean)=>{
+        setOpen(value);
+        localStorage.setItem("initialRun", "false");
+    }}>
       <DialogContent className="max-w-[90%] grid justify-items-center rounded-3xl py-10 px-10 gap-5">
         <h1 className="font-bold text-2xl text-center">
           🎉Welcome to <span className="text-orange-600">Cravings</span>!
