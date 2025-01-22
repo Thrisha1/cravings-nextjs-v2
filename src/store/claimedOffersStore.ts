@@ -138,7 +138,7 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
       syncUserOffersClaimable: async (userId: string) => {
         const userDocRef = doc(db, "users", userId);
         const userDoc = await getDoc(userDocRef);
-        const offersCalimableLessThan2 = get().offersClaimable < 10;
+        const offersCalimableLessThan2 = get().offersClaimable < 100;
         // console.log("offersCalimableLessThan2", offersCalimableLessThan2);
 
         const randomValue = [25, 50, 75, 100][Math.floor(Math.random() * 4)];
