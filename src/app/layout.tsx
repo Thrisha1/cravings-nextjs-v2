@@ -8,6 +8,7 @@ import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 // import RateUsModal from "@/components/RateUsModal";
 import '@smastrom/react-rating/style.css'
 import { Toaster } from "@/components/ui/sonner";
+import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -65,6 +66,7 @@ export default function RootLayout({
         {/* <Snow /> */}
         <Navbar />
         {/* <RateUsModal /> */}
+        <CravingsCashInfoModal />
         <PwaInstallPrompt />
         {children}
       </body>
