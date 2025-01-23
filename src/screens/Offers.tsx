@@ -1,4 +1,5 @@
-import { type Offer } from "@/store/offerStore";
+"use client";
+
 import SearchBox from "@/components/SearchBox";
 import LocationSelection from "@/components/LocationSelection";
 import OfferTabs from "@/components/OfferTabs";
@@ -8,8 +9,35 @@ import NoOffersFound from "@/components/NoOffersFound";
 import LocationAccess from "@/components/LocationAccess";
 import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
 import SurveyDialog from "@/components/SurveyDialog";
+import { useEffect, useState } from "react";
+import { Offer } from "@/store/offerStore";
+import { useSearchParams } from "next/navigation";
+import { filterAndSortOffers, getOffers } from "@/app/actions/offerFetching";
+import OfferCardsLoading from "@/components/OfferCardsLoading";
 
-export default async function Offers({ offers }: { offers: Offer[] }) {
+export default function Offers() {
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const searchParams = useSearchParams();
+  const [isLoading, setLoading] = useState(true);
+
+  const fetchOffers = async () => {
+    const offs = await getOffers();
+    const filteredOffs = await filterAndSortOffers({
+      offers: offs,
+      activeTab: searchParams.get("tab") || "all",
+      searchQuery: searchParams.get("search") || "",
+      location: searchParams.get("location") || null,
+      lat: 0,
+      lon: 0,
+    });
+    setOffers(filteredOffs as Offer[]);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchOffers();
+  }, []);
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 px-3 py-3 relative pb-10">
       {/* <ScanButton /> */}
@@ -45,32 +73,38 @@ export default async function Offers({ offers }: { offers: Offer[] }) {
         {/* offers section  */}
 
         <section>
-          {offers.length > 0 ? (
-            <>
-              <OfferTabs />
-              {/* offer list  */}
-              <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
-                {offers.map((offer) => {
-                  const discount = Math.round(
-                    ((offer.originalPrice - offer.newPrice) /
-                      offer.originalPrice) *
-                      100
-                  );
-                  const isUpcoming = new Date(offer.fromTime) > new Date();
-
-                  return (
-                    <OfferCard
-                      key={offer.id}
-                      discount={discount}
-                      isUpcoming={isUpcoming}
-                      offer={offer}
-                    />
-                  );
-                })}
-              </div>
-            </>
+          {isLoading ? (
+            <OfferCardsLoading/>
           ) : (
-            <NoOffersFound />
+            <>
+              {offers.length > 0 ? (
+                <>
+                  <OfferTabs />
+                  {/* offer list  */}
+                  <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
+                    {offers.map((offer) => {
+                      const discount = Math.round(
+                        ((offer.originalPrice - offer.newPrice) /
+                          offer.originalPrice) *
+                          100
+                      );
+                      const isUpcoming = new Date(offer.fromTime) > new Date();
+
+                      return (
+                        <OfferCard
+                          key={offer.id}
+                          discount={discount}
+                          isUpcoming={isUpcoming}
+                          offer={offer}
+                        />
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <NoOffersFound />
+              )}{" "}
+            </>
           )}
         </section>
       </div>

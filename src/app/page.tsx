@@ -2,12 +2,9 @@
 // import { redirect } from "next/navigation";
 import OfferMainPage from "./offers/page";
 
-
-type SearchParams = Promise<{ [key: string]: string | undefined }>;
-
-export default function Home(props: { searchParams: SearchParams }) {
+export default function Home() {
 
   // return <HomePage />;
 
-  return <OfferMainPage searchParams={props.searchParams} />
+  return <OfferMainPage />
 }
