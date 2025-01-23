@@ -34,11 +34,12 @@ const OfferCard = ({
           <Image
             src={offer.dishImage}
             alt={offer.dishName}
-            width={300}
-            height={300}
+            width={200}
+            height={200}
             priority={false}
+            loading="lazy"
             quality={60}
-            className="w-full h-48 object-cover"
+            className="w-full h-32 object-cover"
           />
 
           <div className="grid bg-gradient-to-t from-black to-transparentr p-3 absolute bottom-0 left-0 w-full">
