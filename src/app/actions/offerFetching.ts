@@ -49,14 +49,17 @@ export const getOffers = unstable_cache(
     });
   
     const sortedOffers = [...currentOffers];
+    
   
     // Add the distance to each offer
     const offersWithDistancePromises = sortedOffers.map(async (offer) => {
       const distance = await isHotelNear(offer.hotelLocation, { lat, lon });
       return { ...offer, distance }; // Attach the distance to each offer
     });
+    
   
     const offersWithDistance = await Promise.all(offersWithDistancePromises);
+    
   
     offersWithDistance.forEach((offer) => {
       if (typeof offer.distance !== "number") {

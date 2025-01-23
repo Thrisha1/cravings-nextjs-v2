@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script"; // Import Script for Google Analytics
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
@@ -10,15 +9,7 @@ import '@smastrom/react-rating/style.css'
 import { Toaster } from "@/components/ui/sonner";
 import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Cravings",
@@ -60,7 +51,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`antialiased`}
       >
         <Toaster richColors />
         {/* <Snow /> */}

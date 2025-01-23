@@ -78,7 +78,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
                 {!isUpcoming && (
                   <div className="flex items-center text-sm text-gray-500">
                     <Clock className="w-4 h-4 mr-2" />
-                    <CountdownTimer endTime={offer.toTime} upcomming={false} />
+                    <CountdownTimer endTime={offer.toTime} />
                   </div>
                 )}
                 <div className="flex items-center text-sm text-gray-500">
@@ -142,7 +142,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
               ) : isUpcoming ? (
                 <div>
                   Offer Activates in :{" "}
-                  <CountdownTimer endTime={offer.fromTime} upcomming={true} />
+                  <CountdownTimer endTime={offer.fromTime}  />
                 </div>
               ) : (
                 "Claim Offer"

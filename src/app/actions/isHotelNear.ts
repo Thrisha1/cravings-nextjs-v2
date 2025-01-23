@@ -47,6 +47,8 @@ export async function isHotelNear(
   userLocation: Coordinates
   // distanceRange: number = 10,
 ) {
+
+
   if (!userLocation.lat || !userLocation.lon) {
     return 0;
   }

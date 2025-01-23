@@ -2,10 +2,9 @@ import { useEffect, useState } from "react";
 
 interface CountdownTimerProps {
   endTime: Date;
-  upcomming: boolean;
 }
 
-export function CountdownTimer({ endTime, upcomming }: CountdownTimerProps) {
+export function CountdownTimer({ endTime }: CountdownTimerProps) {
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -46,7 +45,6 @@ export function CountdownTimer({ endTime, upcomming }: CountdownTimerProps) {
       <span>
         {timeLeft.hours}h {timeLeft.days > 0 ? null : timeLeft.minutes + "m"}
       </span>
-      {!upcomming && <span> remaining</span>}
     </span>
   );
 }

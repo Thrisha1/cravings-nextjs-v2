@@ -27,9 +27,11 @@ export default function Offers() {
       activeTab: searchParams.get("tab") || "all",
       searchQuery: searchParams.get("search") || "",
       location: searchParams.get("location") || null,
-      lat: 0,
-      lon: 0,
+      lat: Number(searchParams.get("lat")) || 0,
+      lon: Number(searchParams.get("lon")) || 0,
     });
+    console.log(filteredOffs);
+    
     setOffers(filteredOffs as Offer[]);
     setLoading(false);
   };

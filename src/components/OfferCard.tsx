@@ -53,7 +53,7 @@ const OfferCard = ({
         </div>
 
         <CardHeader className="p-3 md:p-5 space-y-0">
-          <CardTitle className="font-bold md:text-xl">
+          <CardTitle className="font-bold md:text-xl text-balance">
             {offer.dishName}
           </CardTitle>
         </CardHeader>
@@ -69,7 +69,7 @@ const OfferCard = ({
                       <Clock className="w-4 h-4 mr-2" />
                       <CountdownTimer
                         endTime={offer.toTime}
-                        upcomming={false}
+                        // upcomming={false}
                       />
                     </div>
                   )}

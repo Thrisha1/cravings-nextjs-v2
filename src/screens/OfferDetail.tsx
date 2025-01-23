@@ -148,7 +148,7 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
                 {!isUpcoming && (
                   <div className="flex items-center text-lg text-gray-500">
                     <Clock className="w-4 h-4 mr-2" />
-                    <CountdownTimer endTime={offer.toTime} upcomming={false} />
+                    <CountdownTimer endTime={offer.toTime} />
                   </div>
                 )}
                 <div className="flex items-center text-lg text-gray-500">

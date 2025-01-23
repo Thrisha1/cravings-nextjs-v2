@@ -17,7 +17,7 @@ const buttonConfig = {
   upcoming: {
     text: (offer: Offer) => (
       <>
-        Offer Activates in: <CountdownTimer endTime={offer.toTime} upcomming={true} />
+        Offer Activates in: <CountdownTimer endTime={offer.toTime} />
       </>
     ),
     className: "bg-gray-100 text-[#E63946] shadow-xl border border-gray-200",
