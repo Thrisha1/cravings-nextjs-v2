@@ -29,6 +29,7 @@
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.5.2",
     "firebase": "^11.1.0",
+    "fuse.js": "^7.0.0",
     "googleapis": "^144.0.0",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.468.0",

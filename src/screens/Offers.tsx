@@ -24,21 +24,26 @@ export default function Offers() {
     const offs = await getOffers();
     const filteredOffs = await filterAndSortOffers({
       offers: offs,
-      activeTab: searchParams.get("tab") || "all",
-      searchQuery: searchParams.get("search") || "",
+      activeTab: searchParams.get("filter") || "all",
+      searchQuery: searchParams.get("query") || "",
       location: searchParams.get("location") || null,
       lat: Number(searchParams.get("lat")) || 0,
       lon: Number(searchParams.get("lon")) || 0,
     });
-    console.log(filteredOffs);
-    
     setOffers(filteredOffs as Offer[]);
     setLoading(false);
   };
 
+
   useEffect(() => {
     fetchOffers();
-  }, []);
+  }, [
+    searchParams.get("filter"), 
+    searchParams.get("location"), 
+    searchParams.get("lat"), 
+    searchParams.get("lon"), 
+    searchParams.get("query")
+  ]);
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 px-3 py-3 relative pb-10">
