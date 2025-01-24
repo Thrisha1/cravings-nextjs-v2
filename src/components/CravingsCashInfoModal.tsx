@@ -44,7 +44,7 @@ const CravingsCashInfoModal = () => {
         setOpen(value);
         localStorage.setItem("notInitialRun", "true");
     }}>
-      <DialogContent className="max-w-[90%] grid justify-items-center rounded-3xl py-10 px-10 gap-5">
+      <DialogContent className="max-w-[90%] sm:max-w-sm grid justify-items-center rounded-3xl py-10 px-10 gap-5">
         <h1 className="font-bold text-2xl text-center">
           🎉Welcome to <span className="text-orange-600">Cravings</span>!
         </h1>

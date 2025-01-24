@@ -17,8 +17,7 @@ const page = async () => {
   // users.forEach(async (user) => {
   //   const userDoc = doc(db, "users", user.id);
   //   await updateDoc(userDoc, {
-  //     offersClaimable: 100,
-  //     offersClaimableUpdatedAt: new Date()
+  //     accountStatus : "active"
   //   });
   // });
 

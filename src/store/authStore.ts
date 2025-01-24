@@ -26,6 +26,8 @@ export interface UserData {
   category?: string;
   phone?: string;
   verified?: boolean;
+  accountStatus? : "active" | "pendingDeletion";
+  deletionRequestedAt?: string;
   menu?: MenuItem[];
   offersClaimable?: number;
 }
@@ -39,7 +41,8 @@ interface AuthState {
     email: string,
     password: string,
     fullName: string,
-    phone: string
+    phone: string,
+    accountStatus: "active"
   ) => Promise<string>;
   signUpAsPartner: (
     email: string,
@@ -48,7 +51,8 @@ interface AuthState {
     area: string,
     location: string,
     category: string,
-    phone: string
+    phone: string,
+    accountStatus: "active"
   ) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;

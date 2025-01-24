@@ -2,39 +2,44 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UtensilsCrossed, Tag, LogOutIcon } from "lucide-react";
-import { useAuthStore } from "@/store/authStore"; // Import the auth store
+import { useAuthStore } from "@/store/authStore";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
-import { Button } from "@/components/ui/button"; // Import Button component
-import { deleteUser as deleteFirebaseUser } from "firebase/auth"; // Import Firebase Auth delete function
-import { db } from "@/lib/firebase"; // Import Firebase Auth and Firestore instances
-import { doc, deleteDoc } from "firebase/firestore"; // Import Firestore delete function
-import { useRouter } from "next/navigation"; // Import useRouter for navigation
-import { useState } from "react"; // Import useState for loading and error states
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import OfferLoadinPage from "@/components/OfferLoadinPage";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogFooter,
+} from "@/components/ui/alert-dialog";
+import { AlertDialogCancel } from "@radix-ui/react-alert-dialog";
 
 export default function ProfilePage() {
-  // Fetch user data and loading state from the auth store
-  const { user, userData, loading: authLoading , signOut   } = useAuthStore();
-
-  // Fetch claimed offers and loading state from the claimed offers store
+  const {
+    user,
+    userData,
+    loading: authLoading,
+    signOut,
+    updateUserData,
+  } = useAuthStore();
   const { claimedOffers, isLoading: claimedOffersLoading } =
     useClaimedOffersStore();
-
-  // Router for navigation after account deletion
   const router = useRouter();
-
-  // State for loading and error during account deletion
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Combined loading state
   const isLoading = authLoading || claimedOffersLoading;
 
-  // Default values if data is not available
   const profile = {
-    name: userData?.fullName || "Guest", // Default name if not available
-    offersClaimed: claimedOffers.length || 0, // Number of claimed offers
-    restaurantsSubscribed: 0, // Default value for restaurants subscribed (not available in stores)
+    name: userData?.fullName || "Guest",
+    offersClaimed: claimedOffers.length || 0,
+    restaurantsSubscribed: 0,
     claimedOffers: claimedOffers.map((offer) => ({
       id: offer.offerId,
       foodName: offer.offerDetails.dishName,
@@ -44,7 +49,6 @@ export default function ProfilePage() {
     })),
   };
 
-  // Function to delete the user's account
   const handleDeleteAccount = async () => {
     if (!user) {
       setError("No user is currently logged in.");
@@ -55,14 +59,11 @@ export default function ProfilePage() {
     setError(null);
 
     try {
-      // Delete the user's Firestore data
-      const userDocRef = doc(db, "users", user.uid);
-      await deleteDoc(userDocRef);
-
-      // Delete the user's Firebase Auth account
-      await deleteFirebaseUser(user);
-
-      // Redirect to the home page after deletion
+      await updateUserData(user.uid, {
+        accountStatus: "pendingDeletion",
+        deletionRequestedAt: new Date().toISOString(),
+      });
+      signOut();
       router.push("/");
     } catch (error) {
       console.error("Error deleting account:", error);
@@ -86,10 +87,13 @@ export default function ProfilePage() {
               <CardTitle className="text-2xl sm:text-4xl font-bold flex-1">
                 Welcome back, {profile.name}!
               </CardTitle>
-              <div onClick={()=>{
-                signOut();
-                router.push("/offers");
-              }} className="cursor-pointer hover:text-red-500 transition-all rounded-full flex flex-col items-center justify-center gap-1 text-gray-500">
+              <div
+                onClick={() => {
+                  signOut();
+                  router.push("/offers");
+                }}
+                className="cursor-pointer hover:text-red-500 transition-all rounded-full flex flex-col items-center justify-center gap-1 text-gray-500"
+              >
                 <LogOutIcon className="w-5 h-5" />
                 <span className="text-sm ">Sign Out</span>
               </div>
@@ -158,13 +162,45 @@ export default function ProfilePage() {
               Warning: Deleting your account is irreversible. All your data,
               including claimed offers, will be permanently deleted.
             </p>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAccount}
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Deleting..." : "Delete My Account"}
-            </Button>
+
+            {/* Confirmation Modal */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" disabled={isDeleting}>
+                  {isDeleting ? "Deleting..." : "Delete My Account"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="max-w-[90%] sm:max-w-lg rounded-xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Heads up! Your account is set to be deleted in 30 days. If
+                    you&apos;d like to keep your account active, simply log in
+                    before the deletion date (
+                    {new Date(
+                      new Date().setDate(new Date().getDate() + 30)
+                    ).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                    ).
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="gap-y-2">
+                  <AlertDialogCancel className="bg-gray-500 hover:bg-gray-600 px-3 py-1 rounded text-white">
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteAccount}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Delete Account
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
             {error && <p className="text-red-600">{error}</p>}
           </CardContent>
         </Card>
