@@ -26,7 +26,7 @@ export interface UserData {
   category?: string;
   phone?: string;
   verified?: boolean;
-  accountStatus? : "active" | "pendingDeletion";
+  accountStatus?: "active" | "inActive";
   deletionRequestedAt?: string;
   menu?: MenuItem[];
   offersClaimable?: number;
@@ -41,8 +41,7 @@ interface AuthState {
     email: string,
     password: string,
     fullName: string,
-    phone: string,
-    accountStatus: "active"
+    phone: string
   ) => Promise<string>;
   signUpAsPartner: (
     email: string,
@@ -51,8 +50,7 @@ interface AuthState {
     area: string,
     location: string,
     category: string,
-    phone: string,
-    accountStatus: "active"
+    phone: string
   ) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -94,6 +92,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         phone,
         role: "user",
         offersClaimable: 100,
+        accountStatus: "active",
         offersClaimableUpdatedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       });
@@ -131,6 +130,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         role: "hotel",
         verified: false,
         enquiry: 0,
+        accountStatus: "active",
         offersClaimable: 2,
         createdAt: new Date().toISOString(),
       });

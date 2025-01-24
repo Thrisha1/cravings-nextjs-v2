@@ -60,7 +60,7 @@ export default function ProfilePage() {
 
     try {
       await updateUserData(user.uid, {
-        accountStatus: "pendingDeletion",
+        accountStatus: "inActive",
         deletionRequestedAt: new Date().toISOString(),
       });
       signOut();
