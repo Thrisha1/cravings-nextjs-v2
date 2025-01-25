@@ -24,7 +24,8 @@ const page = async (props: { searchParams: SearchParams }) => {
       try {
         const offersQuery = query(
           collection(db, "offers"),
-          where("hotelId", "==", id)
+          where("hotelId", "==", id),
+          where("toTime", ">", new Date().toISOString())
         );
         const offers = await getDocs(offersQuery);
         const offersData = offers.docs.map((doc) => {

@@ -15,14 +15,14 @@ const MenuItemCard = ({ menuItem }: { menuItem: MenuItem }) => {
         {/* image container */}
         <div className="relative">
           <Image
-            src={menuItem.image !== "" ? menuItem.image : placeHolderImage.src}
+            src={((menuItem.image !== "") && !(menuItem.image.includes("pollinations"))) ? menuItem.image : placeHolderImage.src}
             alt={menuItem.name}
             width={300}
             height={300}
             priority={false}
             quality={60}
             className="w-full h-48 object-cover"
-            onError={(e) => e.currentTarget.src = placeHolderImage.src}
+          
           />
 
           <div className="grid bg-gradient-to-t from-black to-transparent p-3 absolute bottom-0 left-0 w-full">
