@@ -135,10 +135,10 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
                 {offer.description && (
                   <CardDescription>{offer.description}</CardDescription>
                 )}
-                <p className="text-lg text-gray-700 flex items-center gap-2">
+                <Link href={'/hotel?id=' + offer.hotelId} className="text-lg text-gray-700 flex items-center gap-2">
                   <UtensilsCrossed />
                   <span>{offer.hotelName}</span>
-                </p>
+                </Link>
               </div>
             </div>
           </CardHeader>
