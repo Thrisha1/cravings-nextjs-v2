@@ -1,5 +1,6 @@
 import { db } from "@/lib/firebase";
 import OfferDetail from "@/screens/OfferDetail";
+import { UserData } from "@/store/authStore";
 import { Offer } from "@/store/offerStore";
 import { doc, getDoc } from "firebase/firestore";
 import { Metadata } from "next";
@@ -65,8 +66,27 @@ const page = async ({ params }: Props) => {
   );
 
   const offerData: Offer = await getOffer(offerId);
-  
-  return <OfferDetail offer={offerData} />;
+
+  const getHotelData = unstable_cache(
+    async (id: string) => {
+      const usersCollection = doc(db, "users", id);
+      const user = await getDoc(usersCollection);
+      const userData = user.data();
+
+      return {
+        id,
+        ...userData,
+      } as UserData;
+    },
+    [offerData.hotelId || ""],
+    {
+      tags: [offerData.hotelId || ""],
+    }
+  );
+
+  const hotelData = await getHotelData(offerData?.hotelId);
+
+  return <OfferDetail offer={offerData} hotelData={hotelData} />;
 };
 
 export default page;

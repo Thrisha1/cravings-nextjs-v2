@@ -30,17 +30,17 @@ const Share = ({ offerId, className }: ShareProps) => {
     <Badge
       id="offer-share-btn"
       onClick={handleShare}
-      className={`bg-orange-500 text-white cursor-pointer ${className}`}
+      className={` text-white/90 bg-transparent hover:bg-transparent hover:text-white transition-all cursor-pointer ${className}`}
     >
       <div className="flex flex-row-reverse gap-2">
-        <h1>Share</h1>
+        {/* <h1>Share</h1> */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth="1.5"
           stroke="currentColor"
-          className="w-4 h-4 cursor-pointer text-white"
+          className="w-8 h-8 cursor-pointer text-white"
         >
           <path
             strokeLinecap="round"

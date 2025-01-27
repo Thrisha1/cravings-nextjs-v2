@@ -19,7 +19,6 @@ const CravingsCashInfoModal = () => {
       const getAllKeysRequest = store.getAllKeys();
         
       getAllKeysRequest.onsuccess = () => {
-        console.log(getAllKeysRequest.result);
 
         const notInitialRun = localStorage.getItem("notInitialRun");
         

@@ -17,6 +17,7 @@ import { auth } from "@/lib/firebase";
 import { MenuItem } from "@/screens/HotelMenuPage";
 
 export interface UserData {
+  id?: string;
   email: string;
   role: "user" | "hotel" | "superadmin";
   fullName?: string;
@@ -24,12 +25,21 @@ export interface UserData {
   area?: string;
   location?: string;
   category?: string;
+  followers?: {
+    user : string,
+    phone : string,
+  }[];
+  following?: {
+    user : string,
+    phone : string,
+  }[];
   phone?: string;
   verified?: boolean;
   accountStatus?: "active" | "inActive";
   deletionRequestedAt?: string;
   menu?: MenuItem[];
   offersClaimable?: number;
+  offersClaimableUpdatedAt?: string;
 }
 
 interface AuthState {
@@ -177,6 +187,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       throw error;
     }
   },
+
+
 }));
 
 // Set up auth state listener

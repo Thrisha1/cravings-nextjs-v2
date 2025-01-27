@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import NoOffersFound from "@/components/NoOffersFound";
 import SearchBox from "@/components/SearchBox";
 // import {
@@ -15,10 +15,17 @@ import SearchBox from "@/components/SearchBox";
 // import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Offer } from "@/store/offerStore";
-import { UserData } from "@/store/authStore";
+import { useAuthStore, UserData } from "@/store/authStore";
 import OfferCardMin from "@/components/OfferCardMin";
-import { VerifiedIcon } from "lucide-react";
+import { MapPin, Users, VerifiedIcon } from "lucide-react";
 import MenuItemCard from "@/components/MenuItemCard";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { revalidate } from "@/app/actions/revalidate";
+import { toast } from "sonner";
+import Link from "next/link";
 
 export type MenuItem = {
   description: string;
@@ -37,6 +44,9 @@ const HotelMenuPage = ({
   hoteldata: UserData;
   menu: MenuItem[];
 }) => {
+  const { user, userData, updateUserData } = useAuthStore();
+  const router = useRouter();
+  const [isFollowed, setIsFollowed] = useState<boolean>(false);
   // const [items, setItems] = useState<Offer[]>([]);
   // const [totalPrice, setTotalPrice] = useState<number>(0);
 
@@ -67,6 +77,64 @@ const HotelMenuPage = ({
   //   });
   // };
 
+  const handleFollow = async () => {
+    if (user) {
+      const hotelDocRef = doc(db, "users", hoteldata?.id ?? "");
+      await updateDoc(hotelDocRef, {
+        followers: [
+          ...(hoteldata?.followers ?? []),
+          {
+            user: user?.uid ?? "",
+            phone: userData?.phone ?? "",
+          },
+        ],
+      });
+
+      await updateUserData(user.uid, {
+        following: [
+          ...(userData?.following ?? []),
+          {
+            user: hoteldata?.id ?? "",
+            phone: hoteldata?.phone ?? "",
+          },
+        ],
+      });
+
+      toast.success("Following " + hoteldata.hotelName);
+    }
+    revalidate(hoteldata?.id ?? "");
+  };
+
+  const handleUnFollow = async () => {
+    if (user) {
+      const hotelDocRef = doc(db, "users", hoteldata?.id ?? "");
+      await updateDoc(hotelDocRef, {
+        followers: hoteldata?.followers?.filter(
+          (follower) => follower.user !== user?.uid
+        ),
+      });
+
+      await updateUserData(user.uid, {
+        following: userData?.following?.filter(
+          (following) => following.user !== hoteldata?.id
+        ),
+      });
+
+      toast.error("Unfollowed " + hoteldata.hotelName);
+    }
+    revalidate(hoteldata?.id ?? "");
+  };
+
+  useEffect(() => {
+    const isFollowed =
+      hoteldata?.followers?.some(
+        (follower) => follower.user === (user?.uid ?? "?")
+      ) ?? false;
+    console.log(isFollowed, hoteldata.followers);
+
+    setIsFollowed(isFollowed);
+  }, [hoteldata]);
+
   return (
     <main className="bg-gradient-to-b overflow-x-hidden from-orange-50 to-orange-100 relative">
       {/* banner Image  */}
@@ -84,10 +152,33 @@ const HotelMenuPage = ({
         <div className="lg:hidden bg-orange-200 h-2 w-[20%] rounded-full absolute top-4 left-1/2 -translate-x-1/2" />
 
         {/* hotel name  */}
-        <h1 className="text-lg relative flex lg:items-center max-w-[50%] md:text-3xl font-semibold py-5 md:py-10 capitalize">
-          <span>{hoteldata.hotelName}</span>
-          <VerifiedIcon className="ml-2 text-green-600" />
-        </h1>
+        <div className="flex justify-between pt-5 md:pt-10">
+          <h1 className="text-lg relative flex lg:items-center max-w-[50%] md:text-3xl font-semibold  capitalize">
+            <span>{hoteldata.hotelName}</span>
+            <VerifiedIcon className="ml-2 text-green-600" />
+          </h1>
+
+          <Button
+            onClick={isFollowed ? handleUnFollow : handleFollow}
+            className="bg-orange-600 hover:bg-orange-500"
+          >
+            {isFollowed ? "Unfollow" : "Follow"}
+          </Button>
+        </div>
+
+        {/* hotel details  */}
+        <div className="pb-5 md:pb-10 pt-2 grid gap-2">
+          <div className="flex items-center gap-2 text-black/60 text-sm w-fit">
+            <span className="flex items-center gap-1"> <Users size={20} />  Followers : </span> <span>{hoteldata.followers?.length ?? 0}</span>
+          </div>
+
+          <div
+            onClick={() => router.push(hoteldata?.location ?? "")}
+            className="flex items-center gap-2 text-black/60 text-sm w-fit"
+          >
+            <span className="flex items-center gap-1" > <MapPin size={20} /> Area : </span> <span>{hoteldata.area}</span>{" "}
+          </div>
+        </div>
 
         <SearchBox />
 
@@ -110,13 +201,13 @@ const HotelMenuPage = ({
                     );
 
                     return (
-                      <div key={offer.id} className="group">
+                      <Link href={'/offers/' + offer.id} key={offer.id} className="group">
                         <OfferCardMin
                           discount={discount}
                           offer={offer}
                           // onClick={() => addItems(offer)}
                         />
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>

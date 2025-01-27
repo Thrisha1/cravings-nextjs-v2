@@ -30,7 +30,10 @@ const page = async (props: { searchParams: SearchParams }) => {
         const offers = await getDocs(offersQuery);
         const offersData = offers.docs.map((doc) => {
           const data = doc.data();
-          return data as Offer;
+          return {
+            id: doc.id,
+            ...data,
+          } as Offer;
         });
         return offersData;
       } catch (error) {
@@ -51,9 +54,16 @@ const page = async (props: { searchParams: SearchParams }) => {
         const user = await getDoc(usersCollection);
         const userData = user.data();
 
-        return userData as UserData;
+        if (!userData) {
+          return null;
+        }
+
+        return {
+          id,
+          ...userData,
+        } as UserData;
       } catch (error) {
-        console.error("Error fetching hoteldata:", error);
+        console.error("Error fetching hotel data:", error);
         return null;
       }
     },
@@ -73,9 +83,7 @@ const page = async (props: { searchParams: SearchParams }) => {
   const menuItems = hoteldata?.menu || [];
 
   // Filter offers based on the search query
-
   let filteredOffers: Offer[] = [];
-
   if (offers) {
     filteredOffers = search
       ? offers.filter((offer) =>

@@ -2,9 +2,8 @@
 
 import { revalidateTag } from "next/cache";
 
-const revalidateOffer = async () => {
-  revalidateTag("offers");
-  console.log("Offers revalidated");
+const revalidate = async (tag : string) => {
+  revalidateTag(tag ?? "");
 };
 
-export { revalidateOffer };
+export { revalidate };

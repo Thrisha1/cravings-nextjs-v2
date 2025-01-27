@@ -10,7 +10,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Clock, MapPin, Tag, UtensilsCrossed } from "lucide-react";
 import { CountdownTimer } from "@/components/CountdownTimer";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore, UserData } from "@/store/authStore";
 import { OfferTicket } from "@/components/OfferTicket";
 import Share from "@/components/Share";
 import { Offer, useOfferStore } from "@/store/offerStore";
@@ -22,7 +22,13 @@ import ClaimOfferButton from "@/components/ClaimOfferButton";
 import Link from "next/link";
 import { toast } from "sonner";
 
-export default function OfferDetail({ offer }: { offer: Offer }) {
+export default function OfferDetail({
+  offer,
+  hotelData,
+}: {
+  offer: Offer;
+  hotelData: UserData;
+}) {
   const { id: offerId } = useParams();
   const navigate = useRouter();
   const { user, userData } = useAuthStore();
@@ -48,7 +54,7 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
       setToken(claimed ? claimedOffer?.token ?? "" : "");
       const unsubscribe = syncClaimedOffersWithFirestore(user.uid);
 
-      if((offersClaimable < offer.originalPrice - offer.newPrice) && !claimed) {
+      if (offersClaimable < offer.originalPrice - offer.newPrice && !claimed) {
         toast.error("You don't have enough cravings cash to claim this offer");
         return;
       }
@@ -62,7 +68,7 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
       return;
     }
 
-    if(offersClaimable < offer.originalPrice - offer.newPrice) {
+    if (offersClaimable < offer.originalPrice - offer.newPrice) {
       toast.error("You don't have enough cravings cash to claim this offer");
       return;
     }
@@ -82,7 +88,7 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
           setClaimed(true);
         }
 
-        await updateUserOffersClaimable(user.uid, ( -1 * offerDiscount));
+        await updateUserOffersClaimable(user.uid, -1 * offerDiscount);
       } catch (error) {
         console.error("Failed to claim offer:", error);
       }
@@ -95,9 +101,9 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
   );
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-8">
+    <div className="min-h-screen w-full md:bg-gradient-to-b from-orange-50 to-orange-100 md:pt-10">
       <div className="max-w-4xl mx-auto">
-        <Card className="overflow-hidden hover:shadow-xl transition-shadow relative">
+        <Card className="overflow-hidden shadow-none border-none transition-shadow relative rounded-none md:rounded-xl">
           <div
             onClick={() => navigate.back()}
             className="absolute top-3 left-3 text-white z-[50] bg-orange-600 rounded-full p-2"
@@ -116,7 +122,12 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
               className="w-full h-64 object-cover"
             />
 
-            <div className="grid bg-gradient-to-t from-black to-transparentr p-3 absolute bottom-0 left-0 w-full">
+            <div className="grid bg-gradient-to-t from-black to-transparentr p-5 sm:p-3 absolute bottom-0 left-0 w-full">
+              <Share
+                offerId={offerId || ""}
+                className={"absolute bottom-6 right-2"}
+              />
+
               <span className="text-white/70 line-through text-xl">
                 ₹{offer.originalPrice.toFixed(0)}
               </span>
@@ -135,15 +146,31 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
                 {offer.description && (
                   <CardDescription>{offer.description}</CardDescription>
                 )}
-                <Link href={'/hotel?id=' + offer.hotelId} className="text-lg text-gray-700 flex items-center gap-2">
-                  <UtensilsCrossed />
-                  <span>{offer.hotelName}</span>
-                </Link>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
+            <div className="text-lg text-gray-700 grid grid-cols-2  gap-2 bg-gray-50 p-3 rounded-xl w-full">
+              <div className="grid">
+                <UtensilsCrossed />
+                <span>{offer.hotelName}</span>
+                <span className="text-sm mt-1">
+                  Followers : {hotelData?.followers?.length ?? 0}
+                </span>
+              </div>
+
+              <div className="flex justify-end items-center">
+                <Link
+                  className="text-base bg-orange-600 text-white rounded-xl px-3 py-2"
+                  href={"/hotel?id=" + offer.hotelId}
+                >
+                  {hotelData?.followers?.some((f) => f.user == user?.uid)
+                    ? "Unfollow"
+                    : "Follow"}
+                </Link>
+              </div>
+            </div>
+            <div className="space-y-6 mt-5">
               <div className="space-y-3">
                 {!isUpcoming && (
                   <div className="flex items-center text-lg text-gray-500">
@@ -181,9 +208,7 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
                 </div>
               </div>
 
-              <div
-                className={`h-[36px] w-[100%] grid-cols-[1fr,100px] grid gap-2`}
-              >
+              <div className={`h-[36px] w-full`}>
                 {userData ? (
                   <ClaimOfferButton
                     handleClaimOffer={handleClaimOffer}
@@ -193,12 +218,13 @@ export default function OfferDetail({ offer }: { offer: Offer }) {
                     setShowTicket={setShowTicket}
                   />
                 ) : (
-                  <Link  className={`w-full py-2 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm text-center`} href={"/login"}>Claim Offer</Link>
+                  <Link
+                    className={`w-full py-2 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm text-center`}
+                    href={"/login"}
+                  >
+                    Claim Offer
+                  </Link>
                 )}
-                <Share
-                  offerId={offerId || ""}
-                  className={"w-full flex justify-center"}
-                />
               </div>
             </div>
           </CardContent>
