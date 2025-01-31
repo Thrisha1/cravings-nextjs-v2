@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/sonner";
 import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
 import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
 import LocationAccess from "@/components/LocationAccess";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Cravings",
@@ -57,8 +58,10 @@ export default function RootLayout({
         {/* <RateUsModal /> */}
         <CravingsCashInfoModal />
         <PwaInstallPrompt />
-        <SyncUserOfferCoupons />
-        <LocationAccess />
+        <Suspense>
+          <SyncUserOfferCoupons />
+          <LocationAccess />
+        </Suspense>
         {children}
       </body>
     </html>

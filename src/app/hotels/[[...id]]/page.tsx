@@ -84,7 +84,6 @@ const page = async ({ searchParams, params }: { searchParams: SearchParams; para
 
   const menuItems = hoteldata?.menu || [];
 
-  // Filter offers based on the search query
   let filteredOffers: Offer[] = [];
   if (offers) {
     filteredOffers = search
