@@ -106,7 +106,7 @@ export default function OfferDetail({
         <Card className="overflow-hidden shadow-none border-none transition-shadow relative rounded-none md:rounded-xl">
           <div
             onClick={() => navigate.back()}
-            className="absolute top-3 left-3 text-white z-[50] bg-orange-600 rounded-full p-2"
+            className="absolute cursor-pointer top-3 left-3 text-white z-[50] bg-orange-600 rounded-full p-2"
           >
             <ArrowLeft width={30} height={30} />
           </div>
@@ -150,7 +150,7 @@ export default function OfferDetail({
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-lg text-gray-700 grid grid-cols-2  gap-2 bg-gray-50 p-3 rounded-xl w-full">
+            <Link href={`/hotels/${hotelData.id}`} className="text-lg text-gray-700 grid grid-cols-2  gap-2 bg-gray-50 p-3 rounded-xl w-full">
               <div className="grid">
                 <UtensilsCrossed />
                 <span>{offer.hotelName}</span>
@@ -160,16 +160,15 @@ export default function OfferDetail({
               </div>
 
               <div className="flex justify-end items-center">
-                <Link
+                <div
                   className="text-base bg-orange-600 text-white rounded-xl px-3 py-2"
-                  href={"/hotel?id=" + offer.hotelId}
                 >
                   {hotelData?.followers?.some((f) => f.user == user?.uid)
                     ? "Unfollow"
                     : "Follow"}
-                </Link>
+                </div>
               </div>
-            </div>
+            </Link>
             <div className="space-y-6 mt-5">
               <div className="space-y-3">
                 {!isUpcoming && (

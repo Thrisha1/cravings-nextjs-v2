@@ -14,11 +14,16 @@ import { Offer } from "@/store/offerStore";
 import { UserData } from "@/store/authStore";
 
 type SearchParams = Promise<{ [key: string]: string | undefined }>;
+type Params = Promise<{ id: string }>
 
-const page = async (props: { searchParams: SearchParams }) => {
+const page = async (props: { searchParams: SearchParams , params : Params }) => {
   const searchParams = await props.searchParams;
-  const { id, query: search } = searchParams;
-
+  const params = await props.params;
+  const { query: search } = searchParams;
+  const { id : idArray } = params;
+  const id = idArray[0];
+  
+  
   const getHotelOffers = unstable_cache(
     async (id: string) => {
       try {
@@ -41,9 +46,9 @@ const page = async (props: { searchParams: SearchParams }) => {
         return [];
       }
     },
-    [id || ""],
+    [id as string || ""],
     {
-      tags: [id || ""],
+      tags: [id as string || ""],
     }
   );
 

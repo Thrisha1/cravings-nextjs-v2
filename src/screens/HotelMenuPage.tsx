@@ -17,7 +17,7 @@ import Image from "next/image";
 import { Offer } from "@/store/offerStore";
 import { useAuthStore, UserData } from "@/store/authStore";
 import OfferCardMin from "@/components/OfferCardMin";
-import { MapPin, Users, VerifiedIcon } from "lucide-react";
+import { ArrowLeft, MapPin, Users, VerifiedIcon } from "lucide-react";
 import MenuItemCard from "@/components/MenuItemCard";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -136,7 +136,7 @@ const HotelMenuPage = ({
   }, [hoteldata]);
 
   return (
-    <main className="bg-gradient-to-b overflow-x-hidden from-orange-50 to-orange-100 relative">
+    <main className=" overflow-x-hidden relative">
       {/* banner Image  */}
       <div className="w-screen h-[200px] absolute top-0 z-0">
         <Image
@@ -145,6 +145,13 @@ const HotelMenuPage = ({
           fill
           className="w-auto h-auto object-cover"
         />
+
+        <div
+          onClick={() => router.back()}
+          className="absolute cursor-pointer top-3 left-3 sm:top-7 sm:left-10 text-white z-[50] bg-orange-600 rounded-full p-2"
+        >
+          <ArrowLeft width={30} height={30} />
+        </div>
       </div>
 
       {/* offers listing  */}
@@ -169,14 +176,22 @@ const HotelMenuPage = ({
         {/* hotel details  */}
         <div className="pb-5 md:pb-10 pt-2 grid gap-2">
           <div className="flex items-center gap-2 text-black/60 text-sm w-fit">
-            <span className="flex items-center gap-1"> <Users size={20} />  Followers : </span> <span>{hoteldata.followers?.length ?? 0}</span>
+            <span className="flex items-center gap-1">
+              {" "}
+              <Users size={20} /> Followers :{" "}
+            </span>{" "}
+            <span>{hoteldata.followers?.length ?? 0}</span>
           </div>
 
           <div
             onClick={() => router.push(hoteldata?.location ?? "")}
             className="flex items-center gap-2 text-black/60 text-sm w-fit"
           >
-            <span className="flex items-center gap-1" > <MapPin size={20} /> Area : </span> <span>{hoteldata.area}</span>{" "}
+            <span className="flex items-center gap-1">
+              {" "}
+              <MapPin size={20} /> Area :{" "}
+            </span>{" "}
+            <span>{hoteldata.area}</span>{" "}
           </div>
         </div>
 
@@ -201,7 +216,11 @@ const HotelMenuPage = ({
                     );
 
                     return (
-                      <Link href={'/offers/' + offer.id} key={offer.id} className="group">
+                      <Link
+                        href={"/offers/" + offer.id}
+                        key={offer.id}
+                        className="group"
+                      >
                         <OfferCardMin
                           discount={discount}
                           offer={offer}
