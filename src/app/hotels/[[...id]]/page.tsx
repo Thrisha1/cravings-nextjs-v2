@@ -14,16 +14,13 @@ import { Offer } from "@/store/offerStore";
 import { UserData } from "@/store/authStore";
 
 type SearchParams = Promise<{ [key: string]: string | undefined }>;
-type Params = Promise<{ id: string }>
+type Params = Promise<{ id: string }>;
 
-const page = async (props: { searchParams: SearchParams , params : Params }) => {
-  const searchParams = await props.searchParams;
-  const params = await props.params;
-  const { query: search } = searchParams;
-  const { id : idArray } = params;
+const page = async ({ searchParams, params }: { searchParams: SearchParams; params: Params }) => {
+  const { query: search , qrScan } = await searchParams;
+  const { id: idArray } = await params;
   const id = idArray[0];
-  
-  
+
   const getHotelOffers = unstable_cache(
     async (id: string) => {
       try {
@@ -46,9 +43,9 @@ const page = async (props: { searchParams: SearchParams , params : Params }) => 
         return [];
       }
     },
-    [id as string || ""],
+    [(id as string) || ""],
     {
-      tags: [id as string || ""],
+      tags: [(id as string) || ""],
     }
   );
 
@@ -100,11 +97,12 @@ const page = async (props: { searchParams: SearchParams , params : Params }) => 
   }
 
   return (
-    <HotelMenuPage
-      offers={filteredOffers}
-      hoteldata={hoteldata}
-      menu={menuItems}
-    />
+      <HotelMenuPage
+        offers={filteredOffers}
+        hoteldata={hoteldata}
+        menu={menuItems}
+        qrScan={qrScan ?? null}
+      />
   );
 };
 

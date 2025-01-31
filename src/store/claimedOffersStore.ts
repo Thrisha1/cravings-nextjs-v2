@@ -138,7 +138,8 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
       syncUserOffersClaimable: async (userId: string) => {
         const userDocRef = doc(db, "users", userId);
         const userDoc = await getDoc(userDocRef);
-        const offersCalimableLessThan2 = get().offersClaimable < 100;
+        const userOffersClaimable = await userDoc.data()?.offersClaimable || 0;
+        const offersCalimableLessThan2 = userOffersClaimable < 100;
         // console.log("offersCalimableLessThan2", offersCalimableLessThan2);
 
         const randomValue = [25, 50, 75, 100][Math.floor(Math.random() * 4)];
@@ -149,7 +150,7 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
           // const localStoreTime = localStorage.getItem(
           //   "offersClaimableUpdatedAt"
           // );
-          console.log("localStoreTime", localStoreTime);
+          // console.log("localStoreTime", localStoreTime);
 
           const lastOfferClaimedAt = new Date(localStoreTime || 0);
           const minituesPassed =

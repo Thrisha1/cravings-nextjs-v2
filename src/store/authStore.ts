@@ -26,12 +26,16 @@ export interface UserData {
   location?: string;
   category?: string;
   followers?: {
-    user : string,
-    phone : string,
+    user: string;
+    phone: string;
+    visits: {
+      numberOfVisits: number;
+      lastVisit: string;
+    };
   }[];
   following?: {
-    user : string,
-    phone : string,
+    user: string;
+    phone: string;
   }[];
   phone?: string;
   verified?: boolean;
@@ -66,6 +70,9 @@ interface AuthState {
   signOut: () => Promise<void>;
   fetchUserData: (uid: string) => Promise<void>;
   updateUserData: (uid: string, updates: Partial<UserData>) => Promise<void>;
+  updateUserVisits: (uid: string, hid: string) => Promise<void>;
+  handleFollow: (hotelId: string) => Promise<void>;
+  handleUnfollow: (hotelId: string) => Promise<void>;
 }
 
 const db = getFirestore();
@@ -188,7 +195,94 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  updateUserVisits: async (uid: string, hid: string) => {
+    try {
+      console.log("updateUserVisits", uid, hid);
+      const docRef = doc(db, "users", hid);
+      const userDoc = await getDoc(docRef);
+      if (userDoc.exists()) {
+        const followers = userDoc.data().followers || [];
+        const followerIndex = followers.findIndex(
+          (follower: { user: string }) => follower.user === uid
+        );
 
+        if (followerIndex !== -1) {
+          const updatedFollowers = [...followers];
+
+          updatedFollowers[followerIndex] = {
+            ...updatedFollowers[followerIndex],
+            visits: {
+              numberOfVisits:
+                (updatedFollowers[followerIndex].visits?.numberOfVisits ||
+                  0) + 1,
+              lastVisit: new Date().toISOString(),
+            },
+          };
+          console.log("updatedFollowers", updatedFollowers);
+          await updateDoc(docRef, {
+            followers: updatedFollowers,
+          });
+        }
+      }
+    } catch (error) {
+      set({ error: (error as Error).message });
+      throw error;
+    }
+  },
+
+  handleFollow: async (hotelId: string) => {
+    const { user, userData } = get();
+    if (!user) return;
+
+    const hotelDocRef = doc(db, "users", hotelId);
+    const hotelDoc = await getDoc(hotelDocRef);
+    const hotelData = hotelDoc.data() as UserData;
+    const isFollowed = hotelData?.followers?.some(
+      (follower) => follower.user === user.uid
+    );
+
+    if (isFollowed) return;
+
+    await updateDoc(hotelDocRef, {
+      followers: [
+        ...(hotelData?.followers ?? []),
+        {
+          user: user.uid,
+          phone: userData?.phone ?? "",
+        },
+      ],
+    });
+
+    await get().updateUserData(user.uid, {
+      following: [
+        ...(userData?.following ?? []),
+        {
+          user: hotelId,
+          phone: hotelData?.phone ?? "",
+        },
+      ],
+    });
+  },
+
+  handleUnfollow: async (hotelId: string) => {
+    const { user, userData } = get();
+    if (!user) return;
+
+    const hotelDocRef = doc(db, "users", hotelId);
+    const hotelDoc = await getDoc(hotelDocRef);
+    const hotelData = hotelDoc.data() as UserData;
+    await updateDoc(hotelDocRef, {
+      followers: hotelData?.followers?.filter(
+        (follower) => follower.user !== user.uid
+      ),
+    });
+
+    await get().updateUserData(user.uid, {
+      following: userData?.following?.filter(
+        (following) => following.user !== hotelId
+      ),
+    });
+  },
 }));
 
 // Set up auth state listener

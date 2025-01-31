@@ -5,11 +5,11 @@ import { Navbar } from "@/components/Navbar";
 // import Snow from "@/components/Snow";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 // import RateUsModal from "@/components/RateUsModal";
-import '@smastrom/react-rating/style.css'
+import "@smastrom/react-rating/style.css";
 import { Toaster } from "@/components/ui/sonner";
 import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
-
-
+import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
+import LocationAccess from "@/components/LocationAccess";
 
 export const metadata: Metadata = {
   title: "Cravings",
@@ -50,15 +50,15 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body
-        className={`antialiased`}
-      >
+      <body className={`antialiased`}>
         <Toaster richColors />
         {/* <Snow /> */}
         <Navbar />
         {/* <RateUsModal /> */}
         <CravingsCashInfoModal />
         <PwaInstallPrompt />
+        <SyncUserOfferCoupons />
+        <LocationAccess />
         {children}
       </body>
     </html>

@@ -52,7 +52,16 @@ export default function Login() {
       } else {
         await signIn(email, password);
       }
-      navigate.push("/offers");
+
+      const previousRoute = localStorage.getItem("previousRoute");
+      if (previousRoute) {
+        localStorage.removeItem("previousRoute");
+        localStorage.setItem("newUser", "true");
+        navigate.push(previousRoute);
+      } else {
+        navigate.push("/offers");
+      }
+
     } catch (error) {
       console.error("Authentication error:", error);
     }
