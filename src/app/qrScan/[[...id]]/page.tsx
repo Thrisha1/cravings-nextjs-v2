@@ -20,7 +20,7 @@ const page = async ({params}: {params: Params}) => {
           numberOfQrScans: numberOfQrScans + 1
         });
         console.log(hotelId);
-        redirect(`/hotels/${hotelId}`);
+        redirect(`/hotels/${hotelId}?qrScan=true`);
     }
     
   return (
