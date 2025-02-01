@@ -17,9 +17,8 @@ const page = async ({params}: {params: Params}) => {
         hotelId = qrCodeSnap.data().hotelId;
         const numberOfQrScans = qrCodeSnap.data().numberOfQrScans || 0;
         await updateDoc(qrCodeRef, {
-          numberOfQrScans: numberOfQrScans + 1
+          numberOfQrScans: numberOfQrScans + .5
         });
-        console.log(hotelId);
         redirect(`/hotels/${hotelId}?qrScan=true`);
     }
     
