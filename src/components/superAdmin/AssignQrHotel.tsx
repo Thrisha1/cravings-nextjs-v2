@@ -65,10 +65,10 @@ const AssignQrHotel = () => {
       const qrData = qrSnapshot.docs.map(
         (doc) =>
           ({
-            id: doc.id,
-            ...doc.data(),
+        id: doc.id,
+        ...doc.data(),
           } as QrCode)
-      );
+      ).sort((a, b) => (a.qrCodeNumber || 0) - (b.qrCodeNumber || 0));
       setQrCodes(qrData);
 
       // Get array of hotel IDs that are already assigned to QR codes
