@@ -53,6 +53,7 @@ const AssignQrHotel = () => {
   const [qrCount, setQrCount] = useState(1);
   const [selectedQRs, setSelectedQRs] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isQrGenerating , setIsQrGenerating] = useState(false);
   const { createQR, assignQR } = useQRStore();
 
   // Fetch QR codes and hotels
@@ -111,10 +112,12 @@ const AssignQrHotel = () => {
   // Handle generating multiple QR codes
   const handleGenerateQRs = async () => {
     try {
+      setIsQrGenerating(true);
       await createQR(qrCount);
       await fetchData();
       setIsGenerateOpen(false);
       setQrCount(1);
+      setIsQrGenerating(false);
     } catch (error) {
       console.error("Error generating QRs:", error);
     }
@@ -241,10 +244,11 @@ const AssignQrHotel = () => {
                 />
               </div>
               <Button
-                onClick={handleGenerateQRs}
+                disabled={isQrGenerating}
+                onClick={isQrGenerating ? ()=>{} : handleGenerateQRs}
                 className="w-full"
               >
-                Generate
+               { isQrGenerating ? 'Generating..' : ' Generate' }
               </Button>
             </div>
           </DialogContent>
