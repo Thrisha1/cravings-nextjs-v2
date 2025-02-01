@@ -1,3 +1,4 @@
+import AssignQrHotel from "@/components/superAdmin/AssignQrHotel";
 import OfferDetails from "@/components/superAdmin/OfferDetails";
 import PartnerVerification from "@/components/superAdmin/PartnerVerification";
 import { ChevronRight } from "lucide-react";
@@ -19,6 +20,11 @@ const page = async (props : { searchParams : SearchParams  })=> {
       component: <OfferDetails />,
       id: "offer-Details",
     },
+    {
+      name : "Assign QR",
+      component : <AssignQrHotel/>,
+      id : "assign-qr"
+    }
   ];
 
   if (page) {
