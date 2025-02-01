@@ -218,7 +218,7 @@ export default function OfferDetail({
                   />
                 ) : (
                   <Link
-                    className={`w-full py-2 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm text-center`}
+                    className={`w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm `}
                     href={"/login"}
                   >
                     Claim Offer

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { UtensilsCrossed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
+import Image from "next/image";
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -14,7 +15,7 @@ export default function Login() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { signIn, signUp, error } = useAuthStore();
+  const { signIn, signUp, error, signInWithGoogle } = useAuthStore();
   const navigate = useRouter();
   const { updateUserOffersClaimable } = useClaimedOffersStore();
 
@@ -41,7 +42,7 @@ export default function Login() {
                 body: JSON.stringify({
                   to: inviteToken,
                   messageType: "invite-reward",
-                  from : fullName
+                  from: fullName,
                 }),
               }
             ).catch((error) => {
@@ -61,15 +62,31 @@ export default function Login() {
       } else {
         navigate.push("/offers");
       }
-
     } catch (error) {
       console.error("Authentication error:", error);
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+      const decryptedInviteToken = localStorage.getItem("token");
+      if (decryptedInviteToken) {
+        const inviteToken = JSON.parse(atob(decryptedInviteToken));
+        if (inviteToken) {
+          await updateUserOffersClaimable(inviteToken, 50);
+          localStorage.removeItem("token");
+        }
+      }
+      navigate.push("/offers");
+    } catch (error) {
+      console.error("Google authentication error:", error);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-orange-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+    <div className="min-h-[80vh] flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white rounded-lg p-6">
         <div className="flex flex-col items-center mb-8">
           <UtensilsCrossed className="h-12 w-12 text-orange-600 mb-4" />
           <h1 className="text-3xl font-bold text-gray-900 text-center">
@@ -135,11 +152,36 @@ export default function Login() {
           </Button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div>
+          <div className="flex items-center justify-center py-5">
+            <span className="w-1/3 h-px bg-gray-300"></span>
+            <span className="text-gray-500 mx-4 text-[10px] text-nowrap">
+              Or Continue with
+            </span>
+            <span className="w-1/3 h-px bg-gray-300"></span>
+          </div>
+
+          <Button
+            type="button"
+            onClick={handleGoogleSignIn}
+            className="w-full bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+          >
+            <Image
+              width={5}
+              height={5}
+              src="https://www.google.com/favicon.ico"
+              alt="Google"
+              className="w-5 h-5 mr-2"
+            />
+            Sign in with Google
+          </Button>
+        </div>
+
+        <div className="mt-3 text-center">
           <button
             type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-orange-600 hover:text-orange-700"
+            className="text-orange-600 hover:text-orange-700 text-sm"
           >
             {isSignUp
               ? "Already have an account? Sign in"

@@ -17,12 +17,11 @@ const CravingsCashInfoModal = () => {
       const transaction = db.transaction("firebaseLocalStorage", "readonly");
       const store = transaction.objectStore("firebaseLocalStorage");
       const getAllKeysRequest = store.getAllKeys();
-        
-      getAllKeysRequest.onsuccess = () => {
 
+      getAllKeysRequest.onsuccess = () => {
         const notInitialRun = localStorage.getItem("notInitialRun");
-        
-        if ((getAllKeysRequest.result.length == 0) && !notInitialRun) {
+
+        if (getAllKeysRequest.result.length == 0 && !notInitialRun) {
           setOpen(true);
         }
       };
@@ -35,14 +34,16 @@ const CravingsCashInfoModal = () => {
     request.onerror = () => {
       console.error("Error opening firebaseLocalStorageDb");
     };
-    
   }, [user]);
 
   return (
-    <Dialog open={open} onOpenChange={(value :  boolean)=>{
+    <Dialog
+      open={open}
+      onOpenChange={(value: boolean) => {
         setOpen(value);
         localStorage.setItem("notInitialRun", "true");
-    }}>
+      }}
+    >
       <DialogContent className="max-w-[90%] sm:max-w-sm grid justify-items-center rounded-3xl py-10 px-10 gap-5">
         <h1 className="font-bold text-2xl text-center">
           🎉Welcome to <span className="text-orange-600">Cravings</span>!
@@ -57,13 +58,21 @@ const CravingsCashInfoModal = () => {
           Sign up now and get ₹100 Cravings Cash to enjoy delicious offers! 💰
         </p>
 
-        <Link
-          onClick={() => setOpen(false)}
-          href={"/login"}
-          className="text-white rounded-full bg-orange-600 px-6 py-2 font-semibold hover:bg-oragne-500 transition-all"
-        >
-          Get Now
-        </Link>
+        <div className="flex gap-2 items-center">
+          <div
+            onClick={() => setOpen(false)}
+            className="text-black border-[1px] rounded-full text-center cursor-pointer  px-6 py-2 font-semibold hover:border-black transition-all"
+          >
+            Close
+          </div>
+          <Link
+            onClick={() => setOpen(false)}
+            href={"/login"}
+            className="text-white rounded-full bg-orange-600 px-6 py-2 font-semibold hover:bg-oragne-500 transition-all"
+          >
+            Get Now
+          </Link>
+        </div>
       </DialogContent>
     </Dialog>
   );

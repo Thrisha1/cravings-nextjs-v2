@@ -5,6 +5,8 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   type User,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import {
   doc,
@@ -12,6 +14,10 @@ import {
   getDoc,
   updateDoc,
   getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import { auth } from "@/lib/firebase";
 import { MenuItem } from "@/screens/HotelMenuPage";
@@ -66,6 +72,13 @@ interface AuthState {
     category: string,
     phone: string
   ) => Promise<void>;
+  signUpAsPartnerWithGoogle: (
+    hotelName: string,
+    area: string,
+    location: string,
+    category: string,
+    phone: string
+  ) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   fetchUserData: (uid: string) => Promise<void>;
@@ -73,6 +86,7 @@ interface AuthState {
   updateUserVisits: (uid: string, hid: string) => Promise<void>;
   handleFollow: (hotelId: string) => Promise<void>;
   handleUnfollow: (hotelId: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
 }
 
 const db = getFirestore();
@@ -98,6 +112,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signUp: async (email, password, fullName, phone) => {
     try {
       set({ error: null });
+      
+      // Check if email already exists
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        throw new Error("A user with this email already exists");
+      }
+
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -132,6 +156,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   ) => {
     try {
       set({ error: null });
+
+      // Check if email already exists
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        throw new Error("A user with this email already exists");
+      }
+
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -148,7 +182,50 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         verified: false,
         enquiry: 0,
         accountStatus: "active",
-        offersClaimable: 2,
+        offersClaimable: 100,
+        createdAt: new Date().toISOString(),
+      });
+      await get().fetchUserData(userCredential.user.uid);
+    } catch (error) {
+      set({ error: (error as Error).message });
+      throw error;
+    }
+  },
+
+  signUpAsPartnerWithGoogle: async (
+    hotelName,
+    area,
+    location,
+    category,
+    phone
+  ) => {
+    try {
+      set({ error: null });
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const userCredential = result;
+
+      // Check if email already exists
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", userCredential.user.email));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        throw new Error("A user with this email already exists");
+      }
+
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        email: userCredential.user.email,
+        hotelName,
+        area,
+        location,
+        category,
+        phone,
+        role: "hotel",
+        verified: false,
+        enquiry: 0,
+        accountStatus: "active",
+        offersClaimable: 100,
         createdAt: new Date().toISOString(),
       });
       await get().fetchUserData(userCredential.user.uid);
@@ -166,6 +243,45 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email,
         password
       );
+      
+      const docRef = doc(db, "users", userCredential.user.uid);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists() && docSnap.data().accountStatus !== "active") {
+        await updateDoc(docRef, {
+          accountStatus: "active"
+        });
+      }
+
+      await get().fetchUserData(userCredential.user.uid);
+    } catch (error) {
+      set({ error: (error as Error).message });
+      throw error;
+    }
+  },
+
+  signInWithGoogle: async () => {
+    try {
+      set({ error: null });
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const userCredential = result;
+      
+      const docRef = doc(db, "users", userCredential.user.uid);
+      const docSnap = await getDoc(docRef);
+      
+      if (!docSnap.exists()) {
+        await setDoc(docRef, {
+          email: userCredential.user.email,
+          fullName: userCredential.user.displayName,
+          role: "user",
+          offersClaimable: 100,
+          accountStatus: "active",
+          offersClaimableUpdatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+        });
+      }
+      
       await get().fetchUserData(userCredential.user.uid);
     } catch (error) {
       set({ error: (error as Error).message });
