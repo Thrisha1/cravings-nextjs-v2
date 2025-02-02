@@ -18,7 +18,6 @@ interface MenuItemCardProps {
 
 export const MenuItemCard = ({
   item,
-  index,
   isUploading,
   onSelect,
   onAddToMenu,

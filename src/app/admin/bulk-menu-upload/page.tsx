@@ -16,6 +16,8 @@ import {
   EditItemModal,
   MenuItem,
 } from "@/components/bulkMenuUpload/EditItemModal";
+import Link from "next/link";
+import { toast } from "sonner";
 const BulkUploadPage = () => {
   const router = useRouter();
   const [jsonInput, setJsonInput] = useState("");
@@ -46,6 +48,8 @@ const BulkUploadPage = () => {
 
   useEffect(() => {
     const savedItems = localStorage.getItem("bulkMenuItems");
+    const savedJsonInput = localStorage.getItem("jsonInput") as string;
+    setJsonInput(JSON.parse(savedJsonInput));
     if (savedItems) {
       const items = JSON.parse(savedItems);
       // Check each item against menu to set isAdded flag
@@ -115,6 +119,7 @@ const BulkUploadPage = () => {
   const handleJsonSubmit = async () => {
     try {
       const parsedItems = JSON.parse(jsonInput);
+      localStorage.setItem("jsonInput", JSON.stringify(jsonInput));
       const items = Array.isArray(parsedItems) ? parsedItems : [parsedItems];
 
       const itemsWithImages = await Promise.all(
@@ -142,8 +147,8 @@ const BulkUploadPage = () => {
 
       setMenuItems(itemsWithImages);
       localStorage.setItem("bulkMenuItems", JSON.stringify(itemsWithImages));
-    } catch (error) {
-      alert("Invalid JSON format");
+    } catch {
+      toast.error("Invalid JSON format");
     }
   };
 
@@ -259,6 +264,8 @@ const BulkUploadPage = () => {
         </div>
 
         <div className="mb-8">
+          <Link target="_blank" className="underline text-sm py-2 text-blue-500 hover:text-blue-600 block text-right" href={"https://kimi.moonshot.cn/chat"}>Go to KIMI.ai {"->"}</Link>
+
           <Textarea
             value={jsonInput}
             onChange={(e) => setJsonInput(e.target.value)}
