@@ -6,7 +6,13 @@ import Image from "next/image";
 import { Offer } from "@/store/offerStore";
 import { useAuthStore, UserData } from "@/store/authStore";
 import OfferCardMin from "@/components/OfferCardMin";
-import { ArrowLeft, MapPin, Users, VerifiedIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  MapPin,
+  Users,
+  VerifiedIcon,
+  Star,
+} from "lucide-react";
 import MenuItemCard from "@/components/MenuItemCard";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -24,6 +30,10 @@ import {
 import QrHotelAssignmentModal from "@/components/QrHotelAssignmentModal";
 import Error from "@/app/hotels/error";
 import VisitModal from "@/components/VisitModal";
+import ShowAllBtn from "@/components/hotelDetail/ShowAllBtn";
+import ReviewsList from "@/components/hotelDetail/ReviewsList";
+import RateThis from "@/components/RateThis";
+import { useReviewsStore } from "@/store/reviewsStore";
 
 export type MenuItem = {
   description: string;
@@ -61,6 +71,9 @@ const HotelMenuPage = ({
   const qrId = searchParams.get("qid");
   const error = searchParams.get("error");
   const [showVisitModal, setShowVisitModal] = useState(false);
+  const [showAllOffers, setShowAllOffers] = useState(false);
+  const [showAllMenu, setShowAllMenu] = useState(false);
+  const { getAverageReviewByHotelId } = useReviewsStore();
 
   const isLoggedIn = () => {
     console.log("isLoggedIn", userData);
@@ -140,7 +153,6 @@ const HotelMenuPage = ({
   }, [hoteldata]);
 
   useEffect(() => {
-    console.log(userData?.role, qrId, hoteldata?.id);
     if (
       userData?.role === "superadmin" &&
       qrId &&
@@ -153,6 +165,9 @@ const HotelMenuPage = ({
       handleQrScan();
     }
   }, [userData?.role, qrId, error, hoteldata?.id]);
+
+  const displayedOffers = showAllOffers ? offers : offers.slice(0, 4);
+  const displayedMenu = showAllMenu ? menu : menu.slice(0, 4);
 
   return (
     <main className="overflow-x-hidden bg-gradient-to-b from-orange-50 to-orange-100 relative">
@@ -284,6 +299,14 @@ const HotelMenuPage = ({
                 </span>{" "}
                 <span>{hoteldata?.area}</span>{" "}
               </div>
+
+              {/* ratings  */}
+              <Suspense>
+                <div className="flex items-center  gap-2 text-black/60 text-sm w-fit">
+                  <Star className="text-orange-600 fill-orange-600" size={20} />
+                  {getAverageReviewByHotelId(hoteldata?.id as string)}
+                </div>
+              </Suspense>
             </div>
 
             <SearchBox />
@@ -297,9 +320,10 @@ const HotelMenuPage = ({
 
                 <section className="my-5 md:my-10">
                   <>
-                    {/* offer list  */}
-                    <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
-                      {offers.map((offer: Offer) => {
+                    <div
+                      className={`grid transition-all duration-500 gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10`}
+                    >
+                      {displayedOffers.map((offer: Offer) => {
                         const discount = Math.round(
                           ((offer.originalPrice - offer.newPrice) /
                             offer.originalPrice) *
@@ -317,6 +341,12 @@ const HotelMenuPage = ({
                         );
                       })}
                     </div>
+                    {offers.length > 4 && (
+                      <ShowAllBtn
+                        showAll={showAllOffers}
+                        onClick={() => setShowAllOffers(!showAllOffers)}
+                      />
+                    )}
                   </>
                 </section>
               </section>
@@ -331,9 +361,8 @@ const HotelMenuPage = ({
               <section className="mt-5 md:mt-10">
                 {menu.length > 0 ? (
                   <>
-                    {/* offer list  */}
                     <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
-                      {menu.map((menuItem: MenuItem) => {
+                      {displayedMenu.map((menuItem: MenuItem) => {
                         return (
                           <div key={menuItem.id} className="group">
                             <MenuItemCard menuItem={menuItem} />
@@ -341,11 +370,27 @@ const HotelMenuPage = ({
                         );
                       })}
                     </div>
+                    {menu.length > 4 && (
+                      <ShowAllBtn
+                        showAll={showAllMenu}
+                        onClick={() => setShowAllMenu(!showAllMenu)}
+                      />
+                    )}
                   </>
                 ) : (
                   <NoOffersFound />
                 )}
               </section>
+            </section>
+
+            {/* rate this hotel  */}
+            <section className="px-3 pt-10 pb-5 flex sm:justify-center sm:pt-20 sm:pb-10">
+              <RateThis type="hotel" />
+            </section>
+
+            {/* reviews  */}
+            <section className="px-3 pt-5 pb-10 ">
+              <ReviewsList hotelId={hoteldata?.id as string} />
             </section>
           </div>
         </>

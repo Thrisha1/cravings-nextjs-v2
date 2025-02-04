@@ -18,8 +18,7 @@ type Params = Promise<{ id: string }>;
 
 const page = async ({ searchParams, params }: { searchParams: SearchParams; params: Params }) => {
   const { query: search , qrScan } = await searchParams;
-  const { id: idArray } = await params;
-  const id = idArray[0];
+  const { id } = await params;
 
   const getHotelOffers = unstable_cache(
     async (id: string) => {

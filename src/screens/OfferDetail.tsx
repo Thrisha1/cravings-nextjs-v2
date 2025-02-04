@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -8,7 +8,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Clock, MapPin, Tag, UtensilsCrossed } from "lucide-react";
+import {
+  ArrowLeft,
+  Clock,
+  MapPin,
+  Star,
+  Tag,
+  UtensilsCrossed,
+} from "lucide-react";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { useAuthStore, UserData } from "@/store/authStore";
 import { OfferTicket } from "@/components/OfferTicket";
@@ -21,6 +28,7 @@ import DiscountBadge from "@/components/DiscountBadge";
 import ClaimOfferButton from "@/components/ClaimOfferButton";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useReviewsStore } from "@/store/reviewsStore";
 
 export default function OfferDetail({
   offer,
@@ -35,6 +43,7 @@ export default function OfferDetail({
   const [showTicket, setShowTicket] = useState(false);
   const [token, setToken] = useState<string>(""); // Add token state
   const [isClaimed, setClaimed] = useState(false);
+  const { getAverageReviewByHotelId } = useReviewsStore();
   const {
     isOfferClaimed,
     syncClaimedOffersWithFirestore,
@@ -150,19 +159,29 @@ export default function OfferDetail({
             </div>
           </CardHeader>
           <CardContent>
-            <Link href={`/hotels/${hotelData.id}`} className="text-lg text-gray-700 grid grid-cols-2  gap-2 bg-gray-50 p-3 rounded-xl w-full">
+            <Link
+              href={`/hotels/${hotelData.id}`}
+              className="text-lg text-gray-700 grid grid-cols-2  gap-2 bg-gray-50 p-3 rounded-xl w-full"
+            >
               <div className="grid">
                 <UtensilsCrossed />
                 <span>{offer.hotelName}</span>
+                <Suspense>
+                  <div className="flex items-center mt-1  gap-2 text-black/60 text-sm w-fit">
+                    <Star
+                      className="text-orange-600 fill-orange-600"
+                      size={20}
+                    />
+                    {getAverageReviewByHotelId(hotelData?.id as string) ?? 0}
+                  </div>
+                </Suspense>
                 <span className="text-sm mt-1">
                   Followers : {hotelData?.followers?.length ?? 0}
                 </span>
               </div>
 
               <div className="flex justify-end items-center">
-                <div
-                  className="text-base bg-orange-600 text-white rounded-xl px-3 py-2"
-                >
+                <div className="text-base bg-orange-600 text-white rounded-xl px-3 py-2">
                   {hotelData?.followers?.some((f) => f.user == user?.uid)
                     ? "Unfollow"
                     : "Follow"}

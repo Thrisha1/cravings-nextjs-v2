@@ -27,7 +27,7 @@ const MenuItemCard = ({ menuItem }: { menuItem: MenuItem }) => {
 
           <div className="grid bg-gradient-to-t from-black to-transparent p-3 absolute bottom-0 left-0 w-full">
             <span className="text-2xl font-bold text-white">
-              ₹{menuItem.price.toFixed(0)}
+              ₹{typeof menuItem.price === 'number' ? menuItem.price.toFixed(2) : menuItem.price}
             </span>
 
             <div className="font-bold md:text-xl text-white">

@@ -23,6 +23,17 @@ export function Navbar() {
   const [userLocation, setUserLocation] = useState("");
   const [isTooltipOpen, setIsTooltipOpen] = useState(true);
 
+  // Add array of paths where navbar should be hidden
+  const hiddenPaths = ['/hotels/[id]/reviews/new', '/hotels/[id]/reviews']; 
+
+  // Check if current path matches any hidden path pattern
+  const shouldHideNavbar = hiddenPaths.some(path => {
+    // Convert path pattern to regex
+    const pattern = path.replace(/\[.*?\]/g, '[^/]+');
+    const regex = new RegExp(`^${pattern}$`);
+    return regex.test(location);
+  });
+
   useEffect(() => {
     if (
       user &&
@@ -100,6 +111,10 @@ export function Navbar() {
       )}
     </>
   );
+
+  if (shouldHideNavbar) {
+    return null;
+  }
 
   return (
     <>

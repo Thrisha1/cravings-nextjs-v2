@@ -86,7 +86,7 @@ interface AuthState {
   ) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  fetchUserData: (uid: string) => Promise<void>;
+  fetchUserData: (uid: string, save?: boolean) => Promise<UserData | void>;
   updateUserData: (uid: string, updates: Partial<UserData>) => Promise<void>;
   updateUserVisits: (uid: string, hid: string) => Promise<void>;
   handleFollow: (hotelId: string) => Promise<void>;
@@ -104,12 +104,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   userVisit: null,
   isRecentVisit: false,
 
-  fetchUserData: async (uid: string) => {
+  fetchUserData: async (uid: string, save = true) => {
     try {
       const docRef = doc(db, "users", uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        set({ userData: docSnap.data() as UserData });
+        const data = docSnap.data() as UserData;
+        if (save) {
+          set({ userData: data });
+        } else {
+          return data;
+        }
       }
     } catch (error) {
       set({ error: (error as Error).message });
