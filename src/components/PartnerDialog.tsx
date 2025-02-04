@@ -21,7 +21,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useLocationStore } from "@/store/locationStore";
 import { MapPin } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { resolveShortUrl } from "@/app/actions/extractLatLonFromGoogleMapsUrl";
 import { Switch } from "./ui/switch";
 import Image from "next/image";
@@ -42,14 +42,22 @@ export function PartnerDialog() {
     phone: "",
   });
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const isApp = searchParams.get("app");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const urlWithCordinates = await resolveShortUrl(formData.location);
-      
+
       // Validate required fields for Google sign in
-      if (isGoogleSignIn && (!formData.hotelName || !formData.area || !formData.location || !formData.phone)) {
+      if (
+        isGoogleSignIn &&
+        (!formData.hotelName ||
+          !formData.area ||
+          !formData.location ||
+          !formData.phone)
+      ) {
         setError("Please fill in all required fields");
         return;
       }
@@ -68,7 +76,7 @@ export function PartnerDialog() {
           setError("Please fill in all required fields");
           return;
         }
-        
+
         await signUpAsPartner(
           formData.email,
           formData.password,
@@ -222,23 +230,25 @@ export function PartnerDialog() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <Image
-                  width={5}
-                  height={5}
-                  src="https://www.google.com/favicon.ico"
-                  alt="Google"
-                  className="w-7 h-7"
+            {!isApp && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <Image
+                    width={5}
+                    height={5}
+                    src="https://www.google.com/favicon.ico"
+                    alt="Google"
+                    className="w-7 h-7"
+                  />
+                  Use Google Sign In
+                </div>
+                <Switch
+                  className="data-[state=checked]:bg-orange-600"
+                  checked={isGoogleSignIn}
+                  onCheckedChange={() => setIsGoogleSignIn(!isGoogleSignIn)}
                 />
-                Use Google Sign In
               </div>
-              <Switch
-                className="data-[state=checked]:bg-orange-600"
-                checked={isGoogleSignIn}
-                onCheckedChange={() => setIsGoogleSignIn(!isGoogleSignIn)}
-              />
-            </div>
+            )}
 
             {!isGoogleSignIn && (
               <>

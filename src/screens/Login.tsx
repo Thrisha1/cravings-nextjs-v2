@@ -5,7 +5,7 @@ import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UtensilsCrossed } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import Image from "next/image";
 
@@ -18,6 +18,8 @@ export default function Login() {
   const { signIn, signUp, error, signInWithGoogle } = useAuthStore();
   const navigate = useRouter();
   const { updateUserOffersClaimable } = useClaimedOffersStore();
+  const searchParams = useSearchParams();
+  const isApp = searchParams.get("app");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,30 +154,32 @@ export default function Login() {
           </Button>
         </form>
 
-        <div>
-          <div className="flex items-center justify-center py-5">
-            <span className="w-1/3 h-px bg-gray-300"></span>
-            <span className="text-gray-500 mx-4 text-[10px] text-nowrap">
-              Or Continue with
-            </span>
-            <span className="w-1/3 h-px bg-gray-300"></span>
-          </div>
+        {!isApp && (
+          <div>
+            <div className="flex items-center justify-center py-5">
+              <span className="w-1/3 h-px bg-gray-300"></span>
+              <span className="text-gray-500 mx-4 text-[10px] text-nowrap">
+                Or Continue with
+              </span>
+              <span className="w-1/3 h-px bg-gray-300"></span>
+            </div>
 
-          <Button
-            type="button"
-            onClick={handleGoogleSignIn}
-            className="w-full bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-          >
-            <Image
-              width={5}
-              height={5}
-              src="https://www.google.com/favicon.ico"
-              alt="Google"
-              className="w-5 h-5 mr-2"
-            />
-            Sign in with Google
-          </Button>
-        </div>
+            <Button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className="w-full bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+            >
+              <Image
+                width={5}
+                height={5}
+                src="https://www.google.com/favicon.ico"
+                alt="Google"
+                className="w-5 h-5 mr-2"
+              />
+              Sign in with Google
+            </Button>
+          </div>
+        )}
 
         <div className="mt-3 text-center">
           <button
