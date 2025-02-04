@@ -1,10 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { UtensilsCrossed, Menu, X,  Banknote } from "lucide-react";
+import { UtensilsCrossed, Menu, X, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { PartnerDialog } from "./PartnerDialog";
@@ -66,7 +66,11 @@ export function Navbar() {
           {link.label}
         </Link>
       ))}
-      {!user && <PartnerDialog />}
+      {!user && (
+        <Suspense>
+          <PartnerDialog />
+        </Suspense>
+      )}
       {user && (
         <div className="flex w-full">
           <div className="flex items-center gap-2 flex-col sm:flex-row justify-end">
@@ -136,7 +140,7 @@ export function Navbar() {
                   <span>{offersClaimable}</span>
                   <Banknote className="w-8 h-8" />
 
-                  {(offersClaimable == 0 && isTooltipOpen) && (
+                  {offersClaimable == 0 && isTooltipOpen && (
                     <>
                       {/* pulse  */}
                       <div className="absolute top-0 -right-1 rounded-full w-2 aspect-square bg-red-600 animate-pulse" />

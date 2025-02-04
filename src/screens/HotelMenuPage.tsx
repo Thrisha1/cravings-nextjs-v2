@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import NoOffersFound from "@/components/NoOffersFound";
 import SearchBox from "@/components/SearchBox";
 import Image from "next/image";
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import QrHotelAssignmentModal from "@/components/QrHotelAssignmentModal";
 import Error from "@/app/hotels/error";
+import VisitModal from "@/components/VisitModal";
 
 export type MenuItem = {
   description: string;
@@ -43,8 +44,14 @@ const HotelMenuPage = ({
   menu: MenuItem[];
   qrScan: string | null;
 }) => {
-  const { user, userData, updateUserVisits, handleFollow, handleUnfollow } =
-    useAuthStore();
+  const {
+    user,
+    userData,
+    updateUserVisits,
+    handleFollow,
+    handleUnfollow,
+    userVisit,
+  } = useAuthStore();
   const router = useRouter();
   const [isFollowed, setIsFollowed] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -53,6 +60,7 @@ const HotelMenuPage = ({
   const searchParams = useSearchParams();
   const qrId = searchParams.get("qid");
   const error = searchParams.get("error");
+  const [showVisitModal, setShowVisitModal] = useState(false);
 
   const isLoggedIn = () => {
     console.log("isLoggedIn", userData);
@@ -97,7 +105,8 @@ const HotelMenuPage = ({
         await revalidate(hoteldata?.id as string);
         const url = new URLSearchParams(searchParams.toString());
         url.delete("qrScan");
-        // router.replace("?" +url.toString());
+        router.replace("?" + url.toString());
+        setShowVisitModal(true);
       } catch (error) {
         console.error("Error handling QR scan:", error);
       }
@@ -147,18 +156,29 @@ const HotelMenuPage = ({
 
   return (
     <main className="overflow-x-hidden bg-gradient-to-b from-orange-50 to-orange-100 relative">
-      {userData?.role === "superadmin" && qrId && (
-        <QrHotelAssignmentModal
-          qrId={qrId || ""}
-          currentHotelId={hoteldata?.id || null}
-          currentHotelName={hoteldata?.hotelName || null}
-          isOpen={showQrAssignModal}
-          onClose={() => {
-            setShowQrAssignModal(false);
-          }}
-          onButtonClick={() => setShowQrAssignModal(true)}
-        />
-      )}
+      <Suspense>
+        {userData?.role === "superadmin" && qrId && (
+          <QrHotelAssignmentModal
+            qrId={qrId || ""}
+            currentHotelId={hoteldata?.id || null}
+            currentHotelName={hoteldata?.hotelName || null}
+            isOpen={showQrAssignModal}
+            onClose={() => {
+              setShowQrAssignModal(false);
+            }}
+            onButtonClick={() => setShowQrAssignModal(true)}
+          />
+        )}
+
+        {userVisit && qrId && (
+          <VisitModal
+            isOpen={showVisitModal}
+            onClose={() => setShowVisitModal(false)}
+            numberOfVisits={userVisit.numberOfVisits}
+            isRecentVisit={userVisit.isRecentVisit}
+          />
+        )}
+      </Suspense>
 
       {hoteldata ? (
         <>
@@ -217,11 +237,13 @@ const HotelMenuPage = ({
                 onClick={async () => {
                   try {
                     if (isFollowed) {
+                      setIsFollowed(false); // Immediately toggle state
                       await handleUnfollow(hoteldata?.id as string);
                       toast.error("Unfollowed successfully");
                       await revalidate(hoteldata?.id as string);
                     } else {
                       if (user) {
+                        setIsFollowed(true); // Immediately toggle state
                         await handleFollow(hoteldata?.id as string);
                         toast.success("Followed successfully");
                         await revalidate(hoteldata?.id as string);
@@ -230,6 +252,8 @@ const HotelMenuPage = ({
                       }
                     }
                   } catch (error) {
+                    // Revert state if operation fails
+                    setIsFollowed(!isFollowed);
                     console.error("Error following/unfollowing:", error);
                     toast.error("An error occurred. Please try again.");
                   }

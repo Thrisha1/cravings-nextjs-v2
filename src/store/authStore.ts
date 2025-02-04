@@ -57,6 +57,11 @@ interface AuthState {
   userData: UserData | null;
   loading: boolean;
   error: string | null;
+  userVisit : {
+    numberOfVisits: number;
+    lastVisit: string;
+    isRecentVisit: boolean;
+  } | null;
   signUp: (
     email: string,
     password: string,
@@ -96,6 +101,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   userData: null,
   loading: true,
   error: null,
+  userVisit: null,
+  isRecentVisit: false,
 
   fetchUserData: async (uid: string) => {
     try {
@@ -325,6 +332,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (followerIndex !== -1) {
           const updatedFollowers = [...followers];
 
+          const lastVisit = updatedFollowers[followerIndex].visits?.lastVisit;
+          const isRecentVisit = lastVisit && new Date().getTime() - new Date(lastVisit).getTime() < 6 * 60 * 60 * 1000;
+          
+
           updatedFollowers[followerIndex] = {
             ...updatedFollowers[followerIndex],
             visits: {
@@ -334,6 +345,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               lastVisit: new Date().toISOString(),
             },
           };
+          set({userVisit: {
+            numberOfVisits: updatedFollowers[followerIndex].visits?.numberOfVisits || 0,
+            lastVisit: updatedFollowers[followerIndex].visits?.lastVisit || new Date().toISOString(),
+            isRecentVisit: isRecentVisit,
+          }});
           console.log("updatedFollowers", updatedFollowers);
           await updateDoc(docRef, {
             followers: updatedFollowers,
