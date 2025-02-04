@@ -11,6 +11,7 @@ import { Offer } from "@/store/offerStore";
 import { useSearchParams } from "next/navigation";
 import { filterAndSortOffers, getOffers } from "@/app/actions/offerFetching";
 import OfferCardsLoading from "@/components/OfferCardsLoading";
+import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
 
 export default function Offers() {
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -45,6 +46,7 @@ export default function Offers() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 px-3 py-3 relative pb-10">
       {/* <ScanButton /> */}
+      <CravingsCashInfoModal />
       <SurveyDialog offers={offers} />
       {/* christmas lights  */}
       {/* <div className="absolute top-0 gap-7 left-0 flex items-center max-w-screen overflow-hidden pointer-events-none">

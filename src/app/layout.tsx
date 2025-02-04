@@ -7,7 +7,7 @@ import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 // import RateUsModal from "@/components/RateUsModal";
 import "@smastrom/react-rating/style.css";
 import { Toaster } from "@/components/ui/sonner";
-import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
+// import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
 import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
 import LocationAccess from "@/components/LocationAccess";
 import { Suspense } from "react";
@@ -56,7 +56,6 @@ export default function RootLayout({
         {/* <Snow /> */}
         <Navbar />
         {/* <RateUsModal /> */}
-        <CravingsCashInfoModal />
         <PwaInstallPrompt />
         <Suspense>
           <SyncUserOfferCoupons />

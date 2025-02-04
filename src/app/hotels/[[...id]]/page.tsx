@@ -78,9 +78,9 @@ const page = async ({ searchParams, params }: { searchParams: SearchParams; para
   const offers = id ? await getHotelOffers(id) : null;
   const hoteldata = id ? await getHotelData(id) : null;
 
-  if (!hoteldata) {
-    throw new Error("Hotel not found!");
-  }
+  // if (!hoteldata) {
+  //   throw new Error("Hotel not found!");
+  // }
 
   const menuItems = hoteldata?.menu || [];
 
@@ -98,7 +98,7 @@ const page = async ({ searchParams, params }: { searchParams: SearchParams; para
   return (
       <HotelMenuPage
         offers={filteredOffers}
-        hoteldata={hoteldata}
+        hoteldata={hoteldata as UserData}
         menu={menuItems}
         qrScan={qrScan ?? null}
       />

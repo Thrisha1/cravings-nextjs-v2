@@ -19,11 +19,12 @@ const page = async ({params}: {params: Params}) => {
         await updateDoc(qrCodeRef, {
           numberOfQrScans: numberOfQrScans + .5
         });
-        redirect(`/hotels/${hotelId}?qrScan=true`);
+        redirect(`/hotels/${hotelId}?qrScan=true&qid=${qrCodeId}${!hotelId ? '&error=hotel_not_assigned' : ''}`);
+
     }
     
   return (
-    <div>page</div>
+    <div></div>
   )
 }
 
