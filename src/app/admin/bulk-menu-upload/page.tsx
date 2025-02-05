@@ -18,6 +18,7 @@ import {
 } from "@/components/bulkMenuUpload/EditItemModal";
 import Link from "next/link";
 import { toast } from "sonner";
+
 const BulkUploadPage = () => {
   const router = useRouter();
   const [jsonInput, setJsonInput] = useState("");
@@ -116,39 +117,59 @@ const BulkUploadPage = () => {
     }
   };
 
+  const validateMenuItem = (item: MenuItem) => {
+    if (!item.name || typeof item.name !== 'string') {
+      throw new Error('Name is required and must be a string');
+    }
+    if (!item.price || typeof Number(item.price) !== 'number' || isNaN(Number(item.price))) {
+      throw new Error('Price is required and must be a number');
+    }
+    if (!item.description || typeof item.description !== 'string') {
+      throw new Error('Description is required and must be a string');
+    }
+    return {
+      ...item,
+      price: Number(item.price) // Convert price to number
+    };
+  };
+
   const handleJsonSubmit = async () => {
     try {
       const parsedItems = JSON.parse(jsonInput);
       localStorage.setItem("jsonInput", JSON.stringify(jsonInput));
       const items = Array.isArray(parsedItems) ? parsedItems : [parsedItems];
 
+      // Validate each item
+      items.forEach(validateMenuItem);
+
       const itemsWithImages = await Promise.all(
         items.map(async (item) => {
+          const validatedItem = validateMenuItem(item);
           const isAlreadyInMenu = menu.some(
             (menuItem) =>
-              menuItem.name === item.name &&
-              menuItem.price === item.price &&
-              menuItem.description === item.description
+              menuItem.name === validatedItem.name &&
+              menuItem.price === validatedItem.price &&
+              menuItem.description === validatedItem.description
           );
 
-          if (!item.image) {
-            const searchQuery = `${item.name} food`;
+          if (!validatedItem.image) {
+            const searchQuery = `${validatedItem.name} food`;
             const imageUrl = await fetchUnsplashImage(searchQuery);
             return {
-              ...item,
+              ...validatedItem,
               image: imageUrl || "/image_placeholder.webp",
               isSelected: false,
               isAdded: isAlreadyInMenu,
             };
           }
-          return { ...item, isSelected: false, isAdded: isAlreadyInMenu };
+          return { ...validatedItem, isSelected: false, isAdded: isAlreadyInMenu };
         })
       );
 
       setMenuItems(itemsWithImages);
       localStorage.setItem("bulkMenuItems", JSON.stringify(itemsWithImages));
-    } catch {
-      toast.error("Invalid JSON format");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Invalid JSON format");
     }
   };
 
@@ -161,19 +182,20 @@ const BulkUploadPage = () => {
   const handleAddToMenu = async (item: MenuItem, index: number) => {
     setIsUploading((prev) => ({ ...prev, [index]: true }));
     try {
+      const validatedItem = validateMenuItem(item);
       await addItem({
-        name: item.name,
-        price: item.price,
-        image: item.image,
-        description: item.description,
+        name: validatedItem.name,
+        price: validatedItem.price,
+        image: validatedItem.image,
+        description: validatedItem.description,
       });
 
       // Update all matching items as added
       const updatedItems = menuItems.map((menuItem) => {
         if (
-          menuItem.name === item.name &&
-          menuItem.price === item.price &&
-          menuItem.description === item.description
+          menuItem.name === validatedItem.name &&
+          menuItem.price === validatedItem.price &&
+          menuItem.description === validatedItem.description
         ) {
           return { ...menuItem, isAdded: true };
         }
@@ -237,19 +259,24 @@ const BulkUploadPage = () => {
 
   const handleSaveEdit = async () => {
     if (editingItem) {
-      const updatedItems = [...menuItems];
+      try {
+        const validatedItem = validateMenuItem(editingItem.item);
+        const updatedItems = [...menuItems];
 
-      if (!editingItem.item.image) {
-        const searchQuery = `${editingItem.item.name} food`;
-        const imageUrl = await fetchUnsplashImage(searchQuery);
-        editingItem.item.image = imageUrl || "/image_placeholder.webp";
+        if (!validatedItem.image) {
+          const searchQuery = `${validatedItem.name} food`;
+          const imageUrl = await fetchUnsplashImage(searchQuery);
+          validatedItem.image = imageUrl || "/image_placeholder.webp";
+        }
+
+        updatedItems[editingItem.index] = validatedItem;
+        setMenuItems(updatedItems);
+        localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+        setEditingItem(null);
+        setIsEditModalOpen(false);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Invalid item data");
       }
-
-      updatedItems[editingItem.index] = editingItem.item;
-      setMenuItems(updatedItems);
-      localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
-      setEditingItem(null);
-      setIsEditModalOpen(false);
     }
   };
 

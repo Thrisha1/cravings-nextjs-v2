@@ -37,6 +37,11 @@ export interface UserData {
     visits: {
       numberOfVisits: number;
       lastVisit: string;
+      amountsSpent: {
+        amount: number;
+        date: string;
+        discount: number;
+      }[];
     };
   }[];
   following?: {
@@ -57,7 +62,7 @@ interface AuthState {
   userData: UserData | null;
   loading: boolean;
   error: string | null;
-  userVisit : {
+  userVisit: {
     numberOfVisits: number;
     lastVisit: string;
     isRecentVisit: boolean;
@@ -88,13 +93,21 @@ interface AuthState {
   signOut: () => Promise<void>;
   fetchUserData: (uid: string, save?: boolean) => Promise<UserData | void>;
   updateUserData: (uid: string, updates: Partial<UserData>) => Promise<void>;
-  updateUserVisits: (uid: string, hid: string) => Promise<void>;
+  updateUserVisits: (uid: string, hid: string, amount: number, discount: number) => Promise<void>;
   handleFollow: (hotelId: string) => Promise<void>;
   handleUnfollow: (hotelId: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  fetchUserVisit: (uid: string, hid: string) => Promise<void>;
 }
 
 const db = getFirestore();
+
+export const getDiscount = (numberOfVisits: number): number => {
+  if (numberOfVisits % 5 === 0) {
+    return 10;
+  }
+  return Math.floor(Math.random() * 5) + 1; // Random number between 1-5
+};
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
@@ -121,15 +134,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  fetchUserVisit: async (uid: string, hid: string) => {
+    try {
+      const docRef = doc(db, "users", hid);
+      const userDoc = await getDoc(docRef);
+      if (userDoc.exists()) {
+        const followers = userDoc.data().followers || [];
+        const follower = followers.find(
+          (follower: { user: string }) => follower.user === uid
+        );
+
+        if (follower) {
+          const lastVisit = follower.visits?.lastVisit;
+          const isRecentVisit =
+            lastVisit &&
+            new Date().getTime() - new Date(lastVisit).getTime() <
+              6 * 60 * 60 * 1000;
+
+          set({
+            userVisit: {
+              numberOfVisits: follower.visits?.numberOfVisits || 0,
+              lastVisit: follower.visits?.lastVisit || new Date().toISOString(),
+              isRecentVisit: isRecentVisit,
+            },
+          });
+        }
+      }
+    } catch (error) {
+      set({ error: (error as Error).message });
+      throw error;
+    }
+  },
+
   signUp: async (email, password, fullName, phone) => {
     try {
       set({ error: null });
-      
+
       // Check if email already exists
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("email", "==", email));
       const querySnapshot = await getDocs(q);
-      
+
       if (!querySnapshot.empty) {
         throw new Error("A user with this email already exists");
       }
@@ -173,7 +218,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const usersRef = collection(db, "users");
       const q = query(usersRef, where("email", "==", email));
       const querySnapshot = await getDocs(q);
-      
+
       if (!querySnapshot.empty) {
         throw new Error("A user with this email already exists");
       }
@@ -219,9 +264,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Check if email already exists
       const usersRef = collection(db, "users");
-      const q = query(usersRef, where("email", "==", userCredential.user.email));
+      const q = query(
+        usersRef,
+        where("email", "==", userCredential.user.email)
+      );
       const querySnapshot = await getDocs(q);
-      
+
       if (!querySnapshot.empty) {
         throw new Error("A user with this email already exists");
       }
@@ -255,13 +303,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email,
         password
       );
-      
+
       const docRef = doc(db, "users", userCredential.user.uid);
       const docSnap = await getDoc(docRef);
-      
+
       if (docSnap.exists() && docSnap.data().accountStatus !== "active") {
         await updateDoc(docRef, {
-          accountStatus: "active"
+          accountStatus: "active",
         });
       }
 
@@ -278,10 +326,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const userCredential = result;
-      
+
       const docRef = doc(db, "users", userCredential.user.uid);
       const docSnap = await getDoc(docRef);
-      
+
       if (!docSnap.exists()) {
         await setDoc(docRef, {
           email: userCredential.user.email,
@@ -293,7 +341,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           createdAt: new Date().toISOString(),
         });
       }
-      
+
       await get().fetchUserData(userCredential.user.uid);
     } catch (error) {
       set({ error: (error as Error).message });
@@ -323,7 +371,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  updateUserVisits: async (uid: string, hid: string) => {
+  updateUserVisits: async (uid: string, hid: string , amount : number , discount : number) => {
     try {
       console.log("updateUserVisits", uid, hid);
       const docRef = doc(db, "users", hid);
@@ -338,24 +386,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const updatedFollowers = [...followers];
 
           const lastVisit = updatedFollowers[followerIndex].visits?.lastVisit;
-          const isRecentVisit = lastVisit && new Date().getTime() - new Date(lastVisit).getTime() < 6 * 60 * 60 * 1000;
-          
+          const isRecentVisit =
+            lastVisit &&
+            new Date().getTime() - new Date(lastVisit).getTime() <
+              6 * 60 * 60 * 1000;
+
+          const newNumberOfVisits = (updatedFollowers[followerIndex].visits?.numberOfVisits || 0) + 1;
 
           updatedFollowers[followerIndex] = {
             ...updatedFollowers[followerIndex],
             visits: {
-              numberOfVisits:
-                (updatedFollowers[followerIndex].visits?.numberOfVisits ||
-                  0) + 1,
+              numberOfVisits: newNumberOfVisits,
               lastVisit: new Date().toISOString(),
+              amountsSpent: [
+                ...(updatedFollowers[followerIndex].visits?.amountsSpent ||
+                  []),
+                {
+                  amount: amount,
+                  date: new Date().toISOString(),
+                  discount: discount
+                },
+              ],
             },
           };
-          set({userVisit: {
-            numberOfVisits: updatedFollowers[followerIndex].visits?.numberOfVisits || 0,
-            lastVisit: updatedFollowers[followerIndex].visits?.lastVisit || new Date().toISOString(),
-            isRecentVisit: isRecentVisit,
-          }});
-          console.log("updatedFollowers", updatedFollowers);
+          set({
+            userVisit: {
+              numberOfVisits:
+                updatedFollowers[followerIndex].visits?.numberOfVisits || 0,
+              lastVisit:
+                updatedFollowers[followerIndex].visits?.lastVisit ||
+                new Date().toISOString(),
+              isRecentVisit: isRecentVisit,
+            },
+          });
           await updateDoc(docRef, {
             followers: updatedFollowers,
           });

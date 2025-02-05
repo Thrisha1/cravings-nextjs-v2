@@ -149,7 +149,7 @@ export default function OfferDetail({
           <CardHeader>
             <div className="flex justify-between items-start">
               <div className="space-y-4">
-                <CardTitle className="text-3xl font-bold">
+                <CardTitle className="text-3xl font-bold text-pretty">
                   {offer.dishName}
                 </CardTitle>
                 {offer.description && (

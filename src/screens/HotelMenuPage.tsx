@@ -57,7 +57,7 @@ const HotelMenuPage = ({
   const {
     user,
     userData,
-    updateUserVisits,
+    fetchUserVisit,
     handleFollow,
     handleUnfollow,
     userVisit,
@@ -110,10 +110,10 @@ const HotelMenuPage = ({
   };
 
   const handleQrScan = async () => {
-    const handleFollowAndUpdateUserVisits = async () => {
+    const handleFollowUpdate = async () => {
       try {
         await handleFollow(hoteldata?.id as string);
-        await updateUserVisits(user?.uid as string, hoteldata?.id as string);
+        await fetchUserVisit(user?.uid as string, hoteldata?.id as string);
         toast.success("Following");
         await revalidate(hoteldata?.id as string);
         const url = new URLSearchParams(searchParams.toString());
@@ -128,7 +128,7 @@ const HotelMenuPage = ({
     const newUser = localStorage.getItem("newUser");
     if (newUser) {
       localStorage.removeItem("newUser");
-      handleFollowAndUpdateUserVisits();
+      handleFollowUpdate();
     }
 
     if (!userData) {
@@ -138,7 +138,7 @@ const HotelMenuPage = ({
       return;
     } else {
       if (qrScan) {
-        handleFollowAndUpdateUserVisits();
+        handleFollowUpdate();
       }
     }
   };
@@ -188,6 +188,7 @@ const HotelMenuPage = ({
         {userVisit && qrId && (
           <VisitModal
             isOpen={showVisitModal}
+            hotelId={hoteldata?.id as string}
             onClose={() => setShowVisitModal(false)}
             numberOfVisits={userVisit.numberOfVisits}
             isRecentVisit={userVisit.isRecentVisit}
