@@ -14,7 +14,6 @@ import {
 } from "@/components/bulkMenuUpload/EditItemModal";
 import Link from "next/link";
 import { toast } from "sonner";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from 'uuid';
 
 const BulkUploadPage = () => {
@@ -28,11 +27,6 @@ const BulkUploadPage = () => {
     item: MenuItem;
   } | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-  const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(
-    null
-  );
-  const [imageSearchQuery, setImageSearchQuery] = useState("");
   const [isUploading, setIsUploading] = useState<{ [key: number]: boolean }>(
     {}
   );
