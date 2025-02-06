@@ -338,9 +338,10 @@ const BulkUploadPage = () => {
       localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
       toast.success("New image generated successfully!");
     } catch (error) {
-      toast.error("Failed to generate new image",error);
+      toast.error("Failed to generate new image");
     }
   };
+
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-8">
