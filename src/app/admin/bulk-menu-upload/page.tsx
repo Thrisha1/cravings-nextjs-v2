@@ -9,15 +9,13 @@ import { useRouter } from "next/navigation";
 import { useMenuStore } from "@/store/menuStore";
 import { MenuItemCard } from "@/components/bulkMenuUpload/MenuItemCard";
 import {
-  ImageSearchModal,
-  UnsplashImage,
-} from "@/components/admin/ImageSearchModal";
-import {
   EditItemModal,
   MenuItem,
 } from "@/components/bulkMenuUpload/EditItemModal";
 import Link from "next/link";
 import { toast } from "sonner";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { v4 as uuidv4 } from 'uuid';
 
 const BulkUploadPage = () => {
   const router = useRouter();
@@ -35,13 +33,26 @@ const BulkUploadPage = () => {
     null
   );
   const [imageSearchQuery, setImageSearchQuery] = useState("");
-  const [searchedImages, setSearchedImages] = useState<UnsplashImage[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [isUploading, setIsUploading] = useState<{ [key: number]: boolean }>(
     {}
   );
   const [isBulkUploading, setIsBulkUploading] = useState(false);
+
+  const validateMenuItem = (item: MenuItem) => {
+    if (!item.name || typeof item.name !== 'string') {
+      throw new Error('Name is required and must be a string');
+    }
+    if (!item.price || typeof Number(item.price) !== 'number' || isNaN(Number(item.price))) {
+      throw new Error('Price is required and must be a number');
+    }
+    if (!item.description || typeof item.description !== 'string') {
+      throw new Error('Description is required and must be a string');
+    }
+    return {
+      ...item,
+      price: Number(item.price)
+    };
+  };
 
   useEffect(() => {
     fetchMenu();
@@ -49,8 +60,10 @@ const BulkUploadPage = () => {
 
   useEffect(() => {
     const savedItems = localStorage.getItem("bulkMenuItems");
-    const savedJsonInput = localStorage.getItem("jsonInput") as string;
-    setJsonInput(JSON.parse(savedJsonInput));
+    const savedJsonInput = localStorage.getItem("jsonInput");
+    if (savedJsonInput) {
+      setJsonInput(savedJsonInput);
+    }
     if (savedItems) {
       const items = JSON.parse(savedItems);
       // Check each item against menu to set isAdded flag
@@ -67,71 +80,27 @@ const BulkUploadPage = () => {
     }
   }, [menu]);
 
-  const searchUnsplashImages = async (query: string, page = 1) => {
+  const generateMenuImage = async (query: string) => {
     try {
-      const response = await fetch(
-        `https://api.unsplash.com/search/photos?query=${query}&client_id=${process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY}&per_page=9&page=${page}`
-      );
-      const data = await response.json();
-      setSearchedImages(data.results);
-      setTotalPages(Math.ceil(data.total / 9));
-      setCurrentPage(page);
-    } catch (error) {
-      console.error("Error fetching images:", error);
-    }
-  };
+      // Pollinations.ai endpoint for stable diffusion
+      const response = await fetch('https://image.pollinations.ai/prompt/' + encodeURIComponent(query), {
+        method: 'GET',
+      });
 
-  const handleImageClick = (index: number) => {
-    setSelectedItemIndex(index);
-    setImageSearchQuery(menuItems[index].name + " food");
-    searchUnsplashImages(menuItems[index].name + " food");
-    setIsImageModalOpen(true);
-  };
-
-  const handleSelectImage = (imageUrl: string) => {
-    if (selectedItemIndex !== null) {
-      const updatedItems = [...menuItems];
-      updatedItems[selectedItemIndex] = {
-        ...updatedItems[selectedItemIndex],
-        image: imageUrl,
-      };
-      setMenuItems(updatedItems);
-      localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
-      setIsImageModalOpen(false);
-    }
-  };
-
-  const fetchUnsplashImage = async (query: string) => {
-    try {
-      const response = await fetch(
-        `https://api.unsplash.com/search/photos?query=${query}&client_id=${process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY}`
-      );
-      const data = await response.json();
-      if (data.results && data.results.length > 0) {
-        return data.results[0].urls.regular;
+      if (!response.ok) {
+        throw new Error('Failed to generate image');
       }
-      return null;
+
+      // Pollinations.ai returns the image directly
+      return response.url;
     } catch (error) {
-      console.error("Error fetching image:", error);
-      return null;
+      console.error("Error generating image:", error);
+      toast.error("Failed to generate image");
+      return "/image_placeholder.webp";
     }
   };
 
-  const validateMenuItem = (item: MenuItem) => {
-    if (!item.name || typeof item.name !== 'string') {
-      throw new Error('Name is required and must be a string');
-    }
-    if (!item.price || typeof Number(item.price) !== 'number' || isNaN(Number(item.price))) {
-      throw new Error('Price is required and must be a number');
-    }
-    if (!item.description || typeof item.description !== 'string') {
-      throw new Error('Description is required and must be a string');
-    }
-    return {
-      ...item,
-      price: Number(item.price) // Convert price to number
-    };
-  };
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   const handleJsonSubmit = async () => {
     try {
@@ -142,8 +111,13 @@ const BulkUploadPage = () => {
       // Validate each item
       items.forEach(validateMenuItem);
 
-      const itemsWithImages = await Promise.all(
-        items.map(async (item) => {
+      // Process items in batches with delay
+      const batchSize = 3; // Process 3 items at a time
+      const itemsWithImages = [];
+      
+      for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const batchPromises = batch.map(async (item) => {
           const validatedItem = validateMenuItem(item);
           const isAlreadyInMenu = menu.some(
             (menuItem) =>
@@ -153,22 +127,34 @@ const BulkUploadPage = () => {
           );
 
           if (!validatedItem.image) {
-            const searchQuery = `${validatedItem.name} food`;
-            const imageUrl = await fetchUnsplashImage(searchQuery);
+            const prompt = `professional food photography of ${validatedItem.description}`;
+            const imageUrl = await generateMenuImage(prompt);
             return {
               ...validatedItem,
-              image: imageUrl || "/image_placeholder.webp",
+              image: imageUrl,
               isSelected: false,
               isAdded: isAlreadyInMenu,
             };
           }
           return { ...validatedItem, isSelected: false, isAdded: isAlreadyInMenu };
-        })
-      );
+        });
+
+        // Process batch
+        const batchResults = await Promise.all(batchPromises);
+        itemsWithImages.push(...batchResults);
+
+        // Add delay between batches
+        if (i + batchSize < items.length) {
+          await delay(2000); // 2 second delay between batches
+          toast.info(`Processing items ${i + batchSize + 1} to ${Math.min(i + batchSize * 2, items.length)} of ${items.length}`);
+        }
+      }
 
       setMenuItems(itemsWithImages);
       localStorage.setItem("bulkMenuItems", JSON.stringify(itemsWithImages));
+      toast.success("All items processed successfully!");
     } catch (error) {
+      console.error("Error processing JSON:", error);
       toast.error(error instanceof Error ? error.message : "Invalid JSON format");
     }
   };
@@ -177,27 +163,86 @@ const BulkUploadPage = () => {
     setMenuItems([]);
     setJsonInput("");
     localStorage.removeItem("bulkMenuItems");
+    localStorage.removeItem("jsonInput");
+  };
+
+  const uploadImageToS3 = async (imageUrl: string, fileName: string) => {
+    try {
+      // Fetch the image
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error('Failed to fetch image');
+      }
+
+      const blob = await response.blob();
+      
+      // Convert blob to base64
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      // Upload to S3
+      const uploadResponse = await fetch('/api/upload-s3', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: base64,
+          fileName,
+          contentType: blob.type,
+        }),
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || 'Failed to upload image to S3');
+      }
+
+      const { url } = await uploadResponse.json();
+      if (!url) {
+        throw new Error('No URL returned from upload');
+      }
+
+      return url;
+    } catch (error) {
+      console.error('Error uploading to S3:', error);
+      toast.error('Failed to upload image. Using original URL.');
+      return imageUrl; // Fallback to original URL if upload fails
+    }
   };
 
   const handleAddToMenu = async (item: MenuItem, index: number) => {
     setIsUploading((prev) => ({ ...prev, [index]: true }));
     try {
       const validatedItem = validateMenuItem(item);
+      
+      // If the image is from Pollinations, upload it to S3
+      let finalImageUrl = validatedItem.image;
+      if (validatedItem.image.includes('pollinations.ai')) {
+        const fileName = `${uuidv4()}-${validatedItem.name.toLowerCase().replace(/\s+/g, '-')}.jpg`;
+        finalImageUrl = await uploadImageToS3(validatedItem.image, fileName);
+      }
+
+      // Add item with S3 image URL
       await addItem({
         name: validatedItem.name,
         price: validatedItem.price,
-        image: validatedItem.image,
+        image: finalImageUrl,
         description: validatedItem.description,
       });
 
-      // Update all matching items as added
+      // Update all matching items as added with new image URL
       const updatedItems = menuItems.map((menuItem) => {
         if (
           menuItem.name === validatedItem.name &&
           menuItem.price === validatedItem.price &&
           menuItem.description === validatedItem.description
         ) {
-          return { ...menuItem, isAdded: true };
+          return { ...menuItem, isAdded: true, image: finalImageUrl };
         }
         return menuItem;
       });
@@ -205,6 +250,10 @@ const BulkUploadPage = () => {
       setMenuItems(updatedItems);
       localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
       fetchMenu();
+      toast.success("Item added to menu successfully!");
+    } catch (error) {
+      console.error("Error adding item to menu:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to add item to menu");
     } finally {
       setIsUploading((prev) => ({ ...prev, [index]: false }));
     }
@@ -265,7 +314,7 @@ const BulkUploadPage = () => {
 
         if (!validatedItem.image) {
           const searchQuery = `${validatedItem.name} food`;
-          const imageUrl = await fetchUnsplashImage(searchQuery);
+          const imageUrl = await generateMenuImage(searchQuery);
           validatedItem.image = imageUrl || "/image_placeholder.webp";
         }
 
@@ -277,6 +326,25 @@ const BulkUploadPage = () => {
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Invalid item data");
       }
+    }
+  };
+
+  const handleImageClick = async (index: number) => {
+    try {
+      const item = menuItems[index];
+      const prompt = `professional food photography of ${item.description}`;
+      const imageUrl = await generateMenuImage(prompt);
+      
+      const updatedItems = [...menuItems];
+      updatedItems[index] = {
+        ...updatedItems[index],
+        image: imageUrl,
+      };
+      setMenuItems(updatedItems);
+      localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+      toast.success("New image generated successfully!");
+    } catch (error) {
+      toast.error("Failed to generate new image");
     }
   };
 
@@ -362,19 +430,6 @@ const BulkUploadPage = () => {
           ))}
         </div>
       </div>
-
-      <ImageSearchModal
-        isOpen={isImageModalOpen}
-        onOpenChange={setIsImageModalOpen}
-        imageSearchQuery={imageSearchQuery}
-        setImageSearchQuery={setImageSearchQuery}
-        searchedImages={searchedImages}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onSearch={searchUnsplashImages}
-        onSelectImage={handleSelectImage}
-        onPageChange={(page) => searchUnsplashImages(imageSearchQuery, page)}
-      />
 
       <EditItemModal
         isOpen={isEditModalOpen}
