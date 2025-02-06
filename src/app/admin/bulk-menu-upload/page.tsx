@@ -317,8 +317,9 @@ const BulkUploadPage = () => {
         localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
         setEditingItem(null);
         setIsEditModalOpen(false);
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Invalid item data");
+      } catch (err) {
+        console.error('Error saving edit:', err);
+        toast.error(err instanceof Error ? err.message : "Invalid item data");
       }
     }
   };
