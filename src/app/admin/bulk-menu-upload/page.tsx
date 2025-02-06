@@ -338,8 +338,9 @@ const BulkUploadPage = () => {
       setMenuItems(updatedItems);
       localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
       toast.success("New image generated successfully!");
-    } catch (error) {
-      toast.error("Failed to generate new image");
+    } catch (err) {
+      console.error("Error generating new image:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to generate new image");
     }
   };
 
