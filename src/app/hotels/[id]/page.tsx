@@ -20,7 +20,6 @@ type SearchParams = Promise<{ [key: string]: string | undefined }>;
 type Params = Promise<{ id: string }>;
 
 const page = async ({ searchParams, params }: { searchParams: SearchParams; params: Params }) => {
-  const router = useRouter();
   
   useEffect(() => {
     if (typeof window !== 'undefined') {
