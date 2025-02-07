@@ -1,3 +1,5 @@
+'use client';
+
 import { db } from "@/lib/firebase";
 import HotelMenuPage from "@/screens/HotelMenuPage";
 import {
@@ -9,14 +11,23 @@ import {
   where,
 } from "firebase/firestore";
 import { unstable_cache } from "next/cache";
-import React from "react";
+import React, { useEffect } from "react";
 import { Offer } from "@/store/offerStore";
 import { UserData } from "@/store/authStore";
+import { useRouter } from 'next/navigation';
 
 type SearchParams = Promise<{ [key: string]: string | undefined }>;
 type Params = Promise<{ id: string }>;
 
 const page = async ({ searchParams, params }: { searchParams: SearchParams; params: Params }) => {
+  const router = useRouter();
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('previousRoute', window.location.pathname + window.location.search);
+    }
+  }, []);
+
   const { query: search , qrScan } = await searchParams;
   const { id } = await params;
 

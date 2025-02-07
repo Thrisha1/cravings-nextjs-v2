@@ -8,6 +8,7 @@ import { UtensilsCrossed } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import Image from "next/image";
+import { getAndClearSavedRoute } from '@/utils/auth';
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -56,14 +57,8 @@ export default function Login() {
         await signIn(email, password);
       }
 
-      const previousRoute = localStorage.getItem("previousRoute");
-      if (previousRoute) {
-        localStorage.removeItem("previousRoute");
-        localStorage.setItem("newUser", "true");
-        navigate.push(previousRoute);
-      } else {
-        navigate.push("/offers");
-      }
+      const redirectTo = getAndClearSavedRoute();
+      navigate.push(redirectTo);
     } catch (error) {
       console.error("Authentication error:", error);
     }
@@ -80,7 +75,9 @@ export default function Login() {
           localStorage.removeItem("token");
         }
       }
-      navigate.push("/offers");
+      
+      const redirectTo = getAndClearSavedRoute();
+      navigate.push(redirectTo);
     } catch (error) {
       console.error("Google authentication error:", error);
     }
