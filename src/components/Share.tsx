@@ -1,28 +1,34 @@
 import { Badge } from "@/components/ui/badge";
 
 interface ShareProps {
-  offerId: string | string[];
+  offerId?: string | string[];
+  hotelId?: string | string[];
+  menuId?: string | string[];
   className?: string;
 }
-const Share = ({ offerId, className }: ShareProps) => {
+const Share = ({ offerId, hotelId, menuId, className }: ShareProps) => {
   const handleShare = () => {
     const offerLink = `${window.location.origin}/offers/${offerId}/`;
+    const menuLink = `${window.location.origin}/hotels/${hotelId}/menu/${menuId}/`;
+
+    const shareLink = menuId ? menuLink : offerLink;
+    const shareTitle = menuId ? "Check out this menu item!" : "Check out this offer!";
+    const shareText = menuId ? "Check out this menu item on our app!" : "Check out this offer on our app!";
 
     if (navigator.share) {
       navigator
         .share({
-          title: "Check out this offer!",
-          text: "Check out this offer on our app!",
-          url: offerLink,
+          title: shareTitle,
+          text: shareText,
+          url: shareLink,
         })
         .then(() => console.log("Successfully shared"))
         .catch((error) => console.error("Error sharing", error));
     } else {
-      navigator.clipboard.writeText(offerLink).then(
+      navigator.clipboard.writeText(shareLink).then(
         () => alert("Share link copied to clipboard"),
         (error) => console.error("Error copying to clipboard", error)
       );
-      
     }
   };
 

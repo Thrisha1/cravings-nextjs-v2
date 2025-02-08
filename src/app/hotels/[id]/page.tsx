@@ -79,7 +79,7 @@ const HotelPage = async ({
   const offers = id ? await getHotelOffers(id) : null;
   const hoteldata = id ? await getHotelData(id) : null;
   const menuItems = (hoteldata?.menu || []).map((item: MenuItem) => ({
-    id: crypto.randomUUID(),
+    id: item.id,
     name: item.name,
     price: item.price,
     description: item.description,

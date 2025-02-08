@@ -366,7 +366,10 @@ const HotelMenuPage = ({
                       {displayedMenu.map((menuItem: MenuItem) => {
                         return (
                           <div key={menuItem.id} className="group">
-                            <MenuItemCard menuItem={menuItem} />
+                            <MenuItemCard
+                              menuItem={menuItem}
+                              hotelId={hoteldata?.id as string}
+                            />
                           </div>
                         );
                       })}

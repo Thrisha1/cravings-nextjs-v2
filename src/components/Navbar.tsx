@@ -24,7 +24,7 @@ export function Navbar() {
   const [isTooltipOpen, setIsTooltipOpen] = useState(true);
 
   // Add array of paths where navbar should be hidden
-  const hiddenPaths = ['/hotels/[id]/reviews/new', '/hotels/[id]/reviews']; 
+  const hiddenPaths = ['/hotels/[id]/reviews/new', '/hotels/[id]/reviews' , '/hotels/[id]/menu/[mId]/reviews/new', '/hotels/[id]/menu/[mId]/reviews']; 
 
   // Check if current path matches any hidden path pattern
   const shouldHideNavbar = hiddenPaths.some(path => {

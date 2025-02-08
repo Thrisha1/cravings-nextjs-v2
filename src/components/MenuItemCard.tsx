@@ -1,13 +1,24 @@
+"use client";
 import { MenuItem } from "@/screens/HotelMenuPage";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card } from "./ui/card";
 import Image from "next/image";
 import placeHolderImage from "../../public/image_placeholder.webp";
+import Link from "next/link";
+import { useReviewsStore } from "@/store/reviewsStore";
 
-const MenuItemCard = ({ menuItem }: { menuItem: MenuItem }) => {
 
+const MenuItemCard = ({ menuItem, hotelId }: { menuItem: MenuItem, hotelId: string }) => {
+  const { getAverageReviewByMenuId } = useReviewsStore();
+  const [averageRating, setAverageRating] = useState<number | null>(null);
+
+  useEffect(() => {
+    getAverageReviewByMenuId(menuItem.id).then((rating) => {
+      setAverageRating(rating);
+    });
+  }, [menuItem.id]);
   return (
-    <div>
+    <Link href={`/hotels/${hotelId}/menu/${menuItem.id}`}>
       <Card
         key={menuItem.id}
         className="overflow-hidden hover:shadow-xl relative h-full"
@@ -33,10 +44,15 @@ const MenuItemCard = ({ menuItem }: { menuItem: MenuItem }) => {
             <div className="font-bold md:text-xl text-white">
               {menuItem.name}
             </div>
+            
+            <div className="text-sm text-orange-600 flex items-center gap-1">
+              <span>★</span>
+              <span>{averageRating?.toFixed(1) || 'No ratings'}</span>
+            </div>
           </div>
         </div>
       </Card>
-    </div>
+    </Link>
   );
 };
 

@@ -16,26 +16,26 @@ export interface HotelReview extends BaseReview {
   hotelId: string;
 }
 
-export interface OfferReview extends BaseReview {
-  type: 'offer';
-  offerId: string;
+export interface MenuItemReview extends BaseReview {
+  type: 'menuItem';
+  menuId: string;
 }
 
-export type Review = HotelReview | OfferReview;
+export type Review = HotelReview | MenuItemReview;
 
 interface ReviewsStore {
   reviews: Review[];
   addReview: (review: Review) => Promise<void>;
   removeReview: (reviewId: string) => Promise<void>;
   getReviewsByHotelId: (hotelId: string) => Promise<HotelReview[]>;
-  getReviewsByOfferId: (offerId: string) => Promise<OfferReview[]>;
+  getReviewsByMenuId: (menuId: string) => Promise<MenuItemReview[]>;
   getUserReviews: (userId: string) => Promise<Review[]>;
-  getTotalNumberOfReviewsByOfferId: (offerId: string) => Promise<number>;
+  getTotalNumberOfReviewsByMenuId: (menuId: string) => Promise<number>;
   getTotalNumberOfReviewsByHotelId: (hotelId: string) => Promise<number>;
   getLastThreeReviewsByHotelId: (hotelId: string) => Promise<HotelReview[]>;
-  getLastThreeReviewsByOfferId: (offerId: string) => Promise<OfferReview[]>;
+  getLastThreeReviewsByMenuId: (menuId: string) => Promise<MenuItemReview[]>;
   getAverageReviewByHotelId: (hotelId: string) => Promise<number>;
-  getAverageReviewByOfferId: (offerId: string) => Promise<number>;
+  getAverageReviewByMenuId: (menuId: string) => Promise<number>;
 }
 
 export const useReviewsStore = create<ReviewsStore>((set) => ({
@@ -72,19 +72,19 @@ export const useReviewsStore = create<ReviewsStore>((set) => ({
     return reviews;
   },
 
-  getReviewsByOfferId: async (offerId) => {
+  getReviewsByMenuId: async (menuId) => {
     const reviewsRef = collection(db, "reviews");
     const q = query(
       reviewsRef,
-      where("type", "==", "offer"),
-      where("offerId", "==", offerId)
+      where("type", "==", "menuItem"),
+      where("menuId", "==", menuId)
     );
     const querySnapshot = await getDocs(q);
     const reviews = querySnapshot.docs.map(doc => ({
       ...doc.data(),
       id: doc.id,
       createdAt: doc.data().createdAt.toDate()
-    })) as OfferReview[];
+    })) as MenuItemReview[];
 
     set({ reviews: reviews });
     return reviews;
@@ -104,12 +104,12 @@ export const useReviewsStore = create<ReviewsStore>((set) => ({
     return reviews;
   },
 
-  getTotalNumberOfReviewsByOfferId: async (offerId) => {
+  getTotalNumberOfReviewsByMenuId: async (menuId) => {
     const reviewsRef = collection(db, "reviews");
     const q = query(
       reviewsRef,
-      where("type", "==", "offer"),
-      where("offerId", "==", offerId)
+      where("type", "==", "menuItem"),
+      where("menuId", "==", menuId)
     );
     const snapshot = await getCountFromServer(q);
     return snapshot.data().count;
@@ -146,12 +146,12 @@ export const useReviewsStore = create<ReviewsStore>((set) => ({
     return reviews;
   },
 
-  getLastThreeReviewsByOfferId: async (offerId) => {
+  getLastThreeReviewsByMenuId: async (menuId) => {
     const reviewsRef = collection(db, "reviews");
     const q = query(
       reviewsRef,
-      where("type", "==", "offer"),
-      where("offerId", "==", offerId),
+      where("type", "==", "menuItem"),
+      where("menuId", "==", menuId),
       orderBy("createdAt", "desc"),
       limit(3)
     );
@@ -160,7 +160,7 @@ export const useReviewsStore = create<ReviewsStore>((set) => ({
       ...doc.data(),
       id: doc.id,
       createdAt: doc.data().createdAt.toDate()
-    })) as OfferReview[];
+    })) as MenuItemReview[];
 
     set({ reviews: reviews });
     return reviews;
@@ -182,12 +182,12 @@ export const useReviewsStore = create<ReviewsStore>((set) => ({
     return Number(average.toFixed(1));
   },
 
-  getAverageReviewByOfferId: async (offerId) => {
+  getAverageReviewByMenuId: async (menuId) => {
     const reviewsRef = collection(db, "reviews");
     const q = query(
       reviewsRef,
-      where("type", "==", "offer"),
-      where("offerId", "==", offerId)
+      where("type", "==", "menuItem"),
+      where("menuId", "==", menuId)
     );
     const querySnapshot = await getDocs(q);
     const reviews = querySnapshot.docs.map(doc => doc.data().rating);
