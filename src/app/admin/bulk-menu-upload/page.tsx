@@ -326,8 +326,10 @@ const BulkUploadPage = () => {
 
   const handleImageClick = async (index: number) => {
     try {
+
+      const randomNumber = Math.floor(Math.random() * 100);
       const item = menuItems[index];
-      const prompt = `professional food photography of ${item.description}`;
+      const prompt = `professional food photography of ${item.description}?seed=${randomNumber}`;
       const imageUrl = await generateMenuImage(prompt);
       
       const updatedItems = [...menuItems];
