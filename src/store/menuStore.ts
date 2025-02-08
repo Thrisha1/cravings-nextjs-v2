@@ -25,10 +25,12 @@ interface MenuState {
     hotelName: string;
     verified: boolean;
   } | null;
-  fetchMenu: () => Promise<void>;
-  addItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
-  updateItem: (id: string, item: Partial<MenuItem>) => Promise<void>;
-  deleteItem: (id: string) => Promise<void>;
+  selectedHotelId: string | null;
+  setSelectedHotelId: (id: string | null) => void;
+  fetchMenu: (hotelId?: string) => Promise<void>;
+  addItem: (item: Omit<MenuItem, 'id'>, hotelId?: string) => Promise<void>;
+  updateItem: (id: string, item: Partial<MenuItem>, hotelId?: string) => Promise<void>;
+  deleteItem: (id: string, hotelId?: string) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -36,18 +38,24 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   loading: false,
   error: null,
   hotelInfo: null,
+  selectedHotelId: null,
 
-  fetchMenu: async () => {
+  setSelectedHotelId: (id) => set({ selectedHotelId: id }),
+
+  fetchMenu: async (hotelId?: string) => {
     const user = useAuthStore.getState().user;
+    const userData = useAuthStore.getState().userData;
   
-    if (!user) {
-      return;
-    }
+    if (!user) return;
   
     try {
       set({ loading: true, error: null });
   
-      const docRef = doc(db, "users", user.uid);
+      // If superadmin and hotelId provided, fetch that hotel's menu
+      // Otherwise, fetch current user's menu
+      const targetId = userData?.role === 'superadmin' && hotelId ? hotelId : user.uid;
+  
+      const docRef = doc(db, "users", targetId);
       const docSnap = await getDoc(docRef);
   
       if (docSnap.exists()) {
@@ -68,8 +76,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
   
 
-  addItem: async (item) => {
+  addItem: async (item, hotelId?: string) => {
     const user = useAuthStore.getState().user;
+    const userData = useAuthStore.getState().userData;
     if (!user) return;
 
     try {
@@ -77,7 +86,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       const newItem = { ...item, id: crypto.randomUUID() };
       const items = [...get().items, newItem];
 
-      await updateDoc(doc(db, 'users', user.uid), {
+      // If superadmin and hotelId provided, add to that hotel's menu
+      // Otherwise, add to current user's menu
+      const targetId = userData?.role === 'superadmin' && hotelId ? hotelId : user.uid;
+
+      await updateDoc(doc(db, 'users', targetId), {
         menu: items,
       });
 
@@ -87,8 +100,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     }
   },
 
-  updateItem: async (id, updatedItem) => {
+  updateItem: async (id, updatedItem, hotelId?: string) => {
     const user = useAuthStore.getState().user;
+    const userData = useAuthStore.getState().userData;
     if (!user) return;
 
     try {
@@ -97,7 +111,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         item.id === id ? { ...item, ...updatedItem } : item
       );
 
-      await updateDoc(doc(db, 'users', user.uid), {
+      // If superadmin and hotelId provided, update that hotel's menu
+      // Otherwise, update current user's menu
+      const targetId = userData?.role === 'superadmin' && hotelId ? hotelId : user.uid;
+
+      await updateDoc(doc(db, 'users', targetId), {
         menu: items,
       });
 
@@ -107,15 +125,20 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     }
   },
 
-  deleteItem: async (id) => {
+  deleteItem: async (id, hotelId?: string) => {
     const user = useAuthStore.getState().user;
+    const userData = useAuthStore.getState().userData;
     if (!user) return;
 
     try {
       set({ error: null });
       const items = get().items.filter((item) => item.id !== id);
 
-      await updateDoc(doc(db, 'users', user.uid), {
+      // If superadmin and hotelId provided, delete from that hotel's menu
+      // Otherwise, delete from current user's menu
+      const targetId = userData?.role === 'superadmin' && hotelId ? hotelId : user.uid;
+
+      await updateDoc(doc(db, 'users', targetId), {
         menu: items,
       });
 

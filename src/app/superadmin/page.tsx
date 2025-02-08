@@ -1,4 +1,5 @@
 import AssignQrHotel from "@/components/superAdmin/AssignQrHotel";
+import BulkUpload from "@/components/superAdmin/BulkUpload";
 import OfferDetails from "@/components/superAdmin/OfferDetails";
 import PartnerVerification from "@/components/superAdmin/PartnerVerification";
 import { ChevronRight } from "lucide-react";
@@ -7,7 +8,7 @@ import React from "react";
 
 type SearchParams = Promise<{ [key: string]: string | undefined }>;
 
-const page = async (props : { searchParams : SearchParams  })=> {
+const page = async (props: { searchParams: SearchParams }) => {
   const page = (await props.searchParams).page;
   const pages = [
     {
@@ -21,10 +22,15 @@ const page = async (props : { searchParams : SearchParams  })=> {
       id: "offer-Details",
     },
     {
-      name : "Assign QR",
-      component : <AssignQrHotel/>,
-      id : "assign-qr"
-    }
+      name: "Assign QR",
+      component: <AssignQrHotel />,
+      id: "assign-qr",
+    },
+    {
+      name: "Bulk Upload",
+      component: <BulkUpload />,
+      id: "bulk-upload",
+    },
   ];
 
   if (page) {

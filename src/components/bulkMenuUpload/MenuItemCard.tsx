@@ -25,6 +25,8 @@ export const MenuItemCard = ({
   onDelete,
   onImageClick,
 }: MenuItemCardProps) => {
+  const isImageLoading = item.image === "/loading-image.gif";
+
   return (
     <Card className="relative">
       {item.isAdded && (
@@ -39,25 +41,42 @@ export const MenuItemCard = ({
       </div>
       <CardContent>
         <div
-          className="relative h-48 w-full mb-4 cursor-pointer"
+          className="relative overflow-hidden w-full h-48 mb-10  "
           onClick={onImageClick}
         >
-          <Image
-            src={item.image || "/image_placeholder.webp"}
-            alt={item.name}
-            fill
-            className="object-cover rounded-md w-full h-full"
-          />
+          {isImageLoading ? (
+            <div className="absolute inset-0 flex items-center justify-center w-full h-full bg-gray-100 animate-pulse">
+              <div className="text-center">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+                <p className="text-sm text-gray-500">Generating image...</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Image
+                src={item.image}
+                alt={item.name}
+                fill
+                className="object-cover rounded-md w-full h-full z-10"
+                onError={(e) => {
+                  e.currentTarget.src = item.image;
+                }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center w-full h-full bg-gray-100 animate-pulse">
+                <div className="text-center">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">Loading image...</p>
+                </div>
+              </div>
+            </>
+          )}
         </div>
         <p className="text-gray-600 mb-2">{item.description}</p>
         <p className="font-bold">₹{item.price}</p>
       </CardContent>
       <CardFooter className="flex justify-between">
         <div className="flex gap-2">
-          <Button
-            onClick={onAddToMenu}
-            disabled={item.isAdded || isUploading}
-          >
+          <Button onClick={onAddToMenu} disabled={item.isAdded || isUploading}>
             {isUploading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
