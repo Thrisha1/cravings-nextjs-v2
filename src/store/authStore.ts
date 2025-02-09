@@ -82,14 +82,16 @@ interface AuthState {
     area: string,
     location: string,
     category: string,
-    phone: string
+    phone: string,
+    upiId: string
   ) => Promise<void>;
   signUpAsPartnerWithGoogle: (
     hotelName: string,
     area: string,
     location: string,
     category: string,
-    phone: string
+    phone: string,
+    upiId: string
   ) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -212,7 +214,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     area,
     location,
     category,
-    phone
+    phone,
+    upiId
   ) => {
     try {
       set({ error: null });
@@ -238,6 +241,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         location,
         category,
         phone,
+        upiId,
         role: "hotel",
         verified: false,
         enquiry: 0,
@@ -257,7 +261,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     area,
     location,
     category,
-    phone
+    phone,
+    upiId
   ) => {
     try {
       set({ error: null });
@@ -284,6 +289,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         location,
         category,
         phone,
+        upiId,
         role: "hotel",
         verified: false,
         enquiry: 0,

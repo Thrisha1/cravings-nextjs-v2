@@ -14,7 +14,7 @@ import {
   Star,
 } from "lucide-react";
 import MenuItemCard from "@/components/MenuItemCard";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {  useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { revalidate } from "@/app/actions/revalidate";
 import { toast } from "sonner";

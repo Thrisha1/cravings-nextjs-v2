@@ -40,14 +40,26 @@ export function PartnerDialog() {
     password: "",
     category: "hotel",
     phone: "",
+    upiId: "",
   });
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const isApp = searchParams.get("app");
 
+  const validateUpiId = (upiId: string) => {
+    // UPI ID format: username@bankname or phone@bankname
+    const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z]{3,}$/;
+    return upiRegex.test(upiId);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (!validateUpiId(formData.upiId)) {
+        setError("Please enter a valid UPI ID (format: username@bankname)");
+        return;
+      }
+
       const urlWithCordinates = await resolveShortUrl(formData.location);
 
       // Validate required fields for Google sign in
@@ -56,7 +68,8 @@ export function PartnerDialog() {
         (!formData.hotelName ||
           !formData.area ||
           !formData.location ||
-          !formData.phone)
+          !formData.phone ||
+          !formData.upiId)
       ) {
         setError("Please fill in all required fields");
         return;
@@ -68,11 +81,12 @@ export function PartnerDialog() {
           formData.area,
           urlWithCordinates ?? formData.location,
           formData.category,
-          formData.phone
+          formData.phone,
+          formData.upiId
         );
       } else {
         // Validate email/password fields
-        if (!formData.email || !formData.password) {
+        if (!formData.email || !formData.password || !formData.upiId) {
           setError("Please fill in all required fields");
           return;
         }
@@ -84,7 +98,8 @@ export function PartnerDialog() {
           formData.area,
           urlWithCordinates ?? formData.location,
           formData.category,
-          formData.phone
+          formData.phone,
+          formData.upiId
         );
       }
       setIsOpen(false);
@@ -170,6 +185,25 @@ export function PartnerDialog() {
                 value={formData.phone}
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
+                }
+                className="w-full"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="upiId"
+                className="text-sm font-medium text-gray-700"
+              >
+                UPI ID
+              </Label>
+              <Input
+                id="upiId"
+                placeholder="Enter your UPI ID (e.g. username@bankname)"
+                value={formData.upiId}
+                onChange={(e) =>
+                  setFormData({ ...formData, upiId: e.target.value })
                 }
                 className="w-full"
                 required

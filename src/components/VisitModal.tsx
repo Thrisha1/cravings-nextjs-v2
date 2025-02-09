@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getDiscount, useAuthStore } from "@/store/authStore";
+import { getDiscount, useAuthStore, UserData } from "@/store/authStore";
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -27,18 +27,18 @@ const VisitModal = ({
   isRecentVisit,
   hotelId,
 }: VisitModalProps) => {
-  const { user, updateUserVisits, userData, fetchUserData } = useAuthStore();
+  const { user, updateUserVisits, fetchUserData } = useAuthStore();
   const [amount, setAmount] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [discount, setDiscount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [hotelData, setHotelData] = useState<any>(null);
+  const [hotelData, setHotelData] = useState<UserData | null>(null);
 
   useEffect(() => {
     const getHotelData = async () => {
       if (hotelId) {
         const data = await fetchUserData(hotelId);
-        setHotelData(data);
+        setHotelData(data as UserData);
       }
     };
     getHotelData();
