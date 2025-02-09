@@ -15,13 +15,13 @@ import { Suspense } from "react";
 export const metadata: Metadata = {
   title: "Cravings",
   description: "Find the best food deals in your area",
-  icons: ["/icon-64x64_christmas.png"],
+  icons: ["/icon-64x64.png", "/icon-192x192.png", "/icon-512x512.png"],
   metadataBase: new URL("http://cravings.vercel.app"),
   openGraph: {
     title: "Cravings",
     description: "Find the best food deals in your area",
     type: "website",
-    images: ["/ogImage_christmas.jpeg"],
+    images: ["/ogImage_default.jpeg"],
   },
 };
 

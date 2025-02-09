@@ -41,11 +41,11 @@ const MenuItemCard = ({ menuItem, hotelId }: { menuItem: MenuItem, hotelId: stri
               ₹{typeof menuItem.price === 'number' ? menuItem.price.toFixed(2) : menuItem.price}
             </span>
 
-            <div className="font-bold md:text-xl text-white">
+            <div className="font-bold md:text-xl text-white text-pretty">
               {menuItem.name}
             </div>
             
-            <div className="text-sm text-orange-600 flex items-center gap-1">
+            <div className="text-base font-bold text-orange-500 flex items-center gap-1">
               <span>★</span>
               <span>{averageRating?.toFixed(1) || 'No ratings'}</span>
             </div>

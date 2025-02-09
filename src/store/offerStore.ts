@@ -36,6 +36,7 @@ export interface Offer {
   description?: string;
   qty?: number;
   distance?: number;
+  rating?: number;
 }
 
 interface OfferState {
@@ -121,6 +122,10 @@ export const useOfferStore = create<OfferState>((set) => {
               image: string;
               price: number;
               description?: string;
+              reviews: {
+                rating: number;
+                comment: string;
+              }[];
             }
           | undefined = menuItems.find(
           (item: { id: string }) => item.id === offer.menuItemId
@@ -129,6 +134,8 @@ export const useOfferStore = create<OfferState>((set) => {
         if (!menuItem) {
           throw new Error("Menu item not found");
         }
+
+        const averageRatingOfMenuItem = menuItem.reviews.reduce((acc, review) => acc + review.rating, 0) / menuItem.reviews.length;
 
         const offerData = {
           ...offer,
@@ -145,6 +152,7 @@ export const useOfferStore = create<OfferState>((set) => {
           fromTime: offer.fromTime.toISOString(),
           toTime: offer.toTime.toISOString(),
           createdAt: new Date().toISOString(),
+          rating: averageRatingOfMenuItem || 0,
         };
 
         const offersRef = collection(db, "offers");

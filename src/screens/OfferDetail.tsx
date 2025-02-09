@@ -143,6 +143,10 @@ export default function OfferDetail({
               <span className="text-4xl font-bold text-white">
                 ₹{offer.newPrice.toFixed(0)}
               </span>
+              <div className="text-base font-bold text-orange-600 flex items-center gap-1">
+                <span>★</span>
+                <span>{offer.rating?.toFixed(1) || "0"}</span>
+              </div>
             </div>
           </div>
           <DiscountBadge discount={discount} />

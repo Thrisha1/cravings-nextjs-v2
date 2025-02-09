@@ -42,13 +42,20 @@ const OfferCard = ({
             className="w-full h-32 object-cover"
           />
 
-          <div className="grid bg-gradient-to-t from-black to-transparentr p-3 absolute bottom-0 left-0 w-full">
-            <span className="text-white/70 line-through text-sm">
-              ₹{offer.originalPrice.toFixed(0)}
-            </span>
-            <span className="text-2xl font-bold text-white">
-              ₹{offer.newPrice.toFixed(0)}
-            </span>
+          <div className="absolute bottom-0  p-3  left-0 flex items-end bg-gradient-to-t from-black to-transparent w-full">
+            <div className="grid w-full">
+              <span className="text-white/70 line-through text-sm">
+                ₹{offer.originalPrice.toFixed(0)}
+              </span>
+              <span className="text-2xl font-bold text-white">
+                ₹{offer.newPrice.toFixed(0)}
+              </span>
+            </div>
+
+            <div className="text-sm font-bold text-orange-500 flex items-center gap-1">
+              <span>★</span>
+              <span>{offer.rating?.toFixed(1) || "0"}</span>
+            </div>
           </div>
         </div>
 

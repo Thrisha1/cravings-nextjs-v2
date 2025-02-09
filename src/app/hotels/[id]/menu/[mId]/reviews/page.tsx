@@ -6,6 +6,7 @@ import { Star, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuthStore, UserData } from "@/store/authStore";
 import RateThis from "@/components/RateThis";
+import { MenuItem } from "@/store/menuStore";
 
 const ReviewsPage = () => {
   const router = useRouter();
@@ -13,7 +14,7 @@ const ReviewsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const params = useParams();
   const { fetchUserData } = useAuthStore();
-  const [hotelData, setHotelData] = useState<UserData | null>(null);
+  const [menuItemDetails, setMenuItemDetails] = useState<MenuItem | null>(null);
 
   useEffect(() => {
     getReviewsByMenuId(params.mId as string).then(() => {
@@ -22,7 +23,8 @@ const ReviewsPage = () => {
 
     if (params.id) {
       fetchUserData(params.id as string, false).then((data) => {
-        setHotelData(data as UserData);
+        const menuItem = (data as UserData).menu?.find(item => item.id === params.mId);
+        setMenuItemDetails(menuItem ?? null);
       });
     }
   }, [params.mId]);
@@ -42,8 +44,8 @@ const ReviewsPage = () => {
             </div>
           ) : (
             <div>
-              <h1 className="font-semibold text-base md:text-xl">{hotelData?.hotelName}</h1>
-              <p className="text-sm md:text-base text-gray-500">{hotelData?.area}</p>
+              <h1 className="font-semibold text-base md:text-xl">{menuItemDetails?.name}</h1>
+              <p className="text-sm md:text-base text-gray-500">₹{menuItemDetails?.price}</p>
             </div>
           )}
         </div>
@@ -51,7 +53,7 @@ const ReviewsPage = () => {
 
       <div className="container mx-auto px-4 md:px-8 py-6 md:py-10">
         <div className="pb-10 max-w-2xl mx-auto">
-          <RateThis type="hotel" />
+          <RateThis type="menuItem" />
         </div>
 
         <div className="max-w-4xl mx-auto">
