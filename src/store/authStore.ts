@@ -7,6 +7,7 @@ import {
   type User,
   GoogleAuthProvider,
   signInWithPopup,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import {
   doc,
@@ -98,6 +99,7 @@ interface AuthState {
   handleUnfollow: (hotelId: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   fetchUserVisit: (uid: string, hid: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 const db = getFirestore();
@@ -482,6 +484,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         (following) => following.user !== hotelId
       ),
     });
+  },
+
+  resetPassword: async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+      console.error("Password reset error:", error);
+      throw error;
+    }
   },
 }));
 

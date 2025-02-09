@@ -141,6 +141,17 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            {!isSignUp && (
+              <div className="mt-1 text-right">
+                <button
+                  type="button"
+                  onClick={() => navigate.push("/login/forgot-password")}
+                  className="text-orange-600 hover:text-orange-700 text-sm"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            )}
           </div>
           <Button
             type="submit"
