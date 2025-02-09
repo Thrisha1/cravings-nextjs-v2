@@ -65,7 +65,6 @@ const HotelMenuPage = ({
   const router = useRouter();
   const [isFollowed, setIsFollowed] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const pathname = usePathname();
   const [showQrAssignModal, setShowQrAssignModal] = useState(false);
   const searchParams = useSearchParams();
   const qrId = searchParams.get("qid");
@@ -153,6 +152,7 @@ const HotelMenuPage = ({
   }, [hoteldata]);
 
   useEffect(() => {
+    localStorage.removeItem("previousRoute"); 
     if (
       userData?.role === "superadmin" &&
       qrId &&
@@ -210,7 +210,7 @@ const HotelMenuPage = ({
                 <Button
                   className="bg-orange-600 hover:bg-orange-500 border-none outline-none"
                   onClick={() => {
-                    localStorage.setItem("previousRoute", pathname);
+                    localStorage.setItem("previousRoute", location.href);
                     router.push("/login");
                     setShowAuthModal(false);
                   }}

@@ -56,6 +56,7 @@ export interface UserData {
   menu?: MenuItem[];
   offersClaimable?: number;
   offersClaimableUpdatedAt?: string;
+  upiId?: string;
 }
 
 interface AuthState {

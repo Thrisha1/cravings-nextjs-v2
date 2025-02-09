@@ -1,7 +1,7 @@
 "use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UtensilsCrossed, Tag, LogOutIcon } from "lucide-react";
+import { UtensilsCrossed, Tag, LogOutIcon, Pencil } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,8 @@ import {
   AlertDialogFooter,
 } from "@/components/ui/alert-dialog";
 import { AlertDialogCancel } from "@radix-ui/react-alert-dialog";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 export default function ProfilePage() {
   const {
@@ -33,6 +35,9 @@ export default function ProfilePage() {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [upiId, setUpiId] = useState(userData?.upiId || "");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const isLoading = authLoading || claimedOffersLoading;
 
@@ -70,6 +75,22 @@ export default function ProfilePage() {
       setError("Failed to delete account. Please try again.");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleSaveUpiId = async () => {
+    if (!user) return;
+
+    setIsSaving(true);
+    try {
+      await updateUserData(user.uid, { upiId });
+      toast.success("UPI ID updated successfully!");
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating UPI ID:", error);
+      toast.error("Failed to update UPI ID");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -114,41 +135,111 @@ export default function ProfilePage() {
         </Card>
 
         {/* Claimed Offers Section */}
-        <Card className="overflow-hidden hover:shadow-xl transition-shadow">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold">
-              Your Claimed Offers
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {profile.claimedOffers.map((offer) => (
-              <div
-                key={offer.id}
-                className="p-4 border border-orange-300 rounded-lg hover:shadow-md transition-shadow"
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className=" sm:text-xl font-semibold">
-                      {offer.foodName}
-                    </h3>
-                    <p className="text-sm text-gray-600 flex items-center gap-2">
-                      <UtensilsCrossed className="w-4 h-4" />
-                      {offer.restaurant}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-gray-500 line-through text-sm">
-                      ₹{offer.originalPrice.toFixed(0)}
-                    </p>
-                    <p className="text-xl font-bold text-orange-600">
-                      ₹{offer.newPrice.toFixed(0)}
-                    </p>
+        {userData?.role === "user" && (
+          <Card className="overflow-hidden hover:shadow-xl transition-shadow">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold">
+                Your Claimed Offers
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {profile.claimedOffers.map((offer) => (
+                <div
+                  key={offer.id}
+                  className="p-4 border border-orange-300 rounded-lg hover:shadow-md transition-shadow"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className=" sm:text-xl font-semibold">
+                        {offer.foodName}
+                      </h3>
+                      <p className="text-sm text-gray-600 flex items-center gap-2">
+                        <UtensilsCrossed className="w-4 h-4" />
+                        {offer.restaurant}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-gray-500 line-through text-sm">
+                        ₹{offer.originalPrice.toFixed(0)}
+                      </p>
+                      <p className="text-xl font-bold text-orange-600">
+                        ₹{offer.newPrice.toFixed(0)}
+                      </p>
+                    </div>
                   </div>
                 </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Account Settings Section (Only for hotel) */}
+        {userData?.role === "hotel" && (
+          <Card className="overflow-hidden hover:shadow-xl transition-shadow">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold">
+                Account Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label
+                  htmlFor="upiId"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  UPI ID
+                </label>
+                <div className="flex gap-2">
+                  {isEditing ? (
+                    <>
+                      <Input
+                        id="upiId"
+                        type="text"
+                        placeholder="Enter your UPI ID"
+                        value={upiId}
+                        onChange={(e) => setUpiId(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleSaveUpiId}
+                        disabled={isSaving || !upiId}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isSaving ? (
+                          <>
+                            <span className="animate-spin mr-2">⏳</span>
+                            Saving...
+                          </>
+                        ) : (
+                          "Save"
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-gray-700">
+                        {userData?.upiId || "No UPI ID set"}
+                      </span>
+                      <Button
+                        onClick={() => {
+                          setIsEditing(true);
+                          setUpiId(userData?.upiId || "");
+                        }}
+                        variant="ghost"
+                        className="hover:bg-orange-100"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500">
+                  This UPI ID will be used for receiving payments from customers
+                </p>
               </div>
-            ))}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Danger Area */}
         <Card className="overflow-hidden hover:shadow-xl transition-shadow border-red-500">
