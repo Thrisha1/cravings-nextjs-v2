@@ -6,15 +6,9 @@ import Image from "next/image";
 import { Offer } from "@/store/offerStore";
 import { useAuthStore, UserData } from "@/store/authStore";
 import OfferCardMin from "@/components/OfferCardMin";
-import {
-  ArrowLeft,
-  MapPin,
-  Users,
-  VerifiedIcon,
-  Star,
-} from "lucide-react";
+import { ArrowLeft, MapPin, Users, VerifiedIcon, Star } from "lucide-react";
 import MenuItemCard from "@/components/MenuItemCard";
-import {  useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { revalidate } from "@/app/actions/revalidate";
 import { toast } from "sonner";
@@ -152,7 +146,7 @@ const HotelMenuPage = ({
   }, [hoteldata]);
 
   useEffect(() => {
-    localStorage.removeItem("previousRoute"); 
+    localStorage.removeItem("previousRoute");
     if (
       userData?.role === "superadmin" &&
       qrId &&
@@ -309,6 +303,15 @@ const HotelMenuPage = ({
                 </div>
               </Suspense>
             </div>
+
+            {userVisit && !userVisit.isRecentVisit && (
+              <Button
+                onClick={() => setShowVisitModal(true)}
+                className="bg-orange-600 hover:bg-orange-500 w-full text-white block mb-4"
+              >
+                Get Discount
+              </Button>
+            )}
 
             <SearchBox />
 

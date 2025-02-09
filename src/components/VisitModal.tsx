@@ -66,16 +66,13 @@ const VisitModal = ({
   };
 
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={discount || isRecentVisit ? onClose : () => {}}
-    >
+    <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[90%] sm:max-w-lg rounded-xl bg-gradient-to-br from-orange-50 to-white">
         <DialogHeader className="space-y-4">
           <DialogTitle className="text-center text-base font-bold text-orange-600">
             {isRecentVisit
               ? "⚠️ Already Scanned Today ⚠️"
-              : "🎉 Thank you for visiting! 🎉"}
+              : "🎉 Get Discount upto 50% on your bill 🎉"}
           </DialogTitle>
           <DialogDescription className="text-center space-y-4">
             {isRecentVisit ? (
@@ -116,9 +113,11 @@ const VisitModal = ({
                       </span>{" "}
                       discount!
                     </p>
-                    <p className="text-sm text-gray-600 mt-2">
-                      Final amount: ₹
-                      {Number(amount) - (Number(amount) * discount) / 100}
+                    <p className="text-sm flex items-center justify-center gap-1 text-gray-600 mt-2">
+                      Final amount: 
+                      <span className="text-green-600 text-3xl font-bold ">
+                      ₹{Number(amount) - (Number(amount) * discount) / 100}
+                      </span>
                     </p>
                     {hotelData?.upiId && (
                       <Link
