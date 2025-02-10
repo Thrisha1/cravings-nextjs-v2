@@ -6,7 +6,14 @@ import Image from "next/image";
 import { Offer } from "@/store/offerStore";
 import { useAuthStore, UserData } from "@/store/authStore";
 import OfferCardMin from "@/components/OfferCardMin";
-import { ArrowLeft, MapPin, Users, VerifiedIcon, Star } from "lucide-react";
+import {
+  ArrowLeft,
+  MapPin,
+  Users,
+  VerifiedIcon,
+  Star,
+  History,
+} from "lucide-react";
 import MenuItemCard from "@/components/MenuItemCard";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -28,6 +35,7 @@ import ShowAllBtn from "@/components/hotelDetail/ShowAllBtn";
 import ReviewsList from "@/components/hotelDetail/ReviewsList";
 import RateThis from "@/components/RateThis";
 import { useReviewsStore } from "@/store/reviewsStore";
+import PaymentHistoryModal from "@/components/PaymentHistoryModal";
 
 export type MenuItem = {
   description: string;
@@ -67,6 +75,7 @@ const HotelMenuPage = ({
   const [showAllOffers, setShowAllOffers] = useState(false);
   const [showAllMenu, setShowAllMenu] = useState(false);
   const { getAverageReviewByHotelId } = useReviewsStore();
+  const [showPaymentHistory, setShowPaymentHistory] = useState(false);
 
   const isLoggedIn = () => {
     console.log("isLoggedIn", userData);
@@ -183,6 +192,7 @@ const HotelMenuPage = ({
           <VisitModal
             isOpen={showVisitModal}
             hotelId={hoteldata?.id as string}
+            hotelData={hoteldata}
             onClose={() => setShowVisitModal(false)}
             numberOfVisits={userVisit.numberOfVisits}
             isRecentVisit={userVisit.isRecentVisit}
@@ -304,13 +314,23 @@ const HotelMenuPage = ({
               </Suspense>
             </div>
 
-            {userVisit && !userVisit.isRecentVisit && (
-              <Button
-                onClick={() => setShowVisitModal(true)}
-                className="bg-orange-600 hover:bg-orange-500 w-full text-white block mb-4"
-              >
-                Get Discount
-              </Button>
+            {qrId && (
+              <div>
+                {userVisit && (
+                  <Button
+                    onClick={() => setShowVisitModal(true)}
+                    className="bg-orange-600 hover:bg-orange-500 w-full text-white block mb-4"
+                  >
+                    Get Discount
+                  </Button>
+                )}
+                <Button
+                  onClick={() => setShowPaymentHistory(true)}
+                  className="bg-orange-600 hover:bg-orange-500 w-full text-white block mb-4"
+                >
+                  Payment History
+                </Button>
+              </div>
             )}
 
             <SearchBox />
@@ -399,7 +419,27 @@ const HotelMenuPage = ({
             <section className="px-3 pt-5 pb-10 ">
               <ReviewsList hotelId={hoteldata?.id as string} />
             </section>
+
+            {/* Add this after the hotel info section */}
+            <div className="flex items-center gap-2 mt-4">
+              <Button
+                variant="ghost"
+                onClick={() => setShowPaymentHistory(true)}
+                className="flex items-center gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+              >
+                <History className="w-5 h-5" />
+                <span>Payment History</span>
+              </Button>
+            </div>
           </div>
+
+          {/* Add PaymentHistoryModal */}
+          <PaymentHistoryModal
+            isOpen={showPaymentHistory}
+            onClose={() => setShowPaymentHistory(false)}
+            hotelData={hoteldata}
+            userId={user?.uid as string}
+          />
         </>
       ) : (
         <Error />

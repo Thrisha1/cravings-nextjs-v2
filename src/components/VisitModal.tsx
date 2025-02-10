@@ -18,31 +18,30 @@ interface VisitModalProps {
   numberOfVisits: number;
   isRecentVisit: boolean;
   hotelId: string;
+  hotelData: UserData;
 }
 
 const VisitModal = ({
   isOpen,
   onClose,
   numberOfVisits,
-  isRecentVisit,
+  isRecentVisit: initialIsRecentVisit,
   hotelId,
+  hotelData,
 }: VisitModalProps) => {
-  const { user, updateUserVisits, fetchUserData } = useAuthStore();
+  const { user, updateUserVisits, updateUserPayment } = useAuthStore();
   const [amount, setAmount] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [discount, setDiscount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [hotelData, setHotelData] = useState<UserData | null>(null);
+  const [isRecentVisit, setIsRecentVisit] = useState(initialIsRecentVisit);
 
   useEffect(() => {
-    const getHotelData = async () => {
-      if (hotelId) {
-        const data = await fetchUserData(hotelId);
-        setHotelData(data as UserData);
-      }
-    };
-    getHotelData();
-  }, [hotelId, fetchUserData]);
+    setIsRecentVisit(initialIsRecentVisit);
+    setSubmitted(false);
+    setAmount("");
+    setDiscount(0);
+  }, [isOpen, initialIsRecentVisit]);
 
   const handleSubmit = async () => {
     if (!amount) return;
@@ -62,6 +61,15 @@ const VisitModal = ({
       console.error("Error updating visit:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePayment = async () => {
+    try {
+      await updateUserPayment(user?.uid as string, hotelId);
+      onClose(); // Close the modal after successful payment
+    } catch (error) {
+      console.error("Payment error:", error);
     }
   };
 
@@ -114,13 +122,14 @@ const VisitModal = ({
                       discount!
                     </p>
                     <p className="text-sm flex items-center justify-center gap-1 text-gray-600 mt-2">
-                      Final amount: 
+                      Final amount:
                       <span className="text-green-600 text-3xl font-bold ">
-                      ₹{Number(amount) - (Number(amount) * discount) / 100}
+                        ₹{Number(amount) - (Number(amount) * discount) / 100}
                       </span>
                     </p>
                     {hotelData?.upiId && (
                       <Link
+                        onClick={handlePayment}
                         href={`upi://pay?pa=${hotelData?.upiId}&pn=${
                           hotelData?.hotelName
                         }&am=${

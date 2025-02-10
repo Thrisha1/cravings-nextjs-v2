@@ -22,6 +22,7 @@ import {
 } from "firebase/firestore";
 import { auth } from "@/lib/firebase";
 import { MenuItem } from "@/screens/HotelMenuPage";
+import { revalidate } from "@/app/actions/revalidate";
 
 export interface UserData {
   id?: string;
@@ -42,6 +43,7 @@ export interface UserData {
         amount: number;
         date: string;
         discount: number;
+        paid: boolean;
       }[];
     };
   }[];
@@ -103,6 +105,7 @@ interface AuthState {
   signInWithGoogle: () => Promise<void>;
   fetchUserVisit: (uid: string, hid: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updateUserPayment: (userId: string, hotelId: string) => Promise<void>;
 }
 
 const db = getFirestore();
@@ -163,6 +166,51 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               isRecentVisit: isRecentVisit,
             },
           });
+        }
+      }
+    } catch (error) {
+      set({ error: (error as Error).message });
+      throw error;
+    }
+  },
+
+  updateUserPayment: async (userId: string, hotelId: string) => {
+    try {
+      const docRef = doc(db, "users", hotelId);
+      const userDoc = await getDoc(docRef);
+      
+      if (userDoc.exists()) {
+        const followers = userDoc.data().followers || [];
+        const followerIndex = followers.findIndex(
+          (follower: { user: string }) => follower.user === userId
+        );
+
+        if (followerIndex !== -1) {
+          const updatedFollowers = [...followers];
+          const amountsSpent = updatedFollowers[followerIndex].visits?.amountsSpent || [];
+          
+          if (amountsSpent.length > 0) {
+            // Get the latest amount spent
+            const latestAmountIndex = amountsSpent.length - 1;
+            amountsSpent[latestAmountIndex] = {
+              ...amountsSpent[latestAmountIndex],
+              paid: true
+            };
+
+            updatedFollowers[followerIndex] = {
+              ...updatedFollowers[followerIndex],
+              visits: {
+                ...updatedFollowers[followerIndex].visits,
+                amountsSpent
+              }
+            };
+
+            await updateDoc(docRef, {
+              followers: updatedFollowers
+            });
+            revalidate(hotelId);  
+            await get().fetchUserVisit(userId, hotelId);
+          }
         }
       }
     } catch (error) {
@@ -413,7 +461,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 {
                   amount: amount,
                   date: new Date().toISOString(),
-                  discount: discount
+                  discount: discount,
+                  paid: false
                 },
               ],
             },
@@ -433,6 +482,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
         }
       }
+      revalidate(hid);
     } catch (error) {
       set({ error: (error as Error).message });
       throw error;
