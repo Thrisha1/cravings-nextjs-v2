@@ -1,7 +1,5 @@
 import { create } from "zustand";
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   type User,
@@ -15,10 +13,6 @@ import {
   getDoc,
   updateDoc,
   getFirestore,
-  collection,
-  query,
-  where,
-  getDocs,
 } from "firebase/firestore";
 import { auth } from "@/lib/firebase";
 import { MenuItem } from "@/screens/HotelMenuPage";
@@ -71,42 +65,17 @@ interface AuthState {
     lastVisit: string;
     isRecentVisit: boolean;
   } | null;
-  signUp: (
-    email: string,
-    password: string,
-    fullName: string,
-    phone: string
-  ) => Promise<string>;
-  signUpAsPartner: (
-    email: string,
-    password: string,
-    hotelName: string,
-    area: string,
-    location: string,
-    category: string,
-    phone: string,
-    upiId: string
-  ) => Promise<void>;
-  signUpAsPartnerWithGoogle: (
-    hotelName: string,
-    area: string,
-    location: string,
-    category: string,
-    phone: string,
-    upiId: string
-  ) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<{ 
+    fullName: string; 
+    email: string; 
+    needsPhoneNumber: boolean;
+  }>;
   signOut: () => Promise<void>;
   fetchUserData: (uid: string, save?: boolean) => Promise<UserData | void>;
   updateUserData: (uid: string, updates: Partial<UserData>) => Promise<void>;
   updateUserVisits: (uid: string, hid: string, amount: number, discount: number) => Promise<void>;
   handleFollow: (hotelId: string) => Promise<void>;
   handleUnfollow: (hotelId: string) => Promise<void>;
-  signInWithGoogle: () => Promise<{ 
-    fullName: string; 
-    email: string; 
-    needsPhoneNumber: boolean;
-  }>;
   fetchUserVisit: (uid: string, hid: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserPayment: (userId: string, hotelId: string) => Promise<void>;
@@ -217,164 +186,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
         }
       }
-    } catch (error) {
-      set({ error: (error as Error).message });
-      throw error;
-    }
-  },
-
-  signUp: async (email, password, fullName, phone) => {
-    try {
-      set({ error: null });
-
-      // Check if email already exists
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("email", "==", email));
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        throw new Error("A user with this email already exists");
-      }
-
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      await setDoc(doc(db, "users", userCredential.user.uid), {
-        email,
-        fullName,
-        phone,
-        role: "user",
-        offersClaimable: 100,
-        accountStatus: "active",
-        offersClaimableUpdatedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      });
-      await get().fetchUserData(userCredential.user.uid);
-      return userCredential.user.uid;
-    } catch (error) {
-      set({ error: (error as Error).message });
-      throw error;
-    }
-  },
-
-  signUpAsPartner: async (
-    email,
-    password,
-    hotelName,
-    area,
-    location,
-    category,
-    phone,
-    upiId
-  ) => {
-    try {
-      set({ error: null });
-
-      // Check if email already exists
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("email", "==", email));
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        throw new Error("A user with this email already exists");
-      }
-
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      await setDoc(doc(db, "users", userCredential.user.uid), {
-        email,
-        hotelName,
-        area,
-        location,
-        category,
-        phone,
-        upiId,
-        role: "hotel",
-        verified: false,
-        enquiry: 0,
-        accountStatus: "active",
-        offersClaimable: 100,
-        createdAt: new Date().toISOString(),
-      });
-      await get().fetchUserData(userCredential.user.uid);
-    } catch (error) {
-      set({ error: (error as Error).message });
-      throw error;
-    }
-  },
-
-  signUpAsPartnerWithGoogle: async (
-    hotelName,
-    area,
-    location,
-    category,
-    phone,
-    upiId
-  ) => {
-    try {
-      set({ error: null });
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const userCredential = result;
-
-      // Check if email already exists
-      const usersRef = collection(db, "users");
-      const q = query(
-        usersRef,
-        where("email", "==", userCredential.user.email)
-      );
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        throw new Error("A user with this email already exists");
-      }
-
-      await setDoc(doc(db, "users", userCredential.user.uid), {
-        email: userCredential.user.email,
-        hotelName,
-        area,
-        location,
-        category,
-        phone,
-        upiId,
-        role: "hotel",
-        verified: false,
-        enquiry: 0,
-        accountStatus: "active",
-        offersClaimable: 100,
-        createdAt: new Date().toISOString(),
-      });
-      await get().fetchUserData(userCredential.user.uid);
-    } catch (error) {
-      set({ error: (error as Error).message });
-      throw error;
-    }
-  },
-
-  signIn: async (email, password) => {
-    try {
-      set({ error: null });
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-
-      const docRef = doc(db, "users", userCredential.user.uid);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists() && docSnap.data().accountStatus !== "active") {
-        await updateDoc(docRef, {
-          accountStatus: "active",
-        });
-      }
-
-      await get().fetchUserData(userCredential.user.uid);
     } catch (error) {
       set({ error: (error as Error).message });
       throw error;
