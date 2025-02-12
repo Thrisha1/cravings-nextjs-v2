@@ -79,6 +79,14 @@ interface AuthState {
   fetchUserVisit: (uid: string, hid: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserPayment: (userId: string, hotelId: string) => Promise<void>;
+  signUpAsPartnerWithGoogle: (
+    hotelName: string,
+    area: string,
+    location: string,
+    category: string,
+    phone: string,
+    upiId: string
+  ) => Promise<void>;
 }
 
 const db = getFirestore();
@@ -384,6 +392,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.error("Password reset error:", error);
       throw error;
     }
+  },
+
+  signUpAsPartnerWithGoogle: async (
+    hotelName: string,
+    area: string,
+    location: string,
+    category: string,
+    phone: string,
+    upiId: string
+  ) => {
+    // Implementation of signUpAsPartnerWithGoogle method
   },
 }));
 

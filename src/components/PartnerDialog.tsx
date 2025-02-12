@@ -23,31 +23,26 @@ import { MapPin } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRouter, useSearchParams } from "next/navigation";
 import { resolveShortUrl } from "@/app/actions/extractLatLonFromGoogleMapsUrl";
-import { Switch } from "./ui/switch";
 import Image from "next/image";
 
 export function PartnerDialog() {
   const navigate = useRouter();
-  const { signUpAsPartner, signUpAsPartnerWithGoogle } = useAuthStore();
+  const { signUpAsPartnerWithGoogle } = useAuthStore();
   const { locations } = useLocationStore();
   const [isOpen, setIsOpen] = useState(false);
-  const [isGoogleSignIn, setIsGoogleSignIn] = useState(false);
   const [formData, setFormData] = useState({
     hotelName: "",
     area: "",
     location: "",
-    email: "",
-    password: "",
     category: "hotel",
     phone: "",
     upiId: "",
   });
   const [error, setError] = useState<string | null>(null);
-  const searchParams = useSearchParams();
-  const isApp = searchParams.get("app");
+  // const searchParams = useSearchParams();
+  // const isApp = searchParams.get("app");
 
   const validateUpiId = (upiId: string) => {
-    // UPI ID format: username@bankname or phone@bankname
     const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z]{3,}$/;
     return upiRegex.test(upiId);
   };
@@ -60,48 +55,22 @@ export function PartnerDialog() {
         return;
       }
 
-      const urlWithCordinates = await resolveShortUrl(formData.location);
-
-      // Validate required fields for Google sign in
-      if (
-        isGoogleSignIn &&
-        (!formData.hotelName ||
-          !formData.area ||
-          !formData.location ||
-          !formData.phone ||
-          !formData.upiId)
-      ) {
+      if (!formData.hotelName || !formData.area || !formData.location || !formData.phone || !formData.upiId) {
         setError("Please fill in all required fields");
         return;
       }
 
-      if (isGoogleSignIn) {
-        await signUpAsPartnerWithGoogle(
-          formData.hotelName,
-          formData.area,
-          urlWithCordinates ?? formData.location,
-          formData.category,
-          formData.phone,
-          formData.upiId
-        );
-      } else {
-        // Validate email/password fields
-        if (!formData.email || !formData.password || !formData.upiId) {
-          setError("Please fill in all required fields");
-          return;
-        }
+      const urlWithCordinates = await resolveShortUrl(formData.location);
 
-        await signUpAsPartner(
-          formData.email,
-          formData.password,
-          formData.hotelName,
-          formData.area,
-          urlWithCordinates ?? formData.location,
-          formData.category,
-          formData.phone,
-          formData.upiId
-        );
-      }
+      await signUpAsPartnerWithGoogle(
+        formData.hotelName,
+        formData.area,
+        urlWithCordinates ?? formData.location,
+        formData.category,
+        formData.phone,
+        formData.upiId
+      );
+
       setIsOpen(false);
       navigate.push("/admin");
     } catch (error) {
@@ -134,48 +103,22 @@ export function PartnerDialog() {
               </div>
             )}
 
-            {/* <div className="space-y-2">
-              <Label htmlFor="category" className="text-sm font-medium text-gray-700">
-                Category
-              </Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
-              >
-                <SelectTrigger id="category" className="w-full">
-                  <SelectValue placeholder="Select your category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hotel">Hotel</SelectItem>
-                  <SelectItem value="supermarket">Supermarket</SelectItem>
-                </SelectContent>
-              </Select>
-            </div> */}
-
             <div className="space-y-2">
-              <Label
-                htmlFor="hotelName"
-                className="text-sm font-medium text-gray-700"
-              >
+              <Label htmlFor="hotelName" className="text-sm font-medium text-gray-700">
                 Business Name
               </Label>
               <Input
                 id="hotelName"
                 placeholder="Enter your business name"
                 value={formData.hotelName}
-                onChange={(e) =>
-                  setFormData({ ...formData, hotelName: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, hotelName: e.target.value })}
                 className="w-full"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label
-                htmlFor="phone"
-                className="text-sm font-medium text-gray-700"
-              >
+              <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
                 Phone Number
               </Label>
               <Input
@@ -183,45 +126,33 @@ export function PartnerDialog() {
                 type="tel"
                 placeholder="Enter your phone number"
                 value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label
-                htmlFor="upiId"
-                className="text-sm font-medium text-gray-700"
-              >
+              <Label htmlFor="upiId" className="text-sm font-medium text-gray-700">
                 UPI ID
               </Label>
               <Input
                 id="upiId"
                 placeholder="Enter your UPI ID (e.g. username@bankname)"
                 value={formData.upiId}
-                onChange={(e) =>
-                  setFormData({ ...formData, upiId: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
                 className="w-full"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label
-                htmlFor="area"
-                className="text-sm font-medium text-gray-700"
-              >
+              <Label htmlFor="area" className="text-sm font-medium text-gray-700">
                 Area
               </Label>
               <Select
                 value={formData.area}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, area: value })
-                }
+                onValueChange={(value) => setFormData({ ...formData, area: value })}
               >
                 <SelectTrigger id="area" className="w-full">
                   <SelectValue placeholder="Select your area" />
@@ -237,10 +168,7 @@ export function PartnerDialog() {
             </div>
 
             <div className="space-y-2">
-              <Label
-                htmlFor="location"
-                className="text-sm font-medium text-gray-700"
-              >
+              <Label htmlFor="location" className="text-sm font-medium text-gray-700">
                 Google Map Location
               </Label>
               <div className="relative">
@@ -248,9 +176,7 @@ export function PartnerDialog() {
                   id="location"
                   placeholder="Paste your gmap location"
                   value={formData.location}
-                  onChange={(e) =>
-                    setFormData({ ...formData, location: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   className="min-h-[100px] pr-10"
                   required
                 />
@@ -264,87 +190,18 @@ export function PartnerDialog() {
               </div>
             </div>
 
-            {!isApp && (
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <Image
-                    width={5}
-                    height={5}
-                    src="https://www.google.com/favicon.ico"
-                    alt="Google"
-                    className="w-7 h-7"
-                  />
-                  Use Google Sign In
-                </div>
-                <Switch
-                  className="data-[state=checked]:bg-orange-600"
-                  checked={isGoogleSignIn}
-                  onCheckedChange={() => setIsGoogleSignIn(!isGoogleSignIn)}
-                />
-              </div>
-            )}
-
-            {!isGoogleSignIn && (
-              <>
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="email"
-                    className="text-sm font-medium text-gray-700"
-                  >
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="w-full"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="password"
-                    className="text-sm font-medium text-gray-700"
-                  >
-                    Password
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Create a password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className="w-full"
-                    required
-                  />
-                </div>
-              </>
-            )}
             <Button
               type="submit"
-              className={`w-full flex items-center justify-center gap-2 mt-6 ${
-                isGoogleSignIn
-                  ? "text-black bg-white hover:bg-gray-50 border-[1px]"
-                  : "bg-orange-600 hover:bg-orange-700 text-white"
-              }`}
+              className="w-full flex items-center justify-center gap-2 mt-6 text-black bg-white hover:bg-gray-50 border-[1px]"
             >
-              {isGoogleSignIn && (
-                <Image
-                  width={5}
-                  height={5}
-                  src="https://www.google.com/favicon.ico"
-                  alt="Google"
-                  className="w-5 h-5"
-                />
-              )}{" "}
-              Register
+              <Image
+                width={5}
+                height={5}
+                src="https://www.google.com/favicon.ico"
+                alt="Google"
+                className="w-5 h-5"
+              />
+              Sign up with Google
             </Button>
           </form>
         </ScrollArea>
