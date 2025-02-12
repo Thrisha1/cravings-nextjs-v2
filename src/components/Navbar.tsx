@@ -8,7 +8,6 @@ import { UtensilsCrossed, Menu, X, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { PartnerDialog } from "./PartnerDialog";
-import AskPhoneAndNameModal from "./AskPhoneAndNameModal";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 
 export function Navbar() {
