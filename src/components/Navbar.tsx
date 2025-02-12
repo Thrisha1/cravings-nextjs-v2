@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { PartnerDialog } from "./PartnerDialog";
 import AskPhoneAndNameModal from "./AskPhoneAndNameModal";
-// import Image from "next/image";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 
 export function Navbar() {
@@ -35,13 +34,6 @@ export function Navbar() {
   });
 
   useEffect(() => {
-    if (
-      user &&
-      userData &&
-      (!userData?.phone || (!userData?.fullName && !userData.hotelName))
-    ) {
-      setShowModal(true);
-    }
 
     const location = localStorage.getItem("loc");
     if (location) {
@@ -226,14 +218,14 @@ export function Navbar() {
         </div>
       </nav>
 
-      {showModal && (
+      {/* {showModal && (
         <AskPhoneAndNameModal
           setShowModal={setShowModal}
           showModal={showModal}
           updateUserData={updateUserData}
           user={user}
         />
-      )}
+      )} */}
     </>
   );
 }

@@ -102,7 +102,11 @@ interface AuthState {
   updateUserVisits: (uid: string, hid: string, amount: number, discount: number) => Promise<void>;
   handleFollow: (hotelId: string) => Promise<void>;
   handleUnfollow: (hotelId: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: () => Promise<{ 
+    fullName: string; 
+    email: string; 
+    needsPhoneNumber: boolean;
+  }>;
   fetchUserVisit: (uid: string, hid: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserPayment: (userId: string, hotelId: string) => Promise<void>;
@@ -379,29 +383,48 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signInWithGoogle: async () => {
     try {
-      set({ error: null });
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const userCredential = result;
+      const googleProvider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
 
-      const docRef = doc(db, "users", userCredential.user.uid);
+      // Check if user document exists
+      const docRef = doc(db, "users", user.uid);
       const docSnap = await getDoc(docRef);
 
+      let needsPhoneNumber = false;
+      let fullName = user.displayName || '';
+
       if (!docSnap.exists()) {
+        // Create new user document if it doesn't exist
         await setDoc(docRef, {
-          email: userCredential.user.email,
-          fullName: userCredential.user.displayName,
+          email: user.email,
+          fullName: user.displayName,
           role: "user",
           offersClaimable: 100,
           accountStatus: "active",
           offersClaimableUpdatedAt: new Date().toISOString(),
           createdAt: new Date().toISOString(),
         });
+        needsPhoneNumber = true;
+      } else {
+        // User exists, check if phone number exists
+        const userData = docSnap.data();
+        needsPhoneNumber = !userData.phone;
+        // Keep existing fullName if it exists
+        fullName = userData.fullName || user.displayName || '';
       }
 
-      await get().fetchUserData(userCredential.user.uid);
+      // Set the user in state
+      set({ user: result.user });
+      await get().fetchUserData(user.uid);
+      
+      return {
+        fullName,
+        email: user.email || '',
+        needsPhoneNumber
+      };
     } catch (error) {
-      set({ error: (error as Error).message });
+      set({ error: "Failed to sign in with Google" });
       throw error;
     }
   },

@@ -18,6 +18,8 @@ interface AskPhoneAndNameModalProps {
   user: { uid: string } | null;
   setShowModal: (show: boolean) => void;
   showModal: boolean;
+  initialFullName: string;
+  onSubmit?: (phone: string, fullName: string) => void;
 }
 
 const AskPhoneAndNameModal: React.FC<AskPhoneAndNameModalProps> = ({
@@ -25,23 +27,30 @@ const AskPhoneAndNameModal: React.FC<AskPhoneAndNameModalProps> = ({
   user,
   setShowModal,
   showModal,
+  initialFullName,
+  onSubmit
 }) => {
-  const [formData, setFormData] = useState({ fullname: "", phone: "" });
+  const [formData, setFormData] = useState({ 
+    fullname: initialFullName, 
+    phone: "" 
+  });
 
   const handleFormSubmit = () => {
     const phoneRegex = /^\d{10}$/;
     if (formData.fullname && phoneRegex.test(formData.phone)) {
-      if (user) {
+      if (onSubmit) {
+        onSubmit(formData.phone, formData.fullname);
+      } else if (user) {
         try {
           updateUserData(user.uid, {
             fullName: formData.fullname,
             phone: formData.phone,
           });
+          setShowModal(false);
         } catch (error) {
           console.error(error);
         }
       }
-      setShowModal(false);
     } else {
       alert("Please enter a valid 10-digit phone number.");
     }
@@ -55,7 +64,7 @@ const AskPhoneAndNameModal: React.FC<AskPhoneAndNameModalProps> = ({
             Complete Your Profile
           </DialogTitle>
           <DialogDescription>
-            Please provide your full name and phone number to continue.
+            Please verify your name and provide your phone number to continue.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">

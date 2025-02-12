@@ -8,6 +8,7 @@ import { UtensilsCrossed } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import Image from "next/image";
+import AskPhoneAndNameModal from "@/components/AskPhoneAndNameModal";
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -15,11 +16,16 @@ export default function Login() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { signIn, signUp, error, signInWithGoogle } = useAuthStore();
+  const { signIn, signUp, error, signInWithGoogle, updateUserData, user } = useAuthStore();
   const navigate = useRouter();
   const { updateUserOffersClaimable } = useClaimedOffersStore();
   const searchParams = useSearchParams();
   const isApp = searchParams.get("app");
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [googleUserData, setGoogleUserData] = useState<{ fullName: string; phone: string }>({
+    fullName: '',
+    phone: ''
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,20 +71,37 @@ export default function Login() {
 
   const handleGoogleSignIn = async () => {
     try {
-      await signInWithGoogle();
-      const decryptedInviteToken = localStorage.getItem("token");
-      if (decryptedInviteToken) {
-        const inviteToken = JSON.parse(atob(decryptedInviteToken));
-        if (inviteToken) {
-          await updateUserOffersClaimable(inviteToken, 50);
-          localStorage.removeItem("token");
-        }
+      const userData = await signInWithGoogle();
+      
+      if (userData.needsPhoneNumber) {
+        setGoogleUserData({
+          fullName: userData.fullName,
+          phone: ''
+        });
+        setShowPhoneModal(true);
+      } else {
+        const redirectTo = localStorage.getItem("previousRoute") || "/";
+        navigate.push(redirectTo);
       }
+    } catch (error) {
+      console.error("Google authentication error:", error);
+    }
+  };
 
+  const handlePhoneSubmit = async (phone: string, fullName: string) => {
+    try {
+      if (user) {
+        await updateUserData(user.uid, {
+          fullName: fullName,
+          phone: phone
+        });
+      }
+      setShowPhoneModal(false);
+      
       const redirectTo = localStorage.getItem("previousRoute") || "/";
       navigate.push(redirectTo);
     } catch (error) {
-      console.error("Google authentication error:", error);
+      console.error("Error updating user data:", error);
     }
   };
 
@@ -199,6 +222,17 @@ export default function Login() {
               : "Don't have an account? Sign up"}
           </button>
         </div>
+
+        {showPhoneModal && (
+          <AskPhoneAndNameModal
+            showModal={showPhoneModal}
+            setShowModal={setShowPhoneModal}
+            updateUserData={updateUserData}
+            user={user}
+            initialFullName={googleUserData.fullName}
+            onSubmit={(phone) => handlePhoneSubmit(phone, googleUserData.fullName)}
+          />
+        )}
       </div>
     </div>
   );
