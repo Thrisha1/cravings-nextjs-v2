@@ -14,10 +14,9 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const location = pathname.split("?")[0];
-  const { user, userData, updateUserData } = useAuthStore();
+  const { user, userData } = useAuthStore();
   const { offersClaimable } = useClaimedOffersStore();
   const [isOpen, setIsOpen] = useState(false);
-  const [showModal, setShowModal] = useState(false);
   const [userLocation, setUserLocation] = useState("");
   const [isTooltipOpen, setIsTooltipOpen] = useState(true);
 
@@ -216,15 +215,6 @@ export function Navbar() {
           </div>
         </div>
       </nav>
-
-      {/* {showModal && (
-        <AskPhoneAndNameModal
-          setShowModal={setShowModal}
-          showModal={showModal}
-          updateUserData={updateUserData}
-          user={user}
-        />
-      )} */}
     </>
   );
 }
