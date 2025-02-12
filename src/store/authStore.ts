@@ -86,7 +86,7 @@ interface AuthState {
     category: string,
     phone: string,
     upiId: string
-  ) => Promise<void>;
+  ) => Promise<User>;
 }
 
 const db = getFirestore();
@@ -402,7 +402,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     phone: string,
     upiId: string
   ) => {
-    // Implementation of signUpAsPartnerWithGoogle method
+    try {
+      const googleProvider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Create new hotel user document
+      const docRef = doc(db, "users", user.uid);
+      await setDoc(docRef, {
+        email: user.email,
+        hotelName,
+        area,
+        location,
+        category,
+        phone,
+        upiId,
+        role: "hotel",
+        accountStatus: "active",
+        createdAt: new Date().toISOString(),
+      });
+
+      // Set the user in state
+      set({ user: result.user });
+      await get().fetchUserData(user.uid);
+      
+      return user;
+    } catch (error) {
+      set({ error: "Failed to sign up with Google" });
+      throw error;
+    }
   },
 }));
 

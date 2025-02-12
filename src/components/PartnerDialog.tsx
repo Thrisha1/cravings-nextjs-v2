@@ -21,12 +21,10 @@ import { useAuthStore } from "@/store/authStore";
 import { useLocationStore } from "@/store/locationStore";
 import { MapPin } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useRouter, useSearchParams } from "next/navigation";
 import { resolveShortUrl } from "@/app/actions/extractLatLonFromGoogleMapsUrl";
 import Image from "next/image";
 
 export function PartnerDialog() {
-  const navigate = useRouter();
   const { signUpAsPartnerWithGoogle } = useAuthStore();
   const { locations } = useLocationStore();
   const [isOpen, setIsOpen] = useState(false);
@@ -72,7 +70,6 @@ export function PartnerDialog() {
       );
 
       setIsOpen(false);
-      navigate.push("/admin");
     } catch (error) {
       setError((error as Error).message);
     }
