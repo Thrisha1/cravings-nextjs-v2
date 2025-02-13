@@ -5,6 +5,8 @@ import {
   type User,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   sendPasswordResetEmail,
 } from "firebase/auth";
 import {
@@ -412,22 +414,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         prompt: 'select_account',
       });
 
-      let result;
+      let user;
       try {
-        result = await signInWithPopup(auth, googleProvider);
+        // First try with popup
+        const result = await signInWithPopup(auth, googleProvider);
+        user = result.user;
       } catch (error) {
-        if (error instanceof FirebaseError && error.code === 'auth/popup-closed-by-user') {
-          throw error;
+        console.log("Popup failed, falling back to redirect", error);
+        // If popup fails, try redirect
+        await signInWithRedirect(auth, googleProvider);
+        // Get redirect result
+        const result = await getRedirectResult(auth);
+        if (!result) {
+          throw new Error('Sign-in was cancelled');
         }
-        console.error('Sign-in error:', error);
-        throw new Error('Failed to sign in with Google. Please try again.');
+        user = result.user;
       }
 
-      if (!result?.user) {
+      if (!user) {
         throw new Error('No user data received');
       }
-
-      const user = result.user;
 
       // Create new hotel user document
       const docRef = doc(db, "users", user.uid);
@@ -445,12 +451,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       // Set the user in state
-      set({ user: result.user });
+      set({ user });
       await get().fetchUserData(user.uid);
       
       return user;
     } catch (error) {
-      // Let the component handle the error
       throw error;
     }
   },
