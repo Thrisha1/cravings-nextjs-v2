@@ -33,7 +33,7 @@ export default function PartnerVerification() {
         const q = query(
           collection(db, "users"),
           where("role", "==", "hotel"),
-          where("verified", "==", false)
+          where("verified", "==", false),
         );
 
         const querySnapshot = await getDocs(q);

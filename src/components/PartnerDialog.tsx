@@ -35,22 +35,6 @@ export function PartnerDialog() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Add this test data object
-  const testData = {
-    hotelName: "Test Hotel",
-    area: "kalamassery",
-    location: "https://maps.google.com/xyz123",
-    category: "hotel",
-    phone: "9876543210",
-    upiId: "testhotel@upi"
-  };
-
-  // Add this function to fill form with test data
-  const fillTestData = () => {
-    console.log("Filling test data");
-    setFormData(testData);
-  };
-
   const validateUpiId = (upiId: string) => {
     const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z]{3,}$/;
     return upiRegex.test(upiId);
@@ -115,14 +99,6 @@ export function PartnerDialog() {
         <h2 className="text-2xl font-bold text-gray-900">
           Register as Partner
         </h2>
-        {/* Add this button for testing */}
-        <Button 
-          type="button" 
-          onClick={fillTestData}
-          className="mt-2 text-sm"
-        >
-          Fill Test Data
-        </Button>
       </div>
       <ScrollArea className="flex-1 px-6">
         <form onSubmit={handleGoogleSignIn} className="space-y-6 pb-10 px-2">

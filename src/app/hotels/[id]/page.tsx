@@ -8,7 +8,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { unstable_cache } from "next/cache";
+// import { unstable_cache } from "next/cache";
 import React from "react";
 import { Offer } from "@/store/offerStore";
 import { UserData } from "@/store/authStore";
@@ -26,55 +26,105 @@ const HotelPage = async ({
   const { query: search, qrScan } = await searchParams;
   const { id } = await params;
 
-  const getHotelOffers = unstable_cache(
-    async (id: string) => {
-      try {
-        const offersQuery = query(
-          collection(db, "offers"),
-          where("hotelId", "==", id),
-          where("toTime", ">", new Date().toISOString())
-        );
-        const offers = await getDocs(offersQuery);
-        const offersData = offers.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-          } as Offer;
-        });
-        return offersData;
-      } catch (error) {
-        console.error(error);
-        return [];
-      }
-    },
-    [id || ""],
-    { tags: [id || ""] }
-  );
+  // Cached version of getHotelOffers
 
-  const getHotelData = unstable_cache(
-    async (id: string) => {
-      try {
-        const usersCollection = doc(db, "users", id);
-        const user = await getDoc(usersCollection);
-        const userData = user.data();
+  // const getHotelOffers = unstable_cache(
+  //   async (id: string) => {
+  //     try {
+  //       const offersQuery = query(
+  //         collection(db, "offers"), 
+  //         where("hotelId", "==", id),
+  //         where("toTime", ">", new Date().toISOString())
+  //       );
+  //       const offers = await getDocs(offersQuery);
+  //       const offersData = offers.docs.map((doc) => {
+  //         const data = doc.data();
+  //         return {
+  //           id: doc.id,
+  //           ...data,
+  //         } as Offer;
+  //       });
+  //       return offersData;
+  //     } catch (error) {
+  //       console.error(error);
+  //       return [];
+  //     }
+  //   },
+  //   [id || ""],
+  //   { tags: [id || ""] }
+  // );
 
-        if (!userData) {
-          return null;
-        }
-
+  // Non-cached version of getHotelOffers
+  
+  const getHotelOffers = async (id: string) => {
+    try {
+      const offersQuery = query(
+        collection(db, "offers"),
+        where("hotelId", "==", id),
+        where("toTime", ">", new Date().toISOString())
+      );
+      const offers = await getDocs(offersQuery);
+      const offersData = offers.docs.map((doc) => {
+        const data = doc.data();
         return {
-          id,
-          ...userData as UserData,
-        } as UserData;
-      } catch (error) {
-        console.error("Error fetching hotel data:", error);
+          id: doc.id,
+          ...data,
+        } as Offer;
+      });
+      return offersData;
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
+  };
+  
+
+  // Cached version of getHotelData
+
+  // const getHotelData = 
+  // unstable_cache(
+  //   async (id: string) => {
+  //     try {
+  //       const usersCollection = doc(db, "users", id);
+  //       const user = await getDoc(usersCollection);
+  //       const userData = user.data();
+
+  //       if (!userData) {
+  //         return null;
+  //       }
+
+  //       return {
+  //         id,
+  //         ...userData as UserData,
+  //       } as UserData;
+  //     } catch (error) {
+  //       console.error("Error fetching hotel data:", error);
+  //       return null;
+  //     }
+  //   },
+  //   [id || ""],
+  //   { tags: [id || ""] }
+  // );
+
+  const getHotelData = async (id: string) => {
+    try {
+      const usersCollection = doc(db, "users", id);
+      const user = await getDoc(usersCollection);
+      const userData = user.data();
+
+      if (!userData) {
         return null;
       }
-    },
-    [id || ""],
-    { tags: [id || ""] }
-  );
+
+      return {
+        id,
+        ...userData as UserData,
+      } as UserData;
+    } catch (error) {
+      console.error("Error fetching hotel data:", error);
+      return null;
+    }
+  };
 
   const offers = id ? await getHotelOffers(id) : null;
   const hoteldata = id ? await getHotelData(id) : null;

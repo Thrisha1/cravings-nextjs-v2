@@ -559,6 +559,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         menu: [],
         offersClaimable: 100,
         offersClaimableUpdatedAt: new Date().toISOString(),
+        verified: false,
       };
 
       await setDoc(docRef, partnerData);

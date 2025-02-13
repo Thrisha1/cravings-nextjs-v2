@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { collection, getDocs, getFirestore, updateDoc, doc } from 'firebase/firestore';
 import { toast } from "sonner";
 import { Search } from "lucide-react";
+// import { unstable_cache } from 'next/cache';
 
 interface Hotel {
   id: string;
@@ -91,6 +92,15 @@ const UpdateHotelUpiId = () => {
       );
       setHotels(updatedHotels);
       setFilteredHotels(updatedHotels);
+
+      // await unstable_cache(
+      //   async () => ({ timestamp: Date.now() }),
+      //   [selectedHotel.id],
+      //   { 
+      //     tags: [selectedHotel.id],
+      //     revalidate: 0 // immediate revalidation
+      //   }
+      // )();
 
       toast.success("UPI ID updated successfully");
       setIsModalOpen(false);
