@@ -67,7 +67,10 @@ export function Navbar() {
         </Link>
       ))}
       {!user && (
-        <Link href="/partner">
+        <Link 
+          href="/partner"
+          onClick={() => setIsOpen(false)}
+          >
           <Button className="text-white font-medium bg-orange-600 hover:bg-orange-50 hover:border-orange-600 hover:text-orange-600 px-5 text-[1rem] py-3 rounded-full transition-all duration-300">
             Partner with Us
           </Button>

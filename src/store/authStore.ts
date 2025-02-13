@@ -5,8 +5,9 @@ import {
   type User,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
   sendPasswordResetEmail,
+  signInWithRedirect,
+  getRedirectResult,
 } from "firebase/auth";
 import {
   doc,
@@ -81,14 +82,24 @@ interface AuthState {
   fetchUserVisit: (uid: string, hid: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserPayment: (userId: string, hotelId: string) => Promise<void>;
-  signUpAsPartnerWithGoogle: (
+  // signUpAsPartnerWithGoogle: (
+  //   hotelName: string,
+  //   area: string,
+  //   location: string,
+  //   category: string,
+  //   phone: string,
+  //   upiId: string
+  // ) => Promise<User | null>;
+  handlePartnerRedirectResult: () => Promise<void>;
+  initiatePartnerSignup: () => Promise<void>;
+  signInWithGoogleForPartner: (
     hotelName: string,
     area: string,
     location: string,
     category: string,
     phone: string,
     upiId: string
-  ) => Promise<User | null>;
+  ) => Promise<User | void>;
 }
 
 const db = getFirestore();
@@ -99,6 +110,15 @@ export const getDiscount = (numberOfVisits: number): number => {
   }
   return Math.floor(Math.random() * 5) + 1; // Random number between 1-5
 };
+
+// interface PartnerFormData {
+//   hotelName: string;
+//   area: string;
+//   location: string;
+//   category: string;
+//   phone: string;
+//   upiId: string;
+// }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
@@ -413,56 +433,158 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         prompt: 'select_account',
       });
 
-      let user;
-      try {
-        // First try with popup
-        const result = await signInWithPopup(auth, googleProvider);
-        user = result.user;
-      } catch (error) {
-        console.log("Popup failed, falling back to redirect", error);
-        // Store the partner data before redirect
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        // Store partner data before redirect
         sessionStorage.setItem('partnerData', JSON.stringify({
           hotelName, area, location, category, phone, upiId
         }));
-        // If popup fails, try redirect
         await signInWithRedirect(auth, googleProvider);
         return null;
-      }
+      } else {
+        // Popup flow
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
 
-      if (!user) {
-        throw new Error('No user data received');
-      }
+        // Create hotel document
+        const docRef = doc(db, "users", user.uid);
+        
+        // Check if user already exists as a hotel
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const userData = docSnap.data() as UserData;
+          if (userData.role === 'hotel') {
+            throw new Error('This Google account is already registered as a hotel partner');
+          }
+        }
 
-      // Create new hotel user document
-      const docRef = doc(db, "users", user.uid);
+        await setDoc(docRef, {
+          email: user.email,
+          hotelName,
+          area,
+          location,
+          category,
+          phone,
+          upiId,
+          role: "hotel",
+          accountStatus: "active",
+          createdAt: new Date().toISOString(),
+        });
+
+        set({ user });
+        await get().fetchUserData(user.uid);
+        window.location.href = '/admin';
+        return user;
+      }
+    } catch (error) {
+      if (error instanceof FirebaseError && 
+         (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/popup-blocked')) {
+        throw error;
+      }
+      console.error("Sign-in error:", error);
+      throw error;
+    }
+  },
+
+  handlePartnerRedirectResult: async () => {
+    try {
+      const result = await getRedirectResult(auth);
+      if (!result) return;
+
+      const savedFormData = localStorage.getItem("partnerFormData");
+      if (!savedFormData) return;
+
+      const formData = JSON.parse(savedFormData);
+      
+      // Create the user document
+      const docRef = doc(db, "users", result.user.uid);
       await setDoc(docRef, {
+        email: result.user.email,
+        ...formData,
+        role: "hotel",
+        accountStatus: "active",
+        createdAt: new Date().toISOString(),
+      });
+
+      // Clear stored data
+      localStorage.removeItem("partnerFormData");
+
+      // Update state and redirect
+      set({ user: result.user });
+      await get().fetchUserData(result.user.uid);
+      window.location.href = '/admin';
+    } catch (error) {
+      console.error("Redirect result error:", error);
+      throw error;
+    }
+  },
+
+  initiatePartnerSignup: async () => {
+    try {
+      const googleProvider = new GoogleAuthProvider();
+      googleProvider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      await signInWithRedirect(auth, googleProvider);
+    } catch (error) {
+      console.error("Sign-in redirect error:", error);
+      throw error;
+    }
+  },
+
+  signInWithGoogleForPartner: async (hotelName, area, location, category, phone, upiId) => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      console.log("result", result);
+      const user = result.user;
+
+      if (!user.email) throw new Error('Email is required');
+
+      // Create the user document in users collection
+      const docRef = doc(db, "users", user.uid);
+      const partnerData: UserData = {
         email: user.email,
+        role: 'hotel',
         hotelName,
         area,
         location,
         category,
         phone,
         upiId,
-        role: "hotel",
-        accountStatus: "active",
-        createdAt: new Date().toISOString(),
-      });
+        accountStatus: 'active',
+        followers: [],
+        following: [],
+        menu: [],
+        offersClaimable: 100,
+        offersClaimableUpdatedAt: new Date().toISOString(),
+      };
 
-      // Set the user in state
-      set({ user });
-      await get().fetchUserData(user.uid);
+      await setDoc(docRef, partnerData);
+      set({ user, userData: partnerData });
       
       return user;
     } catch (error) {
+      console.error('Partner registration failed:', error);
       throw error;
     }
-  },
+  }
 }));
 
-// Set up auth state listener
+// Update the auth state change handler
 onAuthStateChanged(auth, async (user) => {
   useAuthStore.setState({ user, loading: false });
   if (user) {
+    // Check for redirect result immediately when user signs in
+    const result = await getRedirectResult(auth);
+    if (result) {
+      console.log('Google Sign In Redirect Result:', result);
+      const savedFormData = localStorage.getItem("partnerFormData");
+      console.log('Saved Form Data:', savedFormData);
+    }
+    
+    // Normal user data fetch
     await useAuthStore.getState().fetchUserData(user.uid);
   }
 });

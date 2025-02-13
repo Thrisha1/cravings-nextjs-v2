@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+"use client";
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,11 +18,11 @@ import { MapPin } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { resolveShortUrl } from "@/app/actions/extractLatLonFromGoogleMapsUrl";
 import Image from "next/image";
-import { getRedirectResult } from "@/app/actions/getRedirectResult";
-import { FirebaseError } from "firebase/app";
+import { useRouter } from "next/navigation";
 
 export function PartnerDialog() {
-  const { signUpAsPartnerWithGoogle } = useAuthStore();
+  const router = useRouter();
+  const { signInWithGoogleForPartner } = useAuthStore();
   const { locations } = useLocationStore();
   const [formData, setFormData] = useState({
     hotelName: "",
@@ -32,82 +34,72 @@ export function PartnerDialog() {
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isProcessingRedirect, setIsProcessingRedirect] = useState(false);
 
-  useEffect(() => {
-    async function handleRedirectResult() {
-      try {
-        setIsProcessingRedirect(true);
-        const result = await getRedirectResult();
-        
-        // Get saved partner data
-        const savedPartnerData = sessionStorage.getItem('partnerData');
-        if (result?.user && savedPartnerData) {
-          const partnerData = JSON.parse(savedPartnerData);
-          await signUpAsPartnerWithGoogle(
-            partnerData.hotelName,
-            partnerData.area,
-            partnerData.location,
-            partnerData.category,
-            partnerData.phone,
-            partnerData.upiId
-          );
-          sessionStorage.removeItem('partnerData');
-          window.location.href = '/admin';
-        }
-      } catch (error) {
-        if (error instanceof FirebaseError) {
-          setError(error.message);
-        }
-      } finally {
-        setIsProcessingRedirect(false);
-      }
-    }
+  // Add this test data object
+  const testData = {
+    hotelName: "Test Hotel",
+    area: "kalamassery",
+    location: "https://maps.google.com/xyz123",
+    category: "hotel",
+    phone: "9876543210",
+    upiId: "testhotel@upi"
+  };
 
-    handleRedirectResult();
-  }, [signUpAsPartnerWithGoogle]);
+  // Add this function to fill form with test data
+  const fillTestData = () => {
+    console.log("Filling test data");
+    setFormData(testData);
+  };
 
   const validateUpiId = (upiId: string) => {
     const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z]{3,}$/;
     return upiRegex.test(upiId);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  const validateForm = async() => {
+    if (!validateUpiId(formData.upiId)) {
+      setError("Please enter a valid UPI ID (format: username@bankname)");
+      return false;
+    }
+
+    if (!formData.hotelName || !formData.area || !formData.location || !formData.phone || !formData.upiId) {
+      setError("Please fill in all required fields");
+      return false;
+    }
+    const urlWithCoordinates = await resolveShortUrl(formData.location);
+      
+      // Save form data to localStorage
+      localStorage.setItem("partnerFormData", JSON.stringify({
+        ...formData,
+        location: urlWithCoordinates ?? formData.location
+      }));
+    return true;
+  };
+  
+
+  const handleGoogleSignIn = async () => {
     setError(null);
-    
+
+    if (!validateForm()) {
+      return;
+    }
+
     try {
-      if (!validateUpiId(formData.upiId)) {
-        setError("Please enter a valid UPI ID (format: username@bankname)");
-        return;
-      }
+      setIsSubmitting(true);
+      
 
-      if (!formData.hotelName || !formData.area || !formData.location || !formData.phone || !formData.upiId) {
-        setError("Please fill in all required fields");
-        return;
-      }
-
-      const urlWithCordinates = await resolveShortUrl(formData.location);
-
-      const user = await signUpAsPartnerWithGoogle(
+      // Initiate Google sign in
+      await signInWithGoogleForPartner(
         formData.hotelName,
         formData.area,
-        urlWithCordinates ?? formData.location,
+        formData.location,
         formData.category,
         formData.phone,
         formData.upiId
       );
-
-      if (user) {
-        window.location.href = '/admin';
-      }
+      router.push("/admin");
     } catch (error) {
-      if (error instanceof FirebaseError) {
-        setError(error.message);
-      } else {
-        setError('An unexpected error occurred');
-      }
+      setError(error instanceof Error ? error.message : 'An unexpected error occurred');
     } finally {
       setIsSubmitting(false);
     }
@@ -123,9 +115,17 @@ export function PartnerDialog() {
         <h2 className="text-2xl font-bold text-gray-900">
           Register as Partner
         </h2>
+        {/* Add this button for testing */}
+        <Button 
+          type="button" 
+          onClick={fillTestData}
+          className="mt-2 text-sm"
+        >
+          Fill Test Data
+        </Button>
       </div>
       <ScrollArea className="flex-1 px-6">
-        <form onSubmit={handleSubmit} className="space-y-6 pb-10 px-2">
+        <form onSubmit={handleGoogleSignIn} className="space-y-6 pb-10 px-2">
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4">
               {error}
@@ -220,11 +220,12 @@ export function PartnerDialog() {
           </div>
 
           <Button
-            type="submit"
+            type="button"
+            onClick={handleGoogleSignIn}
             className="w-full flex items-center justify-center gap-2 mt-6 text-black bg-white hover:bg-gray-50 border-[1px]"
-            disabled={isSubmitting || isProcessingRedirect}
+            disabled={isSubmitting}
           >
-            {isSubmitting || isProcessingRedirect ? (
+            {isSubmitting ? (
               "Please wait..."
             ) : (
               <>
