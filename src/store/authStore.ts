@@ -66,6 +66,7 @@ interface AuthState {
   userVisit: {
     numberOfVisits: number;
     lastVisit: string;
+    lastDiscountedVisit: string;
     isRecentVisit: boolean;
   } | null;
   signInWithGoogle: () => Promise<{ 
@@ -104,7 +105,17 @@ interface AuthState {
 
 const db = getFirestore();
 
-export const getDiscount = (numberOfVisits: number): number => {
+export const getDiscount = (numberOfVisits: number, lastDiscountedVisit: string | null): number => {
+  // Check if 6 hours have passed since last discounted visit
+  const isEligibleForDiscount = lastDiscountedVisit
+    ? new Date().getTime() - new Date(lastDiscountedVisit).getTime() >= 6 * 60 * 60 * 1000
+    : true;  // First visit is always eligible for discount
+
+  if (!isEligibleForDiscount) {
+    return 0;
+  }
+
+  // Apply regular discount logic only if eligible
   if (numberOfVisits % 5 === 0) {
     return 10;
   }
@@ -166,6 +177,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             userVisit: {
               numberOfVisits: follower.visits?.numberOfVisits || 0,
               lastVisit: follower.visits?.lastVisit || new Date().toISOString(),
+              lastDiscountedVisit: follower.visits?.lastDiscountedVisit || new Date().toISOString(),
               isRecentVisit: isRecentVisit,
             },
           });
@@ -295,9 +307,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  updateUserVisits: async (uid: string, hid: string , amount : number , discount : number) => {
+  updateUserVisits: async (uid: string, hid: string, amount: number, discount: number) => {
     try {
-      console.log("updateUserVisits", uid, hid);
       const docRef = doc(db, "users", hid);
       const userDoc = await getDoc(docRef);
       if (userDoc.exists()) {
@@ -308,48 +319,52 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (followerIndex !== -1) {
           const updatedFollowers = [...followers];
+          const lastDiscountedVisit = updatedFollowers[followerIndex].visits?.lastDiscountedVisit;
+          
+          // Check if eligible for discount
+          const isEligibleForDiscount = lastDiscountedVisit
+            ? new Date().getTime() - new Date(lastDiscountedVisit).getTime() >= 6 * 60 * 60 * 1000
+            : true;
 
-          const lastVisit = updatedFollowers[followerIndex].visits?.lastVisit;
-          const isRecentVisit =
-            lastVisit &&
-            new Date().getTime() - new Date(lastVisit).getTime() <
-              6 * 60 * 60 * 1000;
-
+          // If not eligible for discount, set it to 0
+          const appliedDiscount = isEligibleForDiscount ? discount : 0;
+          
           const newNumberOfVisits = (updatedFollowers[followerIndex].visits?.numberOfVisits || 0) + 1;
 
           updatedFollowers[followerIndex] = {
             ...updatedFollowers[followerIndex],
             visits: {
               numberOfVisits: newNumberOfVisits,
-              lastVisit: new Date().toISOString(),
+              lastVisit: new Date().toISOString(), // Always update last visit
+              // Only update lastDiscountedVisit if discount was applied
+              lastDiscountedVisit: isEligibleForDiscount ? new Date().toISOString() : (lastDiscountedVisit || new Date().toISOString()),
               amountsSpent: [
-                ...(updatedFollowers[followerIndex].visits?.amountsSpent ||
-                  []),
+                ...(updatedFollowers[followerIndex].visits?.amountsSpent || []),
                 {
                   amount: amount,
                   date: new Date().toISOString(),
-                  discount: discount,
+                  discount: appliedDiscount,
                   paid: false
                 },
               ],
             },
           };
+
           set({
             userVisit: {
-              numberOfVisits:
-                updatedFollowers[followerIndex].visits?.numberOfVisits || 0,
-              lastVisit:
-                updatedFollowers[followerIndex].visits?.lastVisit ||
-                new Date().toISOString(),
-              isRecentVisit: isRecentVisit,
+              numberOfVisits: newNumberOfVisits,
+              lastVisit: new Date().toISOString(),
+              lastDiscountedVisit: updatedFollowers[followerIndex].visits.lastDiscountedVisit,
+              isRecentVisit: !isEligibleForDiscount,
             },
           });
+
           await updateDoc(docRef, {
             followers: updatedFollowers,
           });
         }
+        revalidate(hid);
       }
-      revalidate(hid);
     } catch (error) {
       set({ error: (error as Error).message });
       throw error;

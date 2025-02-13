@@ -196,6 +196,7 @@ const HotelMenuPage = ({
             onClose={() => setShowVisitModal(false)}
             numberOfVisits={userVisit.numberOfVisits}
             isRecentVisit={userVisit.isRecentVisit}
+            lastDiscountedVisit={userVisit.lastDiscountedVisit}
           />
         )}
       </Suspense>
