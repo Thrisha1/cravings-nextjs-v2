@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,8 @@ import { MapPin } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { resolveShortUrl } from "@/app/actions/extractLatLonFromGoogleMapsUrl";
 import Image from "next/image";
+import { getRedirectResult } from "@/app/actions/getRedirectResult";
+import { FirebaseError } from "firebase/app";
 
 export function PartnerDialog() {
   const { signUpAsPartnerWithGoogle } = useAuthStore();
@@ -30,6 +32,40 @@ export function PartnerDialog() {
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isProcessingRedirect, setIsProcessingRedirect] = useState(false);
+
+  useEffect(() => {
+    async function handleRedirectResult() {
+      try {
+        setIsProcessingRedirect(true);
+        const result = await getRedirectResult();
+        
+        // Get saved partner data
+        const savedPartnerData = sessionStorage.getItem('partnerData');
+        if (result?.user && savedPartnerData) {
+          const partnerData = JSON.parse(savedPartnerData);
+          await signUpAsPartnerWithGoogle(
+            partnerData.hotelName,
+            partnerData.area,
+            partnerData.location,
+            partnerData.category,
+            partnerData.phone,
+            partnerData.upiId
+          );
+          sessionStorage.removeItem('partnerData');
+          window.location.href = '/admin';
+        }
+      } catch (error) {
+        if (error instanceof FirebaseError) {
+          setError(error.message);
+        }
+      } finally {
+        setIsProcessingRedirect(false);
+      }
+    }
+
+    handleRedirectResult();
+  }, [signUpAsPartnerWithGoogle]);
 
   const validateUpiId = (upiId: string) => {
     const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z]{3,}$/;
@@ -54,34 +90,24 @@ export function PartnerDialog() {
 
       const urlWithCordinates = await resolveShortUrl(formData.location);
 
-      try {
-        const user = await signUpAsPartnerWithGoogle(
-          formData.hotelName,
-          formData.area,
-          urlWithCordinates ?? formData.location,
-          formData.category,
-          formData.phone,
-          formData.upiId
-        );
+      const user = await signUpAsPartnerWithGoogle(
+        formData.hotelName,
+        formData.area,
+        urlWithCordinates ?? formData.location,
+        formData.category,
+        formData.phone,
+        formData.upiId
+      );
 
-        if (user) {
-          window.location.href = '/admin';
-        }
-      } catch (authError) {
-        // Handle specific auth errors
-        if (authError && typeof authError === 'object' && 'code' in authError) {
-          if (authError.code === 'auth/popup-closed-by-user') {
-            setError('Sign-in was cancelled. Please try again.');
-          } else if (authError.code === 'auth/popup-blocked') {
-            setError('Pop-up was blocked by your browser. Please enable pop-ups and try again.');
-          } else {
-            setError((authError as { message?: string }).message || 'Failed to sign in. Please try again.');
-          }
-        }
+      if (user) {
+        window.location.href = '/admin';
       }
     } catch (error) {
-      const errorMessage = (error as Error).message;
-      setError(errorMessage);
+      if (error instanceof FirebaseError) {
+        setError(error.message);
+      } else {
+        setError('An unexpected error occurred');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -196,10 +222,10 @@ export function PartnerDialog() {
           <Button
             type="submit"
             className="w-full flex items-center justify-center gap-2 mt-6 text-black bg-white hover:bg-gray-50 border-[1px]"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isProcessingRedirect}
           >
-            {isSubmitting ? (
-              "Signing up..."
+            {isSubmitting || isProcessingRedirect ? (
+              "Please wait..."
             ) : (
               <>
                 <Image

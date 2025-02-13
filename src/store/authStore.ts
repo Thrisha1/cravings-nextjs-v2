@@ -6,7 +6,6 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
-  getRedirectResult,
   sendPasswordResetEmail,
 } from "firebase/auth";
 import {
@@ -89,7 +88,7 @@ interface AuthState {
     category: string,
     phone: string,
     upiId: string
-  ) => Promise<User>;
+  ) => Promise<User | null>;
 }
 
 const db = getFirestore();
@@ -407,7 +406,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     category: string,
     phone: string,
     upiId: string
-  ) => {
+  ): Promise<User | null> => {
     try {
       const googleProvider = new GoogleAuthProvider();
       googleProvider.setCustomParameters({
@@ -421,14 +420,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user = result.user;
       } catch (error) {
         console.log("Popup failed, falling back to redirect", error);
+        // Store the partner data before redirect
+        sessionStorage.setItem('partnerData', JSON.stringify({
+          hotelName, area, location, category, phone, upiId
+        }));
         // If popup fails, try redirect
         await signInWithRedirect(auth, googleProvider);
-        // Get redirect result
-        const result = await getRedirectResult(auth);
-        if (!result) {
-          throw new Error('Sign-in was cancelled');
-        }
-        user = result.user;
+        return null;
       }
 
       if (!user) {
