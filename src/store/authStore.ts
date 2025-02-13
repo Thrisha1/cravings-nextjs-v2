@@ -17,6 +17,7 @@ import {
 import { auth } from "@/lib/firebase";
 import { MenuItem } from "@/screens/HotelMenuPage";
 import { revalidate } from "@/app/actions/revalidate";
+import { FirebaseError } from 'firebase/app';
 
 export interface UserData {
   id?: string;
@@ -243,8 +244,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         needsPhoneNumber
       };
     } catch (error) {
-      set({ error: "Failed to sign in with Google" });
-      throw error;
+      if (error instanceof FirebaseError && error.code === 'auth/popup-closed-by-user') {
+        throw error;
+      }
+      console.error('Sign-in error:', error);
+      throw new Error('Failed to sign in with Google. Please try again.');
     }
   },
 
@@ -404,7 +408,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   ) => {
     try {
       const googleProvider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, googleProvider);
+      googleProvider.setCustomParameters({
+        prompt: 'select_account',
+      });
+
+      let result;
+      try {
+        result = await signInWithPopup(auth, googleProvider);
+      } catch (error) {
+        if (error instanceof FirebaseError && error.code === 'auth/popup-closed-by-user') {
+          throw error;
+        }
+        console.error('Sign-in error:', error);
+        throw new Error('Failed to sign in with Google. Please try again.');
+      }
+
+      if (!result?.user) {
+        throw new Error('No user data received');
+      }
+
       const user = result.user;
 
       // Create new hotel user document
@@ -428,7 +450,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       return user;
     } catch (error) {
-      set({ error: "Failed to sign up with Google" });
+      // Let the component handle the error
       throw error;
     }
   },

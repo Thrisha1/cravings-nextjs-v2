@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, usePathname } from "next/navigation";
@@ -7,7 +7,6 @@ import Link from "next/link";
 import { UtensilsCrossed, Menu, X, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
-import { PartnerDialog } from "./PartnerDialog";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 
 export function Navbar() {
@@ -68,9 +67,11 @@ export function Navbar() {
         </Link>
       ))}
       {!user && (
-        <Suspense>
-          <PartnerDialog />
-        </Suspense>
+        <Link href="/partner">
+          <Button className="text-white font-medium bg-orange-600 hover:bg-orange-50 hover:border-orange-600 hover:text-orange-600 px-5 text-[1rem] py-3 rounded-full transition-all duration-300">
+            Partner with Us
+          </Button>
+        </Link>
       )}
       {user && (
         <div className="flex w-full">
