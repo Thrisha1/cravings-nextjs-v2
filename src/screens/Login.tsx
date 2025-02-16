@@ -11,13 +11,11 @@ import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 
 type LoginMode = "user" | "partner";
-
 export default function Login() {
   const { signInWithPhone, signInPartnerWithEmail, signInWithGooglePartner } = useAuthStore();
   const navigate = useRouter();
   const [mode, setMode] = useState<LoginMode>("user");
   const [isLoading, setIsLoading] = useState(false);
-  
   const [userPhone, setUserPhone] = useState("");
   const [partnerData, setPartnerData] = useState({
     email: "",
@@ -26,14 +24,16 @@ export default function Login() {
 
   const handleUserSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (userPhone.length !== 10) {
+    // Remove +91 if present and validate 10 digits
+    const cleanedPhone = userPhone.replace(/^\+91/, '');
+    if (cleanedPhone.length !== 10) {
       toast.error("Please enter a valid 10-digit phone number");
       return;
     }
 
     setIsLoading(true);
     try {
-      await signInWithPhone(userPhone);
+      await signInWithPhone(cleanedPhone);
       navigate.push("/");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
@@ -47,7 +47,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       await signInPartnerWithEmail(partnerData.email, partnerData.password);
-      navigate.push("/admin");
+      navigate.push("/");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
     } finally {
@@ -59,7 +59,7 @@ export default function Login() {
     try {
       setIsLoading(true);
       await signInWithGooglePartner();
-      navigate.push("/admin");
+      navigate.push("/");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
     } finally {

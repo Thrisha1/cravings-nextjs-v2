@@ -11,8 +11,6 @@ import {
   createUserWithEmailAndPassword,
   AuthErrorCodes,
   signInWithEmailAndPassword,
-  signInWithCustomToken,
-  // getAuth
 } from "firebase/auth";
 import {
   doc,
@@ -23,13 +21,12 @@ import {
   collection,
   query,
   where,
-  getDocs
+  getDocs,
 } from "firebase/firestore";
 import { auth } from "@/lib/firebase";
 import { MenuItem } from "@/screens/HotelMenuPage";
 import { revalidate } from "@/app/actions/revalidate";
-import { FirebaseError } from 'firebase/app';
-import { httpsCallable, getFunctions } from 'firebase/functions';
+import { FirebaseError } from "firebase/app";
 
 export interface UserData {
   id?: string;
@@ -79,28 +76,25 @@ interface AuthState {
     lastDiscountedVisit: string;
     isRecentVisit: boolean;
   } | null;
-  signInWithGoogle: () => Promise<{ 
-    fullName: string; 
-    email: string; 
+  signInWithGoogle: () => Promise<{
+    fullName: string;
+    email: string;
     needsPhoneNumber: boolean;
   }>;
   signOut: () => Promise<void>;
   fetchUserData: (uid: string, save?: boolean) => Promise<UserData | void>;
   updateUserData: (uid: string, updates: Partial<UserData>) => Promise<void>;
-  updateUserVisits: (uid: string, hid: string, amount: number, discount: number) => Promise<void>;
+  updateUserVisits: (
+    uid: string,
+    hid: string,
+    amount: number,
+    discount: number
+  ) => Promise<void>;
   handleFollow: (hotelId: string) => Promise<void>;
   handleUnfollow: (hotelId: string) => Promise<void>;
   fetchUserVisit: (uid: string, hid: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserPayment: (userId: string, hotelId: string) => Promise<void>;
-  // signUpAsPartnerWithGoogle: (
-  //   hotelName: string,
-  //   area: string,
-  //   location: string,
-  //   category: string,
-  //   phone: string,
-  //   upiId: string
-  // ) => Promise<User | null>;
   handlePartnerRedirectResult: () => Promise<void>;
   initiatePartnerSignup: () => Promise<void>;
   signInWithGoogleForPartner: (
@@ -112,7 +106,7 @@ interface AuthState {
     upiId: string
   ) => Promise<User | void>;
   signUpWithEmailForPartner: (
-    email: string, 
+    email: string,
     password: string,
     hotelName: string,
     area: string,
@@ -128,11 +122,15 @@ interface AuthState {
 
 const db = getFirestore();
 
-export const getDiscount = (numberOfVisits: number, lastDiscountedVisit: string | null): number => {
+export const getDiscount = (
+  numberOfVisits: number,
+  lastDiscountedVisit: string | null
+): number => {
   // Check if 6 hours have passed since last discounted visit
   const isEligibleForDiscount = lastDiscountedVisit
-    ? new Date().getTime() - new Date(lastDiscountedVisit).getTime() >= 6 * 60 * 60 * 1000
-    : true;  // First visit is always eligible for discount
+    ? new Date().getTime() - new Date(lastDiscountedVisit).getTime() >=
+      6 * 60 * 60 * 1000
+    : true; // First visit is always eligible for discount
 
   if (!isEligibleForDiscount) {
     return 0;
@@ -145,22 +143,12 @@ export const getDiscount = (numberOfVisits: number, lastDiscountedVisit: string 
   return Math.floor(Math.random() * 5) + 1; // Random number between 1-5
 };
 
-// interface PartnerFormData {
-//   hotelName: string;
-//   area: string;
-//   location: string;
-//   category: string;
-//   phone: string;
-//   upiId: string;
-// }
-
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   userData: null,
   loading: true,
   error: null,
   userVisit: null,
-  isRecentVisit: false,
 
   fetchUserData: async (uid: string, save = true) => {
     try {
@@ -200,7 +188,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             userVisit: {
               numberOfVisits: follower.visits?.numberOfVisits || 0,
               lastVisit: follower.visits?.lastVisit || new Date().toISOString(),
-              lastDiscountedVisit: follower.visits?.lastDiscountedVisit || new Date().toISOString(),
+              lastDiscountedVisit:
+                follower.visits?.lastDiscountedVisit ||
+                new Date().toISOString(),
               isRecentVisit: isRecentVisit,
             },
           });
@@ -216,7 +206,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const docRef = doc(db, "users", hotelId);
       const userDoc = await getDoc(docRef);
-      
+
       if (userDoc.exists()) {
         const followers = userDoc.data().followers || [];
         const followerIndex = followers.findIndex(
@@ -225,28 +215,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (followerIndex !== -1) {
           const updatedFollowers = [...followers];
-          const amountsSpent = updatedFollowers[followerIndex].visits?.amountsSpent || [];
-          
+          const amountsSpent =
+            updatedFollowers[followerIndex].visits?.amountsSpent || [];
+
           if (amountsSpent.length > 0) {
             // Get the latest amount spent
             const latestAmountIndex = amountsSpent.length - 1;
             amountsSpent[latestAmountIndex] = {
               ...amountsSpent[latestAmountIndex],
-              paid: true
+              paid: true,
             };
 
             updatedFollowers[followerIndex] = {
               ...updatedFollowers[followerIndex],
               visits: {
                 ...updatedFollowers[followerIndex].visits,
-                amountsSpent
-              }
+                amountsSpent,
+              },
             };
 
             await updateDoc(docRef, {
-              followers: updatedFollowers
+              followers: updatedFollowers,
             });
-            revalidate(hotelId);  
+            revalidate(hotelId);
             await get().fetchUserVisit(userId, hotelId);
           }
         }
@@ -268,7 +259,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const docSnap = await getDoc(docRef);
 
       let needsPhoneNumber = false;
-      let fullName = user.displayName || '';
+      let fullName = user.displayName || "";
 
       if (!docSnap.exists()) {
         // Create new user document if it doesn't exist
@@ -287,24 +278,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const userData = docSnap.data();
         needsPhoneNumber = !userData.phone;
         // Keep existing fullName if it exists
-        fullName = userData.fullName || user.displayName || '';
+        fullName = userData.fullName || user.displayName || "";
       }
 
       // Set the user in state
       set({ user: result.user });
       await get().fetchUserData(user.uid);
-      
+
       return {
         fullName,
-        email: user.email || '',
-        needsPhoneNumber
+        email: user.email || "",
+        needsPhoneNumber,
       };
     } catch (error) {
-      if (error instanceof FirebaseError && error.code === 'auth/popup-closed-by-user') {
+      if (
+        error instanceof FirebaseError &&
+        error.code === "auth/popup-closed-by-user"
+      ) {
         throw error;
       }
-      console.error('Sign-in error:', error);
-      throw new Error('Failed to sign in with Google. Please try again.');
+      console.error("Sign-in error:", error);
+      throw new Error("Failed to sign in with Google. Please try again.");
     }
   },
 
@@ -330,7 +324,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  updateUserVisits: async (uid: string, hid: string, amount: number, discount: number) => {
+  updateUserVisits: async (
+    uid: string,
+    hid: string,
+    amount: number,
+    discount: number
+  ) => {
     try {
       const docRef = doc(db, "users", hid);
       const userDoc = await getDoc(docRef);
@@ -342,17 +341,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (followerIndex !== -1) {
           const updatedFollowers = [...followers];
-          const lastDiscountedVisit = updatedFollowers[followerIndex].visits?.lastDiscountedVisit;
-          
+          const lastDiscountedVisit =
+            updatedFollowers[followerIndex].visits?.lastDiscountedVisit;
+
           // Check if eligible for discount
           const isEligibleForDiscount = lastDiscountedVisit
-            ? new Date().getTime() - new Date(lastDiscountedVisit).getTime() >= 6 * 60 * 60 * 1000
+            ? new Date().getTime() - new Date(lastDiscountedVisit).getTime() >=
+              6 * 60 * 60 * 1000
             : true;
 
           // If not eligible for discount, set it to 0
           const appliedDiscount = isEligibleForDiscount ? discount : 0;
-          
-          const newNumberOfVisits = (updatedFollowers[followerIndex].visits?.numberOfVisits || 0) + 1;
+
+          const newNumberOfVisits =
+            (updatedFollowers[followerIndex].visits?.numberOfVisits || 0) + 1;
 
           updatedFollowers[followerIndex] = {
             ...updatedFollowers[followerIndex],
@@ -360,14 +362,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               numberOfVisits: newNumberOfVisits,
               lastVisit: new Date().toISOString(), // Always update last visit
               // Only update lastDiscountedVisit if discount was applied
-              lastDiscountedVisit: isEligibleForDiscount ? new Date().toISOString() : (lastDiscountedVisit || new Date().toISOString()),
+              lastDiscountedVisit: isEligibleForDiscount
+                ? new Date().toISOString()
+                : lastDiscountedVisit || new Date().toISOString(),
               amountsSpent: [
                 ...(updatedFollowers[followerIndex].visits?.amountsSpent || []),
                 {
                   amount: amount,
                   date: new Date().toISOString(),
                   discount: appliedDiscount,
-                  paid: false
+                  paid: false,
                 },
               ],
             },
@@ -377,7 +381,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             userVisit: {
               numberOfVisits: newNumberOfVisits,
               lastVisit: new Date().toISOString(),
-              lastDiscountedVisit: updatedFollowers[followerIndex].visits.lastDiscountedVisit,
+              lastDiscountedVisit:
+                updatedFollowers[followerIndex].visits.lastDiscountedVisit,
               isRecentVisit: !isEligibleForDiscount,
             },
           });
@@ -468,16 +473,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const googleProvider = new GoogleAuthProvider();
       googleProvider.setCustomParameters({
-        prompt: 'select_account',
+        prompt: "select_account",
       });
 
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      
+
       if (isMobile) {
         // Store partner data before redirect
-        sessionStorage.setItem('partnerData', JSON.stringify({
-          hotelName, area, location, category, phone, upiId
-        }));
+        sessionStorage.setItem(
+          "partnerData",
+          JSON.stringify({
+            hotelName,
+            area,
+            location,
+            category,
+            phone,
+            upiId,
+          })
+        );
         await signInWithRedirect(auth, googleProvider);
         return null;
       } else {
@@ -487,13 +500,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         // Create hotel document
         const docRef = doc(db, "users", user.uid);
-        
+
         // Check if user already exists as a hotel
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const userData = docSnap.data() as UserData;
-          if (userData.role === 'hotel') {
-            throw new Error('This Google account is already registered as a hotel partner');
+          if (userData.role === "hotel") {
+            throw new Error(
+              "This Google account is already registered as a hotel partner"
+            );
           }
         }
 
@@ -512,12 +527,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         set({ user });
         await get().fetchUserData(user.uid);
-        window.location.href = '/admin';
+        window.location.href = "/admin";
         return user;
       }
     } catch (error) {
-      if (error instanceof FirebaseError && 
-         (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/popup-blocked')) {
+      if (
+        error instanceof FirebaseError &&
+        (error.code === "auth/popup-closed-by-user" ||
+          error.code === "auth/popup-blocked")
+      ) {
         throw error;
       }
       console.error("Sign-in error:", error);
@@ -534,7 +552,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!savedFormData) return;
 
       const formData = JSON.parse(savedFormData);
-      
+
       // Create the user document
       const docRef = doc(db, "users", result.user.uid);
       await setDoc(docRef, {
@@ -551,7 +569,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Update state and redirect
       set({ user: result.user });
       await get().fetchUserData(result.user.uid);
-      window.location.href = '/admin';
+      window.location.href = "/admin";
     } catch (error) {
       console.error("Redirect result error:", error);
       throw error;
@@ -562,7 +580,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const googleProvider = new GoogleAuthProvider();
       googleProvider.setCustomParameters({
-        prompt: 'select_account'
+        prompt: "select_account",
       });
       await signInWithRedirect(auth, googleProvider);
     } catch (error) {
@@ -571,27 +589,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signInWithGoogleForPartner: async (hotelName, area, location, category, phone, upiId) => {
+  signInWithGoogleForPartner: async (
+    hotelName,
+    area,
+    location,
+    category,
+    phone,
+    upiId
+  ) => {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       console.log("result", result);
       const user = result.user;
 
-      if (!user.email) throw new Error('Email is required');
+      if (!user.email) throw new Error("Email is required");
 
       // Create the user document in users collection
       const docRef = doc(db, "users", user.uid);
       const partnerData: UserData = {
         email: user.email,
-        role: 'hotel',
+        role: "hotel",
         hotelName,
         area,
         location,
         category,
         phone,
         upiId,
-        accountStatus: 'active',
+        accountStatus: "active",
         followers: [],
         following: [],
         menu: [],
@@ -602,10 +627,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       await setDoc(docRef, partnerData);
       set({ user, userData: partnerData });
-      
+
       return user;
     } catch (error) {
-      console.error('Partner registration failed:', error);
+      console.error("Partner registration failed:", error);
       throw error;
     }
   },
@@ -621,21 +646,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     upiId: string
   ) => {
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const result = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = result.user;
 
       // Create hotel document
       const docRef = doc(db, "users", user.uid);
       const partnerData: UserData = {
         email: user.email as string,
-        role: 'hotel',
+        role: "hotel",
         hotelName,
         area,
         location,
         category,
         phone,
         upiId,
-        accountStatus: 'active',
+        accountStatus: "active",
         followers: [],
         following: [],
         menu: [],
@@ -646,7 +675,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       await setDoc(docRef, partnerData);
       set({ user, userData: partnerData });
-      
+
       return user;
     } catch (error) {
       console.log("error", error);
@@ -669,68 +698,111 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // First check if phone exists with any other role
       const allUsersRef = collection(db, "users");
       const nonUserQuery = query(
-        allUsersRef, 
-        where("phone", "==", phone),
+        allUsersRef,
+        where("phone", "==", `${phone}`),
         where("role", "!=", "user")
       );
       const nonUserSnapshot = await getDocs(nonUserQuery);
 
       if (!nonUserSnapshot.empty) {
-        throw new Error("This phone number is registered as a partner. Please use partner login.");
+        throw new Error(
+          "This phone number is registered as a partner. Please use partner login."
+        );
       }
 
       // Check if user exists with this phone
       const userQuery = query(
-        allUsersRef, 
-        where("phone", "==", phone),
+        allUsersRef,
+        where("phone", "==", `${phone}`),
         where("role", "==", "user")
       );
       const userSnapshot = await getDocs(userQuery);
 
+      // Create standardized email and password
+      const email = `${phone}@user.com`;
+      const password = phone; // Using phone number as password
+
       let userData: UserData;
-      let userId: string;
 
       if (userSnapshot.empty) {
         // Create new user with email and password
-        const randomEmail = `user_${Math.random().toString(36).substring(2, 15)}@cravings.com`;
-        const randomPassword = Math.random().toString(36).substring(2, 15);
-        
-        // Create Firebase Auth user
-        const userCredential = await createUserWithEmailAndPassword(auth, randomEmail, randomPassword);
-        userId = userCredential.user.uid;
-        
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        const user = userCredential.user;
+
+        // Create new user document
         userData = {
-          email: randomEmail,
+          email,
           role: "user",
-          phone,
-          fullName: `User${Math.random().toString(36).substring(2, 6)}`,
+          phone: `${phone}`,
+          fullName: `User${phone.slice(0, 5)}`,
           accountStatus: "active",
           offersClaimable: 100,
           offersClaimableUpdatedAt: new Date().toISOString(),
           following: [],
         };
 
-        // Create new user document
-        const docRef = doc(db, "users", userId);
-        await setDoc(docRef, userData);
+        await setDoc(doc(db, "users", user.uid), userData);
+
+        // Set the user and userData in store
+        set({
+          user,
+          userData: { ...userData, id: user.uid },
+        });
       } else {
+        // Sign in existing user
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+        const user = userCredential.user;
+
         // Get existing user data
-        const userDoc = userSnapshot.docs[0];
-        userId = userDoc.id;
-        userData = { id: userId, ...userDoc.data() } as UserData;
+        userData = {
+          id: userSnapshot.docs[0].id,
+          ...userSnapshot.docs[0].data(),
+        } as UserData;
 
-        // Sign in with existing user's email
-        const functions = getFunctions();
-        const createCustomToken = httpsCallable(functions, 'createCustomToken');
-        const result = await createCustomToken({ uid: userId });
-        await signInWithCustomToken(auth, result.data as string);
+        // Update store
+        set({
+          user,
+          userData,
+        });
       }
-
-      // Firebase Auth will handle setting the user in the store through onAuthStateChanged
     } catch (error) {
       console.error("Sign in error:", error);
       if (error instanceof FirebaseError) {
-        throw new Error("Failed to sign in. Please try again");
+        switch (error.code) {
+          case "auth/email-already-in-use":
+            // If email exists, try to sign in
+            try {
+              const email = `${phone}@user.com`;
+              const userCredential = await signInWithEmailAndPassword(
+                auth,
+                email,
+                phone
+              );
+              const userData = await get().fetchUserData(
+                userCredential.user.uid
+              );
+              if (!userData) {
+                throw new Error("Failed to fetch user data");
+              }
+              set({
+                user: userCredential.user,
+                userData,
+              });
+              return;
+            } catch (error) {
+              throw new Error("Failed to sign in. Please try again" + error);
+            }
+          default:
+            throw new Error("Failed to sign in. Please try again");
+        }
       }
       throw error;
     }
@@ -738,14 +810,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signInPartnerWithEmail: async (email: string, password: string) => {
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      const userData = await get().fetchUserData(result.user.uid);
-      
-      if (userData && userData.role !== 'hotel') {
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+      if (querySnapshot.empty) throw new Error("User not found");
+      const userData = querySnapshot.docs[0].data() as UserData;
+
+      if (
+        userData &&
+        (userData.role === "hotel" || userData.role === "superadmin")
+      ) {
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        set({ user: result.user });
+      } else {
         throw new Error("This account is not registered as a partner");
       }
-      
-      set({ user: result.user });
     } catch (error) {
       if (error instanceof FirebaseError) {
         switch (error.code) {
@@ -766,36 +845,40 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      if (!user.email) throw new Error('Email is required');
+      if (!user.email) throw new Error("Email is required");
 
       // Check if a hotel account exists with this email
       const usersRef = collection(db, "users");
       const q = query(
-        usersRef, 
+        usersRef,
         where("email", "==", user.email),
-        where("role", "==", "hotel")
+        where("role", "!=", "user")
       );
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
         // No hotel account found
         await firebaseSignOut(auth); // Sign out the user
-        throw new Error("No partner account found for this Google account. Please register first.");
+        throw new Error(
+          "No partner account found for this Google account. Please register first."
+        );
       }
 
       // Get the hotel data
-      const hotelData = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as UserData;
-      
-      // Update store
-      set({ 
-        user: user,
-        userData: hotelData
-      });
+      const hotelData = {
+        id: querySnapshot.docs[0].id,
+        ...querySnapshot.docs[0].data(),
+      } as UserData;
 
+      // Update store
+      set({
+        user: user,
+        userData: hotelData,
+      });
     } catch (error) {
       if (error instanceof FirebaseError) {
         switch (error.code) {
-          case 'auth/popup-closed-by-user':
+          case "auth/popup-closed-by-user":
             throw new Error("Sign in cancelled");
           default:
             throw new Error("Failed to sign in. Please try again");
@@ -813,11 +896,11 @@ onAuthStateChanged(auth, async (user) => {
     // Check for redirect result immediately when user signs in
     const result = await getRedirectResult(auth);
     if (result) {
-      console.log('Google Sign In Redirect Result:', result);
+      console.log("Google Sign In Redirect Result:", result);
       const savedFormData = localStorage.getItem("partnerFormData");
-      console.log('Saved Form Data:', savedFormData);
+      console.log("Saved Form Data:", savedFormData);
     }
-    
+
     // Normal user data fetch
     await useAuthStore.getState().fetchUserData(user.uid);
   }
