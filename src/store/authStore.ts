@@ -9,7 +9,10 @@ import {
   signInWithRedirect,
   getRedirectResult,
   createUserWithEmailAndPassword,
-  AuthErrorCodes
+  AuthErrorCodes,
+  signInWithEmailAndPassword,
+  signInWithCustomToken,
+  // getAuth
 } from "firebase/auth";
 import {
   doc,
@@ -17,11 +20,16 @@ import {
   getDoc,
   updateDoc,
   getFirestore,
+  collection,
+  query,
+  where,
+  getDocs
 } from "firebase/firestore";
 import { auth } from "@/lib/firebase";
 import { MenuItem } from "@/screens/HotelMenuPage";
 import { revalidate } from "@/app/actions/revalidate";
 import { FirebaseError } from 'firebase/app';
+import { httpsCallable, getFunctions } from 'firebase/functions';
 
 export interface UserData {
   id?: string;
@@ -113,6 +121,9 @@ interface AuthState {
     phone: string,
     upiId: string
   ) => Promise<User | void>;
+  signInWithPhone: (phone: string) => Promise<void>;
+  signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
+  signInWithGooglePartner: () => Promise<void>;
 }
 
 const db = getFirestore();
@@ -647,6 +658,147 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             throw new Error("Password should be at least 6 characters");
           default:
             throw new Error("Failed to sign up. Please try again");
+        }
+      }
+      throw error;
+    }
+  },
+
+  signInWithPhone: async (phone: string) => {
+    try {
+      // First check if phone exists with any other role
+      const allUsersRef = collection(db, "users");
+      const nonUserQuery = query(
+        allUsersRef, 
+        where("phone", "==", phone),
+        where("role", "!=", "user")
+      );
+      const nonUserSnapshot = await getDocs(nonUserQuery);
+
+      if (!nonUserSnapshot.empty) {
+        throw new Error("This phone number is registered as a partner. Please use partner login.");
+      }
+
+      // Check if user exists with this phone
+      const userQuery = query(
+        allUsersRef, 
+        where("phone", "==", phone),
+        where("role", "==", "user")
+      );
+      const userSnapshot = await getDocs(userQuery);
+
+      let userData: UserData;
+      let userId: string;
+
+      if (userSnapshot.empty) {
+        // Create new user with email and password
+        const randomEmail = `user_${Math.random().toString(36).substring(2, 15)}@cravings.com`;
+        const randomPassword = Math.random().toString(36).substring(2, 15);
+        
+        // Create Firebase Auth user
+        const userCredential = await createUserWithEmailAndPassword(auth, randomEmail, randomPassword);
+        userId = userCredential.user.uid;
+        
+        userData = {
+          email: randomEmail,
+          role: "user",
+          phone,
+          fullName: `User${Math.random().toString(36).substring(2, 6)}`,
+          accountStatus: "active",
+          offersClaimable: 100,
+          offersClaimableUpdatedAt: new Date().toISOString(),
+          following: [],
+        };
+
+        // Create new user document
+        const docRef = doc(db, "users", userId);
+        await setDoc(docRef, userData);
+      } else {
+        // Get existing user data
+        const userDoc = userSnapshot.docs[0];
+        userId = userDoc.id;
+        userData = { id: userId, ...userDoc.data() } as UserData;
+
+        // Sign in with existing user's email
+        const functions = getFunctions();
+        const createCustomToken = httpsCallable(functions, 'createCustomToken');
+        const result = await createCustomToken({ uid: userId });
+        await signInWithCustomToken(auth, result.data as string);
+      }
+
+      // Firebase Auth will handle setting the user in the store through onAuthStateChanged
+    } catch (error) {
+      console.error("Sign in error:", error);
+      if (error instanceof FirebaseError) {
+        throw new Error("Failed to sign in. Please try again");
+      }
+      throw error;
+    }
+  },
+
+  signInPartnerWithEmail: async (email: string, password: string) => {
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      const userData = await get().fetchUserData(result.user.uid);
+      
+      if (userData && userData.role !== 'hotel') {
+        throw new Error("This account is not registered as a partner");
+      }
+      
+      set({ user: result.user });
+    } catch (error) {
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case AuthErrorCodes.INVALID_PASSWORD:
+          case AuthErrorCodes.USER_DELETED:
+            throw new Error("Invalid email or password");
+          default:
+            throw new Error("Failed to sign in. Please try again");
+        }
+      }
+      throw error;
+    }
+  },
+
+  signInWithGooglePartner: async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      if (!user.email) throw new Error('Email is required');
+
+      // Check if a hotel account exists with this email
+      const usersRef = collection(db, "users");
+      const q = query(
+        usersRef, 
+        where("email", "==", user.email),
+        where("role", "==", "hotel")
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        // No hotel account found
+        await firebaseSignOut(auth); // Sign out the user
+        throw new Error("No partner account found for this Google account. Please register first.");
+      }
+
+      // Get the hotel data
+      const hotelData = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as UserData;
+      
+      // Update store
+      set({ 
+        user: user,
+        userData: hotelData
+      });
+
+    } catch (error) {
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case 'auth/popup-closed-by-user':
+            throw new Error("Sign in cancelled");
+          default:
+            throw new Error("Failed to sign in. Please try again");
         }
       }
       throw error;
