@@ -9,7 +9,6 @@ import {
   signInWithRedirect,
   getRedirectResult,
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
   AuthErrorCodes
 } from "firebase/auth";
 import {
