@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 type LoginMode = "user" | "partner";
 
 export default function Login() {
-  const { signInWithGoogle, signInWithPhone, signInPartnerWithEmail, signInWithGooglePartner } = useAuthStore();
+  const { signInWithPhone, signInPartnerWithEmail, signInWithGooglePartner } = useAuthStore();
   const navigate = useRouter();
   const [mode, setMode] = useState<LoginMode>("user");
   const [isLoading, setIsLoading] = useState(false);
