@@ -8,6 +8,9 @@ import {
   sendPasswordResetEmail,
   signInWithRedirect,
   getRedirectResult,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  AuthErrorCodes
 } from "firebase/auth";
 import {
   doc,
@@ -94,6 +97,16 @@ interface AuthState {
   handlePartnerRedirectResult: () => Promise<void>;
   initiatePartnerSignup: () => Promise<void>;
   signInWithGoogleForPartner: (
+    hotelName: string,
+    area: string,
+    location: string,
+    category: string,
+    phone: string,
+    upiId: string
+  ) => Promise<User | void>;
+  signUpWithEmailForPartner: (
+    email: string, 
+    password: string,
     hotelName: string,
     area: string,
     location: string,
@@ -585,7 +598,61 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.error('Partner registration failed:', error);
       throw error;
     }
-  }
+  },
+
+  signUpWithEmailForPartner: async (
+    email: string,
+    password: string,
+    hotelName: string,
+    area: string,
+    location: string,
+    category: string,
+    phone: string,
+    upiId: string
+  ) => {
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const user = result.user;
+
+      // Create hotel document
+      const docRef = doc(db, "users", user.uid);
+      const partnerData: UserData = {
+        email: user.email as string,
+        role: 'hotel',
+        hotelName,
+        area,
+        location,
+        category,
+        phone,
+        upiId,
+        accountStatus: 'active',
+        followers: [],
+        following: [],
+        menu: [],
+        offersClaimable: 100,
+        offersClaimableUpdatedAt: new Date().toISOString(),
+        verified: false,
+      };
+
+      await setDoc(docRef, partnerData);
+      set({ user, userData: partnerData });
+      
+      return user;
+    } catch (error) {
+      console.log("error", error);
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case AuthErrorCodes.EMAIL_EXISTS:
+            throw new Error("Email already in use");
+          case AuthErrorCodes.WEAK_PASSWORD:
+            throw new Error("Password should be at least 6 characters");
+          default:
+            throw new Error("Failed to sign up. Please try again");
+        }
+      }
+      throw error;
+    }
+  },
 }));
 
 // Update the auth state change handler
