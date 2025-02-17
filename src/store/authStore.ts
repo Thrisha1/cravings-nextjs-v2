@@ -28,6 +28,11 @@ import { MenuItem } from "@/screens/HotelMenuPage";
 import { revalidate } from "@/app/actions/revalidate";
 import { FirebaseError } from "firebase/app";
 
+export interface UpiData {
+  userId: string;
+  upiId: string;
+}
+
 export interface UserData {
   id?: string;
   email: string;
@@ -62,7 +67,6 @@ export interface UserData {
   menu?: MenuItem[];
   offersClaimable?: number;
   offersClaimableUpdatedAt?: string;
-  upiId?: string;
 }
 
 interface AuthState {
@@ -118,6 +122,11 @@ interface AuthState {
   signInWithPhone: (phone: string) => Promise<void>;
   signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
   signInWithGooglePartner: () => Promise<void>;
+  createUpiData: (userId: string, upiId: string) => Promise<void>;
+  getUpiData: (userId: string) => Promise<UpiData | null>;
+  upiData: UpiData | null;
+  fetchAndCacheUpiData: (userId: string) => Promise<UpiData | null>;
+  updateUpiData: (userId: string, upiId: string) => Promise<void>;
 }
 
 const db = getFirestore();
@@ -149,6 +158,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loading: true,
   error: null,
   userVisit: null,
+  upiData: null,
 
   fetchUserData: async (uid: string, save = true) => {
     try {
@@ -600,7 +610,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      console.log("result", result);
       const user = result.user;
 
       if (!user.email) throw new Error("Email is required");
@@ -615,7 +624,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         location,
         category,
         phone,
-        upiId,
         accountStatus: "active",
         followers: [],
         following: [],
@@ -626,6 +634,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       };
 
       await setDoc(docRef, partnerData);
+      
+      // Create UPI data in separate collection
+      await get().createUpiData(user.uid, upiId);
+      
       set({ user, userData: partnerData });
 
       return user;
@@ -636,24 +648,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signUpWithEmailForPartner: async (
-    email: string,
-    password: string,
-    hotelName: string,
-    area: string,
-    location: string,
-    category: string,
-    phone: string,
-    upiId: string
+    email,
+    password,
+    hotelName,
+    area,
+    location,
+    category,
+    phone,
+    upiId
   ) => {
     try {
-      const result = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
+      const result = await createUserWithEmailAndPassword(auth, email, password);
       const user = result.user;
 
-      // Create hotel document
       const docRef = doc(db, "users", user.uid);
       const partnerData: UserData = {
         email: user.email as string,
@@ -663,7 +670,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         location,
         category,
         phone,
-        upiId,
         accountStatus: "active",
         followers: [],
         following: [],
@@ -674,6 +680,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       };
 
       await setDoc(docRef, partnerData);
+      
+      // Create UPI data in separate collection
+      await get().createUpiData(user.uid, upiId);
+      
       set({ user, userData: partnerData });
 
       return user;
@@ -885,6 +895,82 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
       throw error;
+    }
+  },
+
+  createUpiData: async (userId: string, upiId: string) => {
+    try {
+      const docRef = doc(db, "upi_ids", userId);
+      await setDoc(docRef, {
+        userId,
+        upiId,
+      });
+    } catch (error) {
+      console.error("Error creating UPI data:", error);
+      throw error;
+    }
+  },
+
+  getUpiData: async (userId: string) => {
+    try {
+      const docRef = doc(db, "upi_ids", userId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return docSnap.data() as UpiData;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error getting UPI data:", error);
+      throw error;
+    }
+  },
+
+  fetchAndCacheUpiData: async (userId: string) => {
+    try {
+      // Import the server action dynamically to avoid SSR issues
+      const { getCachedUpiData } = await import('@/app/actions/getUpiData');
+      const upiData = await getCachedUpiData(userId);
+      set({ upiData });
+      return upiData;
+    } catch (error) {
+      console.error("Error fetching UPI data:", error);
+      throw error;
+    }
+  },
+
+  updateUpiData: async (userId: string, upiId: string) => {
+    try {
+      // First update the Firestore document
+      const docRef = doc(db, "upi_ids", userId);
+      await setDoc(docRef, {
+        userId,
+        upiId,
+      });
+      
+      // Update local state
+      set({ upiData: { userId, upiId } });
+      
+      // Revalidate cache
+      try {
+        // Try to revalidate using server action
+        const { revalidateTag } = await import('@/app/actions/revalidate');
+        await revalidateTag(`user-${userId}`);
+      } catch (error) {
+        console.warn('Cache revalidation failed:', error);
+        // Continue execution even if revalidation fails
+      }
+
+      // Fetch fresh data to ensure UI is updated
+      const { getCachedUpiData } = await import('@/app/actions/getUpiData');
+      const freshData = await getCachedUpiData(userId);
+      if (freshData) {
+        set({ upiData: freshData });
+      }
+
+      return;
+    } catch (error) {
+      console.error("Error updating UPI data:", error);
+      throw new Error("Failed to update UPI ID. Please try again.");
     }
   },
 }));

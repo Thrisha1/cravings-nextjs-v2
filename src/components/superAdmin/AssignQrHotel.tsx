@@ -24,9 +24,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Printer } from "lucide-react";
+import { Search, Printer, QrCodeIcon } from "lucide-react";
 import { useQRStore } from "@/store/qrStore";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Scanner } from '@yudiel/react-qr-scanner';
+import { useToast } from "@/components/ui/use-toast";
 
 interface QrCode {
   id: string;
@@ -55,6 +57,9 @@ const AssignQrHotel = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isQrGenerating , setIsQrGenerating] = useState(false);
   const { createQR, assignQR } = useQRStore();
+  const [showScanner, setShowScanner] = useState(false);
+  const { toast } = useToast();
+  const [lastScannedQr, setLastScannedQr] = useState<QrCode | null>(null);
 
   // Fetch QR codes and hotels
   const fetchData = async () => {
@@ -254,11 +259,53 @@ const AssignQrHotel = () => {
           </DialogContent>
         </Dialog>
 
-        <Button variant="outline" onClick={handlePrint}>
-          <Printer className="mr-2 h-4 w-4" />
-          Print Selected QR Codes
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="mr-2 h-4 w-4" />
+            Print Selected QR Codes
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowScanner(true)}
+            className="flex items-center gap-2"
+          >
+            <QrCodeIcon className="h-4 w-4" />
+            Scan QR
+          </Button>
+        </div>
       </div>
+
+      {lastScannedQr && (
+        <div className="mb-6 p-4 bg-white rounded-lg shadow-sm border">
+          <h3 className="text-lg font-semibold mb-4">Last Scanned QR Code</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-sm text-gray-500">QR Number</p>
+              <p className="font-medium">{lastScannedQr.qrCodeNumber}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">QR ID</p>
+              <p className="font-medium">{lastScannedQr.id}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Hotel Name</p>
+              <p className="font-medium">{lastScannedQr.hotelName || "Not assigned"}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Number of Scans</p>
+              <p className="font-medium">{lastScannedQr.numberOfQrScans || 0}</p>
+            </div>
+            {lastScannedQr.assignedAt && (
+              <div className="col-span-2">
+                <p className="text-sm text-gray-500">Assigned At</p>
+                <p className="font-medium">
+                  {new Date(lastScannedQr.assignedAt).toLocaleString()}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <Table className="mt-10 sm:mt-0">
         <TableHeader>
@@ -310,6 +357,7 @@ const AssignQrHotel = () => {
         </TableBody>
       </Table>
 
+      {/* Reassign Dialog */}
       <Dialog open={isReassignOpen} onOpenChange={setIsReassignOpen}>
         <DialogContent>
           <DialogHeader>
@@ -343,13 +391,77 @@ const AssignQrHotel = () => {
                 <div className="p-2 text-gray-500">No hotels found</div>
               )}
             </div>
-            <Button
-              onClick={handleReassign}
-              disabled={!selectedHotel}
-              className="w-full"
-            >
-              {selectedQr?.hotelId ? "Reassign" : "Assign"}
-            </Button>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsReassignOpen(false);
+                  setSelectedHotel(null);
+                  setSearchQuery("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleReassign}
+                disabled={!selectedHotel}
+                className="bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                {selectedQr?.hotelId ? "Reassign" : "Assign"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Scanner Dialog */}
+      <Dialog 
+        open={showScanner} 
+        onOpenChange={setShowScanner}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Scan QR Code</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <div className="relative w-full h-[300px] bg-black rounded-lg overflow-hidden">
+              <Scanner
+                onScan={(result) => {
+                  if (result && result.length > 0) {
+                    const scannedUrl = result[0].rawValue;
+                    const qrId = scannedUrl.includes('cravings.live/qrScan/') 
+                      ? scannedUrl.split('cravings.live/qrScan/')[1]
+                      : scannedUrl;
+
+                    const foundQr = qrCodes.find(qr => qr.id === qrId);
+                    if (foundQr) {
+                      setLastScannedQr(foundQr);
+                      setSelectedQr(foundQr);
+                      setShowScanner(false);
+                      setIsReassignOpen(true);
+                    } else {
+                      toast({
+                        variant: "destructive",
+                        title: "QR Code not found",
+                        description: "The scanned QR code is not in the system."
+                      });
+                    }
+                  }
+                }}
+                onError={(error) => {
+                  console.error('Scanner error:', error);
+                  toast({
+                    variant: "destructive",
+                    title: "Scanner Error",
+                    description: "Failed to start camera. Please check permissions."
+                  });
+                }}
+                constraints={{
+                  facingMode: 'environment'
+                }}
+                formats={['qr_code']}
+              />
+            </div>
           </div>
         </DialogContent>
       </Dialog>

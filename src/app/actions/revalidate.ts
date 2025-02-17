@@ -1,9 +1,23 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { revalidatePath as nextRevalidatePath, revalidateTag as nextRevalidateTag } from "next/cache";
 
-const revalidate = async (tag : string) => {
-  revalidateTag(tag ?? "");
-};
+export async function revalidate(path: string) {
+  try {
+    nextRevalidatePath(path);
+    return { success: true };
+  } catch (error) {
+    console.error('Revalidation error:', error);
+    return { success: false, error };
+  }
+}
 
-export { revalidate };
+export async function revalidateTag(tag: string) {
+  try {
+    nextRevalidateTag(tag);
+    return { success: true };
+  } catch (error) {
+    console.error('Tag revalidation error:', error);
+    return { success: false, error };
+  }
+}

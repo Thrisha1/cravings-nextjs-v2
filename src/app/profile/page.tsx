@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import OfferLoadinPage from "@/components/OfferLoadinPage";
 import {
   AlertDialog,
@@ -29,13 +29,16 @@ export default function ProfilePage() {
     loading: authLoading,
     signOut,
     updateUserData,
+    updateUpiData,
+    upiData,
+    fetchAndCacheUpiData
   } = useAuthStore();
   const { claimedOffers, isLoading: claimedOffersLoading } =
     useClaimedOffersStore();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [upiId, setUpiId] = useState(userData?.upiId || "");
+  const [upiId, setUpiId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -53,6 +56,18 @@ export default function ProfilePage() {
       newPrice: offer.offerDetails.newPrice,
     })),
   };
+
+  useEffect(() => {
+    if (user && userData?.role === "hotel") {
+      fetchAndCacheUpiData(user.uid)
+        .then((data) => {
+          if (data) {
+            setUpiId(data.upiId);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [user, userData?.role]);
 
   const handleDeleteAccount = async () => {
     if (!user) {
@@ -83,12 +98,12 @@ export default function ProfilePage() {
 
     setIsSaving(true);
     try {
-      await updateUserData(user.uid, { upiId });
+      await updateUpiData(user.uid, upiId);
       toast.success("UPI ID updated successfully!");
       setIsEditing(false);
     } catch (error) {
       console.error("Error updating UPI ID:", error);
-      toast.error("Failed to update UPI ID");
+      toast.error(error instanceof Error ? error.message : "Failed to update UPI ID");
     } finally {
       setIsSaving(false);
     }
@@ -218,12 +233,12 @@ export default function ProfilePage() {
                   ) : (
                     <div className="flex justify-between items-center w-full">
                       <span className="text-gray-700">
-                        {userData?.upiId || "No UPI ID set"}
+                        {upiData?.upiId || "No UPI ID set"}
                       </span>
                       <Button
                         onClick={() => {
                           setIsEditing(true);
-                          setUpiId(userData?.upiId || "");
+                          setUpiId(upiData?.upiId || "");
                         }}
                         variant="ghost"
                         className="hover:bg-orange-100"
