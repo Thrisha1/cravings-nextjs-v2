@@ -76,7 +76,7 @@ const UpdateHotelUpiId = () => {
     };
 
     fetchHotels();
-  }, []);
+  }, [db, getUpiData]);
 
   useEffect(() => {
     const filtered = hotels.filter(hotel =>

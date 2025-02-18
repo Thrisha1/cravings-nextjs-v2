@@ -157,7 +157,7 @@ const HotelMenuPage = ({
       ) ?? false;
 
     setIsFollowed(isFollowed);
-  }, [hoteldata]);
+  }, [hoteldata, user?.uid]);
 
   useEffect(() => {
     localStorage.removeItem("previousRoute");

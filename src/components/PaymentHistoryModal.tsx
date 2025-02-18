@@ -17,6 +17,7 @@ interface PaymentHistoryModalProps {
   onClose: () => void;
   hotelData: UserData;
   userId: string;
+  upiData: UpiData | null;
 }
 
 const PaymentHistoryModal = ({
@@ -24,6 +25,7 @@ const PaymentHistoryModal = ({
   onClose,
   hotelData,
   userId,
+  upiData,
 }: PaymentHistoryModalProps) => {
   const { user, updateUserPayment, fetchUserVisit } = useAuthStore();
   const userVisits = hotelData.followers?.find(
@@ -124,10 +126,10 @@ const PaymentHistoryModal = ({
                       >
                         {payment.paid ? "Paid" : "Unpaid"}
                       </p>
-                      {!payment.paid && index === 0 && hotelData?.upiId && (
+                      {!payment.paid && index === 0 && upiData?.upiId && (
                         <Link
                           onClick={handlePayment}
-                          href={`upi://pay?pa=${hotelData?.upiId}&pn=${
+                          href={`upi://pay?pa=${upiData.upiId}&pn=${
                             hotelData?.hotelName
                           }&am=${
                             payment.amount -
