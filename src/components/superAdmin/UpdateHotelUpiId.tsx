@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
+import { useAuthStore } from "@/store/authStore";
 import {
   Table,
   TableBody,
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { collection, getDocs, getFirestore, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, getFirestore } from 'firebase/firestore';
 import { toast } from "sonner";
 import { Search } from "lucide-react";
 // import { unstable_cache } from 'next/cache';
@@ -35,6 +36,7 @@ const UpdateHotelUpiId = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const { getUpiData, updateUpiData } = useAuthStore();
 
   const db = getFirestore();
 
@@ -43,13 +45,20 @@ const UpdateHotelUpiId = () => {
       try {
         const hotelCollection = collection(db, 'users');
         const hotelSnapshot = await getDocs(hotelCollection);
-        const hotelList = hotelSnapshot.docs
-          .filter(doc => doc.data().role === 'hotel')
-          .map(doc => ({
-            id: doc.id,
-            hotelName: doc.data().hotelName || '',
-            upiId: doc.data().upiId || ''
-          }));
+        
+        // Fetch hotels and their UPI data
+        const hotelList = await Promise.all(
+          hotelSnapshot.docs
+            .filter(doc => doc.data().role === 'hotel')
+            .map(async doc => {
+              const upiData = await getUpiData(doc.id);
+              return {
+                id: doc.id,
+                hotelName: doc.data().hotelName || '',
+                upiId: upiData?.upiId || ''  // Get UPI from separate collection
+              };
+            })
+        );
 
         // Sort hotels - those without UPI ID first
         const sortedHotels = hotelList.sort((a, b) => {
@@ -81,8 +90,7 @@ const UpdateHotelUpiId = () => {
 
     setIsUpdating(true);
     try {
-      const hotelRef = doc(db, 'users', selectedHotel.id);
-      await updateDoc(hotelRef, { upiId: newUpiId });
+      await updateUpiData(selectedHotel.id, newUpiId);
       
       // Update local state
       const updatedHotels = hotels.map(hotel => 
