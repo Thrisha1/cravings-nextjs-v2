@@ -703,7 +703,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signInWithPhone: async (phone: string) => {
+  signInWithPhone: async (phone: string): Promise<void> => {
     try {
       // First check if phone exists with any other role
       const allUsersRef = collection(db, "users");
@@ -814,7 +814,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             throw new Error("Failed to sign in. Please try again");
         }
       }
-      throw error;
+      // Ensure we always throw an Error object
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("An unexpected error occurred");
     }
   },
 

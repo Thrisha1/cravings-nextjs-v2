@@ -37,6 +37,8 @@ import RateThis from "@/components/RateThis";
 import { useReviewsStore } from "@/store/reviewsStore";
 import PaymentHistoryModal from "@/components/PaymentHistoryModal";
 import { UpiData } from "@/store/authStore";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export type MenuItem = {
   description: string;
@@ -68,6 +70,7 @@ const HotelMenuPage = ({
     handleFollow,
     handleUnfollow,
     userVisit,
+    signInWithPhone,
   } = useAuthStore();
   const router = useRouter();
   const [isFollowed, setIsFollowed] = useState<boolean>(false);
@@ -81,6 +84,8 @@ const HotelMenuPage = ({
   const [showAllMenu, setShowAllMenu] = useState(false);
   const { getAverageReviewByHotelId } = useReviewsStore();
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
+  const [userPhone, setUserPhone] = useState("");
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
 
   const isLoggedIn = () => {
     console.log("isLoggedIn", userData);
@@ -177,6 +182,29 @@ const HotelMenuPage = ({
   const displayedOffers = showAllOffers ? offers : offers.slice(0, 4);
   const displayedMenu = showAllMenu ? menu : menu.slice(0, 4);
 
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanedPhone = userPhone.replace(/^\+91/, '');
+    if (cleanedPhone.length !== 10) {
+      toast.error("Please enter a valid 10-digit phone number");
+      return;
+    }
+
+    setIsAuthLoading(true);
+    try {
+      await signInWithPhone(cleanedPhone);
+      setShowAuthModal(false);
+      if (qrScan) {
+        handleQrScan();
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && "Failed to sign in";  
+      toast.error(errorMessage);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
   return (
     <main className="overflow-x-hidden bg-gradient-to-b from-orange-50 to-orange-100 relative">
       <Suspense>
@@ -212,23 +240,33 @@ const HotelMenuPage = ({
           <Dialog open={showAuthModal}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>SignIn Required</DialogTitle>
+                <DialogTitle>Sign In Required</DialogTitle>
                 <DialogDescription>
-                  Please sign in to continue
+                  Please sign in with your phone number to continue
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter>
-                <Button
-                  className="bg-orange-600 hover:bg-orange-500 border-none outline-none"
-                  onClick={() => {
-                    localStorage.setItem("previousRoute", location.href);
-                    router.push("/login");
-                    setShowAuthModal(false);
-                  }}
-                >
-                  Ok
-                </Button>
-              </DialogFooter>
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="Enter your phone number"
+                    value={userPhone}
+                    onChange={(e) => setUserPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    required
+                  />
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="submit"
+                    className="bg-orange-600 hover:bg-orange-500 border-none outline-none"
+                    disabled={isAuthLoading}
+                  >
+                    {isAuthLoading ? "Please wait..." : "Sign In"}
+                  </Button>
+                </DialogFooter>
+              </form>
             </DialogContent>
           </Dialog>
 
