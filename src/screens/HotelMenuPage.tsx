@@ -36,6 +36,7 @@ import ReviewsList from "@/components/hotelDetail/ReviewsList";
 import RateThis from "@/components/RateThis";
 import { useReviewsStore } from "@/store/reviewsStore";
 import PaymentHistoryModal from "@/components/PaymentHistoryModal";
+import { UpiData } from "@/store/authStore";
 
 export type MenuItem = {
   description: string;
@@ -45,17 +46,21 @@ export type MenuItem = {
   price: number;
 };
 
+interface HotelMenuPageProps {
+  offers: Offer[];
+  hoteldata: UserData;
+  menu: MenuItem[];
+  qrScan: string | null;
+  upiData: UpiData | null;
+}
+
 const HotelMenuPage = ({
   offers,
   hoteldata,
   menu,
   qrScan,
-}: {
-  offers: Offer[];
-  hoteldata: UserData;
-  menu: MenuItem[];
-  qrScan: string | null;
-}) => {
+  upiData,
+}: HotelMenuPageProps) => {
   const {
     user,
     userData,
@@ -197,6 +202,7 @@ const HotelMenuPage = ({
             numberOfVisits={userVisit.numberOfVisits}
             isRecentVisit={userVisit.isRecentVisit}
             lastDiscountedVisit={userVisit.lastDiscountedVisit}
+            upiData={upiData}
           />
         )}
       </Suspense>

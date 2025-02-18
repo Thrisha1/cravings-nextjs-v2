@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import Link from "next/link";
+import { UpiData } from "@/store/authStore";
 
 interface VisitModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ interface VisitModalProps {
   hotelId: string;
   hotelData: UserData;
   lastDiscountedVisit?: string;
+  upiData: UpiData | null;
 }
 
 const VisitModal = ({
@@ -29,6 +31,7 @@ const VisitModal = ({
   hotelId,
   hotelData,
   lastDiscountedVisit,
+  upiData,
 }: VisitModalProps) => {
   const { user, updateUserVisits, updateUserPayment } = useAuthStore();
   const [amount, setAmount] = useState("");
@@ -121,10 +124,10 @@ const VisitModal = ({
                     ₹{Number(amount) - (Number(amount) * discount) / 100}
                   </span>
                 </p>
-                {hotelData?.upiId && (
+                {upiData?.upiId && (
                   <Link
                     onClick={handlePayment}
-                    href={`upi://pay?pa=${hotelData?.upiId}&pn=${
+                    href={`upi://pay?pa=${upiData.upiId}&pn=${
                       hotelData?.hotelName
                     }&am=${
                       Number(amount) - (Number(amount) * discount) / 100
