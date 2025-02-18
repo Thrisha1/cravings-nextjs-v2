@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useAuthStore, UserData } from "@/store/authStore";
+import { useAuthStore, UserData, UpiData } from "@/store/authStore";
 import { format } from "date-fns";
 import Link from "next/link";
 import { X } from "lucide-react";

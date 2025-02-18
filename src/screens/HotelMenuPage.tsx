@@ -446,6 +446,7 @@ const HotelMenuPage = ({
             onClose={() => setShowPaymentHistory(false)}
             hotelData={hoteldata}
             userId={user?.uid as string}
+            upiData={upiData}
           />
         </>
       ) : (
