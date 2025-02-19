@@ -39,6 +39,19 @@ import PaymentHistoryModal from "@/components/PaymentHistoryModal";
 import { UpiData } from "@/store/authStore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  collection,
+  DocumentData,
+  getCountFromServer,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  QueryDocumentSnapshot,
+  startAfter,
+  where,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export type MenuItem = {
   description: string;
@@ -51,7 +64,6 @@ export type MenuItem = {
 interface HotelMenuPageProps {
   offers: Offer[];
   hoteldata: UserData;
-  menu: MenuItem[];
   qrScan: string | null;
   upiData: UpiData | null;
 }
@@ -59,7 +71,6 @@ interface HotelMenuPageProps {
 const HotelMenuPage = ({
   offers,
   hoteldata,
-  menu,
   qrScan,
   upiData,
 }: HotelMenuPageProps) => {
@@ -81,11 +92,65 @@ const HotelMenuPage = ({
   const error = searchParams.get("error");
   const [showVisitModal, setShowVisitModal] = useState(false);
   const [showAllOffers, setShowAllOffers] = useState(false);
-  const [showAllMenu, setShowAllMenu] = useState(false);
   const { getAverageReviewByHotelId } = useReviewsStore();
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [userPhone, setUserPhone] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [menu, setMenu] = useState<MenuItem[]>([]);
+  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [totalMenuItems , setTotalMenuItems] = useState(0);
+
+  const fetchMenuItems = async (isInitial: boolean) => {
+    try {
+      const menuRef = collection(db, "menuItems");
+  
+      // Use the correct field for filtering
+      let q = query(
+        menuRef,
+        where("hotelId", "==", hoteldata.id),
+        orderBy("name"),
+        limit(4)
+      );
+  
+      if (!isInitial && lastVisible) {
+        q = query(
+          menuRef,
+          where("hotelId", "==", hoteldata.id), // Check if this should be "hotelId"
+          orderBy("name"),
+          startAfter(lastVisible),
+          limit(4)
+        );
+      }
+  
+      const querySnapshot = await getDocs(q);
+  
+      if (!querySnapshot.empty) {
+        setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]);
+      }
+  
+      // Extract menu array from document
+      const menuItems = querySnapshot.docs.flatMap((doc) => doc.data() || []);
+
+  
+      setMenu((prevMenu: MenuItem[]) => (isInitial ? menuItems : [...prevMenu, ...menuItems]));
+    } catch (error) {
+      console.error("Error fetching menu items:", error);
+    }
+  };
+
+  const getMenuItemsCount = async () => {
+    try {
+      const menuRef = collection(db, "menuItems");
+      const q = query(menuRef, where("hotelId", "==", hoteldata.id));
+      const snapshot = await getCountFromServer(q);
+      setTotalMenuItems(snapshot.data().count);
+    } catch (error) {
+      console.error("Error fetching menu items count:", error);
+      return 0;
+    }
+  };
+  
+  
 
   const isLoggedIn = () => {
     console.log("isLoggedIn", userData);
@@ -180,11 +245,10 @@ const HotelMenuPage = ({
   }, [userData?.role, qrId, error, hoteldata?.id]);
 
   const displayedOffers = showAllOffers ? offers : offers.slice(0, 4);
-  const displayedMenu = showAllMenu ? menu : menu.slice(0, 4);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanedPhone = userPhone.replace(/^\+91/, '');
+    const cleanedPhone = userPhone.replace(/^\+91/, "");
     if (cleanedPhone.length !== 10) {
       toast.error("Please enter a valid 10-digit phone number");
       return;
@@ -198,12 +262,17 @@ const HotelMenuPage = ({
         handleQrScan();
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error && "Failed to sign in";  
+      const errorMessage = error instanceof Error && "Failed to sign in";
       toast.error(errorMessage);
     } finally {
       setIsAuthLoading(false);
     }
   };
+
+  useEffect(()=>{
+    getMenuItemsCount();
+    fetchMenuItems(true);
+  },[])
 
   return (
     <main className="overflow-x-hidden bg-gradient-to-b from-orange-50 to-orange-100 relative">
@@ -253,7 +322,11 @@ const HotelMenuPage = ({
                     type="tel"
                     placeholder="Enter your phone number"
                     value={userPhone}
-                    onChange={(e) => setUserPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    onChange={(e) =>
+                      setUserPhone(
+                        e.target.value.replace(/\D/g, "").slice(0, 10)
+                      )
+                    }
                     required
                   />
                 </div>
@@ -431,7 +504,7 @@ const HotelMenuPage = ({
                 {menu.length > 0 ? (
                   <>
                     <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
-                      {displayedMenu.map((menuItem: MenuItem) => {
+                      {menu.map((menuItem: MenuItem) => {
                         return (
                           <div key={menuItem.id} className="group">
                             <MenuItemCard
@@ -442,10 +515,12 @@ const HotelMenuPage = ({
                         );
                       })}
                     </div>
-                    {menu.length > 4 && (
+                    {menu.length < totalMenuItems && (
                       <ShowAllBtn
-                        showAll={showAllMenu}
-                        onClick={() => setShowAllMenu(!showAllMenu)}
+                        showAll={false}
+                        onClick={() => {
+                          fetchMenuItems(false);
+                        }}
                       />
                     )}
                   </>

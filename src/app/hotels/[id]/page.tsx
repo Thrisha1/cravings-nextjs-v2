@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebase";
-import HotelMenuPage, { MenuItem } from "@/screens/HotelMenuPage";
+import HotelMenuPage from "@/screens/HotelMenuPage";
 import {
   collection,
   doc,
@@ -131,13 +131,13 @@ const HotelPage = async ({
   const hoteldata = id ? await getHotelData(id) : null;
 
   
-  const menuItems = (hoteldata?.menu || []).map((item: MenuItem) => ({
-    id: item.id,
-    name: item.name,
-    price: item.price,
-    description: item.description,
-    image: item.image || "/image_placeholder.webp",
-  })) as MenuItem[];
+  // const menuItems = (hoteldata?.menu || []).map((item: MenuItem) => ({
+  //   id: item.id,
+  //   name: item.name,
+  //   price: item.price,
+  //   description: item.description,
+  //   image: item.image || "/image_placeholder.webp",
+  // })) as MenuItem[];
 
   let filteredOffers: Offer[] = [];
   if (offers) {
@@ -158,7 +158,7 @@ const HotelPage = async ({
     <HotelMenuPage
       offers={filteredOffers}
       hoteldata={hoteldata as UserData}
-      menu={menuItems}
+      // menu={menuItems}
       qrScan={qrScan || null}
       upiData={upiData}
     />
