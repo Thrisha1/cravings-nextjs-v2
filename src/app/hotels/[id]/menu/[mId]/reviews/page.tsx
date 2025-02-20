@@ -4,8 +4,9 @@ import { useReviewsStore } from "@/store/reviewsStore";
 import ReviewCard from "@/components/ReviewCard";
 import { Star, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
-import { useAuthStore, UserData } from "@/store/authStore";
 import RateThis from "@/components/RateThis";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { MenuItem } from "@/store/menuStore";
 
 const ReviewsPage = () => {
@@ -13,7 +14,6 @@ const ReviewsPage = () => {
   const { reviews, getReviewsByMenuId } = useReviewsStore();
   const [isLoading, setIsLoading] = useState(true);
   const params = useParams();
-  const { fetchUserData } = useAuthStore();
   const [menuItemDetails, setMenuItemDetails] = useState<MenuItem | null>(null);
 
   useEffect(() => {
@@ -21,11 +21,14 @@ const ReviewsPage = () => {
       setIsLoading(false);
     });
 
-    if (params.id) {
-      fetchUserData(params.id as string, false).then((data) => {
-        const menuItem = (data as UserData).menu?.find(item => item.id === params.mId);
-        setMenuItemDetails(menuItem ?? null);
-      });
+    if (params.mId) {
+      const fetchMenuItemDetails = async () => {
+        const menuItemDoc = await getDoc(doc(db, "menuItems", params.mId as string));
+        if (menuItemDoc.exists()) {
+          setMenuItemDetails(menuItemDoc.data() as MenuItem);
+        }
+      };
+      fetchMenuItemDetails();
     }
   }, [params.mId]);
 

@@ -114,28 +114,19 @@ export const useOfferStore = create<OfferState>((set) => {
         }
 
         const userData = userDocSnap.data();
-        const menuItems = userData.menu || [];
-        const menuItem:
-          | {
-              id: string;
-              name: string;
-              image: string;
-              price: number;
-              description?: string;
-              reviews: {
-                rating: number;
-                comment: string;
-              }[];
-            }
-          | undefined = menuItems.find(
-          (item: { id: string }) => item.id === offer.menuItemId
-        );
 
-        if (!menuItem) {
+        // Fetch the menu item from the new menuItems collection
+        const menuItemRef = doc(db, "menuItems", offer.menuItemId);
+        const menuItemSnap = await getDoc(menuItemRef);
+
+        if (!menuItemSnap.exists()) {
           throw new Error("Menu item not found");
         }
 
-        const averageRatingOfMenuItem = menuItem.reviews.reduce((acc, review) => acc + review.rating, 0) / menuItem.reviews.length;
+        const menuItem = menuItemSnap.data();
+
+        console.log(userData);
+        
 
         const offerData = {
           ...offer,
@@ -148,11 +139,11 @@ export const useOfferStore = create<OfferState>((set) => {
           originalPrice: menuItem.price,
           description: menuItem.description || "",
           enquiries: 0,
-          category: userData.category || "hotel",
+          category: menuItem.category || "hotel",
           fromTime: offer.fromTime.toISOString(),
           toTime: offer.toTime.toISOString(),
           createdAt: new Date().toISOString(),
-          rating: averageRatingOfMenuItem || 0,
+          rating: 0, // You might want to handle ratings differently now
         };
 
         const offersRef = collection(db, "offers");

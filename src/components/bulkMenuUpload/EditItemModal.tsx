@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 export interface MenuItem {
+    category: string;
     id?: string;
     name: string;
     price: number;

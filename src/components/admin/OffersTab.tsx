@@ -23,6 +23,7 @@ import { Offer, useOfferStore } from "@/store/offerStore";
 import { useAuthStore } from "@/store/authStore";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { toast } from "sonner";
 
 export function OffersTab() {
   const { items } = useMenuStore();
@@ -85,45 +86,61 @@ export function OffersTab() {
       return;
     }
 
-    if(new Date(newOffer.fromTime) < new Date(new Date().getTime() - 1000 * 60 * 15)) {
+    if (
+      new Date(newOffer.fromTime) <
+      new Date(new Date().getTime() - 1000 * 60 * 15)
+    ) {
       alert("From time cannot be in the past");
       setAdding(false);
       return;
     }
 
-    if(new Date(newOffer.toTime) < new Date(new Date().getTime() + 1000 * 60 * 15)) {
+    if (
+      new Date(newOffer.toTime) <
+      new Date(new Date().getTime() + 1000 * 60 * 15)
+    ) {
       alert("To time cannot be in the past");
       setAdding(false);
       return;
     }
 
-
-    if(new Date(newOffer.fromTime) > new Date(newOffer.toTime)) {
+    if (new Date(newOffer.fromTime) > new Date(newOffer.toTime)) {
       alert("From time cannot be greater than to time");
       setAdding(false);
       return;
     }
 
-    if(new Date(newOffer.toTime) < new Date(newOffer.fromTime)) {
+    if (new Date(newOffer.toTime) < new Date(newOffer.fromTime)) {
       alert("To time cannot be less than from time");
       setAdding(false);
       return;
     }
 
-    if(new Date(newOffer.toTime).getTime() - new Date(newOffer.fromTime).getTime() < 1000 * 60 * 15) {
+    if (
+      new Date(newOffer.toTime).getTime() -
+        new Date(newOffer.fromTime).getTime() <
+      1000 * 60 * 15
+    ) {
       alert("Offer duration should be atleast 15 minutes");
       setAdding(false);
       return;
     }
 
-    await addOffer({
-      menuItemId: newOffer.menuItemId,
-      newPrice: parseFloat(newOffer.newPrice),
-      itemsAvailable: parseInt(newOffer.itemsAvailable),
-      fromTime: new Date(newOffer.fromTime),
-      toTime: new Date(newOffer.toTime),
-      category: userData?.category || "hotel",
-    });
+    try {
+      await addOffer({
+        menuItemId: newOffer.menuItemId,
+        newPrice: parseFloat(newOffer.newPrice),
+        itemsAvailable: parseInt(newOffer.itemsAvailable),
+        fromTime: new Date(newOffer.fromTime),
+        toTime: new Date(newOffer.toTime),
+        category: userData?.category || "hotel",
+      });
+    } catch (error) {
+      toast.error('Failed to create offer');
+      console.error(error);
+      setAdding(false);
+      return;
+    }
 
     setNewOffer({
       menuItemId: "",

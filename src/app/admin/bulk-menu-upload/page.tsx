@@ -10,9 +10,11 @@ import { MenuItemCard } from "@/components/bulkMenuUpload/MenuItemCard";
 import { EditItemModal } from "@/components/bulkMenuUpload/EditItemModal";
 import Link from "next/link";
 import { useBulkUpload } from "@/hooks/useBulkUpload";
+import { useAuthStore } from "@/store/authStore";
 
 const BulkUploadPage = () => {
   const router = useRouter();
+  const { user } = useAuthStore();
   const {
     jsonInput,
     menuItems,
@@ -33,7 +35,8 @@ const BulkUploadPage = () => {
     handleSaveEdit,
     handleImageClick,
     setIsEditModalOpen,
-    setEditingItem
+    setEditingItem,
+    handleCategoryChange,
   } = useBulkUpload();
 
   return (
@@ -47,7 +50,18 @@ const BulkUploadPage = () => {
         </div>
 
         <div className="mb-8">
-          <Link target="_blank" className="underline text-sm py-2 text-blue-500 hover:text-blue-600 block text-right" href={"https://kimi.moonshot.cn/chat"}>Go to KIMI.ai {"->"}</Link>
+          <Link
+            target="_blank"
+            onClick={() => {
+              navigator.clipboard.writeText(
+                `extract the menuitems as json { name : string, price : number, description : string (create a short description), category : string (select the most appropriate category from the list ["Appetizers", "Main Course", "Desserts", "Beverages", "Snacks", "Breakfast", "Lunch", "Dinner", "Specials"])}`
+              );
+            }}
+            className="underline text-sm py-2 text-blue-500 hover:text-blue-600 block text-right"
+            href={"https://kimi.moonshot.cn/chat"}
+          >
+            Go to KIMI.ai {"(prompt is copied to clipboard)"} {"->"}
+          </Link>
 
           <Textarea
             value={jsonInput}
@@ -56,8 +70,8 @@ const BulkUploadPage = () => {
             className="min-h-[200px] mb-4"
           />
           <div className="flex gap-2">
-            <Button 
-              className="text-[13px] w-full" 
+            <Button
+              className="text-[13px] w-full"
               onClick={handleJsonSubmit}
               disabled={!jsonInput.trim()}
             >
@@ -76,7 +90,7 @@ const BulkUploadPage = () => {
 
                 <Button
                   className="text-[13px] w-full"
-                  onClick={() => handleUploadSelected()}
+                  onClick={() => handleUploadSelected(user?.uid as string)}
                   disabled={isBulkUploading}
                 >
                   {isBulkUploading ? (
@@ -114,10 +128,15 @@ const BulkUploadPage = () => {
               index={index}
               isUploading={isUploading[index]}
               onSelect={() => handleSelectItem(index)}
-              onAddToMenu={() => handleAddToMenu(item, index)}
+              onAddToMenu={() =>
+                handleAddToMenu(item, index, user?.uid as string)
+              }
               onEdit={() => handleEdit(index, item)}
               onDelete={() => handleDelete(index)}
               onImageClick={() => handleImageClick(index)}
+              onCategoryChange={(category) =>
+                handleCategoryChange(index, category)
+              }
             />
           ))}
         </div>
@@ -143,4 +162,4 @@ const BulkUploadPage = () => {
   );
 };
 
-export default BulkUploadPage
+export default BulkUploadPage;

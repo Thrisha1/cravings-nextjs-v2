@@ -129,7 +129,12 @@ const HotelMenuPage = ({
       }
   
       // Extract menu array from document
-      const menuItems = querySnapshot.docs.flatMap((doc) => doc.data() || []);
+      const menuItems = querySnapshot.docs.map((doc) => {
+        return {
+          id: doc.id,
+          ...doc.data()
+        } as MenuItem;
+      });
 
   
       setMenu((prevMenu: MenuItem[]) => (isInitial ? menuItems : [...prevMenu, ...menuItems]));

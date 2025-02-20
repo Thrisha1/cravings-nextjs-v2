@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import { MenuItemCard } from "@/components/bulkMenuUpload/MenuItemCard";
 import { EditItemModal } from "@/components/bulkMenuUpload/EditItemModal";
 import Link from "next/link";
@@ -14,8 +14,10 @@ import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { UserData } from "@/store/authStore";
 import { useMenuStore } from "@/store/menuStore";
+import { useRouter } from "next/navigation";
 
 const BulkUpload = () => {
+  const router = useRouter();
   const [hotels, setHotels] = useState<UserData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedHotel, setSelectedHotel] = useState<UserData | null>(null);
@@ -45,18 +47,16 @@ const BulkUpload = () => {
     setIsEditModalOpen,
     setEditingItem,
     handleHotelSelect,
+    handleCategoryChange,
   } = useBulkUpload();
 
   useEffect(() => {
     const fetchHotels = async () => {
       setIsLoading(true);
       try {
-        const q = query(
-          collection(db, "users"),
-          where("role", "==", "hotel")
-        );
+        const q = query(collection(db, "users"), where("role", "==", "hotel"));
         const querySnapshot = await getDocs(q);
-        const hotelData:UserData[] = [];
+        const hotelData: UserData[] = [];
         querySnapshot.forEach((doc) => {
           hotelData.push({ id: doc.id, ...doc.data() } as UserData);
         });
@@ -78,8 +78,7 @@ const BulkUpload = () => {
     setSelectedHotel(hotel);
     setShowDropdown(false);
     setSearchTerm(hotel.hotelName || "");
-    
-    // Fetch the selected hotel's menu
+
     if (hotel.id) {
       await handleHotelSelect(hotel.id);
       await fetchMenu(hotel.id);
@@ -87,8 +86,15 @@ const BulkUpload = () => {
   };
 
   return (
-    <div className="min-h-screen w-full ">
+    <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-8">
       <div className="max-w-7xl mx-auto">
+        <div className="flex items-center gap-4 mb-8">
+          <Button variant="ghost" onClick={() => router.back()}>
+            <ChevronLeft className="w-6 h-6" />
+          </Button>
+          <h1 className="text-2xl font-bold text-gray-900">Bulk Menu Upload</h1>
+        </div>
+
         <div className="mb-8">
           <div className="mb-6 relative">
             <Input
@@ -100,7 +106,7 @@ const BulkUpload = () => {
                 setShowDropdown(true);
               }}
               onFocus={() => setShowDropdown(true)}
-              className="mb-2 bg-white"
+              className="mb-2"
             />
             {showDropdown && (searchTerm || isLoading) && (
               <div className="absolute w-full z-10">
@@ -115,7 +121,7 @@ const BulkUpload = () => {
                         <div
                           key={hotel.id}
                           className={`p-2 cursor-pointer hover:bg-gray-100 ${
-                            selectedHotel?.id === hotel.id ? 'bg-gray-100' : ''
+                            selectedHotel?.id === hotel.id ? "bg-gray-100" : ""
                           }`}
                           onClick={() => handleHotelSelection(hotel)}
                         >
@@ -131,7 +137,18 @@ const BulkUpload = () => {
             )}
           </div>
 
-          <Link target="_blank" className="underline text-sm py-2 text-blue-500 hover:text-blue-600 block text-right" href={"https://kimi.moonshot.cn/chat"}>Go to KIMI.ai {"->"}</Link>
+          <Link
+            target="_blank"
+            onClick={() => {
+              navigator.clipboard.writeText(
+                `extract the menuitems as json { name : string, price : number, description : string (create a short description), category : string (select the most appropriate category from the list ["Appetizers", "Main Course", "Desserts", "Beverages", "Snacks", "Breakfast", "Lunch", "Dinner", "Specials"])}`
+              );
+            }}
+            className="underline text-sm py-2 text-blue-500 hover:text-blue-600 block text-right"
+            href={"https://kimi.moonshot.cn/chat"}
+          >
+            Go to KIMI.ai {"(prompt is copied to clipboard)"} {"->"}
+          </Link>
 
           <Textarea
             value={jsonInput}
@@ -140,8 +157,8 @@ const BulkUpload = () => {
             className="min-h-[200px] mb-4"
           />
           <div className="flex gap-2">
-            <Button 
-              className="text-[13px] w-full" 
+            <Button
+              className="text-[13px] w-full"
               onClick={handleJsonSubmit}
               disabled={!selectedHotel}
             >
@@ -202,6 +219,9 @@ const BulkUpload = () => {
               onEdit={() => handleEdit(index, item)}
               onDelete={() => handleDelete(index)}
               onImageClick={() => handleImageClick(index)}
+              onCategoryChange={(category) =>
+                handleCategoryChange(index, category)
+              }
             />
           ))}
         </div>

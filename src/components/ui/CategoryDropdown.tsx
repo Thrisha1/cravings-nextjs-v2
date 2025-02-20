@@ -6,22 +6,23 @@ interface CategoryDropdownProps {
   onChange: (value: string) => void;
 }
 
-const categories = [
-  "Juices",
-  "Desserts",
-  "Main Course",
-  "Appetizers",
-  "Salads",
-  "Beverages",
-  "Snacks",
-  "Others"
-];
+export const CategoryDropdown = ({ value, onChange }: CategoryDropdownProps) => {
+  const categories = [
+    "Appetizers",
+    "Main Course",
+    "Desserts",
+    "Beverages",
+    "Snacks",
+    "Breakfast",
+    "Lunch",
+    "Dinner",
+    "Specials"
+  ];
 
-const CategoryDropdown: React.FC<CategoryDropdownProps> = ({ value, onChange }) => {
   return (
-    <Select value={value} onValueChange={onChange} required>
+    <Select value={value} onValueChange={onChange}>
       <SelectTrigger>
-        <SelectValue placeholder="Select Category" />
+        <SelectValue placeholder="Select category" />
       </SelectTrigger>
       <SelectContent>
         {categories.map((category) => (

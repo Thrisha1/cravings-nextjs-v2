@@ -13,7 +13,7 @@ import { UserData } from "@/store/authStore";
 import { MenuItem } from "@/store/menuStore";
 import Link from "next/link";
 import { useReviewsStore } from "@/store/reviewsStore";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Share from "@/components/Share";
 import RateThis from "@/components/RateThis";
 import ReviewsList from "@/components/menuDetails/ReviewsList";
@@ -26,6 +26,13 @@ interface MenuDetailProps {
 const MenuDetail = ({ menuItem, hotelData }: MenuDetailProps) => {
   const router = useRouter();
   const { getAverageReviewByHotelId } = useReviewsStore();
+  const [averageReview, setAverageReview] = useState(0);
+
+  useEffect(() => {
+    getAverageReviewByHotelId(hotelData.id as string).then((review) => {
+      setAverageReview(review);
+    });
+  }, []);
 
   return (
     <div className="min-h-screen w-full md:bg-gradient-to-b from-orange-50 to-orange-100 md:pt-10">
@@ -95,7 +102,7 @@ const MenuDetail = ({ menuItem, hotelData }: MenuDetailProps) => {
                       className="text-orange-600 fill-orange-600"
                       size={20}
                     />
-                    {getAverageReviewByHotelId(hotelData?.id as string) ?? 0}
+                    {averageReview ?? 0}
                   </div>
                 </Suspense>
                 <span className="text-sm mt-1">

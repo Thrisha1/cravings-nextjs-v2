@@ -4,9 +4,11 @@ import { useParams, useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useReviewsStore } from "@/store/reviewsStore";
-import { useAuthStore, UserData } from "@/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { MenuItem } from "@/store/menuStore";
 
 const CreateNewReviewPage = () => {
@@ -29,19 +31,22 @@ const CreateNewReviewPage = () => {
       fetchUserData(user.uid as string);
     }
 
-    if (params.id) {
-      fetchUserData(params.id as string, false).then((data) => {
-        const menuItem = (data as UserData).menu?.find(item => item.id === params.mId);
-        setMenuItemDetails(menuItem ?? null);
+    if (params.mId) {
+      const fetchMenuItemDetails = async () => {
+        const menuItemDoc = await getDoc(doc(db, "menuItems", params.mId as string));
+        if (menuItemDoc.exists()) {
+          setMenuItemDetails(menuItemDoc.data() as MenuItem);
+        }
         setIsLoading(false);
-      });
+      };
+      fetchMenuItemDetails();
     }
 
     const savedRating = localStorage.getItem(`menuItem_${params.mId}_rating`);
     if (savedRating) {
       setRating(parseInt(savedRating));
     }
-  }, [fetchUserData, user]);
+  }, [fetchUserData, user, params.mId]);
 
   const handleSubmit = async () => {
     if (!userData) return;

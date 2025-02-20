@@ -26,6 +26,13 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
   });
   const [isImageUploaded, setImageUploaded] = useState(false);
 
+  // useEffect(() => {
+  //   console.log(newItem);
+
+  //   console.log((!isImageUploaded && !newItem.image) || !newItem.name || !newItem.price || !newItem.category)
+    
+  // }, [newItem.name , newItem.price, newItem.image, newItem.description, newItem.category]);
+
   const handleImageInput = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target?.files?.[0];
     if (!file) return;
@@ -125,7 +132,7 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
           />
           {/* {children} */}
           <Button
-            disabled={!isImageUploaded || !newItem.name || !newItem.price || !newItem.category}
+            disabled={(!isImageUploaded && !newItem.image) || !newItem.name || !newItem.price || !newItem.category}
             type="submit"
             className="w-full disabled:opacity-50"
           >

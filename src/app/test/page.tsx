@@ -1,89 +1,32 @@
 "use client";
 import { Button } from "@/components/ui/button";
-// import { db } from "@/lib/firebase";
-// import {
-//   addDoc,
-//   collection,
-//   getDocs,
-//   query,
-//   updateDoc,
-//   where,
-// } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { collection, deleteField, getDocs, updateDoc } from "firebase/firestore";
 import React from "react";
 
-const page =  () => {
-  // const moveMenusToCollection = async () => {
-  //   try {
-  //     const usersRef = collection(db, "users");
-  //     const usersQuery = query(usersRef, where("role", "==", "hotel"));
-  //     const querySnapshot = await getDocs(usersQuery);
+const page = () => {
+  const removeIdFromMenuItems = async () => {
+    try {
+      const menuItemsCollection = collection(db, "menuItems");
+      const querySnapshot = await getDocs(menuItemsCollection);
 
-  //     const hotelUsers = querySnapshot.docs.map((doc) => ({
-  //       id: doc.id,
-  //       menu: doc.data().menu || [],
-  //     }));
-  //     console.log("Hotel users:", hotelUsers.length);
+      let menuItemNumber = 0;
+      for (const doc of querySnapshot.docs) {
+        await updateDoc(doc.ref, { id: deleteField() });
+        menuItemNumber++;
+        console.log(`Updated menu item ${menuItemNumber}: ${doc.id}`);
 
-  //     let count = 0;
-  //     let count2 = 0;
-  //     const menusCollection = collection(db, "menuItems");
-  //     for (const data of hotelUsers) {
-  //       count++;
-  //       for (const menuItem of data.menu) {
-  //         try {
-  //           count2++;
-  //           console.log(menuItem?.name, count, count2);
-  //           const insertData = {
-  //             hotelId: data.id,
-  //             ...menuItem,
-  //           };
-  //           await addDoc(menusCollection, insertData);
-  //           await new Promise((resolve) => setTimeout(resolve, 3000)); // Keep 2 second delay
-  //         } catch (itemError) {
-  //           console.error(
-  //             `Failed to add menu item ${menuItem?.name}:`,
-  //             itemError
-  //           );
-  //           continue; // Continue with next item even if one fails
-  //         }
-  //       }
-  //     }
-  //   } catch (e) {
-  //     console.error("Error in moveMenusToCollection:", e);
-  //     throw e; // Re-throw the error for handling at a higher level
-  //   }
-  // };
+        await new Promise((resolve) => setTimeout(resolve, 1500)); // Add delay for each doc
+      }
 
-  // const removeMenusFromUsers = async () => {
-  //   try {
-  //     const usersRef = collection(db, "users");
-  //     const usersQuery = query(usersRef, where("role", "==", "hotel"));
-  //     const querySnapshot = await getDocs(usersQuery);
-
-  //     let count = 0;
-  //     for (const doc of querySnapshot.docs) {
-  //       count++;
-  //       const userData = doc.data();
-  //       delete userData.menu;
-  //       await updateDoc(doc.ref, userData);
-  //       console.log(count);
-
-  //       await new Promise((resolve) => setTimeout(resolve, 1500)); // Rate limiting
-  //     }
-
-  //     console.log("Successfully removed menu field from all hotel users");
-  //   } catch (e) {
-  //     console.error("Error removing menus:", e);
-  //     console.error(e);
-  //   }
-  // };
-
-  // await removeMenusFromUsers();
-
-  // await moveMenusToCollection();
+      console.log("Successfully removed id field from all menu items");
+    } catch (e) {
+      console.error("Error removing id from menu items:", e);
+    }
+  };
 
   const onClickFn = async () => {
-    // await moveMenusToCollection();
+    await removeIdFromMenuItems();
   };
 
   return <Button onClick={onClickFn}>Click</Button>;
