@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { toast } from "sonner";
 import { uploadFileToS3, deleteFileFromS3 } from "@/app/actions/aws-s3";
+import CategoryDropdown from "@/components/ui/CategoryDropdown";
 
 interface AddMenuItemModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (item: { name: string; price: string; image: string; description: string }) => void;
+  onSubmit: (item: { name: string; price: string; image: string; description: string; category: string }) => void;
+  children?: React.ReactNode;
 }
 
 export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItemModalProps) {
@@ -20,6 +22,7 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
     price: "",
     image: "",
     description: "",
+    category: "",
   });
   const [isImageUploaded, setImageUploaded] = useState(false);
 
@@ -49,12 +52,12 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newItem.name || !newItem.price || !newItem.image) {
+    if (!newItem.name || !newItem.price || !newItem.image || !newItem.category) {
       toast.error("Please fill all the fields");
       return;
     }
     onSubmit(newItem);
-    setNewItem({ name: "", price: "", image: "", description: "" });
+    setNewItem({ name: "", price: "", image: "", description: "", category: "" });
     setImageUrl("");
     setImageUploaded(false);
     onOpenChange(false);
@@ -116,8 +119,13 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
             value={newItem.description}
             onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
           />
+          <CategoryDropdown
+            value={newItem.category}
+            onChange={(value) => setNewItem({ ...newItem, category: value })}
+          />
+          {/* {children} */}
           <Button
-            disabled={!isImageUploaded || !newItem.name || !newItem.price}
+            disabled={!isImageUploaded || !newItem.name || !newItem.price || !newItem.category}
             type="submit"
             className="w-full disabled:opacity-50"
           >

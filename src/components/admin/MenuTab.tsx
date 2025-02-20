@@ -25,6 +25,7 @@ export function MenuTab() {
     price: string;
     image: string;
     description: string;
+    category: string;
   } | null>(null);
 
   useEffect(() => {
@@ -39,12 +40,14 @@ export function MenuTab() {
     );
   }, [items, searchQuery]);
 
-  const handleAddItem = (item: { name: string; price: string; image: string; description: string }) => {
+  const handleAddItem = (item: { name: string; price: string; image: string; description: string; category: string }) => {
     addItem({
       name: item.name,
       price: parseFloat(item.price),
       image: item.image,
       description: item.description,
+      category: item.category,
+      hotelId: user?.uid || "",
     });
   };
 
@@ -54,12 +57,14 @@ export function MenuTab() {
     price: string;
     image: string;
     description: string;
+    category: string;
   }) => {
     updateItem(item.id, {
       name: item.name,
       price: parseFloat(item.price),
       image: item.image,
       description: item.description,
+      category: item.category,
     });
   };
 
@@ -69,6 +74,7 @@ export function MenuTab() {
     price: number;
     image: string;
     description: string;
+    category: string;
   }) => {
     setEditingItem({
       id: item.id,
@@ -76,6 +82,7 @@ export function MenuTab() {
       price: item.price.toString(),
       image: item.image,
       description: item.description || "",
+      category: item.category,
     });
     setIsEditModalOpen(true);
   };
@@ -111,7 +118,8 @@ export function MenuTab() {
         isOpen={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
         onSubmit={handleAddItem}
-      />
+      >
+      </AddMenuItemModal>
 
       {editingItem && (
         <EditMenuItemModal
@@ -119,7 +127,8 @@ export function MenuTab() {
           onOpenChange={setIsEditModalOpen}
           item={editingItem}
           onSubmit={handleEditItem}
-        />
+        >
+        </EditMenuItemModal>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -147,7 +156,8 @@ export function MenuTab() {
                 name: item.name,
                 price: item.price,
                 image: item.image,
-                description: item.description || ''
+                description: item.description || '',
+                category: item.category,
               })}>
                 Edit
               </Button>

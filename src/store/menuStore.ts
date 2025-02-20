@@ -9,6 +9,8 @@ export interface MenuItem {
   price: number;
   image: string;
   description?: string;
+  hotelId: string;
+  category: string;
 }
 
 export interface HotelData {

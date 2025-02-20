@@ -5,7 +5,7 @@ import LocationSelection from "@/components/LocationSelection";
 import OfferTabs from "@/components/OfferTabs";
 import OfferCard from "@/components/OfferCard";
 import NoOffersFound from "@/components/NoOffersFound";
-import SurveyDialog from "@/components/SurveyDialog";
+// import SurveyDialog from "@/components/SurveyDialog";
 import { useEffect, useState } from "react";
 import { Offer } from "@/store/offerStore";
 import { useSearchParams } from "next/navigation";
@@ -46,7 +46,11 @@ export default function Offers() {
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 px-3 py-3 relative pb-10">
       {/* <ScanButton /> */}
       <CravingsCashInfoModal />
-      <SurveyDialog offers={offers} />
+
+      {/* survey is currently turned off */}
+
+      {/* <SurveyDialog offers={offers} /> */}
+      
       {/* christmas lights  */}
       {/* <div className="absolute top-0 gap-7 left-0 flex items-center max-w-screen overflow-hidden pointer-events-none">
         {[...Array(6)].map((_, i) => (

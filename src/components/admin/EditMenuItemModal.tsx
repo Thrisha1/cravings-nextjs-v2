@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { uploadFileToS3, deleteFileFromS3 } from "@/app/actions/aws-s3";
+import CategoryDropdown from "@/components/ui/CategoryDropdown";
 
 interface EditMenuItemModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface EditMenuItemModalProps {
     price: string;
     image: string;
     description: string;
+    category: string;
   };
   onSubmit: (item: {
     id: string;
@@ -22,10 +24,12 @@ interface EditMenuItemModalProps {
     price: string;
     image: string;
     description: string;
+    category: string;
   }) => void;
+  children?: React.ReactNode;
 }
 
-export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit }: EditMenuItemModalProps) {
+export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit, children }: EditMenuItemModalProps) {
   const [imageUrl, setImageUrl] = useState(item.image);
   const [editingItem, setEditingItem] = useState(item);
   const [isImageUploaded, setImageUploaded] = useState(true);
@@ -56,7 +60,7 @@ export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit }: Edit
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingItem.name || !editingItem.price || !editingItem.image) {
+    if (!editingItem.name || !editingItem.price || !editingItem.image || !editingItem.category) {
       alert("Please fill all the fields");
       return;
     }
@@ -120,6 +124,11 @@ export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit }: Edit
             value={editingItem.description}
             onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
           />
+          <CategoryDropdown
+            value={editingItem.category}
+            onChange={(value) => setEditingItem({ ...editingItem, category: value })}
+          />
+          {children}
           <Button
             disabled={!editingItem.image || !isImageUploaded}
             type="submit"

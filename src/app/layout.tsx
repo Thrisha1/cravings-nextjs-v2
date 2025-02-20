@@ -3,7 +3,7 @@ import Script from "next/script"; // Import Script for Google Analytics
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 // import Snow from "@/components/Snow";
-import PwaInstallPrompt from "@/components/PwaInstallPrompt";
+// import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 // import RateUsModal from "@/components/RateUsModal";
 import "@smastrom/react-rating/style.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -56,7 +56,10 @@ export default function RootLayout({
         {/* <Snow /> */}
         <Navbar />
         {/* <RateUsModal /> */}
-        <PwaInstallPrompt />
+
+        {/* pwa install is currently turned off */}
+        {/* <PwaInstallPrompt /> */}
+        
         <Suspense>
           <SyncUserOfferCoupons />
           <LocationAccess />
