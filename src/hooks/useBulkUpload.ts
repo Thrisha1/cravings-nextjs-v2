@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useMenuStore } from "@/store/menuStore";
+import { useMenuStore, getMenuItemImage } from "@/store/menuStore";
 import { MenuItem } from "@/components/bulkMenuUpload/EditItemModal";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
-import { uploadFileToS3 } from "@/app/actions/aws-s3";
 
 export const useBulkUpload = () => {
   const [jsonInput, setJsonInput] = useState("");
@@ -23,9 +22,7 @@ export const useBulkUpload = () => {
     item: MenuItem;
   } | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState<{ [key: number]: boolean }>(
-    {}
-  );
+  const [isUploading, setIsUploading] = useState<{ [key: number]: boolean }>({});
   const [isBulkUploading, setIsBulkUploading] = useState(false);
 
   const validateMenuItem = (item: MenuItem) => {
@@ -75,27 +72,6 @@ export const useBulkUpload = () => {
     }
   }, [menu]);
 
-  const generateMenuImage = async (query: string) => {
-    try {
-      const response = await fetch(
-        "https://image.pollinations.ai/prompt/" + encodeURIComponent(query),
-        {
-          method: "GET",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to generate image");
-      }
-
-      return response.url;
-    } catch (error) {
-      console.error("Error generating image:", error);
-      toast.error("Failed to generate image");
-      return "/image_placeholder.webp";
-    }
-  };
-
   const delay = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -107,61 +83,36 @@ export const useBulkUpload = () => {
 
       items.forEach(validateMenuItem);
 
-      // First create menu items without images
       const initialItems = items.map((item) => ({
         ...validateMenuItem(item),
         image: "/loading-image.gif",
         isSelected: false,
         isAdded: false,
-        // Preserve category if it exists in JSON, otherwise set to empty string
         category: item.category || "",
       }));
 
       setMenuItems(initialItems);
       localStorage.setItem("bulkMenuItems", JSON.stringify(initialItems));
 
-      // Then generate images in batches
-      const batchSize = 3;
       const updatedItems = [...initialItems];
-
-      for (let i = 0; i < items.length; i += batchSize) {
-        const batch = items.slice(i, i + batchSize);
-        const batchPromises = batch.map(async (item, batchIndex) => {
-          const index = i + batchIndex;
-          const validatedItem = validateMenuItem(item);
-
-          if (!validatedItem.image) {
-            const prompt = `professional food photography of ${validatedItem.description}`;
-            const imageUrl = await generateMenuImage(prompt);
-            updatedItems[index] = {
-              ...updatedItems[index],
-              image: imageUrl,
-            };
-            // Update UI after each image is generated
+      for (let i = 0; i < items.length; i++) {
+        if (updatedItems[i].category) {
+          const urls = await getMenuItemImage(
+            updatedItems[i].category,
+            updatedItems[i].name
+          );
+          if (urls && urls.length > 0) {
+            updatedItems[i].image = urls[0];
             setMenuItems([...updatedItems]);
             localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
           }
-        });
-
-        await Promise.all(batchPromises);
-
-        if (i + batchSize < items.length) {
-          await delay(2000);
-          toast.info(
-            `Generating images ${i + batchSize + 1} to ${Math.min(
-              i + batchSize * 2,
-              items.length
-            )} of ${items.length}`
-          );
         }
       }
 
       toast.success("All items processed successfully!");
     } catch (error) {
       console.error("Error processing JSON:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Invalid JSON format"
-      );
+      toast.error(error instanceof Error ? error.message : "Invalid JSON format");
     }
   };
 
@@ -170,34 +121,6 @@ export const useBulkUpload = () => {
     setJsonInput("");
     localStorage.removeItem("bulkMenuItems");
     localStorage.removeItem("jsonInput");
-  };
-
-  const uploadImageToS3 = async (imageUrl: string) => {
-    try {
-      const response = await fetch(imageUrl);
-      if (!response.ok) {
-        throw new Error("Failed to fetch image");
-      }
-
-      const blob = await response.blob();
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-
-      const url = await uploadFileToS3(base64 as string);
-      if (!url) {
-        throw new Error("No URL returned from upload");
-      }
-
-      return url;
-    } catch (error) {
-      console.error("Error uploading to S3:", error);
-      toast.error("Failed to upload image. Using original URL.");
-      return imageUrl;
-    }
   };
 
   const handleHotelSelect = async (hotelId: string) => {
@@ -210,44 +133,24 @@ export const useBulkUpload = () => {
     index: number,
     hotelId?: string
   ) => {
+    if (!item.category) {
+      toast.error("Please select a category first");
+      return;
+    }
+
     setIsUploading((prev) => ({ ...prev, [index]: true }));
     try {
-      const validatedItem = validateMenuItem(item);
-
-      let finalImageUrl = validatedItem.image;
-      if (validatedItem.image.includes("pollinations.ai")) {
-        finalImageUrl = await uploadImageToS3(validatedItem.image);
-      }
-
-      console.log({
-        name: validatedItem.name,
-        price: validatedItem.price,
-        image: finalImageUrl,
-        description: validatedItem.description,
-        hotelId: hotelId as string,
-        category: validatedItem.category || "hotel",
-      });
-
       await addItem({
-        name: validatedItem.name,
-        price: validatedItem.price,
-        image: finalImageUrl,
-        description: validatedItem.description,
-        hotelId: hotelId as string,
-        category: validatedItem.category || "hotel",
+        name: item.name,
+        price: Number(item.price),
+        image: item.image,
+        description: item.description || "",
+        category: item.category,
+        hotelId: hotelId || userData?.id || "",
       });
 
-      const updatedItems = menuItems.map((menuItem) => {
-        if (
-          menuItem.name === validatedItem.name &&
-          menuItem.price === validatedItem.price &&
-          menuItem.description === validatedItem.description
-        ) {
-          return { ...menuItem, isAdded: true, image: finalImageUrl };
-        }
-        return menuItem;
-      });
-
+      const updatedItems = [...menuItems];
+      updatedItems[index] = { ...updatedItems[index], isAdded: true };
       setMenuItems(updatedItems);
       localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
       fetchMenu(hotelId);
@@ -342,9 +245,15 @@ export const useBulkUpload = () => {
         const updatedItems = [...menuItems];
 
         if (!validatedItem.image) {
-          const searchQuery = `${validatedItem.name} food`;
-          const imageUrl = await generateMenuImage(searchQuery);
-          validatedItem.image = imageUrl || "/image_placeholder.webp";
+          const urls = await getMenuItemImage(
+            validatedItem.category,
+            validatedItem.name
+          );
+          if (urls && urls.length > 0) {
+            validatedItem.image = urls[0];
+          } else {
+            validatedItem.image = "/image_placeholder.webp";
+          }
         }
 
         updatedItems[editingItem.index] = validatedItem;
@@ -356,29 +265,6 @@ export const useBulkUpload = () => {
         console.error("Error saving edit:", err);
         toast.error(err instanceof Error ? err.message : "Invalid item data");
       }
-    }
-  };
-
-  const handleImageClick = async (index: number) => {
-    try {
-      const randomNumber = Math.floor(Math.random() * 100);
-      const item = menuItems[index];
-      const prompt = `professional food photography of ${item.description}?seed=${randomNumber}`;
-      const imageUrl = await generateMenuImage(prompt);
-
-      const updatedItems = [...menuItems];
-      updatedItems[index] = {
-        ...updatedItems[index],
-        image: imageUrl,
-      };
-      setMenuItems(updatedItems);
-      localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
-      toast.success("New image generated successfully!");
-    } catch (err) {
-      console.error("Error generating new image:", err);
-      toast.error(
-        err instanceof Error ? err.message : "Failed to generate new image"
-      );
     }
   };
 
@@ -394,15 +280,41 @@ export const useBulkUpload = () => {
     await handleAddToMenu(item, index, hotelId);
   };
 
-  // Add this new function to handle category changes
-  const handleCategoryChange = (index: number, category: string) => {
+  const handleCategoryChange = async (index: number, category: string) => {
     const updatedItems = [...menuItems];
     updatedItems[index] = {
       ...updatedItems[index],
       category,
+      image: "/loading-image.gif",
     };
     setMenuItems(updatedItems);
-    localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+    
+    try {
+      const urls = await getMenuItemImage(
+        category,
+        updatedItems[index].name
+      );
+      if (urls && urls.length > 0) {
+        updatedItems[index].image = urls[0];
+        setMenuItems([...updatedItems]);
+        localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+      }
+    } catch (error) {
+      console.error("Error fetching image:", error);
+      toast.error("Failed to fetch image for the new category");
+    }
+  };
+
+  const handleImageClick = async (index: number, newImage?: string) => {
+    if (newImage) {
+      const updatedItems = [...menuItems];
+      updatedItems[index] = {
+        ...updatedItems[index],
+        image: newImage,
+      };
+      setMenuItems(updatedItems);
+      localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+    }
   };
 
   return {

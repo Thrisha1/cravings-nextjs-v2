@@ -11,6 +11,7 @@ import { EditItemModal } from "@/components/bulkMenuUpload/EditItemModal";
 import Link from "next/link";
 import { useBulkUpload } from "@/hooks/useBulkUpload";
 import { useAuthStore } from "@/store/authStore";
+import { KimiAiLink } from "@/components/ui/KimiAiLink";
 
 const BulkUploadPage = () => {
   const router = useRouter();
@@ -49,62 +50,51 @@ const BulkUploadPage = () => {
           <h1 className="text-2xl font-bold text-gray-900">Bulk Menu Upload</h1>
         </div>
 
-        <div className="mb-8">
-          <Link
-            target="_blank"
-            onClick={() => {
-              navigator.clipboard.writeText(
-                `extract the menuitems as json { name : string, price : number, description : string (create a short description), category : string (select the most appropriate category from the list ["Appetizers", "Main Course", "Desserts", "Beverages", "Snacks", "Breakfast", "Lunch", "Dinner", "Specials"])}`
-              );
-            }}
-            className="underline text-sm py-2 text-blue-500 hover:text-blue-600 block text-right"
-            href={"https://kimi.moonshot.cn/chat"}
-          >
-            Go to KIMI.ai {"(prompt is copied to clipboard)"} {"->"}
-          </Link>
-
+        <div className="space-y-4">
+          <KimiAiLink />
           <Textarea
+            placeholder="Paste your JSON here..."
             value={jsonInput}
             onChange={(e) => setJsonInput(e.target.value)}
-            placeholder="Paste your JSON menu items here..."
-            className="min-h-[200px] mb-4"
+            className="min-h-[200px]"
           />
-          <div className="flex gap-2">
-            <Button
-              className="text-[13px] w-full"
-              onClick={handleJsonSubmit}
-              disabled={!jsonInput.trim()}
-            >
-              {menuItems.length > 0 ? "Update JSON" : "Convert JSON"}
-            </Button>
+        </div>
 
-            {menuItems.length > 0 && (
-              <>
-                <Button
-                  className="text-[13px] w-full"
-                  variant="destructive"
-                  onClick={handleClear}
-                >
-                  Clear All
-                </Button>
+        <div className="flex gap-2">
+          <Button
+            className="text-[13px] w-full"
+            onClick={handleJsonSubmit}
+            disabled={!jsonInput.trim()}
+          >
+            {menuItems.length > 0 ? "Update JSON" : "Convert JSON"}
+          </Button>
 
-                <Button
-                  className="text-[13px] w-full"
-                  onClick={() => handleUploadSelected(user?.uid as string)}
-                  disabled={isBulkUploading}
-                >
-                  {isBulkUploading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    "Upload Selected"
-                  )}
-                </Button>
-              </>
-            )}
-          </div>
+          {menuItems.length > 0 && (
+            <>
+              <Button
+                className="text-[13px] w-full"
+                variant="destructive"
+                onClick={handleClear}
+              >
+                Clear All
+              </Button>
+
+              <Button
+                className="text-[13px] w-full"
+                onClick={() => handleUploadSelected(user?.uid as string)}
+                disabled={isBulkUploading}
+              >
+                {isBulkUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  "Upload Selected"
+                )}
+              </Button>
+            </>
+          )}
         </div>
 
         {menuItems.length > 0 && (
@@ -133,7 +123,7 @@ const BulkUploadPage = () => {
               }
               onEdit={() => handleEdit(index, item)}
               onDelete={() => handleDelete(index)}
-              onImageClick={() => handleImageClick(index)}
+              onImageClick={(index, url) => handleImageClick(index, url)}
               onCategoryChange={(category) =>
                 handleCategoryChange(index, category)
               }

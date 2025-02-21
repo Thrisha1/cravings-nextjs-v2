@@ -15,6 +15,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { UserData } from "@/store/authStore";
 import { useMenuStore } from "@/store/menuStore";
 import { useRouter } from "next/navigation";
+import { KimiAiLink } from "@/components/ui/KimiAiLink";
 
 const BulkUpload = () => {
   const router = useRouter();
@@ -29,10 +30,12 @@ const BulkUpload = () => {
     jsonInput,
     menuItems,
     selectAll,
+    editingItem,
+    setEditingItem,
     isEditModalOpen,
+    setIsEditModalOpen,
     isUploading,
     isBulkUploading,
-    editingItem,
     setJsonInput,
     handleJsonSubmit,
     handleClear,
@@ -44,8 +47,6 @@ const BulkUpload = () => {
     handleEdit,
     handleSaveEdit,
     handleImageClick,
-    setIsEditModalOpen,
-    setEditingItem,
     handleHotelSelect,
     handleCategoryChange,
   } = useBulkUpload();
@@ -137,18 +138,7 @@ const BulkUpload = () => {
             )}
           </div>
 
-          <Link
-            target="_blank"
-            onClick={() => {
-              navigator.clipboard.writeText(
-                `extract the menuitems as json { name : string, price : number, description : string (create a short description), category : string (select the most appropriate category from the list ["Appetizers", "Main Course", "Desserts", "Beverages", "Snacks", "Breakfast", "Lunch", "Dinner", "Specials"])}`
-              );
-            }}
-            className="underline text-sm py-2 text-blue-500 hover:text-blue-600 block text-right"
-            href={"https://kimi.moonshot.cn/chat"}
-          >
-            Go to KIMI.ai {"(prompt is copied to clipboard)"} {"->"}
-          </Link>
+          <KimiAiLink />
 
           <Textarea
             value={jsonInput}
@@ -156,6 +146,7 @@ const BulkUpload = () => {
             placeholder="Paste your JSON menu items here..."
             className="min-h-[200px] mb-4"
           />
+
           <div className="flex gap-2">
             <Button
               className="text-[13px] w-full"
@@ -218,10 +209,8 @@ const BulkUpload = () => {
               onAddToMenu={() => handleAddToMenu(item, index, selectedHotel?.id)}
               onEdit={() => handleEdit(index, item)}
               onDelete={() => handleDelete(index)}
-              onImageClick={() => handleImageClick(index)}
-              onCategoryChange={(category) =>
-                handleCategoryChange(index, category)
-              }
+              onImageClick={(index, url) => handleImageClick(index, url)}
+              onCategoryChange={(category) => handleCategoryChange(index, category)}
             />
           ))}
         </div>
@@ -232,7 +221,7 @@ const BulkUpload = () => {
         onOpenChange={setIsEditModalOpen}
         editingItem={editingItem}
         onSave={handleSaveEdit}
-        onEdit={(field, value) =>
+        onEdit={(field: string, value: any) =>
           setEditingItem(
             editingItem
               ? {

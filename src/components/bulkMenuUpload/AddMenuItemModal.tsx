@@ -1,22 +1,22 @@
-import { useState, ChangeEvent } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { toast } from "sonner";
-import { uploadFileToS3, deleteFileFromS3 } from "@/app/actions/aws-s3";
 import CategoryDropdown from "@/components/ui/CategoryDropdown";
+import { getMenuItemImage } from "@/store/menuStore";
+import { Loader2 } from "lucide-react";
 
 interface AddMenuItemModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (item: { name: string; price: string; image: string; description: string; category: string }) => void;
-  children?: React.ReactNode;
 }
 
 export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItemModalProps) {
-  const [imageUrl, setImageUrl] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [newItem, setNewItem] = useState({
     name: "",
     price: "",
@@ -24,38 +24,25 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
     description: "",
     category: "",
   });
-  const [isImageUploaded, setImageUploaded] = useState(false);
 
-  // useEffect(() => {
-  //   console.log(newItem);
-
-  //   console.log((!isImageUploaded && !newItem.image) || !newItem.name || !newItem.price || !newItem.category)
-    
-  // }, [newItem.name , newItem.price, newItem.image, newItem.description, newItem.category]);
-
-  const handleImageInput = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target?.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImageUrl(reader.result as string);
+  // Add effect to fetch image when category changes
+  useEffect(() => {
+    const fetchImage = async () => {
+      if (newItem.name && newItem.category) {
+        try {
+          const urls = await getMenuItemImage(newItem.category, newItem.name);
+          if (urls && urls.length > 0) {
+            setNewItem(prev => ({ ...prev, image: urls[0] }));
+          }
+        } catch (error) {
+          console.error("Error fetching image:", error);
+          toast.error("Failed to fetch image");
+        }
+      }
     };
-    reader.readAsDataURL(file);
 
-    const url = await uploadFileToS3(file);
-    if (url) {
-      setNewItem({ ...newItem, image: url });
-      setImageUploaded(true);
-    }
-  };
-
-  const handleImageRemove = async () => {
-    await deleteFileFromS3(newItem.image);
-    setImageUrl("");
-    setNewItem({ ...newItem, image: "" });
-    setImageUploaded(false);
-  };
+    fetchImage();
+  }, [newItem.name, newItem.category]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,8 +52,6 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
     }
     onSubmit(newItem);
     setNewItem({ name: "", price: "", image: "", description: "", category: "" });
-    setImageUrl("");
-    setImageUploaded(false);
     onOpenChange(false);
   };
 
@@ -77,37 +62,32 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
           <DialogTitle>Add New Menu Item</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2 grid justify-items-center">
-            {imageUrl && (
-              <Image src={imageUrl} alt="upload-image" height={300} width={300} />
-            )}
-            <div className="flex items-center gap-2 w-full">
-              {!imageUrl && (
-                <Input
-                  className="w-full flex-1"
-                  required
-                  placeholder="Image URL"
-                  value={newItem.image}
-                  onChange={(e) => setNewItem({ ...newItem, image: e.target.value })}
-                />
-              )}
-              <label
-                onClick={imageUrl ? handleImageRemove : () => {}}
-                htmlFor={!imageUrl ? "imageUpload" : ""}
-                className={`cursor-pointer text-center transition-all text-white font-medium px-3 py-2 rounded-lg text-sm ${
-                  imageUrl ? "bg-red-600 hover:bg-red-500 w-full" : "bg-black hover:bg-black/50"
-                }`}
-              >
-                {imageUrl ? (isImageUploaded ? "Change Image" : "Uploading....") : "Upload Image"}
-              </label>
-              <input
-                onChange={handleImageInput}
-                className="hidden"
-                type="file"
-                id="imageUpload"
+          {/* Selected Image Preview */}
+          {newItem.image && (
+            <div className="relative h-[200px] w-full">
+              <Image 
+                src={newItem.image} 
+                alt="Selected item" 
+                fill
+                className="object-cover rounded-lg"
               />
             </div>
-          </div>
+          )}
+
+          {/* Image Grid */}
+          {isLoading ? (
+            <div className="h-[200px] flex items-center justify-center bg-gray-100 rounded-lg">
+              <div className="text-center">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+                <p className="text-sm text-gray-500">Getting Images...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-4">
+              {/* Placeholder for image grid */}
+            </div>
+          )}
+
           <Input
             required
             placeholder="Product Name"
@@ -130,9 +110,8 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
             value={newItem.category}
             onChange={(value) => setNewItem({ ...newItem, category: value })}
           />
-          {/* {children} */}
           <Button
-            disabled={(!isImageUploaded && !newItem.image) || !newItem.name || !newItem.price || !newItem.category}
+            disabled={!newItem.name || !newItem.price || !newItem.category || isLoading}
             type="submit"
             className="w-full disabled:opacity-50"
           >

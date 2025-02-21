@@ -35,7 +35,7 @@
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.5.2",
     "firebase": "^11.1.0",
-    "fuse.js": "^7.0.0",
+    "fuse.js": "^7.1.0",
     "googleapis": "^144.0.0",
     "idb": "^8.0.2",
     "input-otp": "^1.2.4",

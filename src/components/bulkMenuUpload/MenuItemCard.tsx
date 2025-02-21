@@ -1,10 +1,12 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, Trash, Upload, Loader2 } from "lucide-react";
+import { Pencil, Trash, Upload, Loader2, ImageOff } from "lucide-react";
 import Image from "next/image";
 import { MenuItem } from "@/components/bulkMenuUpload/EditItemModal";
 import { CategoryDropdown } from "@/components/ui/CategoryDropdown";
+import { ImageGridModal } from "./ImageGridModal";
+import { useState } from "react";
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -14,12 +16,13 @@ interface MenuItemCardProps {
   onAddToMenu: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onImageClick: () => void;
+  onImageClick: (index: number, url: string) => void;
   onCategoryChange: (category: string) => void;
 }
 
 export const MenuItemCard = ({
   item,
+  index,
   isUploading,
   onSelect,
   onAddToMenu,
@@ -29,6 +32,20 @@ export const MenuItemCard = ({
   onCategoryChange,
 }: MenuItemCardProps) => {
   const isImageLoading = item.image === "/loading-image.gif";
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  const handleImageClick = () => {
+    if (item.category) {
+      setIsImageModalOpen(true);
+    }
+  };
+
+  const handleSelectImage = (newImageUrl: string) => {
+    onImageClick(index, newImageUrl);
+    setIsImageModalOpen(false);
+    setImageError(false);  // Reset error state when new image is selected
+  };
 
   return (
     <Card className="relative">
@@ -50,13 +67,21 @@ export const MenuItemCard = ({
       <CardContent className="space-y-4">
         <div
           className="relative overflow-hidden w-full h-48 cursor-pointer"
-          onClick={onImageClick}
+          onClick={handleImageClick}
         >
           {isImageLoading ? (
             <div className="absolute inset-0 flex items-center justify-center w-full h-full bg-gray-100 animate-pulse">
               <div className="text-center">
                 <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Generating image...</p>
+                <p className="text-sm text-gray-500">Loading image...</p>
+              </div>
+            </div>
+          ) : imageError ? (
+            <div className="absolute inset-0 flex items-center justify-center w-full h-full bg-gray-100">
+              <div className="text-center">
+                <ImageOff className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No image found</p>
+                <p className="text-xs text-gray-400">Click to try again</p>
               </div>
             </div>
           ) : (
@@ -66,8 +91,8 @@ export const MenuItemCard = ({
                 alt={item.name}
                 fill
                 className="object-cover rounded-md"
-                onError={(e) => {
-                  e.currentTarget.src = "/image_placeholder.webp";
+                onError={() => {
+                  setImageError(true);
                 }}
               />
             </div>
@@ -87,7 +112,7 @@ export const MenuItemCard = ({
         <div className="flex gap-2">
           <Button 
             onClick={onAddToMenu} 
-            disabled={item.isAdded || isUploading || !item.category}
+            disabled={item.isAdded || isUploading || !item.category || imageError}
           >
             {isUploading ? (
               <>
@@ -109,6 +134,15 @@ export const MenuItemCard = ({
           <Trash className="w-4 h-4" />
         </Button>
       </CardFooter>
+
+      <ImageGridModal
+        isOpen={isImageModalOpen}
+        onOpenChange={setIsImageModalOpen}
+        itemName={item.name}
+        category={item.category}
+        currentImage={item.image}
+        onSelectImage={handleSelectImage}
+      />
     </Card>
   );
 };

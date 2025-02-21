@@ -1,5 +1,6 @@
 import React from 'react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"; // Adjust import as necessary
+import { menuCatagories } from '@/store/menuStore';
 
 interface CategoryDropdownProps {
   value: string;
@@ -7,17 +8,7 @@ interface CategoryDropdownProps {
 }
 
 export const CategoryDropdown = ({ value, onChange }: CategoryDropdownProps) => {
-  const categories = [
-    "Appetizers",
-    "Main Course",
-    "Desserts",
-    "Beverages",
-    "Snacks",
-    "Breakfast",
-    "Lunch",
-    "Dinner",
-    "Specials"
-  ];
+  const categories = menuCatagories;
 
   return (
     <Select value={value} onValueChange={onChange}>
