@@ -8,7 +8,6 @@ import { ChevronLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { MenuItemCard } from "@/components/bulkMenuUpload/MenuItemCard";
 import { EditItemModal } from "@/components/bulkMenuUpload/EditItemModal";
-import Link from "next/link";
 import { useBulkUpload } from "@/hooks/useBulkUpload";
 import { useAuthStore } from "@/store/authStore";
 import { KimiAiLink } from "@/components/ui/KimiAiLink";

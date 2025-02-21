@@ -7,7 +7,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, Loader2 } from "lucide-react";
 import { MenuItemCard } from "@/components/bulkMenuUpload/MenuItemCard";
 import { EditItemModal } from "@/components/bulkMenuUpload/EditItemModal";
-import Link from "next/link";
 import { useBulkUpload } from "@/hooks/useBulkUpload";
 import { Input } from "@/components/ui/input";
 import { db } from "@/lib/firebase";
@@ -221,7 +220,7 @@ const BulkUpload = () => {
         onOpenChange={setIsEditModalOpen}
         editingItem={editingItem}
         onSave={handleSaveEdit}
-        onEdit={(field: string, value: any) =>
+        onEdit={(field: string, value: string | number) =>
           setEditingItem(
             editingItem
               ? {

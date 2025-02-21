@@ -72,8 +72,8 @@ export const useBulkUpload = () => {
     }
   }, [menu]);
 
-  const delay = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
+  // const delay = (ms: number) =>
+  //   new Promise((resolve) => setTimeout(resolve, ms));
 
   const handleJsonSubmit = async () => {
     try {
