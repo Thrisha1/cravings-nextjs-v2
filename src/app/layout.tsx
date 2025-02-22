@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import Script from "next/script"; // Import Script for Google Analytics
 import "./globals.css";
-import { Navbar } from "@/components/Navbar";
+// import { Navbar } from "@/components/Navbar";
 // import Snow from "@/components/Snow";
 // import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 // import RateUsModal from "@/components/RateUsModal";
 import "@smastrom/react-rating/style.css";
 import { Toaster } from "@/components/ui/sonner";
 // import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
-import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
-import LocationAccess from "@/components/LocationAccess";
-import { Suspense } from "react";
+// import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
+// import LocationAccess from "@/components/LocationAccess";
+// import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Cravings",
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   icons: ["/icon-64x64.png", "/icon-192x192.png", "/icon-512x512.png"],
   metadataBase: new URL("http://cravings.vercel.app"),
   openGraph: {
-    title: "Cravings",
+    title: "Cravings",  
     description: "Find the best food deals in your area",
     type: "website",
     images: ["/ogImage_default.jpeg"],
@@ -54,16 +54,12 @@ export default function RootLayout({
       <body className={`antialiased`}>
         <Toaster richColors />
         {/* <Snow /> */}
-        <Navbar />
+        {/* <Navbar /> */}
         {/* <RateUsModal /> */}
 
         {/* pwa install is currently turned off */}
         {/* <PwaInstallPrompt /> */}
-        
-        <Suspense>
-          <SyncUserOfferCoupons />
-          <LocationAccess />
-        </Suspense>
+
         {children}
       </body>
     </html>

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, usePathname } from "next/navigation";
@@ -8,6 +8,8 @@ import { UtensilsCrossed, Menu, X, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
+import LocationAccess from "./LocationAccess";
+import SyncUserOfferCoupons from "./SyncUserOfferCoupons";
 
 export function Navbar() {
   const router = useRouter();
@@ -20,18 +22,23 @@ export function Navbar() {
   const [isTooltipOpen, setIsTooltipOpen] = useState(true);
 
   // Add array of paths where navbar should be hidden
-  const hiddenPaths = ['/hotels/[id]/reviews/new', '/hotels/[id]/reviews' , '/hotels/[id]/menu/[mId]/reviews/new', '/hotels/[id]/menu/[mId]/reviews']; 
+  const hiddenPaths = [
+    "/hotels/[id]/reviews/new",
+    "/hotels/[id]/reviews",
+    "/hotels/[id]/menu/[mId]/reviews/new",
+    "/hotels/[id]/menu/[mId]/reviews",
+    "/qrScan/[...id]",
+  ];
 
   // Check if current path matches any hidden path pattern
-  const shouldHideNavbar = hiddenPaths.some(path => {
+  const shouldHideNavbar = hiddenPaths.some((path) => {
     // Convert path pattern to regex
-    const pattern = path.replace(/\[.*?\]/g, '[^/]+');
+    const pattern = path.replace(/\[.*?\]/g, "[^/]+");
     const regex = new RegExp(`^${pattern}$`);
     return regex.test(location);
   });
 
   useEffect(() => {
-
     const location = localStorage.getItem("loc");
     if (location) {
       setUserLocation(location);
@@ -67,10 +74,7 @@ export function Navbar() {
         </Link>
       ))}
       {!user && (
-        <Link 
-          href="/partner"
-          onClick={() => setIsOpen(false)}
-          >
+        <Link href="/partner" onClick={() => setIsOpen(false)}>
           <Button className="text-white font-medium bg-orange-600 hover:bg-orange-50 hover:border-orange-600 hover:text-orange-600 px-5 text-[1rem] py-3 rounded-full transition-all duration-300">
             Partner with Us
           </Button>
@@ -112,6 +116,10 @@ export function Navbar() {
 
   return (
     <>
+      <Suspense>
+        <SyncUserOfferCoupons />
+        <LocationAccess />
+      </Suspense>
       <nav className="w-full bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">

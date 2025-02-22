@@ -96,7 +96,12 @@ interface AuthState {
   ) => Promise<void>;
   handleFollow: (hotelId: string) => Promise<void>;
   handleUnfollow: (hotelId: string) => Promise<void>;
-  fetchUserVisit: (uid: string, hid: string) => Promise<void>;
+  fetchUserVisit: (uid: string, hid: string) => Promise<{
+    numberOfVisits: number;
+    lastVisit: string;
+    lastDiscountedVisit: string;
+    isRecentVisit: boolean;
+  } | undefined>;
   resetPassword: (email: string) => Promise<void>;
   updateUserPayment: (userId: string, hotelId: string) => Promise<void>;
   handlePartnerRedirectResult: () => Promise<void>;
@@ -177,7 +182,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  fetchUserVisit: async (uid: string, hid: string) => {
+  fetchUserVisit: async (uid: string, hid: string): Promise<{
+    numberOfVisits: number;
+    lastVisit: string;
+    lastDiscountedVisit: string;
+    isRecentVisit: boolean;
+  } | undefined> => {
     try {
       const docRef = doc(db, "users", hid);
       const userDoc = await getDoc(docRef);
@@ -197,18 +207,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           set({
             userVisit: {
               numberOfVisits: follower.visits?.numberOfVisits || 0,
-              lastVisit: follower.visits?.lastVisit || new Date().toISOString(),
+              lastVisit: follower.visits?.lastVisit || null,
               lastDiscountedVisit:
                 follower.visits?.lastDiscountedVisit ||
-                new Date().toISOString(),
-              isRecentVisit: isRecentVisit,
+                null,
+              isRecentVisit: isRecentVisit !== undefined ? isRecentVisit : false,
             },
           });
+
+          return {
+            numberOfVisits: follower.visits?.numberOfVisits || 0,
+            lastVisit: follower.visits?.lastVisit || null,
+            lastDiscountedVisit:
+              follower.visits?.lastDiscountedVisit ||
+              null,
+            isRecentVisit: isRecentVisit !== undefined ? isRecentVisit : false,
+          };
         }
       }
     } catch (error) {
       set({ error: (error as Error).message });
-      throw error;
+      return undefined
     }
   },
 
@@ -247,7 +266,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             await updateDoc(docRef, {
               followers: updatedFollowers,
             });
-            revalidate(hotelId);
+            await revalidate(hotelId);
             await get().fetchUserVisit(userId, hotelId);
           }
         }

@@ -42,6 +42,7 @@ interface QrCode {
 interface Hotel {
   id: string;
   name: string;
+  area: string;
 }
 
 const AssignQrHotel = () => {
@@ -88,7 +89,8 @@ const AssignQrHotel = () => {
       const hotelSnapshot = await getDocs(hotelQuery);
       const hotelData = hotelSnapshot.docs.map((doc) => ({
         id: doc.id,
-        name: doc.data().hotelName
+        name: doc.data().hotelName,
+        area: doc.data().area
       }));
       
       // Filter out assigned hotels after fetching
@@ -133,7 +135,12 @@ const AssignQrHotel = () => {
     if (!selectedQr || !selectedHotel) return;
 
     try {
-      await assignQR(selectedQr.id, selectedHotel.id, selectedHotel.name);
+      await assignQR(
+        selectedQr.id, 
+        selectedHotel.id, 
+        selectedHotel.name,
+        selectedHotel.area
+      );
       await fetchData();
       setIsReassignOpen(false);
       setSelectedQr(null);

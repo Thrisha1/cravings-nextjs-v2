@@ -28,9 +28,12 @@ const PaymentHistoryModal = ({
   upiData,
 }: PaymentHistoryModalProps) => {
   const { user, updateUserPayment, fetchUserVisit } = useAuthStore();
+
   const userVisits = hotelData.followers?.find(
     (follower) => follower.user === userId
   )?.visits;
+
+
 
   const [localPayments, setLocalPayments] = useState<{
     amount: number;
@@ -45,6 +48,10 @@ const PaymentHistoryModal = ({
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
     setLocalPayments(sortedPayments);
+    console.log(sortedPayments);
+    console.log(userVisits);
+    console.log(hotelData);
+    
   }, [userVisits]);
 
   const handlePayment = async () => {

@@ -5,13 +5,21 @@ import { db } from '@/lib/firebase';
 
 // Define the shape of the QR code state
 interface QRState {
-  qrCodes: { hotelId?: string; hotelName?: string; assignedAt?: string; createdAt: string; qrCodeNumber?: number; numberOfQrScans?: number }[];
+  qrCodes: { 
+    hotelId?: string; 
+    hotelName?: string; 
+    hotelArea?: string;  // Added hotelArea
+    assignedAt?: string; 
+    createdAt: string; 
+    qrCodeNumber?: number; 
+    numberOfQrScans?: number 
+  }[];
   loading: boolean;
   error: string | null;
   createQR: (count: number) => Promise<string[]>;
-  assignQR: (docId: string, hotelId: string, hotelName: string) => Promise<void>;
+  assignQR: (docId: string, hotelId: string, hotelName: string, hotelArea: string) => Promise<void>;  // Updated
   fetchQR: (docId: string) => Promise<DocumentData | null>;
-  reassignQR: (docId: string, newHotelId: string) => Promise<void>;
+  reassignQR: (docId: string, newHotelId: string, newHotelName: string, newHotelArea: string) => Promise<void>;
   removeQR: (docId: string) => Promise<void>;
 }
 
@@ -56,12 +64,13 @@ export const useQRStore = create<QRState>((set) => ({
   },
 
   // Function to assign a QR code to a hotel
-  assignQR: async (docId: string, hotelId: string, hotelName: string) => {
+  assignQR: async (docId: string, hotelId: string, hotelName: string, hotelArea: string) => {
     set({ loading: true, error: null });
     try {
       const qrData = {
         hotelId,
         hotelName,
+        hotelArea,  // Added hotelArea
         assignedAt: new Date().toISOString(),
       };
 
@@ -102,19 +111,27 @@ export const useQRStore = create<QRState>((set) => ({
   },
 
   // Function to reassign a QR code to a different hotel
-  reassignQR: async (docId: string, newHotelId: string) => {
+  reassignQR: async (docId: string, newHotelId: string, newHotelName: string, newHotelArea: string) => {
     set({ loading: true, error: null });
     try {
       const qrDocRef = doc(db, 'qrcodes', docId);
       await updateDoc(qrDocRef, { 
         hotelId: newHotelId,
+        hotelName: newHotelName,
+        hotelArea: newHotelArea,
         assignedAt: new Date().toISOString()
       });
 
       // Update local state
       set((state) => ({
         qrCodes: state.qrCodes.map((qr) =>
-          qr.hotelId === newHotelId ? { ...qr, assignedAt: new Date().toISOString() } : qr
+          qr.hotelId === newHotelId ? { 
+            ...qr, 
+            hotelId: newHotelId,
+            hotelName: newHotelName,
+            hotelArea: newHotelArea,
+            assignedAt: new Date().toISOString() 
+          } : qr
         ),
         loading: false,
       }));

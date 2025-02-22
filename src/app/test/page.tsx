@@ -25,6 +25,8 @@ const page = () => {
     }
   };
 
+  
+
   const onClickFn = async () => {
     await removeIdFromMenuItems();
   };

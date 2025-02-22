@@ -97,13 +97,14 @@ const HotelMenuPage = ({
   const [userPhone, setUserPhone] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [menu, setMenu] = useState<MenuItem[]>([]);
-  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [totalMenuItems , setTotalMenuItems] = useState(0);
+  const [lastVisible, setLastVisible] =
+    useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [totalMenuItems, setTotalMenuItems] = useState(0);
 
   const fetchMenuItems = async (isInitial: boolean) => {
     try {
       const menuRef = collection(db, "menuItems");
-  
+
       // Use the correct field for filtering
       let q = query(
         menuRef,
@@ -111,7 +112,7 @@ const HotelMenuPage = ({
         orderBy("name"),
         limit(4)
       );
-  
+
       if (!isInitial && lastVisible) {
         q = query(
           menuRef,
@@ -121,23 +122,24 @@ const HotelMenuPage = ({
           limit(4)
         );
       }
-  
+
       const querySnapshot = await getDocs(q);
-  
+
       if (!querySnapshot.empty) {
         setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]);
       }
-  
+
       // Extract menu array from document
       const menuItems = querySnapshot.docs.map((doc) => {
         return {
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         } as MenuItem;
       });
 
-  
-      setMenu((prevMenu: MenuItem[]) => (isInitial ? menuItems : [...prevMenu, ...menuItems]));
+      setMenu((prevMenu: MenuItem[]) =>
+        isInitial ? menuItems : [...prevMenu, ...menuItems]
+      );
     } catch (error) {
       console.error("Error fetching menu items:", error);
     }
@@ -154,8 +156,6 @@ const HotelMenuPage = ({
       return 0;
     }
   };
-  
-  
 
   const isLoggedIn = () => {
     console.log("isLoggedIn", userData);
@@ -274,10 +274,10 @@ const HotelMenuPage = ({
     }
   };
 
-  useEffect(()=>{
+  useEffect(() => {
     getMenuItemsCount();
     fetchMenuItems(true);
-  },[])
+  }, []);
 
   return (
     <main className="overflow-x-hidden bg-gradient-to-b from-orange-50 to-orange-100 relative">
@@ -350,12 +350,16 @@ const HotelMenuPage = ({
 
           {/* banner Image  */}
           <div className="w-screen h-[200px] absolute top-0 z-0">
-            <Image
-              src={offers[0]?.dishImage ?? menu[0]?.image}
-              alt={offers[0]?.dishName ?? menu[0]?.name}
-              fill
-              className="w-auto h-auto object-cover"
-            />
+            {offers[0]?.dishImage || menu[0]?.image ? (
+              <Image
+                src={offers[0]?.dishImage ?? menu[0]?.image}
+                alt={offers[0]?.dishName ?? menu[0]?.name}
+                fill
+                className="w-auto h-auto object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-orange-200 animate-pulse" />
+            )}
 
             <div
               onClick={() => router.back()}
@@ -451,7 +455,7 @@ const HotelMenuPage = ({
                   onClick={() => setShowPaymentHistory(true)}
                   className="bg-orange-600 hover:bg-orange-500 w-full text-white block mb-4"
                 >
-                  Payment History
+                  Discount History
                 </Button>
               </div>
             )}
