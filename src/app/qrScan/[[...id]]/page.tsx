@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { FileClock, UtensilsCrossed } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useAuthStore, getDiscount } from "@/store/authStore";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -42,6 +42,7 @@ const QrScanPage = () => {
   const [isRecentVisit, setIsRecentVisit] = useState<boolean>(false);
   const [discount, setDiscount] = useState<number>(0);
   const [isPaymentSuccess, setIsPaymentSuccess] = useState<boolean>(false);
+  const router = useRouter();
 
   const getHotelDetails = async () => {
     try {
@@ -230,12 +231,14 @@ const QrScanPage = () => {
                 </div>
 
                 <button
-                  disabled={isPaymentSuccess || isLoading}
-                  onClick={isPaymentSuccess ? () => {} : handlePayNow}
+                  disabled={isLoading}
+                  onClick={isPaymentSuccess ? () => {
+                    router.push(`${window.location.origin}/hotels/${hotelDetails?.hotelId}`);
+                  } : handlePayNow}
                   className="bg-white text-black px-4 w-full py-2 rounded-md disabled:opacity-50"
                 >
                   {isPaymentSuccess
-                    ? "Payment Success"
+                    ? "Go To Hotel Page"
                     : isLoading
                     ? "Processing..."
                     : "Pay Now"}
