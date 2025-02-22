@@ -59,7 +59,7 @@ const QrScanPage = () => {
         throw new Error("ID is null");
       }
     } catch (error) {
-      toast.error(error as string);
+      toast.error("Upi pyament not available");
       console.error(error);
     }
   };
