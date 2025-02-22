@@ -14,27 +14,17 @@ export interface MenuItem {
   category: string;
 }
 
-interface MenuState {
-  items: MenuItem[];
-  loading: boolean;
-  error: string | null;
-  hotelInfo: {
-    hotelName: string;
-    verified: boolean;
-  } | null;
-  selectedHotelId: string | null;
-  setSelectedHotelId: (id: string | null) => void;
-  fetchMenu: (hotelId?: string) => Promise<void>;
-  addItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
-  updateItem: (id: string, item: Partial<MenuItem>) => Promise<void>;
-  deleteItem: (id: string) => Promise<void>;
-}
-
 interface Dish {
   id: string;
   name: string;
   category: string;
   url: string;
+}
+
+interface DishCache {
+  dishes: Dish[];
+  lastFetched: number;
+  expiryTime: number;
 }
 
 export const menuCatagories = [
@@ -51,32 +41,79 @@ export const menuCatagories = [
   "Hot Beverages"
 ];
 
-export const getMenuItemImage = async (category: string, name: string) => {
+const CACHE_EXPIRY_TIME = 60 * 60 * 1000;
+
+const fetchAllDishes = async (): Promise<Dish[]> => {
   const dishRef = collection(db, 'dishes');
-  const q = query(dishRef, where("category", "==", category));
-  const querySnapshot = await getDocs(q);
+  const querySnapshot = await getDocs(dishRef);
   const dishes: Dish[] = [];
   querySnapshot.forEach((doc) => {
     dishes.push({ id: doc.id, ...doc.data() } as Dish);
   });
-  const fuse = new Fuse(dishes, {
+  return dishes;
+};
+
+export const getMenuItemImage = async (category: string, name: string) => {
+  const store = useMenuStore.getState();
+  let dishes: Dish[] = [];
+
+  if (store.dishCache && 
+      Date.now() - store.dishCache.lastFetched < store.dishCache.expiryTime) {
+    dishes = store.dishCache.dishes;
+  } else {
+    dishes = await fetchAllDishes();
+    useMenuStore.setState({
+      dishCache: {
+        dishes,
+        lastFetched: Date.now(),
+        expiryTime: CACHE_EXPIRY_TIME
+      }
+    });
+  }
+
+  const categoryDishes = dishes.filter(dish => dish.category === category);
+  
+  const fuse = new Fuse(categoryDishes, {
     includeScore: false,
     threshold: 0.8,
     keys: ["name", "category"]
   });
+
   const results = fuse.search(name + "_" + category);
-  console.log(results);
   return results.map(result => result.item.url);
+};
+
+interface MenuState {
+  items: MenuItem[];
+  loading: boolean;
+  error: string | null;
+  dishCache: DishCache | null;
+  hotelInfo: {
+    hotelName: string;
+    verified: boolean;
+  } | null;
+  selectedHotelId: string | null;
+  setSelectedHotelId: (id: string | null) => void;
+  fetchMenu: (hotelId?: string) => Promise<void>;
+  addItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
+  updateItem: (id: string, item: Partial<MenuItem>) => Promise<void>;
+  deleteItem: (id: string) => Promise<void>;
+  clearDishCache: () => void;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
   items: [],
   loading: false,
   error: null,
+  dishCache: null,
   hotelInfo: null,
   selectedHotelId: null,
 
   setSelectedHotelId: (id) => set({ selectedHotelId: id }),
+
+  clearDishCache: () => {
+    set({ dishCache: null });
+  },
 
   fetchMenu: async (hotelId?: string) => {
     const user = useAuthStore.getState().user;
