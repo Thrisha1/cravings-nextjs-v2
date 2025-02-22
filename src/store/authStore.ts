@@ -86,7 +86,7 @@ interface AuthState {
     needsPhoneNumber: boolean;
   }>;
   signOut: () => Promise<void>;
-  fetchUserData: (uid: string, save?: boolean) => Promise<UserData | void>;
+  fetchUserData: (uid: string, save?: boolean) => Promise<UserData | null | undefined>;
   updateUserData: (uid: string, updates: Partial<UserData>) => Promise<void>;
   updateUserVisits: (
     uid: string,
@@ -167,6 +167,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   fetchUserData: async (uid: string, save = true) => {
     try {
+
+      if(!uid) {
+        return null;
+      }
+
       const docRef = doc(db, "users", uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
@@ -174,11 +179,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (save) {
           set({ userData: data });
         } else {
-          return data;
+          return data as UserData;
         }
       }
+      return null;
     } catch (error) {
       set({ error: (error as Error).message });
+      return null;
     }
   },
 
