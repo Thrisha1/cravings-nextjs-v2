@@ -172,7 +172,7 @@ const QrScanPage = () => {
   }, []);
 
   return (
-    <main className="px-[7.5%] pt-[12%] pb-[20%] bg-orange-600 h-screen flex flex-col">
+    <main className="px-[7.5%] pt-[12%] pb-[20%] bg-orange-600 h-[100dvh] flex flex-col overflow-hidden">
       <div className="flex justify-between items-start">
         {/* cravings title  */}
         <div className="flex flex-col gap-2 flex-1">
@@ -216,7 +216,7 @@ const QrScanPage = () => {
       <section className={`flex flex-col flex-1 justify-end`}>
         {isSignedIn ? (
           <>
-            {discount > 0 ? (
+            {discount > 0 || isRecentVisit ? (
               <div className="flex flex-col flex-1 justify-between items-center">
                 <div></div>
                 <div className="flex flex-col gap-2">
@@ -225,16 +225,28 @@ const QrScanPage = () => {
                     {Number(billAmount.replace("₹", "")) -
                       Number(billAmount.replace("₹", "")) * (discount / 100)}
                   </h1>
-                  <h1 className="text-white/70 font-medium text-center">
-                    Yay! You got a {discount}% discount
-                  </h1>
+                  {discount > 0 ? (
+                    <h1 className="text-white/70 font-medium text-center">
+                      Yay! You got a {discount}% discount
+                    </h1>
+                  ) : (
+                    <h1 className="text-white/70 font-medium text-center">
+                      Better luck next time!
+                    </h1>
+                  )}
                 </div>
 
                 <button
                   disabled={isLoading}
-                  onClick={isPaymentSuccess ? () => {
-                    router.push(`${window.location.origin}/hotels/${hotelDetails?.hotelId}`);
-                  } : handlePayNow}
+                  onClick={
+                    isPaymentSuccess
+                      ? () => {
+                          router.push(
+                            `${window.location.origin}/hotels/${hotelDetails?.hotelId}`
+                          );
+                        }
+                      : handlePayNow
+                  }
                   className="bg-white text-black px-4 w-full py-2 rounded-md disabled:opacity-50"
                 >
                   {isPaymentSuccess
@@ -246,26 +258,32 @@ const QrScanPage = () => {
               </div>
             ) : (
               <>
-                {isRecentVisit ? (
-                  <div className="flex flex-col gap-2">
-                    <h1 className="text-white text-6xl font-bold">Sorry!</h1>
-                    <div className="text-white/80 text-sm">
-                      You have already claimed your discount for this restaurant
-                      today
-                    </div>
-                    <button
-                      className="bg-white text-black px-4 py-2 rounded-md disabled:opacity-50 mt-5"
-                      onClick={() => {
-                        setIsRecentVisit(false);
+                <form
+                  onSubmit={handleSubmit}
+                  className="flex flex-col gap-2 mt-5 flex-1 justify-between"
+                >
+                  <div />
+
+                  <input
+                    disabled={!hotelDetails}
+                    id="billAmount"
+                    name="billAmount"
+                    value={billAmount}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, "");
+                      if (value === "") {
                         setBillAmount("");
-                      }}
-                    >
-                      Back
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    {/* hotel details  */}
+                      } else {
+                        const formattedValue = `₹${value}`;
+                        setBillAmount(formattedValue);
+                      }
+                    }}
+                    type="text"
+                    placeholder="₹0"
+                    className="w-full p-2 rounded-md text-center text-6xl font-bold bg-transparent text-white placeholder:text-white/70 focus:outline-none "
+                  />
+
+                  <div className="w-full flex flex-col gap-4">
                     <div className="flex flex-col gap-1">
                       <Link
                         href={
@@ -301,40 +319,15 @@ const QrScanPage = () => {
                         )}
                       </div>
                     </div>
-
-                    {/* bill input  */}
-                    <form
-                      onSubmit={handleSubmit}
-                      className="flex flex-col gap-2 mt-5"
+                    <button
+                      disabled={!hotelDetails || !billAmount || isLoading}
+                      type="submit"
+                      className="bg-white text-black px-4 py-2 rounded-md disabled:opacity-50"
                     >
-                      <input
-                        disabled={!hotelDetails}
-                        id="billAmount"
-                        name="billAmount"
-                        value={billAmount}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^0-9]/g, "");
-                          if (value === "") {
-                            setBillAmount("");
-                          } else {
-                            const formattedValue = `₹${value}`;
-                            setBillAmount(formattedValue);
-                          }
-                        }}
-                        type="text"
-                        placeholder="Enter bill amount"
-                        className="w-full p-2 rounded-md bg-white/10 text-white placeholder:text-white/70 focus:outline-none focus:border-white border-2 border-transparent"
-                      />
-                      <button
-                        disabled={!hotelDetails || !billAmount || isLoading}
-                        type="submit"
-                        className="bg-white text-black px-4 py-2 rounded-md disabled:opacity-50"
-                      >
-                        {isLoading ? "Discounting..." : "Get Discount"}
-                      </button>
-                    </form>
-                  </>
-                )}
+                      {isLoading ? "Discounting..." : "Get Discount"}
+                    </button>
+                  </div>
+                </form>
               </>
             )}
           </>
