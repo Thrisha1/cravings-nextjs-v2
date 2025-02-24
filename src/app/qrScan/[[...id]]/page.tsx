@@ -16,6 +16,15 @@ import { useAuthStore, getDiscount } from "@/store/authStore";
 import Link from "next/link";
 import { toast } from "sonner";
 import PartnerLoginModal from "@/components/PartnerLoginModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface hotelDetails {
   hotelId: string;
@@ -43,6 +52,8 @@ const QrScanPage = () => {
   const [isRecentVisit, setIsRecentVisit] = useState<boolean>(false);
   const [discount, setDiscount] = useState<number>(0);
   const [isPaymentSuccess, setIsPaymentSuccess] = useState<boolean>(false);
+  const [showUpiErrorDialog, setShowUpiErrorDialog] = useState(false);
+  const [showHotelPage, setShowHotelPage] = useState(false);
   const router = useRouter();
 
   const getHotelDetails = async () => {
@@ -158,11 +169,12 @@ const QrScanPage = () => {
         window.open(paymentLink, "_blank");
         setIsPaymentSuccess(true);
       } else {
-        throw new Error("UPI ID not found for the hotel");
+        setShowUpiErrorDialog(true);
+        setShowHotelPage(true);
       }
     } catch (error) {
       console.error(error);
-      toast.error(error as string);
+      toast.error("Something went wrong");
     } finally {
       setIsLoading(false);
     }
@@ -232,30 +244,43 @@ const QrScanPage = () => {
                     </h1>
                   ) : (
                     <h1 className="text-white/70 font-medium text-center">
-                      Better luck next time!
+                      Better luck next time with more discounts!
                     </h1>
                   )}
                 </div>
 
-                <button
-                  disabled={isLoading}
-                  onClick={
-                    isPaymentSuccess
-                      ? () => {
-                          router.push(
-                            `${window.location.origin}/hotels/${hotelDetails?.hotelId}`
-                          );
-                        }
-                      : handlePayNow
-                  }
-                  className="bg-white text-black px-4 w-full py-2 rounded-md disabled:opacity-50"
-                >
-                  {isPaymentSuccess
-                    ? "Go To Hotel Page"
-                    : isLoading
-                    ? "Processing..."
-                    : "Pay Now"}
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    disabled={isLoading}
+                    onClick={
+                      isPaymentSuccess
+                        ? () => {
+                            router.push(
+                              `${window.location.origin}/hotels/${hotelDetails?.hotelId}`
+                            );
+                          }
+                        : handlePayNow
+                    }
+                    className="bg-white text-black px-4 w-full py-2 rounded-md disabled:opacity-50"
+                  >
+                    {isPaymentSuccess
+                      ? "Go To Hotel Page"
+                      : isLoading
+                      ? "Processing..."
+                      : "Pay Now"}
+                  </button>
+
+                  {showHotelPage && (
+                    <button
+                      onClick={() => {
+                        router.push(`${window.location.origin}/hotels/${hotelDetails?.hotelId}`);
+                      }}
+                      className="bg-white text-black px-4 w-full py-2 rounded-md"
+                    >
+                      Go To Hotel Page
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               <>
@@ -375,6 +400,25 @@ const QrScanPage = () => {
       </section>
       
       <PartnerLoginModal />
+
+      <Dialog open={showUpiErrorDialog} onOpenChange={setShowUpiErrorDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>UPI Payment Unavailable</DialogTitle>
+            <DialogDescription>
+              UPI payment option is not available right now. Please use cash or card instead.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              onClick={() => setShowUpiErrorDialog(false)}
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              Okay
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 };

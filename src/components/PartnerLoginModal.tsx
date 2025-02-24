@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import Image from "next/image";
+// import Image from "next/image";
 import { X, Check } from "lucide-react";
 
 export default function PartnerLoginModal() {
-  const { signInPartnerWithEmail, signInWithGooglePartner, showPartnerLoginModal } = useAuthStore();
+  const { signInPartnerWithEmail, showPartnerLoginModal } = useAuthStore();
+  // const {signInWithGooglePartner} = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [partnerData, setPartnerData] = useState({
@@ -40,19 +41,19 @@ export default function PartnerLoginModal() {
     }
   };
 
-  const handlePartnerGoogleSignIn = async () => {
-    try {
-      setIsLoading(true);
-      const success = await signInWithGooglePartner();
-      if (success) {
-        await handleSuccess();
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to sign in");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // const handlePartnerGoogleSignIn = async () => {
+  //   try {
+  //     setIsLoading(true);
+  //     const success = await signInWithGooglePartner();
+  //     if (success) {
+  //       await handleSuccess();
+  //     }
+  //   } catch (error) {
+  //     toast.error(error instanceof Error ? error.message : "Failed to sign in");
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   if (!showPartnerLoginModal) return null;
 
@@ -135,7 +136,7 @@ export default function PartnerLoginModal() {
                 </div>
               </div>
 
-              <Button
+              {/* <Button
                 type="button"
                 onClick={handlePartnerGoogleSignIn}
                 className="w-full bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
@@ -155,7 +156,7 @@ export default function PartnerLoginModal() {
                     Sign in with Google
                   </>
                 )}
-              </Button>
+              </Button> */}
             </div>
           </>
         )}
