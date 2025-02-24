@@ -132,6 +132,8 @@ interface AuthState {
   upiData: UpiData | null;
   fetchAndCacheUpiData: (userId: string) => Promise<UpiData | null>;
   updateUpiData: (userId: string, upiId: string) => Promise<void>;
+  showPartnerLoginModal: boolean;
+  setShowPartnerLoginModal: (show: boolean) => void;
 }
 
 const db = getFirestore();
@@ -164,6 +166,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   error: null,
   userVisit: null,
   upiData: null,
+  showPartnerLoginModal: false,
+  setShowPartnerLoginModal: (show: boolean) => set({ showPartnerLoginModal: show }),
 
   fetchUserData: async (uid: string, save = true) => {
     try {
@@ -731,7 +735,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signInWithPhone: async (phone: string): Promise<void> => {
     try {
-      // First check if phone exists with any other role
+      // STEP 1: Check if phone exists as a partner/non-user account
       const allUsersRef = collection(db, "users");
       const nonUserQuery = query(
         allUsersRef,
@@ -741,12 +745,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const nonUserSnapshot = await getDocs(nonUserQuery);
 
       if (!nonUserSnapshot.empty) {
-        throw new Error(
-          "This phone number is registered as a partner. Please use partner login."
-        );
+        // If found as partner, show partner login modal instead of error
+        set({ showPartnerLoginModal: true });
+        return;
       }
 
-      // Check if user exists with this phone
+      // STEP 2: Check if phone exists as a regular user
       const userQuery = query(
         allUsersRef,
         where("phone", "==", `${phone}`),
@@ -754,14 +758,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       );
       const userSnapshot = await getDocs(userQuery);
 
-      // Create standardized email and password
+      // Create standardized email and password from phone
       const email = `${phone}@user.com`;
-      const password = phone; // Using phone number as password
+      const password = phone;
 
       let userData: UserData;
 
+      // STEP 3: Handle user creation or sign in
       if (userSnapshot.empty) {
-        // Create new user with email and password
+        // NEW USER: Create account
         const userCredential = await createUserWithEmailAndPassword(
           auth,
           email,
@@ -783,13 +788,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         await setDoc(doc(db, "users", user.uid), userData);
 
-        // Set the user and userData in store
+        // Update store state
         set({
           user,
           userData: { ...userData, id: user.uid },
         });
       } else {
-        // Sign in existing user
+        // EXISTING USER: Sign in
         const userCredential = await signInWithEmailAndPassword(
           auth,
           email,
@@ -803,18 +808,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           ...userSnapshot.docs[0].data(),
         } as UserData;
 
-        // Update store
+        // Update store state
         set({
           user,
           userData,
         });
       }
+
     } catch (error) {
-      console.error("Sign in error:", error);
+      // STEP 4: Error handling
       if (error instanceof FirebaseError) {
         switch (error.code) {
           case "auth/email-already-in-use":
-            // If email exists, try to sign in
+            // Try signing in if email exists
             try {
               const email = `${phone}@user.com`;
               const userCredential = await signInWithEmailAndPassword(
@@ -822,9 +828,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 email,
                 phone
               );
-              const userData = await get().fetchUserData(
-                userCredential.user.uid
-              );
+              const userData = await get().fetchUserData(userCredential.user.uid);
               if (!userData) {
                 throw new Error("Failed to fetch user data");
               }
@@ -840,7 +844,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             throw new Error("Failed to sign in. Please try again");
         }
       }
-      // Ensure we always throw an Error object
       if (error instanceof Error) {
         throw error;
       }

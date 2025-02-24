@@ -15,6 +15,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuthStore, getDiscount } from "@/store/authStore";
 import Link from "next/link";
 import { toast } from "sonner";
+import PartnerLoginModal from "@/components/PartnerLoginModal";
 
 interface hotelDetails {
   hotelId: string;
@@ -372,6 +373,8 @@ const QrScanPage = () => {
           </>
         )}
       </section>
+      
+      <PartnerLoginModal />
     </main>
   );
 };
