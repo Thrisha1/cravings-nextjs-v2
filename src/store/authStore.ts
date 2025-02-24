@@ -126,7 +126,7 @@ interface AuthState {
   ) => Promise<User | void>;
   signInWithPhone: (phone: string) => Promise<void>;
   signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
-  signInWithGooglePartner: () => Promise<void>;
+  signInWithGooglePartner: () => Promise<boolean>;
   createUpiData: (userId: string, upiId: string) => Promise<void>;
   getUpiData: (userId: string) => Promise<UpiData | null>;
   upiData: UpiData | null;
@@ -885,16 +885,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signInWithGooglePartner: async () => {
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+      // Use signInWithPopup and ignore the window.close() error
+      const result = await signInWithPopup(auth, provider).catch(error => {
+        // Check if it's the window.close() error
+        if (error.message?.includes('Cross-Origin-Opener-Policy')) {
+          // Ignore this specific error as sign in still succeeds
+          return error.customData?._tokenResponse;
+        }
+        throw error; // Re-throw other errors
+      });
 
-      if (!user.email) throw new Error("Email is required");
+      if (!result) throw new Error("Sign in failed");
+
+      // Get user email from result
+      const email = result.email || result.user?.email;
+      if (!email) throw new Error("Email is required");
 
       // Check if a hotel account exists with this email
       const usersRef = collection(db, "users");
       const q = query(
         usersRef,
-        where("email", "==", user.email),
+        where("email", "==", email),
         where("role", "!=", "user")
       );
       const querySnapshot = await getDocs(q);
@@ -915,9 +926,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Update store
       set({
-        user: user,
+        user: auth.currentUser,
         userData: hotelData,
       });
+
+      return true; // Indicate successful sign in
     } catch (error) {
       if (error instanceof FirebaseError) {
         switch (error.code) {

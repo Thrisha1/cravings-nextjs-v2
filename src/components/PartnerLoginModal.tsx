@@ -43,8 +43,10 @@ export default function PartnerLoginModal() {
   const handlePartnerGoogleSignIn = async () => {
     try {
       setIsLoading(true);
-      await signInWithGooglePartner();
-      await handleSuccess();
+      const success = await signInWithGooglePartner();
+      if (success) {
+        await handleSuccess();
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
     } finally {
