@@ -32,6 +32,38 @@ interface hotelDetails {
   hotelArea: string;
 }
 
+interface UPIApp {
+  name: string;
+  icon: string;
+  getUrl: (params: {
+    upiId: string,
+    merchantName: string,
+    amount: number,
+    transactionId: string
+  }) => string;
+}
+
+const upiApps: UPIApp[] = [
+  {
+    name: "Google Pay",
+    icon: "/google-pay.png",
+    getUrl: ({ upiId, merchantName, amount, transactionId }) =>
+      `gpay://upi/pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&tr=${transactionId}&tn=Payment%20to%20${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`
+  },
+  {
+    name: "PhonePe",
+    icon: "/phonepay-icon.jpg",
+    getUrl: ({ upiId, merchantName, amount, transactionId }) =>
+      `phonepe://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&tr=${transactionId}&tn=Payment%20to%20${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`
+  },
+  {
+    name: "Paytm",
+    icon: "/paytm-icon.jpg",
+    getUrl: ({ upiId, merchantName, amount, transactionId }) =>
+      `paytmmp://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&tr=${transactionId}&tn=Payment%20to%20${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`
+  }
+];
+
 const QrScanPage = () => {
   const [billAmount, setBillAmount] = useState<string>("");
   const [hotelDetails, setHotelDetails] = useState<hotelDetails>();
@@ -54,6 +86,7 @@ const QrScanPage = () => {
   const [isPaymentSuccess, setIsPaymentSuccess] = useState<boolean>(false);
   const [showUpiErrorDialog, setShowUpiErrorDialog] = useState(false);
   const [showHotelPage, setShowHotelPage] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const router = useRouter();
 
   const getHotelDetails = async () => {
@@ -159,14 +192,7 @@ const QrScanPage = () => {
       if (!upiDocSnap.empty) {
         const upiData = upiDocSnap.docs[0].data();
         const upiId = upiData.upiId;
-
-        const paymentLink = `upi://pay?pa=${upiId}&pn=${
-          hotelDetails?.hotelName
-        }&am=${
-          Number(billAmount.replace("₹", "")) -
-          (Number(billAmount.replace("₹", "")) * discount) / 100
-        }&cu=INR`;
-        window.open(paymentLink, "_blank");
+        setShowPaymentModal(true);
         setIsPaymentSuccess(true);
       } else {
         setShowUpiErrorDialog(true);
@@ -178,6 +204,33 @@ const QrScanPage = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleUPIPayment = (app: UPIApp) => {
+    setShowPaymentModal(false);
+    
+    const upiRef = collection(db, "upi_ids");
+    const q = query(
+      upiRef,
+      where("userId", "==", hotelDetails?.hotelId as string)
+    );
+    getDocs(q).then((upiDocSnap) => {
+      if (!upiDocSnap.empty) {
+        const upiData = upiDocSnap.docs[0].data();
+        const upiId = upiData.upiId;
+        const finalAmount = Number(billAmount.replace("₹", "")) -
+          (Number(billAmount.replace("₹", "")) * discount) / 100;
+
+        const paymentUrl = app.getUrl({
+          upiId,
+          merchantName: hotelDetails?.hotelName || '',
+          amount: finalAmount,
+          transactionId: Date.now().toString()
+        });
+        
+        window.location.href = paymentUrl;
+      }
+    });
   };
 
   useEffect(() => {
@@ -415,6 +468,37 @@ const QrScanPage = () => {
               className="w-full bg-orange-600 hover:bg-orange-700 text-white"
             >
               Okay
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Choose Payment Method</DialogTitle>
+            <DialogDescription>
+              Select your preferred UPI payment app
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            {upiApps.map((app) => (
+              <Button 
+                key={app.name}
+                onClick={() => handleUPIPayment(app)}
+                className="w-full bg-white hover:bg-gray-100 text-black border flex items-center justify-center gap-2"
+              >
+                <img src={app.icon} alt={app.name} className="w-6 h-6" />
+                Pay with {app.name}
+              </Button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button 
+              onClick={() => setShowPaymentModal(false)}
+              variant="outline"
+            >
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
