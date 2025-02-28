@@ -190,8 +190,6 @@ const QrScanPage = () => {
       );
       const upiDocSnap = await getDocs(q);
       if (!upiDocSnap.empty) {
-        const upiData = upiDocSnap.docs[0].data();
-        const upiId = upiData.upiId;
         setShowPaymentModal(true);
         setIsPaymentSuccess(true);
       } else {
