@@ -278,6 +278,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               followers: updatedFollowers,
             });
             await revalidateTag(hotelId);
+            await revalidateTag(userId);
             await get().fetchUserVisit(userId, hotelId);
           }
         }
