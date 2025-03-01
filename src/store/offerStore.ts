@@ -155,6 +155,7 @@ export const useOfferStore = create<OfferState>((set) => {
           },
           body: JSON.stringify({
             offer: { id: addedOffer.id, ...offerData },
+            hotel : { id: user.uid, ...userData },
           }),
         }).catch((error) => {
           console.error("Error sending message:", error);

@@ -1,36 +1,27 @@
 "use client";
-import { Button } from "@/components/ui/button";
-import { db } from "@/lib/firebase";
-import { collection, deleteField, getDocs, updateDoc, query, where } from "firebase/firestore";
-import React from "react";
+import Link from "next/link";
+// import { Button } from "@/components/ui/button";
+// import { Link } from "lucide-react";
+import React, { useState } from "react";
 
-const page = () => {
-  const removeMenuFieldFromHotels = async () => {
-    try {
-      const usersCollection = collection(db, "users");
-      const hotelQuery = query(usersCollection, where("role", "==", "hotel"));
-      const querySnapshot = await getDocs(hotelQuery);
+const TestPage = () => {
+  const [upiLink, setUpiLink] = useState("upi://pay?pa=6238969297@ptyes&pn=MUHAMMED%20MUSTHAFA%20AMEEN%20%20N%20M");
 
-      let hotelNumber = 0;
-      for (const doc of querySnapshot.docs) {
-        await updateDoc(doc.ref, { menu: deleteField() });
-        hotelNumber++;
-        console.log(`Updated hotel ${hotelNumber}: ${doc.id}`);
+  return (
+    <div>
+      <div>Test Link : </div>
+      <input 
+        type="text" 
+        value={upiLink} 
+        onChange={(e) => setUpiLink(e.target.value)} 
+        placeholder="Enter UPI link" 
+        className="border p-2 mb-4 bg-white"
+      />
 
-        await new Promise((resolve) => setTimeout(resolve, 1500)); // Add delay for each doc
-      }
-
-      console.log("Successfully removed menu field from all hotels");
-    } catch (e) {
-      console.error("Error removing menu field from hotels:", e);
-    }
-  };
-
-  const onClickFn = async () => {
-    await removeMenuFieldFromHotels();
-  };
-
-  return <Button onClick={onClickFn}>Click</Button>;
+      <div>Click :</div>
+      <Link href={upiLink}>{upiLink}</Link>
+    </div>
+  );
 };
 
-export default page;
+export default TestPage;
