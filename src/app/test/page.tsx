@@ -1,34 +1,33 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/firebase";
-import { collection, deleteField, getDocs, updateDoc } from "firebase/firestore";
+import { collection, deleteField, getDocs, updateDoc, query, where } from "firebase/firestore";
 import React from "react";
 
 const page = () => {
-  const removeIdFromMenuItems = async () => {
+  const removeMenuFieldFromHotels = async () => {
     try {
-      const menuItemsCollection = collection(db, "menuItems");
-      const querySnapshot = await getDocs(menuItemsCollection);
+      const usersCollection = collection(db, "users");
+      const hotelQuery = query(usersCollection, where("role", "==", "hotel"));
+      const querySnapshot = await getDocs(hotelQuery);
 
-      let menuItemNumber = 0;
+      let hotelNumber = 0;
       for (const doc of querySnapshot.docs) {
-        await updateDoc(doc.ref, { id: deleteField() });
-        menuItemNumber++;
-        console.log(`Updated menu item ${menuItemNumber}: ${doc.id}`);
+        await updateDoc(doc.ref, { menu: deleteField() });
+        hotelNumber++;
+        console.log(`Updated hotel ${hotelNumber}: ${doc.id}`);
 
         await new Promise((resolve) => setTimeout(resolve, 1500)); // Add delay for each doc
       }
 
-      console.log("Successfully removed id field from all menu items");
+      console.log("Successfully removed menu field from all hotels");
     } catch (e) {
-      console.error("Error removing id from menu items:", e);
+      console.error("Error removing menu field from hotels:", e);
     }
   };
 
-  
-
   const onClickFn = async () => {
-    await removeIdFromMenuItems();
+    await removeMenuFieldFromHotels();
   };
 
   return <Button onClick={onClickFn}>Click</Button>;
