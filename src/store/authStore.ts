@@ -471,6 +471,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         },
       ],
     });
+
+    await revalidateTag(hotelId);
+    await revalidateTag(user.uid);
   },
 
   handleUnfollow: async (hotelId: string) => {
@@ -491,6 +494,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         (following) => following.user !== hotelId
       ),
     });
+
+    await revalidateTag(hotelId);
+    await revalidateTag(user.uid);
   },
 
   resetPassword: async (email: string) => {
