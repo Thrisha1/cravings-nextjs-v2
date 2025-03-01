@@ -190,7 +190,19 @@ const QrScanPage = () => {
       );
       const upiDocSnap = await getDocs(q);
       if (!upiDocSnap.empty) {
-        setShowPaymentModal(true);
+        console.log(navigator.userAgent);
+        
+        const isIphone = /iPhone/.test(navigator.userAgent);
+        if (isIphone) {
+          setShowPaymentModal(true);
+        } else {
+          const upiData = upiDocSnap.docs[0].data();
+          const upiId = upiData.upiId;
+          const finalAmount = Number(billAmount.replace("₹", "")) -
+            (Number(billAmount.replace("₹", "")) * discount) / 100;
+          router.push(`upi://pay?pa=${upiId}&pn=${hotelDetails?.hotelName}&am=${finalAmount}&tn=Payment%20to%20${hotelDetails?.hotelName}`)
+            
+          }
         setIsPaymentSuccess(true);
       } else {
         setShowUpiErrorDialog(true);
@@ -300,7 +312,7 @@ const QrScanPage = () => {
                   )}
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 w-full">
                   <button
                     disabled={isLoading}
                     onClick={
@@ -312,7 +324,7 @@ const QrScanPage = () => {
                           }
                         : handlePayNow
                     }
-                    className="bg-white text-black px-4 w-full py-2 rounded-md disabled:opacity-50"
+                    className="bg-white text-black px-4 w-full py-2 rounded-md disabled:opacity-50 flex-1"
                   >
                     {isPaymentSuccess
                       ? "Go To Hotel Page"
