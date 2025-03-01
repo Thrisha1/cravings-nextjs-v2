@@ -190,9 +190,8 @@ const QrScanPage = () => {
       );
       const upiDocSnap = await getDocs(q);
       if (!upiDocSnap.empty) {
-        console.log(navigator.userAgent);
         
-        const isIphone = /iPhone/.test(navigator.userAgent);
+        const isIphone = /iPad|iPhone|iPod/.test(navigator.userAgent);
         if (isIphone) {
           setShowPaymentModal(true);
         } else {
