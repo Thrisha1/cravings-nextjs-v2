@@ -25,7 +25,7 @@ import {
 } from "firebase/firestore";
 import { auth } from "@/lib/firebase";
 import { MenuItem } from "@/screens/HotelMenuPage";
-import { revalidate } from "@/app/actions/revalidate";
+import { revalidateTag } from "@/app/actions/revalidate";
 import { FirebaseError } from "firebase/app";
 
 export interface UpiData {
@@ -277,7 +277,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             await updateDoc(docRef, {
               followers: updatedFollowers,
             });
-            await revalidate(hotelId);
+            await revalidateTag(hotelId);
             await get().fetchUserVisit(userId, hotelId);
           }
         }
@@ -431,7 +431,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             followers: updatedFollowers,
           });
         }
-        revalidate(hid);
+        revalidateTag(hid);
       }
     } catch (error) {
       set({ error: (error as Error).message });

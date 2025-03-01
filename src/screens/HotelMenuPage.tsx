@@ -17,7 +17,7 @@ import {
 import MenuItemCard from "@/components/MenuItemCard";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { revalidate } from "@/app/actions/revalidate";
+import { revalidateTag } from "@/app/actions/revalidate";
 import { toast } from "sonner";
 import Link from "next/link";
 import {
@@ -197,7 +197,7 @@ const HotelMenuPage = ({
         await handleFollow(hoteldata?.id as string);
         await fetchUserVisit(user?.uid as string, hoteldata?.id as string);
         toast.success("Following");
-        await revalidate(hoteldata?.id as string);
+        await revalidateTag(hoteldata?.id as string);
         const url = new URLSearchParams(searchParams.toString());
         url.delete("qrScan");
         router.replace("?" + url.toString());
@@ -387,13 +387,13 @@ const HotelMenuPage = ({
                       setIsFollowed(false); // Immediately toggle state
                       await handleUnfollow(hoteldata?.id as string);
                       toast.error("Unfollowed successfully");
-                      await revalidate(hoteldata?.id as string);
+                      await revalidateTag(hoteldata?.id as string);
                     } else {
                       if (user) {
                         setIsFollowed(true); // Immediately toggle state
                         await handleFollow(hoteldata?.id as string);
                         toast.success("Followed successfully");
-                        await revalidate(hoteldata?.id as string);
+                        await revalidateTag(hoteldata?.id as string);
                       } else {
                         setShowAuthModal(true);
                       }

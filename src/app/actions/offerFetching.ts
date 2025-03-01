@@ -10,6 +10,8 @@ import Fuse from "fuse.js";
 
 export const getOffers = unstable_cache(
   async () => {
+    console.log("Fetching offers...");
+    
     const now = new Date().toISOString();
     const offersCollection = collection(db, "offers");
     const offersQuery = query(offersCollection, where("toTime", ">", now));

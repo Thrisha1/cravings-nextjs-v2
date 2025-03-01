@@ -14,7 +14,7 @@ import {
 import { db } from "@/lib/firebase";
 import { useAuthStore } from "./authStore";
 import { unstable_cache } from "next/cache";
-import { revalidate } from "@/app/actions/revalidate";
+import { revalidateTag } from "@/app/actions/revalidate";
 
 export interface Offer {
   id: string;
@@ -124,10 +124,7 @@ export const useOfferStore = create<OfferState>((set) => {
         }
 
         const menuItem = menuItemSnap.data();
-
-        console.log(userData);
         
-
         const offerData = {
           ...offer,
           hotelId: user.uid,
@@ -149,7 +146,8 @@ export const useOfferStore = create<OfferState>((set) => {
         const offersRef = collection(db, "offers");
         const addedOffer = await addDoc(offersRef, offerData);
 
-        await revalidate("offers");
+        await revalidateTag("offers");
+
         fetch(`${process.env.NEXT_PUBLIC_WWJS_API_URL}/send-message`, {
           method: "POST",
           headers: {
@@ -175,7 +173,7 @@ export const useOfferStore = create<OfferState>((set) => {
         set({ error: null });
         const offerRef = doc(db, "offers", id);
         await deleteDoc(offerRef);
-        await revalidate("offers");
+        await revalidateTag("offers");
       } catch (error) {
         set({ error: (error as Error).message });
         throw error;

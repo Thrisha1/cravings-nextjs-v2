@@ -17,6 +17,7 @@ export default function Offers() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const searchParams = useSearchParams();
   const [isLoading, setLoading] = useState(true);
+  
   const fetchOffers = async () => {
     const offs = await getOffers();
     const filteredOffs = await filterAndSortOffers({
