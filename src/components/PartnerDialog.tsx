@@ -97,6 +97,7 @@ export function PartnerDialog() {
           formData.upiId
         );
         toast.success("Account created successfully!");
+        router.push("/admin");
       } else {
         await signInWithGoogleForPartner(
           formData.hotelName,

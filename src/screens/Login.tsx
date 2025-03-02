@@ -47,7 +47,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       await signInPartnerWithEmail(partnerData.email, partnerData.password);
-      navigate.push("/");
+      navigate.push("/admin");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
     } finally {
@@ -59,7 +59,7 @@ export default function Login() {
     try {
       setIsLoading(true);
       await signInWithGooglePartner();
-      navigate.push("/");
+      navigate.push("/admin");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
     } finally {
