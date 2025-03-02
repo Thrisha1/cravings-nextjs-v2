@@ -65,6 +65,17 @@ export default function PartnerVerification() {
     }
   };
 
+  const rejectPartner = async (partnerId: string) => {
+    try {
+      await updateDoc(doc(db, "users", partnerId), {
+        verified: false,
+      });
+      setPartners(partners.filter((partner) => partner.id !== partnerId));
+    } catch (error) {
+      console.error("Error rejecting partner:", error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-orange-50 to-orange-100 flex items-center justify-center">
@@ -110,6 +121,12 @@ export default function PartnerVerification() {
                       className="flex-1 bg-green-600 hover:bg-green-700"
                     >
                       Verify Partner
+                    </Button>
+                    <Button
+                      onClick={() => rejectPartner(partner.id)}
+                      className="flex-1 bg-red-600 hover:bg-red-700"
+                    >
+                      Reject Partner
                     </Button>
                     <Button
                       variant="outline"

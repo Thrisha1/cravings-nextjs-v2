@@ -115,6 +115,12 @@ const AssignQrHotel = () => {
     hotel.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Filter QR codes based on search query
+  const filteredQRCodes = qrCodes.filter((qr) => {
+    const hotelMatch = qr.hotelName?.toLowerCase().includes(searchQuery.toLowerCase());
+    const qrMatch = qr.qrCodeNumber?.toString().includes(searchQuery);
+    return hotelMatch || qrMatch;
+  });
 
   // Handle generating multiple QR codes
   const handleGenerateQRs = async () => {
@@ -266,7 +272,7 @@ const AssignQrHotel = () => {
           </DialogContent>
         </Dialog>
 
-        <div className="flex gap-2">
+        <div className="grid  sm:flex gap-2">
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="mr-2 h-4 w-4" />
             Print Selected QR Codes
@@ -314,6 +320,16 @@ const AssignQrHotel = () => {
         </div>
       )}
 
+      <div className="flex items-center mb-4 bg-white rounded-lg p-1 focus-within:ring-1 ring-black">
+        <Search className="h-4 w-4 text-gray-400" />
+        <Input
+          placeholder="Search QR by hotel name or QR number..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full border-none shadow-none focus-visible:ring-0"
+        />
+      </div>
+
       <Table className="mt-10 sm:mt-0">
         <TableHeader>
           <TableRow>
@@ -324,8 +340,8 @@ const AssignQrHotel = () => {
               />
             </TableHead>
             <TableHead className="text-sm sm:text-base">QR Number</TableHead>
-            <TableHead className="text-sm sm:text-base">QR ID</TableHead>
-            <TableHead className="text-sm sm:text-base">Hotel ID</TableHead>
+            {/* <TableHead className="text-sm sm:text-base">QR ID</TableHead> */}
+            {/* <TableHead className="text-sm sm:text-base">Hotel ID</TableHead> */}
             <TableHead className="text-sm sm:text-base">Hotel Name</TableHead>
             <TableHead className="text-sm sm:text-base">Assigned At</TableHead>
             <TableHead className="text-sm sm:text-base">Number of Scans</TableHead>
@@ -338,7 +354,7 @@ const AssignQrHotel = () => {
                 Loading QR codes...
               </TableCell>
             </TableRow>
-          ) : qrCodes.map((qr) => (
+          ) : filteredQRCodes.map((qr) => (
             <TableRow
               key={qr.id}
               className="cursor-pointer hover:bg-gray-50"
@@ -354,8 +370,8 @@ const AssignQrHotel = () => {
                 />
               </TableCell>
               <TableCell>{qr.qrCodeNumber}</TableCell>
-              <TableCell>{qr.id}</TableCell>
-              <TableCell>{qr.hotelId || "NULL"}</TableCell>
+              {/* <TableCell>{qr.id}</TableCell> */}
+              {/* <TableCell>{qr.hotelId || "NULL"}</TableCell> */}
               <TableCell>{qr.hotelName || "NULL"}</TableCell>
               <TableCell>{qr.assignedAt ? new Date(qr.assignedAt).toLocaleString() : "NULL"}</TableCell>
               <TableCell>{qr.numberOfQrScans || 0}</TableCell>
