@@ -893,19 +893,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const provider = new GoogleAuthProvider();
       // Use signInWithPopup and ignore the window.close() error
-      const result = await signInWithPopup(auth, provider).catch(error => {
-        // Check if it's the window.close() error
-        if (error.message?.includes('Cross-Origin-Opener-Policy')) {
-          // Ignore this specific error as sign in still succeeds
-          return error.customData?._tokenResponse;
-        }
-        throw error; // Re-throw other errors
-      });
-
-      if (!result) throw new Error("Sign in failed");
+      const result = await signInWithPopup(auth, provider);
 
       // Get user email from result
-      const email = result.email || result.user?.email;
+      const email = result.user?.email;
       if (!email) throw new Error("Email is required");
 
       // Check if a hotel account exists with this email
@@ -937,16 +928,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         userData: hotelData,
       });
 
-      return true; // Indicate successful sign in
+      return true; 
     } catch (error) {
-      if (error instanceof FirebaseError) {
-        switch (error.code) {
-          case "auth/popup-closed-by-user":
-            throw new Error("Sign in cancelled");
-          default:
-            throw new Error("Failed to sign in. Please try again");
-        }
-      }
+      console.error(error);
       throw error;
     }
   },

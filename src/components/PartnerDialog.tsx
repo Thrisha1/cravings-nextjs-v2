@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 
+
 export function PartnerDialog() {
   const router = useRouter();
   const { signInWithGoogleForPartner, signUpWithEmailForPartner } =
@@ -198,7 +199,7 @@ export function PartnerDialog() {
 
           <div className="space-y-2">
             <Label htmlFor="area" className="text-sm font-medium text-gray-700">
-              Area
+              District
             </Label>
             <Select
               value={formData.area}
@@ -207,10 +208,10 @@ export function PartnerDialog() {
               }
             >
               <SelectTrigger id="area" className="w-full">
-                <SelectValue placeholder="Select your area" />
+                <SelectValue placeholder="Select your district" />
               </SelectTrigger>
               <SelectContent>
-                {locations.map((location) => (
+                {locations.map((location : string) => (
                   <SelectItem key={location} value={location}>
                     {location}
                   </SelectItem>

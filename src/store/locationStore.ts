@@ -5,5 +5,20 @@ interface LocationState {
 }
 
 export const useLocationStore = create<LocationState>(() => ({
-  locations: ["kakkanad", "kalamassery", "edapally"],
+  locations:[
+    "Kasaragod",
+    "Kannur",
+    "Kozhikode",
+    "Malappuram",
+    "Palakkad",
+    "Thrissur",
+    "Ernakulam",
+    "Idukki",
+    "Wayanad",
+    "Kottayam",
+    "Pathanamthitta",
+    "Alappuzha",
+    "Kollam",
+    "Trivandrum",
+  ],
 }));
