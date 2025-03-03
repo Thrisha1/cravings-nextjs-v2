@@ -9,7 +9,7 @@ import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
-
+import Link from "next/link";
 type LoginMode = "user" | "partner";
 export default function Login() {
   const { signInWithPhone, signInPartnerWithEmail, signInWithGooglePartner } = useAuthStore();
@@ -139,6 +139,7 @@ export default function Login() {
                   onChange={(e) => setPartnerData({ ...partnerData, password: e.target.value })}
                   required
                 />
+                <Link href="/login/forgot-password" className="text-right flex flex-1 justify-end w-full  text-sm text-gray-500 hover:text-orange-600">Forgot Password?</Link>
               </div>
               <Button
                 type="submit"
