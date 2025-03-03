@@ -3,6 +3,7 @@ import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where } 
 import { db } from '@/lib/firebase';
 import { useAuthStore } from './authStore';
 import Fuse from 'fuse.js'
+import CATEGORIES from '@/data/CATEGORIES.json';
 
 export interface MenuItem {
   id: string;
@@ -27,19 +28,7 @@ interface DishCache {
   expiryTime: number;
 }
 
-export const menuCatagories = [
-  "Starters & Appetizers",
-  "Rice & Biryani Dishes",
-  "Breads & Indian Breads",
-  "Wraps & Shawarma",
-  "Chinese & Asian Dishes",
-  "Indian Main Course - Non-Veg & Veg",
-  "Mandhi Session",
-  "Mojitos & Refreshing Drinks",
-  "Shakes & Smoothies",
-  "Fresh Juices",
-  "Hot Beverages"
-];
+export const menuCatagories = CATEGORIES.map((category) => category.name);
 
 const CACHE_EXPIRY_TIME = 60 * 60 * 1000;
 

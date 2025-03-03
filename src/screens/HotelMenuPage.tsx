@@ -1,6 +1,6 @@
 "use client";
 import React, { Suspense, useEffect, useState } from "react";
-import NoOffersFound from "@/components/NoOffersFound";
+// import NoOffersFound from "@/components/NoOffersFound";
 import SearchBox from "@/components/SearchBox";
 import Image from "next/image";
 import { Offer } from "@/store/offerStore";
@@ -14,7 +14,7 @@ import {
   Star,
   History,
 } from "lucide-react";
-import MenuItemCard from "@/components/MenuItemCard";
+// import MenuItemCard from "@/components/MenuItemCard";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { revalidateTag } from "@/app/actions/revalidate";
@@ -42,7 +42,7 @@ import { Label } from "@/components/ui/label";
 import {
   collection,
   DocumentData,
-  getCountFromServer,
+  // getCountFromServer,
   getDocs,
   limit,
   orderBy,
@@ -52,6 +52,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import CategoryList from "@/components/CategoryList";
 
 export type MenuItem = {
   description: string;
@@ -99,7 +100,7 @@ const HotelMenuPage = ({
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [lastVisible, setLastVisible] =
     useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const [totalMenuItems, setTotalMenuItems] = useState(0);
+  // const [totalMenuItems, setTotalMenuItems] = useState(0);
 
   const fetchMenuItems = async (isInitial: boolean) => {
     try {
@@ -145,17 +146,17 @@ const HotelMenuPage = ({
     }
   };
 
-  const getMenuItemsCount = async () => {
-    try {
-      const menuRef = collection(db, "menuItems");
-      const q = query(menuRef, where("hotelId", "==", hoteldata.id));
-      const snapshot = await getCountFromServer(q);
-      setTotalMenuItems(snapshot.data().count);
-    } catch (error) {
-      console.error("Error fetching menu items count:", error);
-      return 0;
-    }
-  };
+  // const getMenuItemsCount = async () => {
+  //   try {
+  //     const menuRef = collection(db, "menuItems");
+  //     const q = query(menuRef, where("hotelId", "==", hoteldata.id));
+  //     const snapshot = await getCountFromServer(q);
+  //     // setTotalMenuItems(snapshot.data().count);
+  //   } catch (error) {
+  //     console.error("Error fetching menu items count:", error);
+  //     return 0;
+  //   }
+  // };
 
   const isLoggedIn = () => {
     console.log("isLoggedIn", userData);
@@ -275,7 +276,7 @@ const HotelMenuPage = ({
   };
 
   useEffect(() => {
-    getMenuItemsCount();
+    // getMenuItemsCount();
     fetchMenuItems(true);
   }, []);
 
@@ -504,7 +505,7 @@ const HotelMenuPage = ({
             )}
 
             {/* Menu items  */}
-            <section className="border-t-2 border-orange-600/10">
+            {/* <section className="border-t-2 border-orange-600/10">
               <h1 className="text-lg relative flex max-w-[50%] md:text-3xl font-semibold pt-5 capitalize">
                 All Menu Items
               </h1>
@@ -537,7 +538,9 @@ const HotelMenuPage = ({
                   <NoOffersFound />
                 )}
               </section>
-            </section>
+            </section> */}
+
+            <CategoryList hotelId={hoteldata?.id as string} />
 
             {/* rate this hotel  */}
             <section className="px-3 pt-10 pb-5 flex sm:justify-center sm:pt-20 sm:pb-10">
