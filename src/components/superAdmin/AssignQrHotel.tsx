@@ -5,6 +5,8 @@ import {
   getDocs,
   where,
   query,
+  doc,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
@@ -24,11 +26,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Printer, QrCodeIcon } from "lucide-react";
+import { Search, Printer, QrCodeIcon, Trash, HotelIcon } from "lucide-react";
 import { useQRStore } from "@/store/qrStore";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Scanner } from '@yudiel/react-qr-scanner';
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 interface QrCode {
   id: string;
@@ -50,17 +52,18 @@ const AssignQrHotel = () => {
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
-  const [selectedQr, setSelectedQr] = useState<QrCode | null>(null);
+  const [selectedQrs, setSelectedQrs] = useState<QrCode[]>([]);
   const [isReassignOpen, setIsReassignOpen] = useState(false);
   const [isGenerateOpen, setIsGenerateOpen] = useState(false);
   const [qrCount, setQrCount] = useState(1);
-  const [selectedQRs, setSelectedQRs] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isQrGenerating , setIsQrGenerating] = useState(false);
   const { createQR, assignQR } = useQRStore();
   const [showScanner, setShowScanner] = useState(false);
-  const { toast } = useToast();
   const [lastScannedQr, setLastScannedQr] = useState<QrCode | null>(null);
+
+  // State for modal search
+  const [modalSearchQuery, setModalSearchQuery] = useState("");
 
   // Fetch QR codes and hotels
   const fetchData = async () => {
@@ -77,8 +80,8 @@ const AssignQrHotel = () => {
       ).sort((a, b) => (a.qrCodeNumber || 0) - (b.qrCodeNumber || 0));
       setQrCodes(qrData);
 
-      // Get array of hotel IDs that are already assigned to QR codes
-      const assignedHotelIds = qrData.map((qr) => qr.hotelId).filter(Boolean);
+      // // Get array of hotel IDs that are already assigned to QR codes
+      // const assignedHotelIds = qrData.map((qr) => qr.hotelId).filter(Boolean);
 
       // Fetch all hotels with role "hotel", not filtering assigned ones yet
       const hotelQuery = query(
@@ -93,12 +96,7 @@ const AssignQrHotel = () => {
         area: doc.data().area
       }));
       
-      // Filter out assigned hotels after fetching
-      const unassignedHotels = hotelData.filter(
-        hotel => !assignedHotelIds.includes(hotel.id)
-      );
-      
-      setHotels(unassignedHotels);
+      setHotels(hotelData);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -109,11 +107,6 @@ const AssignQrHotel = () => {
   useEffect(() => {
     fetchData();
   }, []);
-
-  // Filter hotels based on search query
-  const filteredHotels = hotels.filter((hotel) =>
-    hotel.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   // Filter QR codes based on search query
   const filteredQRCodes = qrCodes.filter((qr) => {
@@ -138,18 +131,20 @@ const AssignQrHotel = () => {
 
   // Handle QR reassignment
   const handleReassign = async () => {
-    if (!selectedQr || !selectedHotel) return;
+    if (!selectedHotel || selectedQrs.length === 0) return;
 
     try {
-      await assignQR(
-        selectedQr.id, 
-        selectedHotel.id, 
-        selectedHotel.name,
-        selectedHotel.area
-      );
+      for (const qr of selectedQrs) {
+        await assignQR(
+          qr.id, 
+          selectedHotel.id, 
+          selectedHotel.name,
+          selectedHotel.area
+        );
+      }
       await fetchData();
       setIsReassignOpen(false);
-      setSelectedQr(null);
+      setSelectedQrs([]);
       setSelectedHotel(null);
       setSearchQuery("");
     } catch (error) {
@@ -157,31 +152,38 @@ const AssignQrHotel = () => {
     }
   };
 
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedQRs(qrCodes.map(qr => qr.id));
-    } else {
-      setSelectedQRs([]);
+  // Handle removing hotel assignment
+  const handleRemoveAssignment = async (qrId: string) => {
+    try {
+      const qrDocRef = doc(db, "qrcodes", qrId);
+      await updateDoc(qrDocRef, {
+        hotelId: null,
+        hotelName: null,
+        assignedAt: null,
+      });
+      await fetchData();
+    } catch (error) {
+      console.error("Error removing hotel assignment:", error);
     }
   };
 
-  const handleSelectQR = (qrId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedQRs(prev => [...prev, qrId]);
-    } else {
-      setSelectedQRs(prev => prev.filter(id => id !== qrId));
-    }
-  };
+  // Filter hotels based on modal search query
+  const filteredHotels = hotels.filter((hotel) =>
+    hotel.name.toLowerCase().includes(modalSearchQuery.toLowerCase())
+  );
 
-  // Handle printing selected QR codes
-  const handlePrint = () => {
-    if (selectedQRs.length === 0) {
+
+   // Handle printing selected QR codes
+   const handlePrint = () => {
+    if (selectedQrs.length === 0) {
       alert("Please select QR codes to print");
       return;
     }
 
-    const qrsToPrint = qrCodes.filter(qr => selectedQRs.includes(qr.id));
+      const qrsToPrint = qrCodes.filter(qr => {
+        const isSelected = selectedQrs.some(selectedQr => selectedQr.id === qr.id);
+        return isSelected;
+      });
     // Create printable content with table format
     const printContent = `
       <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%;">
@@ -219,26 +221,13 @@ const AssignQrHotel = () => {
     // Create a new window for printing
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Selected QR Codes Report</title>
-            <style>
-              body { margin: 20px; }
-              table { font-family: Arial, sans-serif; }
-              th { background-color: #f0f0f0; }
-              td, th { padding: 8px; text-align: left; }
-            </style>
-          </head>
-          <body>
-            ${printContent}
-          </body>
-        </html>
-      `);
+      printWindow.document.write('<pre>' + printContent + '</pre>');
       printWindow.document.close();
       printWindow.print();
+    } else {
+      console.error("Failed to open print window");
     }
-  };
+  }
 
   return (
     <section className="p-4">
@@ -335,16 +324,22 @@ const AssignQrHotel = () => {
           <TableRow>
             <TableHead>
               <Checkbox 
-                checked={selectedQRs.length === qrCodes.length}
-                onCheckedChange={(checked: boolean) => handleSelectAll(checked)}
+                checked={selectedQrs.length === qrCodes.length}
+                onCheckedChange={(checked: boolean) => {
+                  if (checked) {
+                    setSelectedQrs(qrCodes);
+                  } else {
+                    setSelectedQrs([]);
+                  }
+                }}
               />
             </TableHead>
             <TableHead className="text-sm sm:text-base">QR Number</TableHead>
-            {/* <TableHead className="text-sm sm:text-base">QR ID</TableHead> */}
-            {/* <TableHead className="text-sm sm:text-base">Hotel ID</TableHead> */}
+            <TableHead className="text-sm sm:text-base">QR ID</TableHead>
             <TableHead className="text-sm sm:text-base">Hotel Name</TableHead>
             <TableHead className="text-sm sm:text-base">Assigned At</TableHead>
             <TableHead className="text-sm sm:text-base">Number of Scans</TableHead>
+            <TableHead className="text-sm sm:text-base">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -358,23 +353,41 @@ const AssignQrHotel = () => {
             <TableRow
               key={qr.id}
               className="cursor-pointer hover:bg-gray-50"
-              onClick={() => {
-                setSelectedQr(qr);
-                setIsReassignOpen(true);
-              }}
             >
-              <TableCell onClick={(e) => e.stopPropagation()}>
+              <TableCell>
                 <Checkbox 
-                  checked={selectedQRs.includes(qr.id)}
-                  onCheckedChange={(checked: boolean) => handleSelectQR(qr.id, checked)}
+                  checked={selectedQrs.includes(qr)}
+                  onCheckedChange={(checked: boolean) => {
+                    if (checked) {
+                      setSelectedQrs(prev => [...prev, qr]);
+                    } else {
+                      setSelectedQrs(prev => prev.filter(q => q.id !== qr.id));
+                    }
+                  }}
                 />
               </TableCell>
               <TableCell>{qr.qrCodeNumber}</TableCell>
-              {/* <TableCell>{qr.id}</TableCell> */}
-              {/* <TableCell>{qr.hotelId || "NULL"}</TableCell> */}
-              <TableCell>{qr.hotelName || "NULL"}</TableCell>
-              <TableCell>{qr.assignedAt ? new Date(qr.assignedAt).toLocaleString() : "NULL"}</TableCell>
+              <TableCell>{qr.id}</TableCell>
+              <TableCell>{qr.hotelName || "Not assigned"}</TableCell>
+              <TableCell>{qr.assignedAt ? new Date(qr.assignedAt).toLocaleString() : "Not assigned"}</TableCell>
               <TableCell>{qr.numberOfQrScans || 0}</TableCell>
+              <TableCell>
+                <Button
+                  onClick={() => handleRemoveAssignment(qr.id)}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={() => {
+                    setSelectedQrs([qr]);
+                    setIsReassignOpen(true);
+                  }}
+                  className="bg-green-600 hover:bg-green-700 ml-2"
+                >
+                  <HotelIcon className="h-4 w-4" />
+                </Button>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -384,17 +397,15 @@ const AssignQrHotel = () => {
       <Dialog open={isReassignOpen} onOpenChange={setIsReassignOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {selectedQr?.hotelId ? "Reassign QR Code" : "Assign QR Code"}
-            </DialogTitle>
+            <DialogTitle>Assign QR Code</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <Search className="w-4 h-4 text-gray-400" />
               <Input
                 placeholder="Search hotels..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={modalSearchQuery}
+                onChange={(e) => setModalSearchQuery(e.target.value)}
               />
             </div>
             <div className="max-h-64 overflow-y-auto">
@@ -403,7 +414,7 @@ const AssignQrHotel = () => {
                   <div
                     key={hotel.id}
                     className={`p-2 cursor-pointer hover:bg-gray-100 ${
-                      selectedHotel?.id === hotel.id ? "bg-blue-50" : ""
+                      selectedHotel?.id === hotel.id ? "bg-orange-600/50" : ""
                     }`}
                     onClick={() => setSelectedHotel(hotel)}
                   >
@@ -420,7 +431,7 @@ const AssignQrHotel = () => {
                 onClick={() => {
                   setIsReassignOpen(false);
                   setSelectedHotel(null);
-                  setSearchQuery("");
+                  setModalSearchQuery(""); // Reset modal search query
                 }}
               >
                 Cancel
@@ -430,7 +441,7 @@ const AssignQrHotel = () => {
                 disabled={!selectedHotel}
                 className="bg-orange-600 hover:bg-orange-700 text-white"
               >
-                {selectedQr?.hotelId ? "Reassign" : "Assign"}
+                Assign
               </Button>
             </div>
           </div>
@@ -459,25 +470,17 @@ const AssignQrHotel = () => {
                     const foundQr = qrCodes.find(qr => qr.id === qrId);
                     if (foundQr) {
                       setLastScannedQr(foundQr);
-                      setSelectedQr(foundQr);
+                      setSelectedQrs([foundQr]);
                       setShowScanner(false);
                       setIsReassignOpen(true);
                     } else {
-                      toast({
-                        variant: "destructive",
-                        title: "QR Code not found",
-                        description: "The scanned QR code is not in the system."
-                      });
+                      toast.error("QR Code not found");
                     }
                   }
                 }}
                 onError={(error) => {
                   console.error('Scanner error:', error);
-                  toast({
-                    variant: "destructive",
-                    title: "Scanner Error",
-                    description: "Failed to start camera. Please check permissions."
-                  });
+                  toast.error("Failed to start camera. Please check permissions.");
                 }}
                 constraints={{
                   facingMode: 'environment'
