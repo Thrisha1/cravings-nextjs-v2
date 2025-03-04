@@ -24,13 +24,13 @@ const CategoryPage = () => {
   const [category, setCategory] = useState<Category | null>(null);
 
   useEffect(() => {
-    const fetchMenuItems = async () => {
+    const fetchMenuItems = async (selectedCategory: string) => {
       setLoading(true);
       try {
         const menuQuery = query(
           collection(db, "menuItems"),
           where("hotelId", "==", id),
-          where("category", "==", categoryId)
+          where("category", "==", selectedCategory)
         );
         const menuSnapshot = await getDocs(menuQuery);
         const items = menuSnapshot.docs.map((doc) => ({
@@ -46,9 +46,11 @@ const CategoryPage = () => {
     };
 
     const fetchData = async () => {
-      await fetchMenuItems();
+      
       const selectedCategory = CATEGORIES.find(cat => cat.id.toString() === categoryId);
       setCategory(selectedCategory as unknown as Category);
+
+      await fetchMenuItems(selectedCategory?.name as string);
     };
     fetchData();
   }, [id, categoryId]);
