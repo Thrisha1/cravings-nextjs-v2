@@ -6,6 +6,8 @@ import Image from "next/image";
 import { Offer } from "@/store/offerStore";
 import { useAuthStore, UserData } from "@/store/authStore";
 import OfferCardMin from "@/components/OfferCardMin";
+import Autoplay from "embla-carousel-autoplay"
+
 import {
   ArrowLeft,
   MapPin,
@@ -53,6 +55,13 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import CategoryList from "@/components/CategoryList";
+import MenuItemCard from "@/components/MenuItemCard";
+import { useMenuStore } from "@/store/menuStore";
+import {
+  Carousel,
+  CarouselItem,
+  CarouselContent,
+} from "@/components/ui/carousel";
 
 export type MenuItem = {
   description: string;
@@ -100,7 +109,8 @@ const HotelMenuPage = ({
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [lastVisible, setLastVisible] =
     useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  // const [totalMenuItems, setTotalMenuItems] = useState(0);
+  const { fetchTopMenuItems } = useMenuStore();
+  const [topMenuItems, setTopMenuItems] = useState<MenuItem[]>([]);
 
   const fetchMenuItems = async (isInitial: boolean) => {
     try {
@@ -145,18 +155,6 @@ const HotelMenuPage = ({
       console.error("Error fetching menu items:", error);
     }
   };
-
-  // const getMenuItemsCount = async () => {
-  //   try {
-  //     const menuRef = collection(db, "menuItems");
-  //     const q = query(menuRef, where("hotelId", "==", hoteldata.id));
-  //     const snapshot = await getCountFromServer(q);
-  //     // setTotalMenuItems(snapshot.data().count);
-  //   } catch (error) {
-  //     console.error("Error fetching menu items count:", error);
-  //     return 0;
-  //   }
-  // };
 
   const isLoggedIn = () => {
     console.log("isLoggedIn", userData);
@@ -279,6 +277,15 @@ const HotelMenuPage = ({
     // getMenuItemsCount();
     fetchMenuItems(true);
   }, []);
+
+  useEffect(() => {
+    const fetchItems = async () => {
+      const items = await fetchTopMenuItems(hoteldata?.id as string);
+      setTopMenuItems(items as MenuItem[]);
+    };
+
+    fetchItems();
+  }, [fetchTopMenuItems, hoteldata?.id]);
 
   return (
     <main className="overflow-x-hidden bg-gradient-to-b from-orange-50 to-orange-100 relative">
@@ -540,7 +547,34 @@ const HotelMenuPage = ({
               </section>
             </section> */}
 
-            <CategoryList hotelId={hoteldata?.id as string} />
+            {topMenuItems.length > 0 && (
+              <div className="p-4">
+                <h1 className="text-2xl font-bold mb-4">Top 3 Items ⭐</h1>
+                <Carousel
+                  plugins={[
+                    Autoplay({
+                      delay: 2000,
+                    }),
+                  ]}
+                  className="w-full max-w-xs"
+                >
+                  <CarouselContent>
+                    {topMenuItems.map((item) => (
+                      <CarouselItem key={item.id}>
+                        <MenuItemCard
+                          menuItem={item}
+                          hotelId={hoteldata?.id as string}
+                        />
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                </Carousel>
+              </div>
+            )}
+
+            <section className="px-[7%]">
+              <CategoryList hotelId={hoteldata?.id as string} />
+            </section>
 
             {/* rate this hotel  */}
             <section className="px-3 pt-10 pb-5 flex sm:justify-center sm:pt-20 sm:pb-10">

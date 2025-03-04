@@ -3,6 +3,7 @@ import { Plus, Search, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch"; // Import the Switch component
 import { useMenuStore } from "@/store/menuStore";
 import { useAdminOfferStore } from "@/store/useAdminOfferStore";
 import { useAuthStore } from "@/store/authStore";
@@ -11,6 +12,7 @@ import Link from "next/link";
 import { AddMenuItemModal } from "../bulkMenuUpload/AddMenuItemModal";
 import { EditMenuItemModal } from "./EditMenuItemModal";
 import { deleteFileFromS3 } from "@/app/actions/aws-s3";
+import { toast } from "sonner";
 
 export function MenuTab() {
   const { items, addItem, updateItem, deleteItem } = useMenuStore();
@@ -87,6 +89,7 @@ export function MenuTab() {
     setIsEditModalOpen(true);
   };
 
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
@@ -118,8 +121,7 @@ export function MenuTab() {
         isOpen={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
         onSubmit={handleAddItem}
-      >
-      </AddMenuItemModal>
+      />
 
       {editingItem && (
         <EditMenuItemModal
@@ -127,8 +129,7 @@ export function MenuTab() {
           onOpenChange={setIsEditModalOpen}
           item={editingItem}
           onSubmit={handleEditItem}
-        >
-        </EditMenuItemModal>
+        />
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -149,6 +150,22 @@ export function MenuTab() {
               {item.description && (
                 <p className="text-gray-600 mt-2">{item.description}</p>
               )}
+              <div className="flex items-center mt-2">
+                <label className="mr-2">Mark as Top 3:</label>
+                <Switch
+                  checked={item.isTop}
+                  onCheckedChange={() => {
+                    const topItemsCount = filteredItems.filter(i => i.isTop).length;
+                    if (item.isTop) {
+                      updateItem(item.id, { isTop: false });
+                    } else if (topItemsCount < 3) {
+                      updateItem(item.id, { isTop: true });
+                    } else {
+                      toast.error("You can only mark up to 3 items as Top 3.");
+                    }
+                  }}
+                />
+              </div>
             </CardContent>
             <CardFooter className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => openEditModal({

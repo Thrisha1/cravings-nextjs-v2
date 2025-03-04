@@ -5,6 +5,7 @@ import { useAuthStore } from './authStore';
 import Fuse from 'fuse.js'
 import CATEGORIES from '@/data/CATEGORIES.json';
 
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -13,6 +14,7 @@ export interface MenuItem {
   description?: string;
   hotelId: string;
   category: string;
+  isTop?: boolean;
 }
 
 interface Dish {
@@ -88,6 +90,7 @@ interface MenuState {
   updateItem: (id: string, item: Partial<MenuItem>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
   clearDishCache: () => void;
+  fetchTopMenuItems: (hotelId?: string) => Promise<MenuItem[]>; 
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -128,6 +131,34 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       set({ error: (error as Error).message });
     } finally {
       set({ loading: false });
+    }
+  },
+
+  fetchTopMenuItems: async (hotelId?: string) => { 
+
+    if (!hotelId) {
+      return [];
+    }
+
+    try {
+      const q = query(
+        collection(db, "menuItems"),
+        where("hotelId", "==", hotelId),
+        where("isTop", "==", true)
+      );
+      
+      const querySnapshot = await getDocs(q);
+
+      const topItems: MenuItem[] = [];
+      querySnapshot.forEach((doc) => {
+        topItems.push({ id: doc.id, ...doc.data() } as MenuItem);
+      });
+
+      return topItems.slice(0, 3);
+    } catch (error) {
+      console.log(error);
+      set({ error: (error as Error).message });
+      return [];
     }
   },
 
