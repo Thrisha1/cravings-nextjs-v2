@@ -1,9 +1,10 @@
 "use server";
 import {
   S3Client,
-  PutObjectCommand,
+  // PutObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+// import { Upload } from "@aws-sdk/lib-storage";
 
 const s3Client = new S3Client({
   region: process.env.NEXT_PUBLIC_S3_REGION,
@@ -11,53 +12,75 @@ const s3Client = new S3Client({
     accessKeyId: process.env.NEXT_PUBLIC_S3_ACCESS_KEY,
     secretAccessKey: process.env.NEXT_PUBLIC_S3_SECRET_KEY,
   },
+  requestTimeout: 120000, 
+  maxAttempts: 3,
 });
 
-export async function uploadFileToS3(file) {
+// export async function uploadFileToS3(file, filename) {
+//   try {
+//     if (!file) throw new Error("File not provided");
+
+//     let buffer;
+//     let contentType;
+//     let fileName = filename || `menu-images/${Date.now()}.jpg`;
+
+//     if (typeof file === "string" && file.startsWith("data:")) {
+//       // Convert base64 to buffer
+//       const base64Data = file.split(",")[1];
+//       buffer = Buffer.from(base64Data, "base64");
+//       contentType = file.match(/^data:(.*?);base64/)?.[1] || "image/jpeg";
+//     } else {
+//       // Handle File object
+//       const arrayBuffer = await file.arrayBuffer();
+//       buffer = Buffer.from(arrayBuffer);
+//       contentType = file.type || "image/jpeg";
+//     }
+
+//     const uploadParams = {
+//       Bucket: process.env.NEXT_PUBLIC_S3_BUCKET,
+//       Key: fileName,
+//       Body: buffer,
+//       ContentType: contentType,
+//     };
+
+//     // Use multi-part upload for large files
+//     const upload = new Upload({
+//       client: s3Client,
+//       params: uploadParams,
+//     });
+
+//     await upload.done();
+
+//     return `https://${process.env.NEXT_PUBLIC_S3_BUCKET}.s3.${process.env.NEXT_PUBLIC_S3_REGION}.amazonaws.com/${fileName}`;
+//   } catch (error) {
+//     console.error("Error in uploadFileToS3:", error);
+//     throw error;
+//   }
+// }
+
+
+export async function uploadFileToS3(file, filename){
+
   try {
-    if (!file) {
-      throw new Error("File not provided");
-    }
 
-    // Convert base64 to buffer if it's a base64 string
-    let buffer;
-    let contentType;
-    let fileName;
+    const res = await fetch(`${process.env.NEXT_PUBLIC_WWJS_API_URL}/aws/upload`,{
+      method : 'POST',
+      headers : {
+        'Content-Type' : 'application/json'
+      },
+      body : JSON.stringify({
+        filename : filename,
+        imageUrl : file
+      })
+    })
 
-    if (typeof file === "string" && file.startsWith("data:")) {
-      // Handle base64 string
-      const base64Data = file.replace(/^data:image\/\w+;base64,/, "");
-      buffer = Buffer.from(base64Data, "base64");
-      contentType = file.split(";")[0].split(":")[1];
-      fileName = `menu-images/${Date.now()}.${contentType.split("/")[1]}`;
-    } else {
-      // Handle File object
-      const arrayBuffer = await file.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
-      contentType = file.type;
-      fileName = `menu-images/${file.name}`;
-    }
-
-    const uploadParams = {
-      Bucket: process.env.NEXT_PUBLIC_S3_BUCKET,
-      Key: fileName,
-      Body: buffer,
-      ContentType: contentType,
-      ContentEncoding: typeof file === "string" ? "base64" : undefined,
-    };
-
-    try {
-      await s3Client.send(new PutObjectCommand(uploadParams));
-    } catch (uploadError) {
-      console.error("S3 Upload Error:", uploadError);
-      throw uploadError;
-    }
-
-    return `https://${process.env.NEXT_PUBLIC_S3_BUCKET}.s3.${process.env.NEXT_PUBLIC_S3_REGION}.amazonaws.com/${fileName}`;
+    const data = await res.json();
+    return data.url;
+    
   } catch (error) {
-    console.error("Error in uploadFileToS3:", error);
     throw error;
   }
+
 }
 
 export async function deleteFileFromS3(fileUrl) {

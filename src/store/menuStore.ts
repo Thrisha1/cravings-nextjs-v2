@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuthStore } from './authStore';
 import Fuse from 'fuse.js'
@@ -36,7 +36,8 @@ const CACHE_EXPIRY_TIME = 60 * 60 * 1000;
 
 const fetchAllDishes = async (): Promise<Dish[]> => {
   const dishRef = collection(db, 'dishes');
-  const querySnapshot = await getDocs(dishRef);
+  const q = query(dishRef, orderBy('createdAt', 'asc'));
+  const querySnapshot = await getDocs(q);
   const dishes: Dish[] = [];
   querySnapshot.forEach((doc) => {
     dishes.push({ id: doc.id, ...doc.data() } as Dish);
