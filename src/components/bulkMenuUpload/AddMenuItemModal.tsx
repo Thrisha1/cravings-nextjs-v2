@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { toast } from "sonner";
 import CategoryDropdown from "@/components/ui/CategoryDropdown";
-import { getMenuItemImage } from "@/store/menuStore";
-import { Loader2 } from "lucide-react";
 import { ImageGridModal } from "./ImageGridModal";
 
 interface AddMenuItemModalProps {
@@ -26,25 +24,6 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-
-  // Add effect to fetch image when category changes
-  useEffect(() => {
-    const fetchImage = async () => {
-      if (newItem.name && newItem.category) {
-        try {
-          const urls = await getMenuItemImage(newItem.category, newItem.name);
-          if (urls && urls.length > 0) {
-            setNewItem(prev => ({ ...prev, image: urls[0] }));
-          }
-        } catch (error) {
-          console.error("Error fetching image:", error);
-          toast.error("Failed to fetch image");
-        }
-      }
-    };
-
-    fetchImage();
-  }, [newItem.name, newItem.category]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,19 +48,32 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
           <DialogTitle>Add New Menu Item</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Selected Image Preview */}
-          {newItem.image && (
-            <div className="relative h-[200px] w-full cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
-              <Image 
-                src={newItem.image} 
-                alt="Selected item" 
-                fill
-                className="object-cover rounded-lg"
-              />
-            </div>
-          )}
+          {/* Image Preview and Selection */}
+          <div className="space-y-2">
+            {newItem.image ? (
+              <div className="relative h-[200px] w-full cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
+                <Image 
+                  src={newItem.image} 
+                  alt="Selected item" 
+                  fill
+                  className="object-cover rounded-lg"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
+                  <p className="text-white">Click to change image</p>
+                </div>
+              </div>
+            ) : (
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full h-[200px]"
+                onClick={() => setIsImageModalOpen(true)}
+              >
+                Select Image
+              </Button>
+            )}
+          </div>
 
-          {/* Image Grid Modal */}
           <ImageGridModal
             isOpen={isImageModalOpen}
             onOpenChange={setIsImageModalOpen}
@@ -89,8 +81,8 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
             category={newItem.category}
             currentImage={newItem.image}
             onSelectImage={(newImageUrl: string) => {
-              setNewItem(prev => ({ ...prev, image: newImageUrl }))
-              setIsImageModalOpen(false)
+              setNewItem(prev => ({ ...prev, image: newImageUrl }));
+              setIsImageModalOpen(false);
             }}
           />
 
@@ -122,10 +114,7 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
             className="w-full disabled:opacity-50"
           >
             {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Submitting...
-              </>
+              "Submitting..."
             ) : (
               "Add Item"
             )}

@@ -183,6 +183,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         item.id === id ? { ...item, ...updatedItem } : item
       );
       set({ items });
+      
     } catch (error) {
       set({ error: (error as Error).message });
     }

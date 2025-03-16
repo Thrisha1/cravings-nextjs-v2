@@ -1,11 +1,11 @@
-import { useState, ChangeEvent } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { uploadFileToS3, deleteFileFromS3 } from "@/app/actions/aws-s3";
 import CategoryDropdown from "@/components/ui/CategoryDropdown";
+import { ImageGridModal } from "../bulkMenuUpload/ImageGridModal";
 
 interface EditMenuItemModalProps {
   isOpen: boolean;
@@ -30,33 +30,8 @@ interface EditMenuItemModalProps {
 }
 
 export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit, children }: EditMenuItemModalProps) {
-  const [imageUrl, setImageUrl] = useState(item.image);
   const [editingItem, setEditingItem] = useState(item);
-  const [isImageUploaded, setImageUploaded] = useState(true);
-
-  const handleImageInput = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target?.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImageUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    const url = await uploadFileToS3(file);
-    if (url) {
-      setEditingItem({ ...editingItem, image: url });
-      setImageUploaded(true);
-    }
-  };
-
-  const handleImageRemove = async () => {
-    await deleteFileFromS3(editingItem.image);
-    setImageUrl("");
-    setEditingItem({ ...editingItem, image: "" });
-    setImageUploaded(false);
-  };
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,37 +50,45 @@ export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit, childr
           <DialogTitle>Edit Menu Item</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2 grid justify-items-center">
-            {imageUrl && (
-              <Image src={imageUrl} alt="upload-image" height={300} width={300} />
-            )}
-            <div className="flex items-center gap-2 w-full">
-              {!imageUrl && (
-                <Input
-                  className="w-full flex-1"
-                  required
-                  placeholder="Image URL"
-                  value={editingItem.image}
-                  onChange={(e) => setEditingItem({ ...editingItem, image: e.target.value })}
+          {/* Image Preview and Selection */}
+          <div className="space-y-2">
+            {editingItem.image ? (
+              <div className="relative h-[200px] w-full cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
+                <Image 
+                  src={editingItem.image} 
+                  alt="Selected item" 
+                  fill
+                  className="object-cover rounded-lg"
                 />
-              )}
-              <label
-                onClick={imageUrl ? handleImageRemove : () => {}}
-                htmlFor={!imageUrl ? "imageEdit" : ""}
-                className={`cursor-pointer text-center transition-all text-white font-medium px-3 py-2 rounded-lg text-sm ${
-                  imageUrl ? "bg-red-600 hover:bg-red-500 w-full" : "bg-black hover:bg-black/50"
-                }`}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
+                  <p className="text-white">Click to change image</p>
+                </div>
+              </div>
+            ) : (
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full h-[200px]"
+                onClick={() => setIsImageModalOpen(true)}
               >
-                {imageUrl ? (isImageUploaded ? "Change Image" : "Uploading....") : "Upload Image"}
-              </label>
-              <input
-                onChange={handleImageInput}
-                className="hidden"
-                type="file"
-                id="imageEdit"
-              />
-            </div>
+                Select Image
+              </Button>
+            )}
           </div>
+
+          <ImageGridModal
+            isOpen={isImageModalOpen}
+            onOpenChange={setIsImageModalOpen}
+            itemName={editingItem.name}
+            category={editingItem.category}
+            currentImage={editingItem.image}
+            onSelectImage={(newImageUrl: string) => {
+              setEditingItem(prev => ({ ...prev, image: newImageUrl }));
+              setIsImageModalOpen(false);
+            }}
+          />
+
+          {/* Rest of the form fields */}
           <Input
             required
             placeholder="Product Name"
@@ -129,11 +112,7 @@ export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit, childr
             onChange={(value) => setEditingItem({ ...editingItem, category: value })}
           />
           {children}
-          <Button
-            disabled={!editingItem.image || !isImageUploaded}
-            type="submit"
-            className="w-full"
-          >
+          <Button type="submit" className="w-full">
             Save Changes
           </Button>
         </form>
