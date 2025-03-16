@@ -131,18 +131,18 @@ const QrScanPage = () => {
         return;
       }
 
-      const discount = await getDiscount(
-        (uv?.numberOfVisits as number) + 1,
-        uv?.lastDiscountedVisit as string | null
-      );
-      setDiscount(discount);
+      // const discount = await getDiscount(
+      //   (uv?.numberOfVisits as number) + 1,
+      //   uv?.lastDiscountedVisit as string | null
+      // );
+      setDiscount(0);
       const amount = billAmount.replace("₹", "");
 
       updateUserVisits(
         user.uid,
         hotelDetails?.hotelId as string,
         Number(amount),
-        discount
+        0
       );
 
       setIsLoading(false);
