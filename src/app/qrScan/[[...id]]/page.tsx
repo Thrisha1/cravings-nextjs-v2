@@ -12,7 +12,7 @@ import {
 import { FileClock, UtensilsCrossed } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAuthStore, getDiscount } from "@/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { toast } from "sonner";
 import PartnerLoginModal from "@/components/PartnerLoginModal";
