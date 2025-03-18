@@ -36,10 +36,10 @@ interface UPIApp {
   name: string;
   icon: string;
   getUrl: (params: {
-    upiId: string,
-    merchantName: string,
-    amount: number,
-    transactionId: string
+    upiId: string;
+    merchantName: string;
+    amount: number;
+    transactionId: string;
   }) => string;
 }
 
@@ -48,20 +48,32 @@ const upiApps: UPIApp[] = [
     name: "Google Pay",
     icon: "/google-pay.png",
     getUrl: ({ upiId, merchantName, amount, transactionId }) =>
-      `gpay://upi/pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&tr=${transactionId}&tn=Payment%20to%20${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`
+      `gpay://upi/pay?pa=${upiId}&pn=${encodeURIComponent(
+        merchantName
+      )}&tr=${transactionId}&tn=Payment%20to%20${encodeURIComponent(
+        merchantName
+      )}&am=${amount}&cu=INR`,
   },
   {
     name: "PhonePe",
     icon: "/phonepay-icon.jpg",
     getUrl: ({ upiId, merchantName, amount, transactionId }) =>
-      `phonepe://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&tr=${transactionId}&tn=Payment%20to%20${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`
+      `phonepe://pay?pa=${upiId}&pn=${encodeURIComponent(
+        merchantName
+      )}&tr=${transactionId}&tn=Payment%20to%20${encodeURIComponent(
+        merchantName
+      )}&am=${amount}&cu=INR`,
   },
   {
     name: "Paytm",
     icon: "/paytm-icon.jpg",
     getUrl: ({ upiId, merchantName, amount, transactionId }) =>
-      `paytmmp://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&tr=${transactionId}&tn=Payment%20to%20${encodeURIComponent(merchantName)}&am=${amount}&cu=INR`
-  }
+      `paytmmp://pay?pa=${upiId}&pn=${encodeURIComponent(
+        merchantName
+      )}&tr=${transactionId}&tn=Payment%20to%20${encodeURIComponent(
+        merchantName
+      )}&am=${amount}&cu=INR`,
+  },
 ];
 
 const QrScanPage = () => {
@@ -87,6 +99,7 @@ const QrScanPage = () => {
   const [showUpiErrorDialog, setShowUpiErrorDialog] = useState(false);
   const [showHotelPage, setShowHotelPage] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isBillAmountSubmitted, setIsBillAmountSubmitted] = useState(false);
   const router = useRouter();
 
   const getHotelDetails = async () => {
@@ -112,6 +125,8 @@ const QrScanPage = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log("handling submit");
+
     if (!user) {
       setIsSignedIn(false);
       return;
@@ -119,6 +134,9 @@ const QrScanPage = () => {
 
     try {
       setIsLoading(true);
+
+      console.log("handling follow");
+
       await handleFollow(hotelDetails?.hotelId as string);
       const uv = await fetchUserVisit(
         user.uid,
@@ -127,29 +145,35 @@ const QrScanPage = () => {
 
       if (uv?.isRecentVisit) {
         setIsRecentVisit(true);
+        setIsBillAmountSubmitted(true);
         setIsLoading(false);
         return;
       }
 
-      // const discount = await getDiscount(
+      console.log("fetching discount");
+
+      const dis = 0;
+      // await getDiscount(
       //   (uv?.numberOfVisits as number) + 1,
       //   uv?.lastDiscountedVisit as string | null
       // );
-      setDiscount(0);
       const amount = billAmount.replace("₹", "");
 
-      updateUserVisits(
+      console.log("updating user visits");
+      await updateUserVisits(
         user.uid,
         hotelDetails?.hotelId as string,
         Number(amount),
-        0
+        dis
       );
 
+      console.log("done");
+      setDiscount(dis);
+      setIsBillAmountSubmitted(true);
       setIsLoading(false);
     } catch (error) {
       console.error(error);
       toast.error(error as string);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -190,18 +214,19 @@ const QrScanPage = () => {
       );
       const upiDocSnap = await getDocs(q);
       if (!upiDocSnap.empty) {
-        
         const isIphone = /iPad|iPhone|iPod/.test(navigator.userAgent);
         if (isIphone) {
           setShowPaymentModal(true);
         } else {
           const upiData = upiDocSnap.docs[0].data();
           const upiId = upiData.upiId;
-          const finalAmount = Number(billAmount.replace("₹", "")) -
+          const finalAmount =
+            Number(billAmount.replace("₹", "")) -
             (Number(billAmount.replace("₹", "")) * discount) / 100;
-          router.push(`upi://pay?pa=${upiId}&pn=${hotelDetails?.hotelName}&am=${finalAmount}&tn=Payment%20to%20${hotelDetails?.hotelName}`)
-            
-          }
+          router.push(
+            `upi://pay?pa=${upiId}&pn=${hotelDetails?.hotelName}&am=${finalAmount}&tn=Payment%20to%20${hotelDetails?.hotelName}`
+          );
+        }
         setIsPaymentSuccess(true);
       } else {
         setShowUpiErrorDialog(true);
@@ -217,7 +242,7 @@ const QrScanPage = () => {
 
   const handleUPIPayment = (app: UPIApp) => {
     setShowPaymentModal(false);
-    
+
     const upiRef = collection(db, "upi_ids");
     const q = query(
       upiRef,
@@ -227,16 +252,17 @@ const QrScanPage = () => {
       if (!upiDocSnap.empty) {
         const upiData = upiDocSnap.docs[0].data();
         const upiId = upiData.upiId;
-        const finalAmount = Number(billAmount.replace("₹", "")) -
+        const finalAmount =
+          Number(billAmount.replace("₹", "")) -
           (Number(billAmount.replace("₹", "")) * discount) / 100;
 
         const paymentUrl = app.getUrl({
           upiId,
-          merchantName: hotelDetails?.hotelName || '',
+          merchantName: hotelDetails?.hotelName || "",
           amount: finalAmount,
-          transactionId: Date.now().toString()
+          transactionId: Date.now().toString(),
         });
-        
+
         window.location.href = paymentUrl;
       }
     });
@@ -291,7 +317,7 @@ const QrScanPage = () => {
       <section className={`flex flex-col flex-1 justify-end`}>
         {isSignedIn ? (
           <>
-            {discount > 0 || isRecentVisit ? (
+            { isBillAmountSubmitted || isRecentVisit ? (
               <div className="flex flex-col flex-1 justify-between items-center">
                 <div></div>
                 <div className="flex flex-col gap-2">
@@ -335,7 +361,9 @@ const QrScanPage = () => {
                   {showHotelPage && (
                     <button
                       onClick={() => {
-                        router.push(`${window.location.origin}/hotels/${hotelDetails?.hotelId}`);
+                        router.push(
+                          `${window.location.origin}/hotels/${hotelDetails?.hotelId}`
+                        );
                       }}
                       className="bg-white text-black px-4 w-full py-2 rounded-md"
                     >
@@ -460,7 +488,7 @@ const QrScanPage = () => {
           </>
         )}
       </section>
-      
+
       <PartnerLoginModal />
 
       <Dialog open={showUpiErrorDialog} onOpenChange={setShowUpiErrorDialog}>
@@ -468,11 +496,12 @@ const QrScanPage = () => {
           <DialogHeader>
             <DialogTitle>UPI Payment Unavailable</DialogTitle>
             <DialogDescription>
-              UPI payment option is not available right now. Please use cash or card instead.
+              UPI payment option is not available right now. Please use cash or
+              card instead.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button 
+            <Button
               onClick={() => setShowUpiErrorDialog(false)}
               className="w-full bg-orange-600 hover:bg-orange-700 text-white"
             >
@@ -492,7 +521,7 @@ const QrScanPage = () => {
           </DialogHeader>
           <div className="flex flex-col gap-4">
             {upiApps.map((app) => (
-              <Button 
+              <Button
                 key={app.name}
                 onClick={() => handleUPIPayment(app)}
                 className="w-full bg-white hover:bg-gray-100 text-black border flex items-center justify-center gap-2"
@@ -503,7 +532,7 @@ const QrScanPage = () => {
             ))}
           </div>
           <DialogFooter>
-            <Button 
+            <Button
               onClick={() => setShowPaymentModal(false)}
               variant="outline"
             >
