@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { UtensilsCrossed } from "lucide-react";
+import { UtensilsCrossed, ShoppingCart } from "lucide-react";
 // import { PartnerDialog } from "@/components/PartnerDialog";
 import { useRouter } from "next/navigation";
 
@@ -10,9 +10,19 @@ export default function HomePage() {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 flex items-center justify-center p-4">
       <div className="max-w-3xl mx-auto text-center space-y-8">
-        <div className="flex items-center justify-center space-x-3 mb-8">
-          <UtensilsCrossed className="h-12 w-12 text-orange-600" />
-          <h1 className="text-5xl font-bold text-gray-900">Cravings</h1>
+        <div className="space-y-4">
+          <div className="flex items-center justify-center space-x-3">
+            <UtensilsCrossed className="h-12 w-12 text-orange-600" />
+            <h1 className="text-5xl font-bold text-gray-900">Cravings</h1>
+          </div>
+          
+          {/* New CraveMart Feature Announcement */}
+          <div className="flex items-center justify-center space-x-2 bg-green-50 p-3 rounded-full border border-green-200 animate-pulse">
+            <ShoppingCart className="h-5 w-5 text-green-600" />
+            <p className="text-sm font-medium text-green-700">
+              Coming Soon: CraveMart - Smart Savings on Supermarket Shopping!
+            </p>
+          </div>
         </div>
 
         <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
@@ -48,12 +58,12 @@ export default function HomePage() {
               Never miss a deal with instant notifications
             </p>
           </div>
-          <div className="p-6 bg-white rounded-xl shadow-md">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Easy Savings
+          <div className="p-6 bg-white rounded-xl shadow-md hover:bg-green-50 transition-colors group">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-green-700">
+              CraveMart
             </h3>
-            <p className="text-gray-600">
-              Save money on your favorite restaurants
+            <p className="text-gray-600 group-hover:text-green-600">
+              Coming soon: Supermarket deals and discounts
             </p>
           </div>
         </div>
