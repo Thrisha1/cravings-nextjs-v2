@@ -1,10 +1,10 @@
-// import HomePage from "@/screens/HomePage";
+import HomePage from "@/screens/HomePage";
 // import { redirect } from "next/navigation";
-import OfferMainPage from "../offers/page";
+// import OfferMainPage from "../offers/page";
 
 export default function Home() {
 
-  // return <HomePage />;
+  return <HomePage />;
 
-  return <OfferMainPage />
+  // return <OfferMainPage/>
 }

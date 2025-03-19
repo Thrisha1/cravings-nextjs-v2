@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { UtensilsCrossed } from "lucide-react";
-import { PartnerDialog } from "@/components/PartnerDialog";
+// import { PartnerDialog } from "@/components/PartnerDialog";
 import { useRouter } from "next/navigation";
 
 export default function HomePage() {
@@ -28,7 +28,7 @@ export default function HomePage() {
           >
             Let&apos;s Go
           </Button>
-          <PartnerDialog />
+          {/* <PartnerDialog /> */}
         </div>
 
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
