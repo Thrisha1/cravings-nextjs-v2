@@ -1,0 +1,3 @@
+table:
+  name: offers_claimed
+  schema: public

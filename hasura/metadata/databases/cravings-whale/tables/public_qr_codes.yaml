@@ -1,0 +1,3 @@
+table:
+  name: qr_codes
+  schema: public

@@ -27,6 +27,10 @@ import { auth } from "@/lib/firebase";
 import { MenuItem } from "@/screens/HotelMenuPage";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { FirebaseError } from "firebase/app";
+import { useMutation } from "@tanstack/react-query";
+import { loginMutation } from "@/api/Login";
+import { useGraphQL } from "@/context/GraphqlClient";
+
 
 export interface UpiData {
   userId: string;
@@ -37,7 +41,7 @@ export interface UserData {
   id?: string;
   email: string;
   role: "user" | "hotel" | "superadmin";
-  fullName?: string;
+  fullName?: string; 
   hotelName?: string;
   hotelBanner?: string;
   area?: string;
@@ -742,6 +746,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signInWithPhone: async (phone: string): Promise<void> => {
+
+    const graphql = useGraphQL();
+
     try {
       // STEP 1: Check if phone exists as a partner/non-user account
       const allUsersRef = collection(db, "users");
@@ -795,6 +802,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
 
         await setDoc(doc(db, "users", user.uid), userData);
+
+        const insertUser = async () => {
+          const mutation = `
+            mutation InsertUser($loginInput: UserDataInput!) {
+              insertUser(input: $loginInput) {
+                id
+              }
+            }
+          `;
+          return await graphql(mutation, {
+            loginInput: userData,
+          });
+        };
 
         // Update store state
         set({
