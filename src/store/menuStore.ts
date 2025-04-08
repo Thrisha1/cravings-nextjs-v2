@@ -1,10 +1,19 @@
-import { create } from 'zustand';
-import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useAuthStore } from './authStore';
-import Fuse from 'fuse.js'
-import CATEGORIES from '@/data/CATEGORIES.json';
-
+import { create } from "zustand";
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuthStore } from "./authStore";
+import Fuse from "fuse.js";
+import CATEGORIES from "@/data/CATEGORIES.json";
 
 export interface MenuItem {
   id: string;
@@ -35,8 +44,8 @@ export const menuCatagories = CATEGORIES.map((category) => category.name);
 const CACHE_EXPIRY_TIME = 60 * 60 * 1000;
 
 const fetchAllDishes = async (): Promise<Dish[]> => {
-  const dishRef = collection(db, 'dishes');
-  const q = query(dishRef, orderBy('createdAt', 'asc'));
+  const dishRef = collection(db, "dishes");
+  const q = query(dishRef, orderBy("createdAt", "asc"));
   const querySnapshot = await getDocs(q);
   const dishes: Dish[] = [];
   querySnapshot.forEach((doc) => {
@@ -49,8 +58,12 @@ export const getMenuItemImage = async (category: string, name: string) => {
   const store = useMenuStore.getState();
   let dishes: Dish[] = [];
 
-  if (store.dishCache && 
-      Date.now() - store.dishCache.lastFetched < store.dishCache.expiryTime) {
+  if (
+    store.dishCache &&
+    Date.now() - store.dishCache.lastFetched < store.dishCache.expiryTime
+  ) {
+
+    
     dishes = store.dishCache.dishes;
   } else {
     dishes = await fetchAllDishes();
@@ -58,21 +71,21 @@ export const getMenuItemImage = async (category: string, name: string) => {
       dishCache: {
         dishes,
         lastFetched: Date.now(),
-        expiryTime: CACHE_EXPIRY_TIME
-      }
+        expiryTime: CACHE_EXPIRY_TIME,
+      },
     });
   }
 
-  const categoryDishes = dishes.filter(dish => dish.category === category);
-  
+  const categoryDishes = dishes.filter((dish) => dish.category === category);
+
   const fuse = new Fuse(categoryDishes, {
     includeScore: false,
     threshold: 0.8,
-    keys: ["name", "category"]
+    keys: ["name", "category"],
   });
 
   const results = fuse.search(name + "_" + category);
-  return results.map(result => result.item.url);
+  return results.map((result) => result.item.url);
 };
 
 interface MenuState {
@@ -87,11 +100,11 @@ interface MenuState {
   selectedHotelId: string | null;
   setSelectedHotelId: (id: string | null) => void;
   fetchMenu: (hotelId?: string) => Promise<void>;
-  addItem: (item: Omit<MenuItem, 'id'>) => Promise<void>;
+  addItem: (item: Omit<MenuItem, "id">) => Promise<void>;
   updateItem: (id: string, item: Partial<MenuItem>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
   clearDishCache: () => void;
-  fetchTopMenuItems: (hotelId?: string) => Promise<MenuItem[]>; 
+  fetchTopMenuItems: (hotelId?: string) => Promise<MenuItem[]>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -115,12 +128,12 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     try {
       set({ loading: true, error: null });
       const targetId = hotelId || user.uid;
-      
+
       const q = query(
         collection(db, "menuItems"),
         where("hotelId", "==", targetId)
       );
-      
+
       const querySnapshot = await getDocs(q);
       const items: MenuItem[] = [];
       querySnapshot.forEach((doc) => {
@@ -135,8 +148,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     }
   },
 
-  fetchTopMenuItems: async (hotelId?: string) => { 
-
+  fetchTopMenuItems: async (hotelId?: string) => {
     if (!hotelId) {
       return [];
     }
@@ -147,7 +159,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         where("hotelId", "==", hotelId),
         where("isTop", "==", true)
       );
-      
+
       const querySnapshot = await getDocs(q);
 
       const topItems: MenuItem[] = [];
@@ -166,7 +178,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   addItem: async (item) => {
     try {
       set({ error: null });
-      const menuItemsRef = collection(db, 'menuItems');
+      const menuItemsRef = collection(db, "menuItems");
       const docRef = await addDoc(menuItemsRef, item);
       const newItem = { ...item, id: docRef.id };
       set({ items: [...get().items, newItem] });
@@ -178,12 +190,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   updateItem: async (id, updatedItem) => {
     try {
       set({ error: null });
-      await updateDoc(doc(db, 'menuItems', id), updatedItem);
+      await updateDoc(doc(db, "menuItems", id), updatedItem);
       const items = get().items.map((item) =>
         item.id === id ? { ...item, ...updatedItem } : item
       );
       set({ items });
-      
     } catch (error) {
       set({ error: (error as Error).message });
     }
@@ -192,11 +203,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   deleteItem: async (id) => {
     try {
       set({ error: null });
-      await deleteDoc(doc(db, 'menuItems', id));
+      await deleteDoc(doc(db, "menuItems", id));
       const items = get().items.filter((item) => item.id !== id);
       set({ items });
     } catch (error) {
       set({ error: (error as Error).message });
     }
-  }
+  },
 }));

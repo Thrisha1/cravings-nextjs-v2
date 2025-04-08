@@ -33,7 +33,7 @@ export function ImageGridModal({
       try {
         const urls = await getMenuItemImage(category, itemName);
         if (urls.length === 0) {
-          setError(`No images found for "${itemName}" in category "${category}"`);
+          // setError(`No images found for "${itemName}" in category "${category}"`);
         }
         setImageUrls(urls);
         setLoadingStates(urls.reduce((acc, url) => ({ ...acc, [url]: true }), {}));

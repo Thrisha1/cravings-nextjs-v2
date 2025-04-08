@@ -6,7 +6,9 @@ import Image from "next/image";
 import { MenuItem } from "@/components/bulkMenuUpload/EditItemModal";
 import { CategoryDropdown } from "@/components/ui/CategoryDropdown";
 import { ImageGridModal } from "./ImageGridModal";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useCategoryStore } from "@/store/categoryStore";
+import { toast } from "sonner";
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -31,9 +33,25 @@ export const MenuItemCard = ({
   onImageClick,
   onCategoryChange,
 }: MenuItemCardProps) => {
-  const isImageLoading = item.image === "/loading-image.gif";
+  const [isImageLoading, setIsImageLoading] = useState(true);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const { categories, fetchCategories } = useCategoryStore();
+  const [isValidCategory, setIsValidCategory] = useState(false);
+
+  useEffect(() => {
+    if (item.category) {
+      const isValid = categories.includes(item.category);
+      setIsValidCategory(isValid);
+      setImageError(!isValid);
+    }
+    console.log(item);
+    
+  }, [item.category, categories]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   const handleImageClick = () => {
     if (item.category) {
@@ -44,7 +62,7 @@ export const MenuItemCard = ({
   const handleSelectImage = (newImageUrl: string) => {
     onImageClick(index, newImageUrl);
     setIsImageModalOpen(false);
-    setImageError(false);  // Reset error state when new image is selected
+    setImageError(false); // Reset error state when new image is selected
   };
 
   return (
@@ -56,10 +74,10 @@ export const MenuItemCard = ({
       )}
 
       <div className="flex flex-row items-center gap-2 px-5 py-6">
-        <Checkbox 
-          checked={item.isSelected} 
-          onCheckedChange={onSelect} 
-          disabled={!item.category || item.isAdded} 
+        <Checkbox
+          checked={item.isSelected}
+          onCheckedChange={onSelect}
+          disabled={!item.category || item.isAdded || !isValidCategory}
         />
         <div className="font-bold text-lg">{item.name}</div>
       </div>
@@ -67,30 +85,49 @@ export const MenuItemCard = ({
       <CardContent className="space-y-4">
         <div
           className="relative overflow-hidden w-full h-48 cursor-pointer"
-          onClick={handleImageClick}
+          onClick={
+            isValidCategory
+              ? handleImageClick
+              : () => toast.error("Select a valid category")
+          }
         >
-          {isImageLoading ? (
-            <div className="absolute inset-0 flex items-center justify-center w-full h-full bg-gray-100 animate-pulse">
-              <div className="text-center">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Loading image...</p>
-              </div>
-            </div>
-          ) : imageError ? (
+          {imageError ? (
             <div className="absolute inset-0 flex items-center justify-center w-full h-full bg-gray-100">
               <div className="text-center">
                 <ImageOff className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No image found</p>
+                <p className="text-sm text-gray-500">
+                  {" "}
+                  {!isValidCategory
+                    ? "Not Valid Category"
+                    : "No image found"}{" "}
+                </p>
                 <p className="text-xs text-gray-400">Click to try again</p>
               </div>
             </div>
           ) : (
             <div className="relative w-full h-full">
+              {/* loadign  */}
+              <div className={`absolute inset-0 flex items-center justify-center w-full h-full bg-gray-100 animate-pulse ${isImageLoading ? "z-10" : "z-0"}`}>
+                <div className="text-center">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">Loading image...</p>
+                </div>
+              </div>
+
               <Image
                 src={item.image}
                 alt={item.name}
                 fill
                 className="object-cover rounded-md"
+                onLoad={() => {
+                  console.log("Image loading started");
+                  setIsImageLoading(true);
+                }}
+                onLoadingComplete={() => {
+                  console.log("Image loaded");
+                  setIsImageLoading(false);
+                  setImageError(false);
+                }}
                 onError={() => {
                   setImageError(true);
                 }}
@@ -110,9 +147,14 @@ export const MenuItemCard = ({
 
       <CardFooter className="flex justify-between">
         <div className="flex gap-2">
-          <Button 
-            onClick={onAddToMenu} 
-            disabled={item.isAdded || isUploading || !item.category || imageError}
+          <Button
+            onClick={onAddToMenu}
+            disabled={
+              item.isAdded ||
+              isUploading ||
+              !item.category ||
+              !isValidCategory
+            }
           >
             {isUploading ? (
               <>

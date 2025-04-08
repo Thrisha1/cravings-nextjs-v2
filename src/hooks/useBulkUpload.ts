@@ -287,6 +287,7 @@ export const useBulkUpload = () => {
       category,
       image: "/loading-image.gif",
     };
+
     setMenuItems(updatedItems);
     
     try {

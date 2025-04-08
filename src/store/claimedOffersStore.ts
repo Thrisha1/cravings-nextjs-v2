@@ -136,49 +136,57 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
       },
 
       syncUserOffersClaimable: async (userId: string) => {
-        const userDocRef = doc(db, "users", userId);
-        const userDoc = await getDoc(userDocRef);
-        const userOffersClaimable = await userDoc.data()?.offersClaimable || 0;
-        const offersCalimableLessThan2 = userOffersClaimable < 100;
-        // console.log("offersCalimableLessThan2", offersCalimableLessThan2);
+        try {
+          const userDocRef = doc(db, "users", userId);
+          const userDoc = await getDoc(userDocRef);
+          const userOffersClaimable =
+            (await userDoc.data()?.offersClaimable) || 0;
+          const offersCalimableLessThan2 = userOffersClaimable < 100;
+          // console.log("offersCalimableLessThan2", offersCalimableLessThan2);
 
-        const randomValue = [25, 50, 75, 100][Math.floor(Math.random() * 4)];
+          const randomValue = [25, 50, 75, 100][Math.floor(Math.random() * 4)];
 
-        if (userDoc.exists()) {
-          const { offersClaimable, offersClaimableUpdatedAt: localStoreTime } =
-            userDoc.data();
-          // const localStoreTime = localStorage.getItem(
-          //   "offersClaimableUpdatedAt"
-          // );
-          // console.log("localStoreTime", localStoreTime);
+          if (userDoc.exists()) {
+            const {
+              offersClaimable,
+              offersClaimableUpdatedAt: localStoreTime,
+            } = userDoc.data();
+            // const localStoreTime = localStorage.getItem(
+            //   "offersClaimableUpdatedAt"
+            // );
+            // console.log("localStoreTime", localStoreTime);
 
-          const lastOfferClaimedAt = new Date(localStoreTime || 0);
-          const minituesPassed =
-            (new Date().getTime() - lastOfferClaimedAt.getTime()) / 1000 / 60; //in minutes
+            const lastOfferClaimedAt = new Date(localStoreTime || 0);
+            const minituesPassed =
+              (new Date().getTime() - lastOfferClaimedAt.getTime()) / 1000 / 60; //in minutes
 
-          // if (!localStoreTime && (new Date(userDoc.data().createdAt).getTime() <= new Date().getTime() - 60000)) {
-          //   minituesPassed = 9999;
-          // }
+            // if (!localStoreTime && (new Date(userDoc.data().createdAt).getTime() <= new Date().getTime() - 60000)) {
+            //   minituesPassed = 9999;
+            // }
 
-          // console.log(
-          //   "how many minits have passed after latofferclaimedat",
-          //   localStoreTime,
-          //   lastOfferClaimedAt,
-          //   minituesPassed,
-          //   offersCalimableLessThan2,
-          //   minituesPassed >= 1440
-          // );
+            // console.log(
+            //   "how many minits have passed after latofferclaimedat",
+            //   localStoreTime,
+            //   lastOfferClaimedAt,
+            //   minituesPassed,
+            //   offersCalimableLessThan2,
+            //   minituesPassed >= 1440
+            // );
 
-          if (offersCalimableLessThan2 && minituesPassed >= 1440) { //24 hrs
+            if (offersCalimableLessThan2 && minituesPassed >= 1440) {
+              //24 hrs
 
-            const updateDocRef = doc(db, "users", userId);
-            updateDoc(updateDocRef, {
-              offersClaimable: offersClaimable + randomValue,
-              offersClaimableUpdatedAt: new Date().toISOString(),
-            });
-            set({ offersClaimable: offersClaimable + randomValue });
+              const updateDocRef = doc(db, "users", userId);
+              updateDoc(updateDocRef, {
+                offersClaimable: offersClaimable + randomValue,
+                offersClaimableUpdatedAt: new Date().toISOString(),
+              });
+              set({ offersClaimable: offersClaimable + randomValue });
+            }
+            set({ offersClaimable });
           }
-          set({ offersClaimable });
+        } catch (error) {
+          console.error("Error syncing user's claimable offers: ", error);
         }
       },
 
@@ -188,14 +196,18 @@ export const useClaimedOffersStore = create<ClaimedOffersState>()(
         try {
           if (value > 0) {
             const userDoc = await getDoc(userDocRef);
-            const currentOffersClaimable = await userDoc.data()?.offersClaimable || 0;
+            const currentOffersClaimable =
+              (await userDoc.data()?.offersClaimable) || 0;
             const newClaimable = currentOffersClaimable + value;
 
             await updateDoc(userDocRef, {
               offersClaimable: newClaimable,
               offersClaimableUpdatedAt: new Date().toISOString(),
             });
-            set({ offersClaimable: newClaimable , offersClaimableUpdatedAt: new Date().toISOString()});
+            set({
+              offersClaimable: newClaimable,
+              offersClaimableUpdatedAt: new Date().toISOString(),
+            });
           } else {
             const finalValue =
               get().offersClaimable + value <= 0

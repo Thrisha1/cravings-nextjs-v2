@@ -47,7 +47,7 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
       }
   
       const encodedPrompt = encodeURIComponent(prompt);
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}`;
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&width=512&height=512`;
 
       const response = await fetch(imageUrl);
       const blob = await response.blob();

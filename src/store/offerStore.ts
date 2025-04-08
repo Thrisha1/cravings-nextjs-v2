@@ -148,7 +148,7 @@ export const useOfferStore = create<OfferState>((set) => {
 
         await revalidateTag("offers");
 
-        fetch(`${process.env.NEXT_PUBLIC_WWJS_API_URL}/offerAlert`, {
+        fetch(`${process.env.NEXT_PUBLIC_WWJS_API_URL}/api/offerAlert`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
