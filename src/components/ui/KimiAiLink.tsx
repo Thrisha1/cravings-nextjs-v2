@@ -7,13 +7,11 @@ interface KimiAiLinkProps {
   className?: string;
 }
 
-
-
 export function KimiAiLink({ className = "" }: KimiAiLinkProps) {
   const { fetchCategories } = useCategoryStore();
 
   const handleClick = async () => {
-    await fetchCategories().then((categories) => {
+    await fetchCategories().then(() => {
       if (!document.hasFocus()) {
         window.focus();
       }
@@ -25,14 +23,10 @@ export function KimiAiLink({ className = "" }: KimiAiLinkProps) {
         "name": "string (item name)",
         "price": number (numeric value only),
         "description": "string (brief 5-10 word description)",
-        "category": "string (must match exactly from allowed categories below)"
+        "category": "string"
       }
-      
-      2. Allowed Categories (case-sensitive):
-      ${categories.map(cat => `- ${cat}`).join('\n')}
-      
+
       3. Rules:
-      - Only use the exact category names listed above
       - Price must be a number (no currency symbols)
       - Descriptions should be concise but descriptive
       - Output must be valid JSON (no trailing commas)
@@ -44,15 +38,12 @@ export function KimiAiLink({ className = "" }: KimiAiLinkProps) {
           "name": "Example Dish",
           "price": 200,
           "description": "Brief description of the dish",
-          "category": "${categories.length > 0 ? categories[0] : 'Category'}"
+          "category": "Mandhi Session"
         }
       ]`
       );
       toast.success("Prompt copied to clipboard!");
-      window.open(
-        "https://kimi.moonshot.cn/",
-        "_blank"
-      );
+      window.open("https://kimi.moonshot.cn/", "_blank");
     });
   };
 

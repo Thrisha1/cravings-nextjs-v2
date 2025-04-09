@@ -5,8 +5,10 @@ import { useMenuStore, getMenuItemImage } from "@/store/menuStore";
 import { MenuItem } from "@/components/bulkMenuUpload/EditItemModal";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
+import { useCategoryStore } from "@/store/categoryStore";
 
 export const useBulkUpload = () => {
+  const { addCategory } = useCategoryStore();
   const [jsonInput, setJsonInput] = useState("");
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -140,12 +142,15 @@ export const useBulkUpload = () => {
 
     setIsUploading((prev) => ({ ...prev, [index]: true }));
     try {
+
+      const categoryId = await addCategory(item.category);
+
       await addItem({
         name: item.name,
         price: Number(item.price),
-        image: item.image,
+        image: '',
         description: item.description || "",
-        category: item.category,
+        category: categoryId || "",
         hotelId: hotelId || userData?.id || "",
       });
 

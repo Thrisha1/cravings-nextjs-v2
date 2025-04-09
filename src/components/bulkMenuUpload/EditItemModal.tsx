@@ -53,10 +53,11 @@ export const EditItemModal = ({
             />
           </div>
           <div>
-            <label className="text-sm font-medium">Image URL</label>
+            <label className="text-sm font-medium">Price</label>
             <Input
-              value={editingItem.item.image}
-              onChange={(e) => onEdit('image', e.target.value)}
+              value={editingItem.item.price}
+              type="number"
+              onChange={(e) => onEdit('price', parseFloat(e.target.value))}
             />
           </div>
           <div className="flex justify-end gap-4">

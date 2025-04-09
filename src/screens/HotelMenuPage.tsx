@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Offer } from "@/store/offerStore";
 import { useAuthStore, UserData } from "@/store/authStore";
 import OfferCardMin from "@/components/OfferCardMin";
-import Autoplay from "embla-carousel-autoplay"
+import Autoplay from "embla-carousel-autoplay";
 
 import {
   ArrowLeft,
@@ -62,6 +62,7 @@ import {
   CarouselItem,
   CarouselContent,
 } from "@/components/ui/carousel";
+import MenuItemsList from "@/components/hotelDetail/MenuItemsList";
 
 export type MenuItem = {
   description: string;
@@ -511,42 +512,6 @@ const HotelMenuPage = ({
               </section>
             )}
 
-            {/* Menu items  */}
-            {/* <section className="border-t-2 border-orange-600/10">
-              <h1 className="text-lg relative flex max-w-[50%] md:text-3xl font-semibold pt-5 capitalize">
-                All Menu Items
-              </h1>
-
-              <section className="mt-5 md:mt-10">
-                {menu.length > 0 ? (
-                  <>
-                    <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
-                      {menu.map((menuItem: MenuItem) => {
-                        return (
-                          <div key={menuItem.id} className="group">
-                            <MenuItemCard
-                              menuItem={menuItem}
-                              hotelId={hoteldata?.id as string}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {menu.length < totalMenuItems && (
-                      <ShowAllBtn
-                        showAll={false}
-                        onClick={() => {
-                          fetchMenuItems(false);
-                        }}
-                      />
-                    )}
-                  </>
-                ) : (
-                  <NoOffersFound />
-                )}
-              </section>
-            </section> */}
-
             {topMenuItems.length > 0 && (
               <div className="p-4">
                 <h1 className="text-2xl font-bold mb-4">Top 3 Items ⭐</h1>
@@ -573,7 +538,7 @@ const HotelMenuPage = ({
             )}
 
             <section className="px-[7%]">
-              <CategoryList hotelId={hoteldata?.id as string} />
+              <MenuItemsList hotelId={hoteldata?.id as string} />
             </section>
 
             {/* rate this hotel  */}
