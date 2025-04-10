@@ -123,6 +123,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       }));
     } catch (error: unknown) {
       set({ loading: false, error: "Failed to delete category" });
+      console.error("Delete category error:", error instanceof Error? error.message : String(error));
     }
   },
 
