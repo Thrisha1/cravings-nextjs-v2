@@ -27,9 +27,9 @@ import { auth } from "@/lib/firebase";
 import { MenuItem } from "@/screens/HotelMenuPage";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { FirebaseError } from "firebase/app";
-import { useMutation } from "@tanstack/react-query";
-import { loginMutation } from "@/api/Login";
-import { useGraphQL } from "@/context/GraphqlClient";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import { userLoginMutation, userLoginQuery } from "@/api/auth";
+import { decryptText, encryptText } from "@/lib/encrtption";
 
 
 export interface UpiData {
@@ -40,8 +40,9 @@ export interface UpiData {
 export interface UserData {
   id?: string;
   email: string;
+  password?: string;
   role: "user" | "hotel" | "superadmin";
-  fullName?: string; 
+  fullName?: string;
   hotelName?: string;
   area?: string;
   location?: string;
@@ -73,9 +74,18 @@ export interface UserData {
   offersClaimableUpdatedAt?: string;
 }
 
+export interface HasuraUser {
+  email: string;
+  password: string;
+  full_name: string;
+  phone: string;
+  crave_coins: number;
+  location: string | null;
+}
+
 interface AuthState {
   user: User | null;
-  userData: UserData | null;
+  userData: HasuraUser | null;
   loading: boolean;
   error: string | null;
   userVisit: {
@@ -149,7 +159,7 @@ export const getDiscount = (
   // Check if 6 hours have passed since last discounted visit
   const isEligibleForDiscount = lastDiscountedVisit
     ? new Date().getTime() - new Date(lastDiscountedVisit).getTime() >=
-      6 * 60 * 60 * 1000
+    6 * 60 * 60 * 1000
     : true; // First visit is always eligible for discount
 
   if (!isEligibleForDiscount) {
@@ -176,7 +186,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   fetchUserData: async (uid: string, save = true) => {
     try {
 
-      if(!uid) {
+      if (!uid) {
         return null;
       }
 
@@ -217,7 +227,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const isRecentVisit =
             lastVisit &&
             new Date().getTime() - new Date(lastVisit).getTime() <
-              6 * 60 * 60 * 1000;
+            6 * 60 * 60 * 1000;
 
           set({
             userVisit: {
@@ -392,7 +402,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // Check if eligible for discount
           const isEligibleForDiscount = lastDiscountedVisit
             ? new Date().getTime() - new Date(lastDiscountedVisit).getTime() >=
-              6 * 60 * 60 * 1000
+            6 * 60 * 60 * 1000
             : true;
 
           // If not eligible for discount, set it to 0
@@ -675,10 +685,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       };
 
       await setDoc(docRef, partnerData);
-      
+
       // Create UPI data in separate collection
       await get().createUpiData(user.uid, upiId);
-      
+
       set({ user, userData: partnerData });
 
       return user;
@@ -721,10 +731,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       };
 
       await setDoc(docRef, partnerData);
-      
+
       // Create UPI data in separate collection
       await get().createUpiData(user.uid, upiId);
-      
+
       set({ user, userData: partnerData });
 
       return user;
@@ -745,132 +755,130 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signInWithPhone: async (phone: string): Promise<void> => {
-
-    const graphql = useGraphQL();
-
     try {
-      // STEP 1: Check if phone exists as a partner/non-user account
-      const allUsersRef = collection(db, "users");
-      const nonUserQuery = query(
-        allUsersRef,
-        where("phone", "==", `${phone}`),
-        where("role", "!=", "user")
-      );
-      const nonUserSnapshot = await getDocs(nonUserQuery);
-
-      if (!nonUserSnapshot.empty) {
-        // If found as partner, show partner login modal instead of error
-        set({ showPartnerLoginModal: true });
-        return;
-      }
-
-      // STEP 2: Check if phone exists as a regular user
-      const userQuery = query(
-        allUsersRef,
-        where("phone", "==", `${phone}`),
-        where("role", "==", "user")
-      );
-      const userSnapshot = await getDocs(userQuery);
-
       // Create standardized email and password from phone
       const email = `${phone}@user.com`;
-      const password = phone;
 
-      let userData: UserData;
+      let userData: HasuraUser;
 
-      // STEP 3: Handle user creation or sign in
-      if (userSnapshot.empty) {
-        // NEW USER: Create account
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-        const user = userCredential.user;
-
-        // Create new user document
-        userData = {
-          email,
-          role: "user",
-          phone: `${phone}`,
-          fullName: `User${phone.slice(0, 5)}`,
-          accountStatus: "active",
-          offersClaimable: 100,
-          offersClaimableUpdatedAt: new Date().toISOString(),
-          following: [],
-        };
-
-        await setDoc(doc(db, "users", user.uid), userData);
-
-        const insertUser = async () => {
-          const mutation = `
-            mutation InsertUser($loginInput: UserDataInput!) {
-              insertUser(input: $loginInput) {
-                id
-              }
-            }
-          `;
-          return await graphql(mutation, {
-            loginInput: userData,
-          });
-        };
-
-        // Update store state
-        set({
-          user,
-          userData: { ...userData, id: user.uid },
-        });
-      } else {
-        // EXISTING USER: Sign in
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-        const user = userCredential.user;
-
-        // Get existing user data
-        userData = {
-          id: userSnapshot.docs[0].id,
-          ...userSnapshot.docs[0].data(),
-        } as UserData;
-
-        // Update store state
-        set({
-          user,
-          userData,
-        });
+      // Define the response type
+      interface HasuraUserResponseType {
+        users: {
+          id: string;
+          email: string;
+          full_name: string;
+          phone: string;
+          crave_coins: number;
+          location: string;
+        }[];
       }
+
+      // check user already exist in hasura
+      const hasuraUserResponse = await fetchFromHasura(userLoginQuery, {
+        email: email
+      }) as HasuraUserResponseType;
+
+      // if user already exist in hasura then no need to create just login using email and password
+      if (hasuraUserResponse?.users?.length > 0) {
+        console.log("user already exist in hasura");
+        const user = hasuraUserResponse.users[0];
+        if (user) {
+          // hash the userid and store it in local storage
+          const userhashedId = encryptText(user.id);
+          localStorage.setItem("hasuraUserId", userhashedId);
+          
+          set({
+            userData: {
+              email: user.email,
+              full_name: user.full_name,
+              phone: user.phone,
+              crave_coins: user.crave_coins,
+              location: user.location,
+              password : "",
+            }
+          });
+        }
+        return;
+      }
+      else {
+        let hasuraUser: HasuraUser;
+        hasuraUser = {
+          email: email,
+          password: phone,
+          full_name: `User${phone.slice(0, 5)}`,
+          phone: phone,
+          crave_coins: 100,
+          location: null,
+        }
+        try {
+          await fetchFromHasura(userLoginMutation, {
+            object: hasuraUser
+          });
+
+        } catch (error) {
+          console.error("Failed to insert user into Hasura:", error);
+          throw new Error("Failed to create user profile");
+        }
+
+      }
+
+      // Update store state
+      // set({
+      //   user,
+      //   userData: { ...userData, id: user.uid },
+      // });
+      // } 
+      // else {
+      //   // EXISTING USER: Sign in
+      //   const userCredential = await signInWithEmailAndPassword(
+      //     auth,
+      //     email,
+      //     password
+      //   );
+      //   const user = userCredential.user;
+
+      //   // Get existing user data
+      //   userData = {
+      //     id: userSnapshot.docs[0].id,
+      //     ...userSnapshot.docs[0].data(),
+      //   } as UserData;
+
+      //   // Update store state
+      //   set({
+      //     user,
+      //     userData,
+      //   });
+      // }
 
     } catch (error) {
       // STEP 4: Error handling
-      if (error instanceof FirebaseError) {
-        switch (error.code) {
-          case "auth/email-already-in-use":
-            // Try signing in if email exists
-            try {
-              const email = `${phone}@user.com`;
-              const userCredential = await signInWithEmailAndPassword(
-                auth,
-                email,
-                phone
-              );
-              const userData = await get().fetchUserData(userCredential.user.uid);
-              if (!userData) {
-                throw new Error("Failed to fetch user data");
-              }
-              set({
-                user: userCredential.user,
-                userData,
-              });
-              return;
-            } catch (error) {
-              throw new Error("Failed to sign in. Please try again" + error);
-            }
-          default:
-            throw new Error("Failed to sign in. Please try again");
-        }
-      }
+      // if (error instanceof FirebaseError) {
+      //   switch (error.code) {
+      //     case "auth/email-already-in-use":
+      //       // Try signing in if email exists
+      //       try {
+      //         const email = `${phone}@user.com`;
+      //         const userCredential = await signInWithEmailAndPassword(
+      //           auth,
+      //           email,
+      //           phone
+      //         );
+      //         const userData = await get().fetchUserData(userCredential.user.uid);
+      //         if (!userData) {
+      //           throw new Error("Failed to fetch user data");
+      //         }
+      //         set({
+      //           user: userCredential.user,
+      //           userData,
+      //         });
+      //         return;
+      //       } catch (error) {
+      //         throw new Error("Failed to sign in. Please try again" + error);
+      //       }
+      //     default:
+      //       throw new Error("Failed to sign in. Please try again");
+      //   }
+      // }
       if (error instanceof Error) {
         throw error;
       }
@@ -948,7 +956,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         userData: hotelData,
       });
 
-      return true; 
+      return true;
     } catch (error) {
       console.error(error);
       throw error;
@@ -1003,10 +1011,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         userId,
         upiId,
       });
-      
+
       // Update local state
       set({ upiData: { userId, upiId } });
-      
+
       // Revalidate cache
       try {
         // Try to revalidate using server action
