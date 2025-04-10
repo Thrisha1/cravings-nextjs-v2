@@ -359,16 +359,12 @@ const HotelMenuPage = ({
 
           {/* banner Image  */}
           <div className="w-screen h-[200px] absolute top-0 z-0">
-            {offers[0]?.dishImage || menu[0]?.image ? (
-              <Image
-                src={offers[0]?.dishImage ?? menu[0]?.image}
-                alt={offers[0]?.dishName ?? menu[0]?.name}
-                fill
-                className="w-auto h-auto object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-orange-200 animate-pulse" />
-            )}
+            <Image
+              src={`http://image.pollinations.ai/prompt/burgers%20%20pizza%20%20biriyani%20frechfires?nologo=true&width=1920&height=1080&seed=402`}
+              alt={"Hotel Banner"}
+              fill
+              className="w-auto h-auto object-cover"
+            />
 
             <div
               onClick={() => router.back()}
@@ -513,27 +509,27 @@ const HotelMenuPage = ({
             )}
 
             {topMenuItems.length > 0 && (
-              <div className="p-4">
-                <h1 className="text-2xl font-bold mb-4">Top 3 Items ⭐</h1>
-                <Carousel
-                  plugins={[
-                    Autoplay({
-                      delay: 2000,
-                    }),
-                  ]}
-                  className="w-full max-w-xs"
-                >
-                  <CarouselContent>
-                    {topMenuItems.map((item) => (
-                      <CarouselItem key={item.id}>
-                        <MenuItemCard
-                          menuItem={item}
-                          hotelId={hoteldata?.id as string}
-                        />
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                </Carousel>
+              <div className="p-4 py-10">
+                <h1 className="text-2xl font-bold mb-4 text-center">Top 3 Items ⭐</h1>
+
+                <div className="grid divide-y-2 gap-1 divide-orange-200">
+                  {topMenuItems.map((item) => (
+                    <div key={item.id} className="py-2 rounded animate-bg px-2">
+                      <div className="flex justify-between items-center">
+                        <span className="capitalize font-semibold text-lg">
+                          {item.name}
+                        </span>
+                        <span className="font-bold text-2xl text-orange-500">
+                          ₹{item.price}
+                        </span>
+                      </div>
+                      <span className="text-sm text-black/50">
+                        {item.description}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
               </div>
             )}
 

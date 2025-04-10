@@ -99,7 +99,7 @@ interface MenuState {
   } | null;
   selectedHotelId: string | null;
   setSelectedHotelId: (id: string | null) => void;
-  fetchMenu: (hotelId?: string) => Promise<void>;
+  fetchMenu: (hotelId?: string) => Promise<MenuItem[] | []>;
   addItem: (item: Omit<MenuItem, "id">) => Promise<void>;
   updateItem: (id: string, item: Partial<MenuItem>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
@@ -123,11 +123,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
   fetchMenu: async (hotelId?: string) => {
     const user = useAuthStore.getState().user;
-    if (!user) return;
 
     try {
       set({ loading: true, error: null });
-      const targetId = hotelId || user.uid;
+      const targetId = hotelId || user?.uid;
 
       const q = query(
         collection(db, "menuItems"),
@@ -137,14 +136,13 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       const querySnapshot = await getDocs(q);
       const items: MenuItem[] = [];
       querySnapshot.forEach((doc) => {
-        items.push({ id: doc.id, ...doc.data() } as MenuItem);
+        items.push({ id: doc.id, ...doc.data()} as MenuItem);
       });
-
       set({ items });
+      return items;
     } catch (error) {
       set({ error: (error as Error).message });
-    } finally {
-      set({ loading: false });
+      return [];
     }
   },
 
