@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pencil, Trash, Upload, Loader2 } from "lucide-react";
 import { MenuItem } from "@/components/bulkMenuUpload/EditItemModal";
-import { useEffect, useState } from "react";
-import { useCategoryStore } from "@/store/categoryStore";
+import { useState } from "react";
 import { Input } from "../ui/input";
 
 interface MenuItemCardProps {

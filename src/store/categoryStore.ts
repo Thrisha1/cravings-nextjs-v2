@@ -42,8 +42,9 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       set({ categories, loading: false });
       return categories as string[];
-    } catch (error) {
+    } catch (error: any) {
       set({ loading: false, error: "Failed to fetch categories" });
+      console.error("Fetch categories error:", error.message);
       return [];
     }
   },
@@ -99,8 +100,9 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const updated = cat.toLowerCase();
       return updated;
-    } catch (error) {
-      set({ loading: false, error: "Failed to add category" });
+    } catch (error: any) {
+      set({ loading: false, error: "Failed to update category" });
+      console.error("Update category error:", error.message);
     }
   },
 
@@ -134,8 +136,8 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         return null;
       }
       return catDoc.data().name;
-    } catch (error) {
-      console.error("Error fetching category by ID:", error);
+    } catch (error: any) {
+      console.error("Error fetching category by ID:", error.message);
       return null;
     }
   },

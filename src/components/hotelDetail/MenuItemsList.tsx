@@ -10,7 +10,7 @@ const MenuItemsList = ({ hotelId }: { hotelId: string }) => {
   const { getCategoryById } = useCategoryStore();
   const [items, setMenuItems] = useState<MenuItem[] | []>([]);
   const [categorisedItems, setCategorisedItems] = React.useState<{
-    [key: string]: any[];
+    [key: string]: MenuItem[];
   }>({});
 
   useEffect(() => {

@@ -6,7 +6,6 @@ import Image from "next/image";
 import { Offer } from "@/store/offerStore";
 import { useAuthStore, UserData } from "@/store/authStore";
 import OfferCardMin from "@/components/OfferCardMin";
-import Autoplay from "embla-carousel-autoplay";
 
 import {
   ArrowLeft,
@@ -54,14 +53,14 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import CategoryList from "@/components/CategoryList";
-import MenuItemCard from "@/components/MenuItemCard";
+// import CategoryList from "@/components/CategoryList";
+// import MenuItemCard from "@/components/MenuItemCard";
 import { useMenuStore } from "@/store/menuStore";
-import {
-  Carousel,
-  CarouselItem,
-  CarouselContent,
-} from "@/components/ui/carousel";
+// import {
+//   Carousel,
+//   CarouselItem,
+//   CarouselContent,
+// } from "@/components/ui/carousel";
 import MenuItemsList from "@/components/hotelDetail/MenuItemsList";
 
 export type MenuItem = {
@@ -107,7 +106,7 @@ const HotelMenuPage = ({
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [userPhone, setUserPhone] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const [menu, setMenu] = useState<MenuItem[]>([]);
+  // const [menu, setMenu] = useState<MenuItem[]>([]);
   const [lastVisible, setLastVisible] =
     useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const { fetchTopMenuItems } = useMenuStore();
@@ -149,9 +148,9 @@ const HotelMenuPage = ({
         } as MenuItem;
       });
 
-      setMenu((prevMenu: MenuItem[]) =>
-        isInitial ? menuItems : [...prevMenu, ...menuItems]
-      );
+      // setMenu((prevMenu: MenuItem[]) =>
+      //   isInitial ? menuItems : [...prevMenu, ...menuItems]
+      // );
     } catch (error) {
       console.error("Error fetching menu items:", error);
     }
