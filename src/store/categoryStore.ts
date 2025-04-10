@@ -42,9 +42,9 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       set({ categories, loading: false });
       return categories as string[];
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({ loading: false, error: "Failed to fetch categories" });
-      console.error("Fetch categories error:", error.message);
+      console.error("Fetch categories error:", error instanceof Error ? error.message : String(error));
       return [];
     }
   },
@@ -83,12 +83,11 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       }));
   
       return addedCat.id;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(error);
       set({ loading: false, error: "Failed to add category" });
     }
-  }
-  ,
+  },
 
   updateCategory: async (cat, catId) => {
     try {
@@ -100,9 +99,9 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const updated = cat.toLowerCase();
       return updated;
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({ loading: false, error: "Failed to update category" });
-      console.error("Update category error:", error.message);
+      console.error("Update category error:", error instanceof Error ? error.message : String(error));
     }
   },
 
@@ -122,7 +121,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         categories: state.categories.filter((category) => category !== cat),
         loading: false,
       }));
-    } catch (error) {
+    } catch (error: unknown) {
       set({ loading: false, error: "Failed to delete category" });
     }
   },
@@ -136,8 +135,8 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         return null;
       }
       return catDoc.data().name;
-    } catch (error: any) {
-      console.error("Error fetching category by ID:", error.message);
+    } catch (error: unknown) {
+      console.error("Error fetching category by ID:", error instanceof Error ? error.message : String(error));
       return null;
     }
   },
