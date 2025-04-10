@@ -4,6 +4,8 @@ import { getMenuItemImage } from "@/store/menuStore";
 import Image from "next/image";
 import { Loader2, Check, AlertCircle } from "lucide-react";
 import AIImageGenerateModal from "@/components/AIImageGenerateModal";
+import { ImageUploadModal } from "./ImageUploadModal";
+import { Upload } from "lucide-react";
 
 interface ImageGridModalProps {
   isOpen: boolean;
@@ -26,6 +28,7 @@ export function ImageGridModal({
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [isAIImageModalOpen, setAIImageModalOpen] = useState(false);
+  const [isUploadModalOpen, setUploadModalOpen] = useState(false);
 
   const fetchImages = async () => {
     if (isOpen && itemName && category) {
@@ -72,6 +75,16 @@ export function ImageGridModal({
               </div>
             </div>
 
+            <div
+              className="aspect-square cursor-pointer group bg-gray-100 rounded-md relative"
+              onClick={() => setUploadModalOpen(true)}
+            >
+              <div className="z-10 absolute top-1/2 left-1/2 text-center -translate-x-1/2 -translate-y-1/2">
+                <Upload className="w-8 h-8 mx-auto mb-2" />
+                <span className="text-xl font-bold">Upload</span>
+              </div>
+            </div>
+
             {imageUrls.map((url, index) => (
               <div
                 key={url}
@@ -115,6 +128,14 @@ export function ImageGridModal({
         itemName={itemName}
         isOpen={isAIImageModalOpen}
         onOpenChange={setAIImageModalOpen}
+      />
+
+      <ImageUploadModal
+        addNewImage={addNewImage}
+        category={category}
+        itemName={itemName}
+        isOpen={isUploadModalOpen}
+        onOpenChange={setUploadModalOpen}
       />
     </Dialog>
   );

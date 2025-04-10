@@ -53,6 +53,9 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
       setImageUrl(objectUrl);
+
+      console.log("Generated image URL:", objectUrl);
+      
       
       setGeneratedImage(imageUrl);
       toast.success("Image generated successfully!");
