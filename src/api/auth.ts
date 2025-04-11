@@ -12,6 +12,24 @@ export const userLoginQuery = `
   }
 }`;
 
+// partner table data query
+export const partnerQuery = `
+  query GetPartnerByEmail($email: String!) {
+  partners(where: {email: {_eq: $email}}, limit: 1) {
+    id
+    name
+    email
+    password
+    store_name
+    location
+    status
+    upi_id
+    description
+    phone
+    district
+  }
+}`;
+
 
 /*...........mutation...........*/
 
@@ -24,5 +42,22 @@ export const userLoginMutation = `
     phone
     crave_coins
     location
+  }
+}`;
+
+export const partnerMutation = `
+  mutation InsertPartner($object: partners_insert_input!) {
+  insert_partners_one(object: $object) {
+    id
+    name
+    email
+    password
+    store_name
+    location
+    status
+    upi_id
+    description
+    phone
+    district
   }
 }`;
