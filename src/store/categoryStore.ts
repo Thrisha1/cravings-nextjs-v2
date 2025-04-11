@@ -7,6 +7,8 @@ import {
   deleteDoc,
   getDoc,
   updateDoc,
+  query,
+  where,
 } from "firebase/firestore";
 import { create } from "zustand";
 
@@ -14,11 +16,12 @@ interface CategoryState {
   categories: string[];
   loading: boolean;
   error: string | null;
-  fetchCategories: () => Promise<string[]>;
+  fetchCategories: (addedBy?: string) => Promise<string[]>;
   addCategory: (cat: string) => Promise<string | void>;
   deleteCategory: (cat: string) => Promise<void>;
   getCategoryById: (catId: string) => Promise<string | null>;
   updateCategory: (cat: string, catId: string) => Promise<string | void>;
+  getCategoryId: (cat: string, addedBy: string) => Promise<string | null>;
 }
 
 export const useCategoryStore = create<CategoryState>((set, get) => ({
@@ -27,7 +30,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
   loading: false,
   error: null,
 
-  fetchCategories: async () => {
+  fetchCategories: async (addedBy?: string) => {
     try {
       set({ loading: true, error: null });
 
@@ -36,15 +39,28 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         return get().categories as string[];
       }
 
-      const categories = (await getDocs(collection(db, "categories"))).docs.map(
-        (doc) => doc.data().name
-      );
+      let categories: string[] = [];
+
+      if (!addedBy) {
+        categories = (await getDocs(collection(db, "categories"))).docs.map(
+          (doc) => doc.data().name
+        );
+      } else {
+        categories = (
+          await getDocs(
+            query(collection(db, "categories"), where("addedBy", "==", addedBy))
+          )
+        ).docs.map((doc) => doc.data().name);
+      }
 
       set({ categories, loading: false });
       return categories as string[];
     } catch (error: unknown) {
       set({ loading: false, error: "Failed to fetch categories" });
-      console.error("Fetch categories error:", error instanceof Error ? error.message : String(error));
+      console.error(
+        "Fetch categories error:",
+        error instanceof Error ? error.message : String(error)
+      );
       return [];
     }
   },
@@ -52,7 +68,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
   addCategory: async (cat) => {
     try {
       set({ loading: true, error: null });
-  
+
       const allCategories = (
         await getDocs(collection(db, "categories"))
       ).docs.map((doc) => ({
@@ -66,22 +82,22 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
           category.name.toLowerCase() === cat.toLowerCase() &&
           category.addedBy === auth.currentUser?.uid
       );
-  
+
       if (isCategoryExists) {
         set({ loading: false, error: "Category already exists" });
-        return isCategoryExists.id; 
+        return isCategoryExists.id;
       }
 
       const addedCat = await addDoc(collection(db, "categories"), {
         name: cat.toLowerCase(),
         addedBy: auth.currentUser?.uid,
       });
-  
+
       set((state) => ({
         categories: [...state.categories, cat.toLowerCase()],
         loading: false,
       }));
-  
+
       return addedCat.id;
     } catch (error: unknown) {
       console.error(error);
@@ -101,7 +117,10 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       return updated;
     } catch (error: unknown) {
       set({ loading: false, error: "Failed to update category" });
-      console.error("Update category error:", error instanceof Error ? error.message : String(error));
+      console.error(
+        "Update category error:",
+        error instanceof Error ? error.message : String(error)
+      );
     }
   },
 
@@ -123,7 +142,10 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       }));
     } catch (error: unknown) {
       set({ loading: false, error: "Failed to delete category" });
-      console.error("Delete category error:", error instanceof Error? error.message : String(error));
+      console.error(
+        "Delete category error:",
+        error instanceof Error ? error.message : String(error)
+      );
     }
   },
 
@@ -137,7 +159,34 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       }
       return catDoc.data().name;
     } catch (error: unknown) {
-      console.error("Error fetching category by ID:", error instanceof Error ? error.message : String(error));
+      console.error(
+        "Error fetching category by ID:",
+        error instanceof Error ? error.message : String(error)
+      );
+      return null;
+    }
+  },
+
+  getCategoryId: async (cat: string, addedBy: string) => {
+    try {
+      const allCategories = (
+        await getDocs(
+          query(
+            collection(db, "categories"),
+            where("addedBy", "==", addedBy),
+            where("name", "==", cat)
+          )
+        )
+      ).docs.map((doc) => ({
+        id: doc.id,
+      }));
+
+      return allCategories[0]?.id || null;
+    } catch (error) {
+      console.error(
+        "Error fetching category ID:",
+        error instanceof Error ? error.message : String(error)
+      );
       return null;
     }
   },

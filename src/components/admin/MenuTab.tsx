@@ -20,6 +20,7 @@ import { deleteFileFromS3 } from "@/app/actions/aws-s3";
 import { toast } from "sonner";
 import { useCategoryStore } from "@/store/categoryStore";
 import CategoryUpdateModal from "./CategoryUpdateModal";
+import Image from "next/image";
 
 export function MenuTab() {
   const { items, addItem, updateItem, deleteItem } = useMenuStore();
@@ -52,6 +53,12 @@ export function MenuTab() {
       fetchAdminOffers(user.uid);
     }
   }, [user, fetchAdminOffers]);
+
+  useEffect(() => {
+    if (!isEditModalOpen) {
+      setEditingItem(null);
+    }
+  }, [isEditModalOpen]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) =>
@@ -130,13 +137,13 @@ export function MenuTab() {
     convertToCategorised();
   }, [filteredItems, getCategoryById, catUpated]);
 
-  const handleCategoryUpdate = async (cat : string , catId : string) => {
+  const handleCategoryUpdate = async (cat: string, catId: string) => {
     setIsCategoryEditing(true);
     seteditingCategory({
-      id : catId,
-      name : cat
+      id: catId,
+      name: cat,
     });
-  }
+  };
 
   return (
     <div className="p-4">
@@ -184,7 +191,7 @@ export function MenuTab() {
         />
       )}
 
-      {isCategoryEditing && ( 
+      {isCategoryEditing && (
         <CategoryUpdateModal
           catId={editingCategory?.id || ""}
           cat={editingCategory?.name || ""}
@@ -196,95 +203,118 @@ export function MenuTab() {
       )}
 
       <div className="grid gap-4 divide-y-2 divide-gray-300 ">
-        {Object.entries(categoriesdItems).sort().map(([category, items]) => {
-          return (
-            <div key={category} className="pb-10">
-              <div className="flex items-center gap-2 group max-w-fit">
-                <h1 className="text-2xl lg:text-4xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent">
-                  {category}
-                </h1>
-                <button onClick={()=>{
-                  handleCategoryUpdate(category, items[0].category);
-                }} className="group-hover:opacity-100 opacity-0 transition-opacity duration-300">
-                  <Pen />
-                </button>
-              </div>
+        {Object.entries(categoriesdItems)
+          .sort()
+          .map(([category, items]) => {
+            return (
+              <div key={category} className="pb-10">
+                <div className="flex items-center gap-2 group max-w-fit">
+                  <h1 className="text-2xl lg:text-4xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent">
+                    {category}
+                  </h1>
+                  <button
+                    onClick={() => {
+                      handleCategoryUpdate(category, items[0].category);
+                    }}
+                    className="group-hover:opacity-100 opacity-0 transition-opacity duration-300"
+                  >
+                    <Pen />
+                  </button>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ">
-                {items.map((item) => (
-                  <Card className="rounded-xl overflow-hidden" key={item.id}>
-                    <CardHeader>
-                      <CardTitle>{item.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-2xl font-bold">
-                        ₹{item.price.toFixed(2)}
-                      </p>
-                      {item.description && (
-                        <p className="text-gray-600 mt-2">{item.description}</p>
-                      )}
-                      <div className="flex items-center mt-2">
-                        <label className="mr-2">Mark as Top 3:</label>
-                        <Switch
-                          checked={item.isTop}
-                          onCheckedChange={() => {
-                            const topItemsCount = filteredItems.filter(
-                              (i) => i.isTop
-                            ).length;
-                            if (item.isTop) {
-                              updateItem(item.id, { isTop: false });
-                            } else if (topItemsCount < 3) {
-                              updateItem(item.id, { isTop: true });
-                            } else {
-                              toast.error(
-                                "You can only mark up to 3 items as Top 3."
-                              );
-                            }
-                          }}
-                        />
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        onClick={() =>
-                          openEditModal({
-                            id: item.id,
-                            name: item.name,
-                            price: item.price,
-                            image: item.image,
-                            description: item.description || "",
-                            category: item.category,
-                          })
-                        }
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={async () => {
-                          const isOfferActive = adminOffers.some(
-                            (offer) => offer.menuItemId === item.id
-                          );
-                          if (isOfferActive) {
-                            alert(
-                              `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
-                            );
-                            return;
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ">
+                  {items.map((item) => (
+                    <Card
+                      className="rounded-xl overflow-hidden grid"
+                      key={item.id}
+                    >
+                      <CardHeader className="flex flex-row justify-between">
+                        <div>
+                          {item.image.length > 0 && (
+                            <div>
+                              <Image
+                                src={item.image}
+                                alt={item.name}
+                                width={200}
+                                height={200}
+                                className="w-full h-32 object-cover rounded-lg"
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <CardTitle>{item.name}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-2xl font-bold">
+                          ₹{item.price.toFixed(2)}
+                        </p>
+                        {item.description && (
+                          <p className="text-gray-600 mt-2">
+                            {item.description}
+                          </p>
+                        )}
+                        <div className="flex items-center mt-2">
+                          <label className="mr-2">Mark as Top 3:</label>
+                          <Switch
+                            checked={item.isTop}
+                            onCheckedChange={() => {
+                              const topItemsCount = filteredItems.filter(
+                                (i) => i.isTop
+                              ).length;
+                              if (item.isTop) {
+                                updateItem(item.id, { isTop: false });
+                              } else if (topItemsCount < 3) {
+                                updateItem(item.id, { isTop: true });
+                              } else {
+                                toast.error(
+                                  "You can only mark up to 3 items as Top 3."
+                                );
+                              }
+                            }}
+                          />
+                        </div>
+                      </CardContent>
+                      <CardFooter className="flex justify-end space-x-2">
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            openEditModal({
+                              id: item.id,
+                              name: item.name,
+                              price: item.price,
+                              image: item.image,
+                              description: item.description || "",
+                              category: item.category,
+                            })
                           }
-                          deleteItem(item.id);
-                          await deleteFileFromS3(item.image);
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={async () => {
+                            const isOfferActive = adminOffers.some(
+                              (offer) => offer.menuItemId === item.id
+                            );
+                            if (isOfferActive) {
+                              alert(
+                                `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
+                              );
+                              return;
+                            }
+                            deleteItem(item.id);
+                            await deleteFileFromS3(item.image);
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
     </div>
   );

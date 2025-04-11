@@ -2,8 +2,9 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useState, useEffect } from "react";
 import { getMenuItemImage } from "@/store/menuStore";
 import Image from "next/image";
-import { Loader2, Check, AlertCircle } from "lucide-react";
+import { Loader2, Check, AlertCircle, Upload } from "lucide-react";
 import AIImageGenerateModal from "@/components/AIImageGenerateModal";
+import ImageUploadModal from "../ImageUploadModal";
 
 interface ImageGridModalProps {
   isOpen: boolean;
@@ -23,20 +24,27 @@ export function ImageGridModal({
   onSelectImage,
 }: ImageGridModalProps) {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(
+    {}
+  );
   const [error, setError] = useState<string | null>(null);
   const [isAIImageModalOpen, setAIImageModalOpen] = useState(false);
+  const [isImageUploadModalOpen , setImageUploadModalOpen] = useState(false);
 
   const fetchImages = async () => {
     if (isOpen && itemName && category) {
       setError(null);
       try {
         const urls = await getMenuItemImage(category, itemName);
+        console.log("Fetched URLs:", itemName, category, urls);
+        
         if (urls.length === 0) {
           // setError(`No images found for "${itemName}" in category "${category}"`);
         }
         setImageUrls(urls);
-        setLoadingStates(urls.reduce((acc, url) => ({ ...acc, [url]: true }), {}));
+        setLoadingStates(
+          urls.reduce((acc, url) => ({ ...acc, [url]: true }), {})
+        );
       } catch (error) {
         console.error("Error fetching images:", error);
         setError("Failed to fetch images. Please try again.");
@@ -65,6 +73,16 @@ export function ImageGridModal({
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-1">
             <div
               className="aspect-square cursor-pointer group bg-gray-100 rounded-md relative"
+              onClick={() => setImageUploadModalOpen(true)}
+            >
+              <div className="z-10 absolute grid place-items-center top-1/2 left-1/2 text-center -translate-x-1/2 -translate-y-1/2 text-xl font-bold">
+                <Upload className="w-8 h-8 " />
+                Upload
+              </div>
+            </div>
+
+            <div
+              className="aspect-square cursor-pointer group bg-gray-100 rounded-md relative"
               onClick={() => setAIImageModalOpen(true)}
             >
               <div className="z-10 absolute top-1/2 left-1/2 text-center -translate-x-1/2 -translate-y-1/2 text-xl font-bold">
@@ -88,8 +106,12 @@ export function ImageGridModal({
                   alt={`Option ${index + 1}`}
                   fill
                   className="object-cover rounded-md"
-                  onLoad={() => setLoadingStates((prev) => ({ ...prev, [url]: false }))}
-                  onError={() => setLoadingStates((prev) => ({ ...prev, [url]: false }))}
+                  onLoad={() =>
+                    setLoadingStates((prev) => ({ ...prev, [url]: false }))
+                  }
+                  onError={() =>
+                    setLoadingStates((prev) => ({ ...prev, [url]: false }))
+                  }
                 />
                 {currentImage === url && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
@@ -100,7 +122,9 @@ export function ImageGridModal({
                 )}
                 <div
                   className={`absolute inset-0 transition-colors rounded-md ${
-                    currentImage === url ? "ring-2 ring-orange-500" : "hover:bg-black/20"
+                    currentImage === url
+                      ? "ring-2 ring-orange-500"
+                      : "hover:bg-black/20"
                   }`}
                 />
               </div>
@@ -115,6 +139,14 @@ export function ImageGridModal({
         itemName={itemName}
         isOpen={isAIImageModalOpen}
         onOpenChange={setAIImageModalOpen}
+      />
+
+      <ImageUploadModal
+        isOpen={isImageUploadModalOpen}
+        onOpenChange={setImageUploadModalOpen}
+        addNewImage={addNewImage}
+        category={category}
+        itemName={itemName}
       />
     </Dialog>
   );

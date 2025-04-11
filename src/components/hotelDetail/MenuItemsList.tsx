@@ -4,6 +4,7 @@ import type { MenuItem } from "@/store/menuStore";
 import React, { useEffect, useState } from "react";
 import { Accordion, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { AccordionContent } from "@radix-ui/react-accordion";
+import Image from "next/image";
 
 const MenuItemsList = ({ hotelId }: { hotelId: string }) => {
   const { fetchMenu } = useMenuStore();
@@ -56,7 +57,11 @@ const MenuItemsList = ({ hotelId }: { hotelId: string }) => {
             Menu
           </h1>
 
-          <Accordion type="multiple" defaultValue={[Object.entries(categorisedItems)[0]?.[0]]} className="mt-10">
+          <Accordion
+            type="multiple"
+            defaultValue={[Object.entries(categorisedItems)[0]?.[0]]}
+            className="mt-10"
+          >
             {Object.entries(categorisedItems).map(([category, items]) => (
               <AccordionItem value={category} key={category} className="mb-6">
                 <AccordionTrigger className="text-xl font-bold mb-2 capitalize">
@@ -64,18 +69,30 @@ const MenuItemsList = ({ hotelId }: { hotelId: string }) => {
                 </AccordionTrigger>
                 <AccordionContent className="grid divide-y-2 divide-orange-200">
                   {items.map((item) => (
-                    <div key={item.id} className="py-2">
+                    <div key={item.id} className="py-6 rounded px-2">
                       <div className="flex justify-between items-center">
-                        <span className="capitalize font-semibold text-lg">
-                          {item.name}
-                        </span>
-                        <span className="font-bold text-2xl text-orange-500">
-                          ₹{item.price}
-                        </span>
+                        <div className="grid gap-2">
+                          <span className="capitalize  text-xl font-bold">
+                            {item.name}
+                          </span>
+                          <span className="font-bold text-xl text-orange-500">
+                            ₹{item.price}
+                          </span>
+                          <span className="text-sm text-black/50">
+                            {item.description}
+                          </span>
+                        </div>
+                        {item.image.length > 0 && (
+                          <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden ">
+                            <Image
+                              src={item.image}
+                              alt={item.name}
+                              fill
+                              className="object-cover w-full h-full"
+                            />
+                          </div>
+                        )}
                       </div>
-                      <span className="text-sm text-black/50">
-                        {item.description}
-                      </span>
                     </div>
                   ))}
                 </AccordionContent>

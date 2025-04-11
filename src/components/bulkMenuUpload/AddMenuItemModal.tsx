@@ -12,6 +12,9 @@ import Image from "next/image";
 import { toast } from "sonner";
 import CategoryDropdown from "@/components/ui/CategoryDropdown";
 import { ImageGridModal } from "./ImageGridModal";
+import { useCategoryStore } from "@/store/categoryStore";
+import { useAuthStore } from "@/store/authStore";
+import { addDoc } from "firebase/firestore";
 
 interface AddMenuItemModalProps {
   isOpen: boolean;
@@ -39,21 +42,23 @@ export function AddMenuItemModal({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const { getCategoryId } = useCategoryStore();
+  const { user } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      !newItem.name ||
-      !newItem.price ||
-      !newItem.image ||
-      !newItem.category
-    ) {
+    if (!newItem.name || !newItem.price || !newItem.category) {
       toast.error("Please fill all the fields");
       return;
     }
     setIsSubmitting(true);
     try {
-      await onSubmit(newItem);
+      const catId = await getCategoryId(newItem.category, user?.uid || "");
+      await onSubmit({
+        ...newItem,
+        category: catId as string,
+      });
+
       setNewItem({
         name: "",
         price: "",
@@ -75,7 +80,7 @@ export function AddMenuItemModal({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Image Preview and Selection */}
-          {(newItem.category && newItem.name) && (
+          {newItem.category && newItem.name && (
             <div className="space-y-2">
               {newItem.image ? (
                 <div

@@ -1,11 +1,18 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { use, useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import CategoryDropdown from "@/components/ui/CategoryDropdown";
 import { ImageGridModal } from "../bulkMenuUpload/ImageGridModal";
+import { useCategoryStore } from "@/store/categoryStore";
+import { useAuthStore } from "@/store/authStore";
 
 interface EditMenuItemModalProps {
   isOpen: boolean;
@@ -29,19 +36,57 @@ interface EditMenuItemModalProps {
   children?: React.ReactNode;
 }
 
-export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit, children }: EditMenuItemModalProps) {
-  const [editingItem, setEditingItem] = useState(item);
+export function EditMenuItemModal({
+  isOpen,
+  onOpenChange,
+  item,
+  onSubmit,
+  children,
+}: EditMenuItemModalProps) {
+  const [editingItem, setEditingItem] = useState(item );
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const { getCategoryById, getCategoryId } = useCategoryStore();
+  const [categoryName, setCategoryName] = useState("");
+  const { user } = useAuthStore();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingItem.name || !editingItem.price || !editingItem.image || !editingItem.category) {
+    if (!editingItem.name || !editingItem.price || !categoryName) {
       alert("Please fill all the fields");
       return;
     }
-    onSubmit(editingItem);
+
+    let catId = await getCategoryId(editingItem.category, user?.uid || "");
+    if (!catId) {
+      catId = item.category;
+    }
+
+    const updatedItem = {
+      ...editingItem,
+      category: catId,
+    };
+
+    onSubmit(updatedItem);
     onOpenChange(false);
   };
+
+  useEffect(() => {
+    const fetchCatName = async () => {
+      const catName = await getCategoryById(item.category);
+
+      if (catName) {
+        setCategoryName(catName);
+      } else {
+        setCategoryName("Unknown Category");
+      }
+    };
+
+    fetchCatName();
+
+
+  }, [item, isOpen, editingItem, isImageModalOpen]);
+
+ 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -53,11 +98,15 @@ export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit, childr
           {/* Image Preview and Selection */}
           <div className="space-y-2">
             {editingItem.image ? (
-              <div className="relative h-[200px] w-full cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
-                <Image 
-                  src={editingItem.image} 
-                  alt="Selected item" 
-                  fill
+              <div
+                className="relative h-[200px] w-full cursor-pointer"
+                onClick={() => setIsImageModalOpen(true)}
+              >
+                <Image
+                  src={editingItem.image}
+                  alt="Selected item"
+                  width={200}
+                  height={200}
                   className="object-cover rounded-lg"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
@@ -65,9 +114,9 @@ export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit, childr
                 </div>
               </div>
             ) : (
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 className="w-full h-[200px]"
                 onClick={() => setIsImageModalOpen(true)}
               >
@@ -80,10 +129,10 @@ export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit, childr
             isOpen={isImageModalOpen}
             onOpenChange={setIsImageModalOpen}
             itemName={editingItem.name}
-            category={editingItem.category}
+            category={categoryName}
             currentImage={editingItem.image}
             onSelectImage={(newImageUrl: string) => {
-              setEditingItem(prev => ({ ...prev, image: newImageUrl }));
+              setEditingItem((prev) => ({ ...prev, image: newImageUrl }));
               setIsImageModalOpen(false);
             }}
           />
@@ -93,23 +142,32 @@ export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit, childr
             required
             placeholder="Product Name"
             value={editingItem.name}
-            onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+            onChange={(e) =>
+              setEditingItem({ ...editingItem, name: e.target.value })
+            }
           />
           <Input
             required
             type="number"
             placeholder="Price in ₹"
             value={editingItem.price}
-            onChange={(e) => setEditingItem({ ...editingItem, price: e.target.value })}
+            onChange={(e) =>
+              setEditingItem({ ...editingItem, price: e.target.value })
+            }
           />
           <Textarea
             placeholder="Product Description"
             value={editingItem.description}
-            onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+            onChange={(e) =>
+              setEditingItem({ ...editingItem, description: e.target.value })
+            }
           />
           <CategoryDropdown
-            value={editingItem.category}
-            onChange={(value) => setEditingItem({ ...editingItem, category: value })}
+            value={categoryName}
+            onChange={(value) => {
+              setEditingItem({ ...editingItem, category: value });
+              setCategoryName(value);
+            }}
           />
           {children}
           <Button type="submit" className="w-full">

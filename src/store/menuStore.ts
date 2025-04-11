@@ -66,7 +66,9 @@ export const getMenuItemImage = async (category: string, name: string) => {
     
     dishes = store.dishCache.dishes;
   } else {
+
     dishes = await fetchAllDishes();
+
     useMenuStore.setState({
       dishCache: {
         dishes,

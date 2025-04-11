@@ -74,7 +74,9 @@ export async function uploadFileToS3(file, filename){
       })
     })
 
-    const data = await res.json();
+    const data = await res.json();   
+    console.log(data);
+     
     return data.url;
     
   } catch (error) {
