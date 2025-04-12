@@ -14,7 +14,6 @@ import CategoryDropdown from "@/components/ui/CategoryDropdown";
 import { ImageGridModal } from "./ImageGridModal";
 import { useCategoryStore } from "@/store/categoryStore";
 import { useAuthStore } from "@/store/authStore";
-import { addDoc } from "firebase/firestore";
 
 interface AddMenuItemModalProps {
   isOpen: boolean;

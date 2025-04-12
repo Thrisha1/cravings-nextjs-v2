@@ -37,9 +37,9 @@ export const EditItemModal = ({
   onSave,
   onEdit,
 }: EditItemModalProps) => {
-  if (!editingItem) return null;
-
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+
+  if (!editingItem) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
