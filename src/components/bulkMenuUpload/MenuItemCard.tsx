@@ -5,6 +5,7 @@ import { Pencil, Trash, Upload, Loader2 } from "lucide-react";
 import { MenuItem } from "@/components/bulkMenuUpload/EditItemModal";
 import { useState } from "react";
 import { Input } from "../ui/input";
+import Image from "next/image";
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -28,7 +29,7 @@ export const MenuItemCard = ({
 }: MenuItemCardProps) => {
   const [itemCategory, setItemCategory] = useState(item.category);
   return (
-    <Card className="relative">
+    <Card className="relative grid">
       {item.isAdded && (
         <div className="absolute top-2 right-1/2 translate-x-1/2 bg-green-500 text-white px-2 py-1 rounded-md">
           Added
@@ -40,16 +41,25 @@ export const MenuItemCard = ({
           <Checkbox
             checked={item.isSelected}
             onCheckedChange={onSelect}
-            disabled={!item.category || item.isAdded }
+            disabled={!item.category || item.isAdded}
           />
           <div className="font-bold text-lg">{item.name}</div>
         </div>
         <p className="font-bold text-2xl text-right">₹{item.price}</p>
       </div>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 ">
+        {item.image.length > 9 && (
+          <Image
+            src={item.image}
+            alt={item.name}
+            width={200}
+            height={200}
+            className="w-full h-40 object-cover rounded-md cursor-pointer"
+          />
+        )}
         <p className="text-gray-600">{item.description}</p>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center ">
           <label htmlFor="category" className="text-sm">
             Category :
           </label>
@@ -70,9 +80,7 @@ export const MenuItemCard = ({
         <div className="flex gap-2">
           <Button
             onClick={onAddToMenu}
-            disabled={
-              item.isAdded || isUploading || !item.category 
-            }
+            disabled={item.isAdded || isUploading || !item.category}
           >
             {isUploading ? (
               <>

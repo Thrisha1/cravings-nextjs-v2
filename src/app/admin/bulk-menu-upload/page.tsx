@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -38,6 +38,11 @@ const BulkUploadPage = () => {
     setEditingItem,
     handleCategoryChange,
   } = useBulkUpload();
+
+  useEffect(() => {
+    console.log("Menu Items:", menuItems);
+    
+  },[menuItems]);
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-8">

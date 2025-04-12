@@ -37,6 +37,8 @@ interface DishCache {
   dishes: Dish[];
   lastFetched: number;
   expiryTime: number;
+  category: string;
+  name: string;
 }
 
 export const menuCatagories = CATEGORIES.map((category) => category.name);
@@ -60,13 +62,11 @@ export const getMenuItemImage = async (category: string, name: string) => {
 
   if (
     store.dishCache &&
-    Date.now() - store.dishCache.lastFetched < store.dishCache.expiryTime
+    Date.now() - store.dishCache.lastFetched < store.dishCache.expiryTime &&
+    store.dishCache.category !== category
   ) {
-
-    
     dishes = store.dishCache.dishes;
   } else {
-
     dishes = await fetchAllDishes();
 
     useMenuStore.setState({
@@ -74,6 +74,8 @@ export const getMenuItemImage = async (category: string, name: string) => {
         dishes,
         lastFetched: Date.now(),
         expiryTime: CACHE_EXPIRY_TIME,
+        category,
+        name,
       },
     });
   }
@@ -138,7 +140,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       const querySnapshot = await getDocs(q);
       const items: MenuItem[] = [];
       querySnapshot.forEach((doc) => {
-        items.push({ id: doc.id, ...doc.data()} as MenuItem);
+        items.push({ id: doc.id, ...doc.data() } as MenuItem);
       });
       set({ items });
       return items;
