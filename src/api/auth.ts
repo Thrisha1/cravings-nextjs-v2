@@ -30,6 +30,24 @@ export const partnerQuery = `
   }
 }`;
 
+export const partnerIdQuery = `
+  query GetPartnerById($id: uuid!) {
+    partners_by_pk(id: $id) {
+      id
+      name
+      email
+      password
+      store_name
+      location
+      status
+      upi_id
+      description
+      phone
+      district
+    }
+  }
+`;
+
 export const partnerLoginQuery = `
   query PartnerLogin($email: String!, $password: String!) {
     partners(where: {
@@ -54,6 +72,15 @@ export const partnerLoginQuery = `
 export const superAdminLoginQuery = `
   query SuperAdminLogin($email: String!, $password: String!) {
     super_admins(where: {email: {_eq: $email}, password: {_eq: $password}}) {
+      id
+      email
+    }
+  }
+`;
+
+export const superAdminIdQuery = `
+  query GetSuperAdminById($id: uuid!) {
+    super_admins_by_pk(id: $id) {
       id
       email
     }

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { getUserByIdQuery, partnerMutation, partnerQuery, userLoginMutation, userLoginQuery, partnerLoginQuery, superAdminLoginQuery } from "@/api/auth";
-import { encryptText } from "@/lib/encrtption";
+import { getUserByIdQuery, partnerMutation, partnerQuery, userLoginMutation, userLoginQuery, partnerLoginQuery, superAdminLoginQuery, partnerIdQuery, superAdminIdQuery } from "@/api/auth";
+import { encryptText, decryptText } from "@/lib/encrtption";
 
 export interface Partner {
   id: string;
@@ -56,6 +56,7 @@ interface AuthState {
   signInWithPhone: (phone: string) => Promise<void>;
   signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
   signInSuperAdminWithEmail: (email: string, password: string) => Promise<void>;
+  fetchUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -64,6 +65,57 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   superAdminData: null,
   loading: true,
   error: null,
+
+  fetchUser: async () => {
+    try {
+      const stored = localStorage.getItem("sysbio");
+      if (!stored) return;
+  
+      const decrypted = decryptText(stored) as { id: string; role: string };
+  
+      if (!decrypted || !decrypted.id || !decrypted.role) {
+        throw new Error("Invalid session data");
+      }
+  
+      const { id, role } = decrypted;
+  
+      if (role === "user") {
+        const response = await fetchFromHasura(getUserByIdQuery, { id });
+        const user = response?.users?.[0];
+        if (user) {
+          set({
+            userData: {
+              id: user.id,
+              email: user.email,
+              full_name: user.full_name,
+              phone: user.phone,
+              crave_coins: user.crave_coins,
+              location: user.location,
+              password: "",
+              role: "user"
+            }
+          });
+        }
+      } else if (role === "partner") {
+        const response = await fetchFromHasura(partnerIdQuery, { id });
+        const partner = response?.partners?.[0];
+        if (partner) {
+          set({ partnerData: partner });
+        }
+      } else if (role === "superadmin") {
+        const response = await fetchFromHasura(superAdminIdQuery, {
+          id
+        });
+        const superAdmin = response?.super_admins?.[0];
+        if (superAdmin) {
+          set({ superAdminData: superAdmin });
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    }
+  },
+  
 
   signOut: async () => {
     try {

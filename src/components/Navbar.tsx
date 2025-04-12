@@ -15,7 +15,7 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const location = pathname.split("?")[0];
-  const { userData } = useAuthStore();
+  const { userData, partnerData, superAdminData } = useAuthStore();
   const { offersClaimable } = useClaimedOffersStore();
   const [isOpen, setIsOpen] = useState(false);
   const [userLocation, setUserLocation] = useState("");
@@ -43,7 +43,7 @@ export function Navbar() {
     if (location) {
       setUserLocation(location);
     }
-  }, [userData]);
+  }, [userData, superAdminData, partnerData]);
 
   const NavLinks = () => (
     <>
@@ -73,14 +73,14 @@ export function Navbar() {
           {link.label}
         </Link>
       ))}
-      {!user && (
+      {!(userData || partnerData || superAdminData)  && (
         <Link href="/partner" onClick={() => setIsOpen(false)}>
           <Button className="text-white font-medium bg-orange-600 hover:bg-orange-50 hover:border-orange-600 hover:text-orange-600 px-5 text-[1rem] py-3 rounded-full transition-all duration-300">
             Partner with Us
           </Button>
         </Link>
       )}
-      {user && (
+      {(userData || partnerData || superAdminData)  && (
         <div className="flex w-full">
           <div className="flex items-center gap-2 flex-col sm:flex-row justify-end">
             <Link
@@ -102,7 +102,16 @@ export function Navbar() {
                   d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
                 />
               </svg>
-              <span>{userData?.fullName ?? userData?.hotelName}</span>
+              <span>
+                {userData && !partnerData && !superAdminData 
+                  ? userData.full_name
+                  : partnerData && !userData && !superAdminData
+                  ? partnerData.store_name 
+                  : superAdminData && !userData && !partnerData
+                  ? "Super Admin"
+                  : userData?.email
+                }
+              </span>
             </Link>
           </div>
         </div>
@@ -146,7 +155,7 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-5">
-              {user && (
+              {(userData || partnerData || superAdminData) && (
                 <div
                   onClick={() => {
                     router.push("/coupons");
@@ -176,7 +185,7 @@ export function Navbar() {
                 </div>
               )}
 
-              {!user && (
+              {!(userData || partnerData || superAdminData)  && (
                 <Button
                   onClick={() => router.push("/login")}
                   size="lg"
