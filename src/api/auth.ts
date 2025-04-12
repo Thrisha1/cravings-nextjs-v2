@@ -51,6 +51,15 @@ export const partnerLoginQuery = `
   }
 `;
 
+export const superAdminLoginQuery = `
+  query SuperAdminLogin($email: String!, $password: String!) {
+    super_admins(where: {email: {_eq: $email}, password: {_eq: $password}}) {
+      id
+      email
+    }
+  }
+`;
+
 
 /*...........mutation...........*/
 

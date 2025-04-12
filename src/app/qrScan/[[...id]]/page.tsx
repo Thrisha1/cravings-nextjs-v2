@@ -489,7 +489,7 @@ const QrScanPage = () => {
         )}
       </section>
 
-      <PartnerLoginModal />
+      {/* <PartnerLoginModal /> */}
 
       <Dialog open={showUpiErrorDialog} onOpenChange={setShowUpiErrorDialog}>
         <DialogContent className="sm:max-w-md">
