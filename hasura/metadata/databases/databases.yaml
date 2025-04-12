@@ -2,7 +2,7 @@
   kind: postgres
   configuration:
     connection_info:
-      database_url: postgresql://neondb_owner:npg_ZcQM6o5Kemwl@ep-white-thunder-a7z8jes9-pooler.ap-southeast-2.aws.neon.tech/curious-ferret-93_db_8071907?sslmode=require
+      database_url: "{{ env('DATABASE_URL') }}"
       isolation_level: read-committed
       use_prepared_statements: false
   tables: "!include cravings-whale/tables/tables.yaml"
