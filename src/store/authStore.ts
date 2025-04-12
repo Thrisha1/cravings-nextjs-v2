@@ -28,7 +28,7 @@ import { MenuItem } from "@/screens/HotelMenuPage";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { FirebaseError } from "firebase/app";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { userLoginMutation, userLoginQuery } from "@/api/auth";
+import { getUserByIdQuery, partnerMutation, partnerQuery, userLoginMutation, userLoginQuery } from "@/api/auth";
 import { decryptText, encryptText } from "@/lib/encrtption";
 
 
@@ -75,7 +75,22 @@ export interface UserData {
   offersClaimableUpdatedAt?: string;
 }
 
+export interface HasuraPartner {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  store_name: string;
+  location: string;
+  status: string;
+  upi_id: string;
+  description: string | null;
+  phone: string;
+  district: string;
+}
+
 export interface HasuraUser {
+  id: string;
   email: string;
   password: string;
   full_name: string;
@@ -87,6 +102,7 @@ export interface HasuraUser {
 interface AuthState {
   user: User | null;
   userData: HasuraUser | null;
+  hasuraPartner: HasuraPartner | null;
   loading: boolean;
   error: string | null;
   userVisit: {
@@ -177,6 +193,7 @@ export const getDiscount = (
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   userData: null,
+  hasuraPartner: null,
   loading: true,
   error: null,
   userVisit: null,
@@ -191,17 +208,43 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return null;
       }
 
-      const docRef = doc(db, "users", uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data() as UserData;
-        if (save) {
-          set({ userData: data });
-        } else {
-          return data as UserData;
-        }
+      // Define the response type for user query
+      interface UserByIdResponse {
+        users_by_pk: {
+          id: string;
+          email: string;
+          full_name: string;
+          phone: string;
+          crave_coins: number;
+          location: string | null;
+        };
       }
-      return null;
+
+      // Get user data from Hasura
+      const response = await fetchFromHasura(getUserByIdQuery, {
+        id: uid
+      }) as UserByIdResponse;
+
+      if (response?.users_by_pk) {
+        const user = response.users_by_pk;
+
+        // Store encrypted user ID in localStorage
+        const userhashedId = encryptText(user.id);
+        localStorage.setItem("hasuraUserId", userhashedId);
+
+        // Set user data in state
+        set({
+          userData: {
+            id: user.id,
+            email: user.email,
+            full_name: user.full_name,
+            phone: user.phone,
+            crave_coins: user.crave_coins,
+            location: user.location,
+            password: ""
+          }
+        });
+      }
     } catch (error) {
       set({ error: (error as Error).message });
       return null;
@@ -700,57 +743,61 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signUpWithEmailForPartner: async (
-    email,
-    password,
-    hotelName,
-    area,
-    location,
-    category,
-    phone,
-    upiId
+    email: string,
+    password: string,
+    hotelName: string,
+    area: string,
+    location: string,
+    category: string,
+    phone: string,
+    upiId: string
   ) => {
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      const user = result.user;
+      // First check if partner exists
+      interface PartnerResponse {
+        partners: HasuraPartner[];
+      }
 
-      const docRef = doc(db, "users", user.uid);
-      const partnerData: UserData = {
-        email: user.email as string,
-        role: "hotel",
-        hotelName,
-        area,
-        location,
-        category,
-        phone,
-        accountStatus: "active",
-        followers: [],
-        following: [],
-        menu: [],
-        offersClaimable: 100,
-        offersClaimableUpdatedAt: new Date().toISOString(),
-        verified: false,
+      const existingPartner = await fetchFromHasura(partnerQuery, {
+        email: email
+      }) as PartnerResponse;
+
+      if (existingPartner?.partners?.length > 0) {
+        throw new Error("A partner account with this email already exists");
+      }
+
+      // Create new partner in Hasura
+      const partnerData = {
+        email: email,
+        password: password,
+        name: hotelName,
+        store_name: hotelName,
+        location: location,
+        district: area,
+        status: "not-verified",
+        upi_id: upiId,
+        phone: phone,
+        description: category
       };
 
-      await setDoc(docRef, partnerData);
-
-      // Create UPI data in separate collection
-      await get().createUpiData(user.uid, upiId);
-
-      set({ user, userData: partnerData });
-
-      return user;
-    } catch (error) {
-      console.log("error", error);
-      if (error instanceof FirebaseError) {
-        switch (error.code) {
-          case AuthErrorCodes.EMAIL_EXISTS:
-            throw new Error("Email already in use");
-          case AuthErrorCodes.WEAK_PASSWORD:
-            throw new Error("Password should be at least 6 characters");
-          default:
-            throw new Error("Failed to sign up. Please try again");
-        }
+      interface PartnerMutationResponse {
+        insert_partners_one: HasuraPartner;
       }
+
+      const response = await fetchFromHasura(partnerMutation, {
+        object: partnerData
+      }) as PartnerMutationResponse;
+
+      if (!response?.insert_partners_one) {
+        throw new Error("Failed to create partner account");
+      }
+
+      // Set the partner data in state
+      set({
+        hasuraPartner: response.insert_partners_one
+      });
+    } catch (error) {
+      console.error("Partner registration failed:", error);
       throw error;
     }
   },
@@ -760,7 +807,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Create standardized email and password from phone
       const email = `${phone}@user.com`;
 
-      let userData: HasuraUser;
+      // let userData: HasuraUser;
 
       // Define the response type
       interface HasuraUserResponseType {
@@ -787,23 +834,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // hash the userid and store it in local storage
           const userhashedId = encryptText(user.id);
           localStorage.setItem("hasuraUserId", userhashedId);
-          
+
           set({
             userData: {
+              id: user.id,
               email: user.email,
               full_name: user.full_name,
               phone: user.phone,
               crave_coins: user.crave_coins,
               location: user.location,
-              password : "",
+              password: "",
             }
           });
         }
         return;
       }
       else {
-        let hasuraUser: HasuraUser;
-        hasuraUser = {
+        const hasuraUser={
           email: email,
           password: phone,
           full_name: `User${phone.slice(0, 5)}`,
