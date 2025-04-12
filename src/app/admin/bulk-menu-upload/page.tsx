@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -38,6 +38,11 @@ const BulkUploadPage = () => {
     setEditingItem,
     handleCategoryChange,
   } = useBulkUpload();
+
+  useEffect(() => {
+    console.log("Menu Items:", menuItems);
+    
+  },[menuItems]);
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-8">
@@ -97,7 +102,7 @@ const BulkUploadPage = () => {
         </div>
 
         {menuItems.length > 0 && (
-          <div className="mb-4 flex items-center">
+          <div className="mb-4 mt-5 flex items-center">
             <Checkbox
               checked={selectAll}
               onCheckedChange={handleSelectAll}
@@ -109,7 +114,7 @@ const BulkUploadPage = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {menuItems.map((item, index) => (
             <MenuItemCard
               key={index}

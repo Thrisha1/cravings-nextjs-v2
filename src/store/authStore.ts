@@ -1,36 +1,11 @@
 import { create } from "zustand";
-import {
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  type User,
-  GoogleAuthProvider,
-  signInWithPopup,
-  sendPasswordResetEmail,
-  signInWithRedirect,
-  getRedirectResult,
-  createUserWithEmailAndPassword,
-  AuthErrorCodes,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
-import {
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  getFirestore,
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
 import { auth } from "@/lib/firebase";
 import { MenuItem } from "@/screens/HotelMenuPage";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { FirebaseError } from "firebase/app";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { getUserByIdQuery, partnerMutation, partnerQuery, userLoginMutation, userLoginQuery, partnerLoginQuery } from "@/api/auth";
-import { decryptText, encryptText } from "@/lib/encrtption";
-
+import { encryptText } from "@/lib/encrtption";
 
 export interface UpiData {
   userId: string;
@@ -44,6 +19,7 @@ export interface UserData {
   role: "user" | "hotel" | "superadmin";
   fullName?: string;
   hotelName?: string;
+  hotelBanner?: string;
   area?: string;
   location?: string;
   category?: string;
@@ -74,7 +50,7 @@ export interface UserData {
   offersClaimableUpdatedAt?: string;
 }
 
-export interface HasuraPartner {
+export interface Partner {
   id: string;
   name: string;
   email: string;
@@ -88,7 +64,7 @@ export interface HasuraPartner {
   district: string;
 }
 
-export interface HasuraUser {
+export interface User {
   id: string;
   email: string;
   password: string;
@@ -99,9 +75,8 @@ export interface HasuraUser {
 }
 
 interface AuthState {
-  user: User | null;
-  userData: HasuraUser | null;
-  hasuraPartner: HasuraPartner | null;
+  userData: User | null;
+  partnerData: Partner | null;
   loading: boolean;
   error: string | null;
   userVisit: {
@@ -180,9 +155,8 @@ export const getDiscount = (
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null,
   userData: null,
-  hasuraPartner: null,
+  partnerData: null,
   loading: true,
   error: null,
   userVisit: null,
@@ -614,7 +588,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       // First check if partner exists
       interface PartnerResponse {
-        partners: HasuraPartner[];
+        partners: Partner[];
       }
 
       const existingPartner = await fetchFromHasura(partnerQuery, {
@@ -640,7 +614,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       };
 
       interface PartnerMutationResponse {
-        insert_partners_one: HasuraPartner;
+        insert_partners_one: Partner;
       }
 
       const response = await fetchFromHasura(partnerMutation, {
@@ -653,7 +627,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Set the partner data in state
       set({
-        hasuraPartner: response.insert_partners_one
+        Partner: response.insert_partners_one
       });
     } catch (error) {
       console.error("Partner registration failed:", error);
@@ -664,7 +638,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signInPartnerWithEmail: async (email: string, password: string) => {
     try {
       interface PartnerLoginResponse {
-        partners: HasuraPartner[];
+        partners: Partner[];
       }
   
       const response = await fetchFromHasura(partnerLoginQuery, {
@@ -684,7 +658,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   
       // Set the partner data in state
       set({
-        hasuraPartner: partner
+        Partner: partner
       });
   
     } catch (error) {

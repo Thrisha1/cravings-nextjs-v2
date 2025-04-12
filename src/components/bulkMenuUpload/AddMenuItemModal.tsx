@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -7,14 +12,26 @@ import Image from "next/image";
 import { toast } from "sonner";
 import CategoryDropdown from "@/components/ui/CategoryDropdown";
 import { ImageGridModal } from "./ImageGridModal";
+import { useCategoryStore } from "@/store/categoryStore";
+import { useAuthStore } from "@/store/authStore";
 
 interface AddMenuItemModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (item: { name: string; price: string; image: string; description: string; category: string }) => void;
+  onSubmit: (item: {
+    name: string;
+    price: string;
+    image: string;
+    description: string;
+    category: string;
+  }) => void;
 }
 
-export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItemModalProps) {
+export function AddMenuItemModal({
+  isOpen,
+  onOpenChange,
+  onSubmit,
+}: AddMenuItemModalProps) {
   const [newItem, setNewItem] = useState({
     name: "",
     price: "",
@@ -24,17 +41,30 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const { getCategoryId } = useCategoryStore();
+  const { user } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newItem.name || !newItem.price || !newItem.image || !newItem.category) {
+    if (!newItem.name || !newItem.price || !newItem.category) {
       toast.error("Please fill all the fields");
       return;
     }
     setIsSubmitting(true);
     try {
-      await onSubmit(newItem);
-      setNewItem({ name: "", price: "", image: "", description: "", category: "" });
+      const catId = await getCategoryId(newItem.category, user?.uid || "");
+      await onSubmit({
+        ...newItem,
+        category: catId as string,
+      });
+
+      setNewItem({
+        name: "",
+        price: "",
+        image: "",
+        description: "",
+        category: "",
+      });
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);
@@ -49,30 +79,35 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Image Preview and Selection */}
-          <div className="space-y-2">
-            {newItem.image ? (
-              <div className="relative h-[200px] w-full cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
-                <Image 
-                  src={newItem.image} 
-                  alt="Selected item" 
-                  fill
-                  className="object-cover rounded-lg"
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
-                  <p className="text-white">Click to change image</p>
+          {newItem.category && newItem.name && (
+            <div className="space-y-2">
+              {newItem.image ? (
+                <div
+                  className="relative h-[200px] w-full cursor-pointer"
+                  onClick={() => setIsImageModalOpen(true)}
+                >
+                  <Image
+                    src={newItem.image}
+                    alt="Selected item"
+                    fill
+                    className="object-cover rounded-lg"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
+                    <p className="text-white">Click to change image</p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full h-[200px]"
-                onClick={() => setIsImageModalOpen(true)}
-              >
-                Select Image
-              </Button>
-            )}
-          </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-[200px]"
+                  onClick={() => setIsImageModalOpen(true)}
+                >
+                  Select Image
+                </Button>
+              )}
+            </div>
+          )}
 
           <ImageGridModal
             isOpen={isImageModalOpen}
@@ -81,7 +116,7 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
             category={newItem.category}
             currentImage={newItem.image}
             onSelectImage={(newImageUrl: string) => {
-              setNewItem(prev => ({ ...prev, image: newImageUrl }));
+              setNewItem((prev) => ({ ...prev, image: newImageUrl }));
               setIsImageModalOpen(false);
             }}
           />
@@ -102,22 +137,26 @@ export function AddMenuItemModal({ isOpen, onOpenChange, onSubmit }: AddMenuItem
           <Textarea
             placeholder="Product Description"
             value={newItem.description}
-            onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+            onChange={(e) =>
+              setNewItem({ ...newItem, description: e.target.value })
+            }
           />
           <CategoryDropdown
             value={newItem.category}
             onChange={(value) => setNewItem({ ...newItem, category: value })}
           />
           <Button
-            disabled={!newItem.name || !newItem.price || !newItem.category || !newItem.image || isSubmitting}
+            disabled={
+              !newItem.name ||
+              !newItem.price ||
+              !newItem.category ||
+              !newItem.image ||
+              isSubmitting
+            }
             type="submit"
             className="w-full disabled:opacity-50"
           >
-            {isSubmitting ? (
-              "Submitting..."
-            ) : (
-              "Add Item"
-            )}
+            {isSubmitting ? "Submitting..." : "Add Item"}
           </Button>
         </form>
       </DialogContent>

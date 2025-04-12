@@ -6,7 +6,6 @@ import Image from "next/image";
 import { Offer } from "@/store/offerStore";
 import { useAuthStore, UserData } from "@/store/authStore";
 import OfferCardMin from "@/components/OfferCardMin";
-import Autoplay from "embla-carousel-autoplay"
 
 import {
   ArrowLeft,
@@ -54,14 +53,15 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import CategoryList from "@/components/CategoryList";
-import MenuItemCard from "@/components/MenuItemCard";
+// import CategoryList from "@/components/CategoryList";
+// import MenuItemCard from "@/components/MenuItemCard";
 import { useMenuStore } from "@/store/menuStore";
-import {
-  Carousel,
-  CarouselItem,
-  CarouselContent,
-} from "@/components/ui/carousel";
+// import {
+//   Carousel,
+//   CarouselItem,
+//   CarouselContent,
+// } from "@/components/ui/carousel";
+import MenuItemsList from "@/components/hotelDetail/MenuItemsList";
 
 export type MenuItem = {
   description: string;
@@ -106,7 +106,7 @@ const HotelMenuPage = ({
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [userPhone, setUserPhone] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
-  const [menu, setMenu] = useState<MenuItem[]>([]);
+  // const [menu, setMenu] = useState<MenuItem[]>([]);
   const [lastVisible, setLastVisible] =
     useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const { fetchTopMenuItems } = useMenuStore();
@@ -141,16 +141,16 @@ const HotelMenuPage = ({
       }
 
       // Extract menu array from document
-      const menuItems = querySnapshot.docs.map((doc) => {
-        return {
-          id: doc.id,
-          ...doc.data(),
-        } as MenuItem;
-      });
+      // const menuItems = querySnapshot.docs.map((doc) => {
+      //   return {
+      //     id: doc.id,
+      //     ...doc.data(),
+      //   } as MenuItem;
+      // });
 
-      setMenu((prevMenu: MenuItem[]) =>
-        isInitial ? menuItems : [...prevMenu, ...menuItems]
-      );
+      // setMenu((prevMenu: MenuItem[]) =>
+      //   isInitial ? menuItems : [...prevMenu, ...menuItems]
+      // );
     } catch (error) {
       console.error("Error fetching menu items:", error);
     }
@@ -358,16 +358,12 @@ const HotelMenuPage = ({
 
           {/* banner Image  */}
           <div className="w-screen h-[200px] absolute top-0 z-0">
-            {offers[0]?.dishImage || menu[0]?.image ? (
-              <Image
-                src={offers[0]?.dishImage ?? menu[0]?.image}
-                alt={offers[0]?.dishName ?? menu[0]?.name}
-                fill
-                className="w-auto h-auto object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-orange-200 animate-pulse" />
-            )}
+            <Image
+              src={hoteldata?.hotelBanner || "/hotelDetailsBanner.jpeg"}
+              alt={"Hotel Banner"}
+              fill
+              className="w-auto h-auto object-cover"
+            />
 
             <div
               onClick={() => router.back()}
@@ -511,69 +507,46 @@ const HotelMenuPage = ({
               </section>
             )}
 
-            {/* Menu items  */}
-            {/* <section className="border-t-2 border-orange-600/10">
-              <h1 className="text-lg relative flex max-w-[50%] md:text-3xl font-semibold pt-5 capitalize">
-                All Menu Items
-              </h1>
+            {topMenuItems.length > 0 && (
+              <div className="p-4 py-10">
+                <h1 className="text-2xl font-bold mb-4 text-center">
+                  Top 3 Items ⭐
+                </h1>
 
-              <section className="mt-5 md:mt-10">
-                {menu.length > 0 ? (
-                  <>
-                    <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
-                      {menu.map((menuItem: MenuItem) => {
-                        return (
-                          <div key={menuItem.id} className="group">
-                            <MenuItemCard
-                              menuItem={menuItem}
-                              hotelId={hoteldata?.id as string}
+                <div className="grid divide-y-2 gap-1 divide-orange-200">
+                  {topMenuItems.map((item) => (
+                    <div key={item.id} className="py-6 rounded animate-bg px-2 flex-1">
+                      <div className="flex justify-between items-start">
+                        <div className="grid gap-2 ">
+                          <span className="capitalize  text-xl font-bold">
+                            {item.name}
+                          </span>
+                          <span className="font-bold text-xl text-orange-500">
+                            ₹{item.price}
+                          </span>
+                          <span className="text-sm text-black/50">
+                            {item.description}
+                          </span>
+                        </div>
+                        {item.image.length > 0 && (
+                          <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden ">
+                            <Image
+                              src={item.image}
+                              alt={item.name}
+                              fill
+                              className="object-cover w-full h-full"
                             />
                           </div>
-                        );
-                      })}
+                        )}
+                      </div>
                     </div>
-                    {menu.length < totalMenuItems && (
-                      <ShowAllBtn
-                        showAll={false}
-                        onClick={() => {
-                          fetchMenuItems(false);
-                        }}
-                      />
-                    )}
-                  </>
-                ) : (
-                  <NoOffersFound />
-                )}
-              </section>
-            </section> */}
-
-            {topMenuItems.length > 0 && (
-              <div className="p-4">
-                <h1 className="text-2xl font-bold mb-4">Top 3 Items ⭐</h1>
-                <Carousel
-                  plugins={[
-                    Autoplay({
-                      delay: 2000,
-                    }),
-                  ]}
-                  className="w-full max-w-xs"
-                >
-                  <CarouselContent>
-                    {topMenuItems.map((item) => (
-                      <CarouselItem key={item.id}>
-                        <MenuItemCard
-                          menuItem={item}
-                          hotelId={hoteldata?.id as string}
-                        />
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                </Carousel>
+                  ))}
+                </div>
               </div>
             )}
 
             <section className="px-[7%]">
-              <CategoryList hotelId={hoteldata?.id as string} />
+              <MenuItemsList hotelId={hoteldata?.id as string} />
             </section>
 
             {/* rate this hotel  */}

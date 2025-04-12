@@ -63,7 +63,7 @@ export async function uploadFileToS3(file, filename){
 
   try {
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_WWJS_API_URL}/aws/upload`,{
+    const res = await fetch(`${process.env.NEXT_PUBLIC_WWJS_API_URL}/api/aws/upload`,{
       method : 'POST',
       headers : {
         'Content-Type' : 'application/json'
@@ -74,7 +74,9 @@ export async function uploadFileToS3(file, filename){
       })
     })
 
-    const data = await res.json();
+    const data = await res.json();  
+    console.log("File uploaded to S3:", data);
+     
     return data.url;
     
   } catch (error) {

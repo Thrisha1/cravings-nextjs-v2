@@ -1,12 +1,11 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, Trash, Upload, Loader2, ImageOff } from "lucide-react";
-import Image from "next/image";
+import { Pencil, Trash, Upload, Loader2 } from "lucide-react";
 import { MenuItem } from "@/components/bulkMenuUpload/EditItemModal";
-import { CategoryDropdown } from "@/components/ui/CategoryDropdown";
-import { ImageGridModal } from "./ImageGridModal";
 import { useState } from "react";
+import { Input } from "../ui/input";
+import Image from "next/image";
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -22,97 +21,66 @@ interface MenuItemCardProps {
 
 export const MenuItemCard = ({
   item,
-  index,
   isUploading,
   onSelect,
   onAddToMenu,
   onEdit,
   onDelete,
-  onImageClick,
-  onCategoryChange,
 }: MenuItemCardProps) => {
-  const isImageLoading = item.image === "/loading-image.gif";
-  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-  const [imageError, setImageError] = useState(false);
-
-  const handleImageClick = () => {
-    if (item.category) {
-      setIsImageModalOpen(true);
-    }
-  };
-
-  const handleSelectImage = (newImageUrl: string) => {
-    onImageClick(index, newImageUrl);
-    setIsImageModalOpen(false);
-    setImageError(false);  // Reset error state when new image is selected
-  };
-
+  const [itemCategory, setItemCategory] = useState(item.category);
   return (
-    <Card className="relative">
+    <Card className="relative grid">
       {item.isAdded && (
-        <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-md">
+        <div className="absolute top-2 right-1/2 translate-x-1/2 bg-green-500 text-white px-2 py-1 rounded-md">
           Added
         </div>
       )}
 
-      <div className="flex flex-row items-center gap-2 px-5 py-6">
-        <Checkbox 
-          checked={item.isSelected} 
-          onCheckedChange={onSelect} 
-          disabled={!item.category || item.isAdded} 
-        />
-        <div className="font-bold text-lg">{item.name}</div>
+      <div className="flex justify-between items-center gap-2 px-5 py-6 ">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={item.isSelected}
+            onCheckedChange={onSelect}
+            disabled={!item.category || item.isAdded}
+          />
+          <div className="font-bold text-lg">{item.name}</div>
+        </div>
+        <p className="font-bold text-2xl text-right">₹{item.price}</p>
       </div>
 
-      <CardContent className="space-y-4">
-        <div
-          className="relative overflow-hidden w-full h-48 cursor-pointer"
-          onClick={handleImageClick}
-        >
-          {isImageLoading ? (
-            <div className="absolute inset-0 flex items-center justify-center w-full h-full bg-gray-100 animate-pulse">
-              <div className="text-center">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Loading image...</p>
-              </div>
-            </div>
-          ) : imageError ? (
-            <div className="absolute inset-0 flex items-center justify-center w-full h-full bg-gray-100">
-              <div className="text-center">
-                <ImageOff className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No image found</p>
-                <p className="text-xs text-gray-400">Click to try again</p>
-              </div>
-            </div>
-          ) : (
-            <div className="relative w-full h-full">
-              <Image
-                src={item.image}
-                alt={item.name}
-                fill
-                className="object-cover rounded-md"
-                onError={() => {
-                  setImageError(true);
-                }}
-              />
-            </div>
-          )}
-        </div>
-
-        <CategoryDropdown
-          value={item.category || ""}
-          onChange={onCategoryChange}
-        />
-
+      <CardContent className="space-y-3 ">
+        {item.image.length > 9 && (
+          <Image
+            src={item.image}
+            alt={item.name}
+            width={200}
+            height={200}
+            className="w-full h-40 object-cover rounded-md cursor-pointer"
+          />
+        )}
         <p className="text-gray-600">{item.description}</p>
-        <p className="font-bold">₹{item.price}</p>
+        <div className="flex gap-2 items-center ">
+          <label htmlFor="category" className="text-sm">
+            Category :
+          </label>
+          <Input
+            id="category"
+            className="flex-1"
+            placeholder="Enter category name"
+            value={itemCategory}
+            onChange={(e) => {
+              setItemCategory(e.target.value);
+              item.category = e.target.value;
+            }}
+          />
+        </div>
       </CardContent>
 
       <CardFooter className="flex justify-between">
         <div className="flex gap-2">
-          <Button 
-            onClick={onAddToMenu} 
-            disabled={item.isAdded || isUploading || !item.category || imageError}
+          <Button
+            onClick={onAddToMenu}
+            disabled={item.isAdded || isUploading || !item.category}
           >
             {isUploading ? (
               <>
@@ -135,14 +103,14 @@ export const MenuItemCard = ({
         </Button>
       </CardFooter>
 
-      <ImageGridModal
+      {/* <ImageGridModal
         isOpen={isImageModalOpen}
         onOpenChange={setIsImageModalOpen}
         itemName={item.name}
         category={item.category}
         currentImage={item.image}
         onSelectImage={handleSelectImage}
-      />
+      /> */}
     </Card>
   );
 };

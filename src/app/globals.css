@@ -116,3 +116,15 @@ body {
     transform: translate(-50%,56px);
   }
 }
+
+.animate-bg{
+  animation: animateBg 2s infinite alternate;
+}
+@keyframes animateBg {
+  0% {
+    background-color: #fee6c4;
+  }
+  100% {
+    background-color: #fff1f200;
+  }
+}
