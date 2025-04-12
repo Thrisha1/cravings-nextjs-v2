@@ -14,6 +14,7 @@ import { uploadFileToS3 } from "@/app/actions/aws-s3";
 import { addDoc, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useMenuStore } from "@/store/menuStore";
+import { useAuthStore } from "@/store/authStore";
 
 interface AIImageGenerateModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [saving , setSaving] = useState(false);
   const { clearDishCache } = useMenuStore();
+  const { user } = useAuthStore();
 
   const handleGenerateImage = async () => {
     setLoading(true);
@@ -90,6 +92,8 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
         category: category,
         url: imgUrl,
         createdAt: new Date(),
+        addedBy : user?.uid,
+        imageSource: "ai",
       });
   
       clearDishCache();

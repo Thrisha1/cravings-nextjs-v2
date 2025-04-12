@@ -359,7 +359,7 @@ const HotelMenuPage = ({
           {/* banner Image  */}
           <div className="w-screen h-[200px] absolute top-0 z-0">
             <Image
-              src={`http://image.pollinations.ai/prompt/burgers%20%20pizza%20%20biriyani%20frechfires?nologo=true&width=1920&height=1080&seed=402`}
+              src={hoteldata?.hotelBanner || "/hotelDetailsBanner.jpeg"}
               alt={"Hotel Banner"}
               fill
               className="w-auto h-auto object-cover"

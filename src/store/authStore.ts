@@ -39,6 +39,7 @@ export interface UserData {
   role: "user" | "hotel" | "superadmin";
   fullName?: string;
   hotelName?: string;
+  hotelBanner?: string;
   area?: string;
   location?: string;
   category?: string;

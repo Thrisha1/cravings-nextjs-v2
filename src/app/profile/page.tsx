@@ -21,6 +21,8 @@ import {
 import { AlertDialogCancel } from "@radix-ui/react-alert-dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import Image from "next/image";
+import { uploadFileToS3 } from "../actions/aws-s3";
 
 export default function ProfilePage() {
   const {
@@ -31,7 +33,7 @@ export default function ProfilePage() {
     updateUserData,
     updateUpiData,
     upiData,
-    fetchAndCacheUpiData
+    fetchAndCacheUpiData,
   } = useAuthStore();
   const { claimedOffers, isLoading: claimedOffersLoading } =
     useClaimedOffersStore();
@@ -41,6 +43,11 @@ export default function ProfilePage() {
   const [upiId, setUpiId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [bannerImage, setBannerImage] = useState<string | null>(
+    userData?.hotelBanner || null
+  );
+  const [isBannerUploading, setBannerUploading] = useState(false);
+  const [isBannerChanged, setIsBannerChanged] = useState(false);
 
   const isLoading = authLoading || claimedOffersLoading;
 
@@ -103,12 +110,102 @@ export default function ProfilePage() {
       setIsEditing(false);
     } catch (error) {
       console.error("Error updating UPI ID:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to update UPI ID");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update UPI ID"
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleBannerChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const files = e.target.files;
+      if (!files || !files[0]) return;
+      const file = files[0];
+
+      //convert to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const base64String = reader.result as string;
+        setBannerImage(base64String);
+      };
+
+      setIsBannerChanged(true);
+    } catch (error) {
+      console.error("Error updating banner:", error);
+    }
+  };
+
+  const handleBannerUpload = async () => {
+    if (!user) return;
+  
+    setBannerUploading(true);
+    try {
+      // Convert the bannerBase64 to WebP
+      const img = document.createElement("img");
+      img.src = bannerImage as string;
+      await new Promise((resolve) => (img.onload = resolve));
+  
+      const canvas = document.createElement("canvas");
+      const maxWidth = 500;
+      const ratio = maxWidth / img.width;
+      canvas.width = maxWidth;
+      canvas.height = img.height * ratio;
+  
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Failed to get canvas context");
+  
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  
+      const webpBase64WithPrefix: string = await new Promise(
+        (resolve, reject) => {
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error("Failed to convert image to WebP"));
+                return;
+              }
+  
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            },
+            "image/webp",
+            0.8
+          );
+        }
+      );
+  
+      // Upload to S3
+      const imgUrl = await uploadFileToS3(
+        webpBase64WithPrefix,
+        `hotel_banners/${user.uid}.webp`
+      );
+  
+      if (!imgUrl) {
+        throw new Error("Failed to upload image to S3");
+      }
+      console.log("Image uploaded to S3:", imgUrl);
+
+      // Update user data
+      await updateUserData(user.uid, {
+        hotelBanner: imgUrl,
+      });
+      toast.success("Banner updated successfully!");
+ 
+      setIsBannerChanged(false);
+    } catch (error) {
+      console.error("Error updating banner:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update banner"
+      );
+    } finally {
+      setBannerUploading(false);
+    }
+  };
+  
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
   }
@@ -196,12 +293,52 @@ export default function ProfilePage() {
                 Account Settings
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className="grid gap-4 divide-y-2">
+              {/* //your hotel banner  */}
+              <div>
+                <h3 className="text-lg font-semibold">Your Hotel Banner</h3>
+                <p className="text-sm text-gray-500 mb-2">
+                  Click on the banner to change it.
+                </p>
+
                 <label
-                  htmlFor="upiId"
-                  className="text-sm font-medium text-gray-700"
+                  htmlFor="bannerInput"
+                  className="relative cursor-pointer w-full h-48 bg-gray-200 rounded-lg overflow-hidden"
                 >
+                  {bannerImage ? (
+                    <Image
+                      src={bannerImage}
+                      alt="Hotel Banner"
+                      width={500}
+                      height={500}
+                      className="object-cover w-full h-48 rounded-2xl"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-48 bg-gray-100 rounded-2xl text-gray-500">
+                      No banner set
+                    </div>
+                  )}
+                </label>
+
+                <input
+                  type="file"
+                  id="bannerInput"
+                  accept="image/*"
+                  onChange={handleBannerChange}
+                  className="hidden"
+                />
+
+                {isBannerChanged && (
+                  <div className="mt-2 flex justify-end">
+                    <Button onClick={handleBannerUpload}>
+                      {isBannerUploading ? "Uploading...." : "Update Banner"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <label htmlFor="upiId" className="text-lg font-semibold">
                   UPI ID
                 </label>
                 <div className="flex gap-2">

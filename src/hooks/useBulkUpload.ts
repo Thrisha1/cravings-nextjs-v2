@@ -185,6 +185,8 @@ export const useBulkUpload = () => {
           category: item.category.toLowerCase(),
           url: url,
           createdAt: new Date(),
+          addedBy: user?.uid,
+          imageSource: "user-upload",
         });
 
         imageUrl = url;

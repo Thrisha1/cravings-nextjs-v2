@@ -9,6 +9,8 @@ import {
   query,
   where,
   orderBy,
+  or,
+  and,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuthStore } from "./authStore";
@@ -44,15 +46,37 @@ interface DishCache {
 export const menuCatagories = CATEGORIES.map((category) => category.name);
 
 const CACHE_EXPIRY_TIME = 60 * 60 * 1000;
-
-const fetchAllDishes = async (): Promise<Dish[]> => {
+const fetchAllDishes = async (category: string): Promise<Dish[]> => {
   const dishRef = collection(db, "dishes");
-  const q = query(dishRef, orderBy("createdAt", "asc"));
-  const querySnapshot = await getDocs(q);
-  const dishes: Dish[] = [];
-  querySnapshot.forEach((doc) => {
-    dishes.push({ id: doc.id, ...doc.data() } as Dish);
-  });
+  const user = useAuthStore.getState().user;
+
+  // Query 1: AI dishes
+  const q1 = query(
+    dishRef,
+    where("category", "==", category),
+    where("imageSource", "==", "ai"),
+    orderBy("createdAt", "asc")
+  );
+
+  // Query 2: User-added non-AI dishes
+  const q2 = query(
+    dishRef,
+    where("category", "==", category),
+    where("addedBy", "==", user?.uid),
+    where("imageSource", "!=", "ai"),
+    orderBy("imageSource"), // required due to '!='
+    orderBy("createdAt", "asc")
+  );
+
+  // Execute both queries
+  const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+
+  // Map docs to Dish objects
+  const dishes: Dish[] = [
+    ...snap1.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Dish)),
+    ...snap2.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Dish)),
+  ];
+
   return dishes;
 };
 
@@ -67,7 +91,7 @@ export const getMenuItemImage = async (category: string, name: string) => {
   ) {
     dishes = store.dishCache.dishes;
   } else {
-    dishes = await fetchAllDishes();
+    dishes = await fetchAllDishes(category);
 
     useMenuStore.setState({
       dishCache: {

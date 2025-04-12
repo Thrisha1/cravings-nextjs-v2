@@ -103,6 +103,8 @@ const ImageUploadModal = ({
         category: category,
         url: url,
         createdAt: new Date(),
+        addedBy: user?.uid,
+        imageSource: "user-upload",
       });
       console.log("Uploaded to:", url);
       addNewImage(url); // uncomment if needed
