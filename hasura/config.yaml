@@ -1,7 +1,7 @@
 version: 3
-endpoint: https://curious-ferret-93.hasura.app
+endpoint: ""
 metadata_directory: metadata
 actions:
   kind: synchronous
   handler_webhook_baseurl: http://localhost:3000
-admin_secret: grK3WUtZW9mXGtYtjEqU44QfmFkWOMga9qQoa1uBvR03n7DXLkTodHH9cWDcN6cn
+admin_secret: ""
