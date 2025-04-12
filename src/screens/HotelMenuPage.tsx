@@ -515,9 +515,9 @@ const HotelMenuPage = ({
 
                 <div className="grid divide-y-2 gap-1 divide-orange-200">
                   {topMenuItems.map((item) => (
-                    <div key={item.id} className="py-6 rounded animate-bg px-2">
-                      <div className="flex justify-between items-center">
-                        <div className="grid gap-2">
+                    <div key={item.id} className="py-6 rounded animate-bg px-2 flex-1">
+                      <div className="flex justify-between items-start">
+                        <div className="grid gap-2 ">
                           <span className="capitalize  text-xl font-bold">
                             {item.name}
                           </span>

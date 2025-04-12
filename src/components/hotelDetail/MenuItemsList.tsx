@@ -70,8 +70,8 @@ const MenuItemsList = ({ hotelId }: { hotelId: string }) => {
                 <AccordionContent className="grid divide-y-2 divide-orange-200">
                   {items.map((item) => (
                     <div key={item.id} className="py-6 rounded px-2">
-                      <div className="flex justify-between items-center">
-                        <div className="grid gap-2">
+                      <div className="flex justify-between items-start">
+                        <div className="grid gap-2 flex-1">
                           <span className="capitalize  text-xl font-bold">
                             {item.name}
                           </span>
