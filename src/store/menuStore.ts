@@ -8,9 +8,7 @@ import {
   getDocs,
   query,
   where,
-  orderBy,
-  or,
-  and,
+  orderBy
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuthStore } from "./authStore";
