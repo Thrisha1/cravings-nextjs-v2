@@ -1,4 +1,5 @@
 
+//mutation
 
 export const addMenu = `
     mutation InsertMenu($menu: [menu_insert_input!]!) {
