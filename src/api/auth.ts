@@ -30,6 +30,27 @@ export const partnerQuery = `
   }
 }`;
 
+export const partnerLoginQuery = `
+  query PartnerLogin($email: String!, $password: String!) {
+    partners(where: {
+      email: {_eq: $email}, 
+      password: {_eq: $password}
+    }, limit: 1) {
+      id
+      name
+      email
+      password
+      store_name
+      location
+      status
+      upi_id
+      description
+      phone
+      district
+    }
+  }
+`;
+
 
 /*...........mutation...........*/
 

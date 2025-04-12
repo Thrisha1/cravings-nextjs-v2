@@ -1,5 +1,4 @@
 - "!include public_category.yaml"
-- "!include public_cravings_items.yaml"
 - "!include public_followers.yaml"
 - "!include public_menu.yaml"
 - "!include public_offers.yaml"
@@ -8,4 +7,6 @@
 - "!include public_payments.yaml"
 - "!include public_qr_codes.yaml"
 - "!include public_reviews.yaml"
+- "!include public_super_admin.yaml"
+- "!include public_table_orders.yaml"
 - "!include public_users.yaml"
