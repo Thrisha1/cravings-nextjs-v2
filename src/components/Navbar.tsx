@@ -15,7 +15,7 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const location = pathname.split("?")[0];
-  const { user, userData } = useAuthStore();
+  const { userData } = useAuthStore();
   const { offersClaimable } = useClaimedOffersStore();
   const [isOpen, setIsOpen] = useState(false);
   const [userLocation, setUserLocation] = useState("");
@@ -43,7 +43,7 @@ export function Navbar() {
     if (location) {
       setUserLocation(location);
     }
-  }, [user, userData]);
+  }, [userData]);
 
   const NavLinks = () => (
     <>

@@ -15,6 +15,7 @@ export interface Partner {
   description: string | null;
   phone: string;
   district: string;
+  role: string;
 }
 
 export interface User {
@@ -25,12 +26,14 @@ export interface User {
   phone: string;
   crave_coins: number;
   location: string | null;
+  role:string;
 }
 
 interface SuperAdmin {
   id: string;
   email: string;
   password: string;
+  role: string;
 }
 
 interface AuthState {
@@ -116,6 +119,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         upi_id: upiId,
         phone: phone,
         description: "",
+        role: "partner",
       };
 
       interface PartnerMutationResponse {
@@ -238,6 +242,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               crave_coins: user.crave_coins,
               location: user.location,
               password: "",
+              role: "user",
             }
           });
         }
@@ -281,6 +286,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               crave_coins: user.crave_coins,
               location: user.location,
               password: "",
+              role: "user",
             }  
           })
 
