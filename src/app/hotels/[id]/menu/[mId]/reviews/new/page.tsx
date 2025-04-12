@@ -55,7 +55,7 @@ const CreateNewReviewPage = () => {
       type: "menuItem",
       menuId: params.mId as string,
       userId: user?.uid as string,
-      userName: (userData.fullName as string) ?? (userData.hotelName as string),
+      userName: (userData.full_name as string),
       rating,
       comment,
       createdAt: new Date(),
@@ -110,7 +110,7 @@ const CreateNewReviewPage = () => {
         ) : (
           <div className="space-y-2">
             <p className="font-medium md:text-lg">
-              {userData?.fullName ?? userData?.hotelName}
+              {userData?.full_name}
             </p>
             <p className="text-sm md:text-base text-gray-600">
               Reviews are public and include your account info
