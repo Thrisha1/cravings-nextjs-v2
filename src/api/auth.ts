@@ -61,3 +61,16 @@ export const partnerMutation = `
     district
   }
 }`;
+
+export const getUserByIdQuery = `
+  query GetUserById($id: uuid!) {
+    users_by_pk(id: $id) {
+      id
+      email
+      full_name
+      phone
+      crave_coins
+      location
+    }
+  }
+`;
