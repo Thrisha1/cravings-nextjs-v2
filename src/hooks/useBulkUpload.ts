@@ -145,41 +145,41 @@ export const useBulkUpload = () => {
         img.crossOrigin = "anonymous";
         img.src = imageUrl;
         await new Promise((resolve) => (img.onload = resolve));
-
-        const MAX_HEIGHT = 300;
-        const aspectRatio = img.width / img.height;
-
+      
         const canvas = document.createElement("canvas");
-        canvas.height = Math.min(img.height, MAX_HEIGHT);
-        canvas.width = canvas.height * aspectRatio;
-
         const ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("Failed to get canvas context");
-
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        const webpBase64WithPrefix: string = await new Promise(
-          (resolve, reject) => {
-            canvas.toBlob(
-              (blob) => {
-                if (!blob) return reject(new Error("Canvas toBlob failed"));
-
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.readAsDataURL(blob);
-              },
-              "image/webp",
-              0.8
-            );
-          }
-        );
-
-        const fileName = `${user?.uid}/${item.category}/${
-          item.name
-        }-${Date.now()}.webp`;
-        console.log(fileName);
-
+      
+        if (item.image.includes("assets.swiggy")) {
+          // Crop 500x500 from x:96, y:0 for swiggy assets
+          canvas.width = 500;
+          canvas.height = 500;
+          ctx.drawImage(img, 96, 0, 500, 500, 0, 0, 500, 500);
+        } else {
+          // Resize image with aspect ratio and max height
+          const MAX_HEIGHT = 300;
+          const aspectRatio = img.width / img.height;
+          canvas.height = Math.min(img.height, MAX_HEIGHT);
+          canvas.width = canvas.height * aspectRatio;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        }
+      
+        const webpBase64WithPrefix: string = await new Promise((resolve, reject) => {
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) return reject(new Error("Canvas toBlob failed"));
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            },
+            "image/webp",
+            0.8
+          );
+        });
+      
+        const fileName = `${user?.uid}/${item.category}/${item.name}-${Date.now()}.webp`;
         const url = await uploadFileToS3(webpBase64WithPrefix, fileName);
+      
         await addDoc(collection(db, "dishes"), {
           name: item.name,
           category: item.category.toLowerCase(),
@@ -188,9 +188,10 @@ export const useBulkUpload = () => {
           addedBy: user?.uid,
           imageSource: "user-upload",
         });
-
+      
         imageUrl = url;
       }
+      
 
       await addItem({
         name: item.name,
