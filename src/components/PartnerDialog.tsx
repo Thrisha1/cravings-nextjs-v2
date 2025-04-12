@@ -25,7 +25,7 @@ import { Switch } from "@/components/ui/switch";
 
 export function PartnerDialog() {
   const router = useRouter();
-  const { signInWithGoogleForPartner, signUpWithEmailForPartner } =
+  const { signUpWithEmailForPartner } =
     useAuthStore();
   const { locations } = useLocationStore();
   const [formData, setFormData] = useState({
@@ -34,7 +34,6 @@ export function PartnerDialog() {
     hotelName: "",
     area: "",
     location: "",
-    category: "hotel",
     phone: "",
     upiId: "",
   });
@@ -88,26 +87,17 @@ export function PartnerDialog() {
     try {
       if (authMethod === "email") {
         await signUpWithEmailForPartner(
-          formData.email,
-          formData.password,
           formData.hotelName,
+          formData.phone,
+          formData.upiId,
           formData.area,
           formData.location,
-          formData.category,
-          formData.phone,
-          formData.upiId
+          formData.email,
+          formData.password,
         );
         toast.success("Account created successfully!");
         router.push("/admin");
       } else {
-        await signInWithGoogleForPartner(
-          formData.hotelName,
-          formData.area,
-          formData.location,
-          formData.category,
-          formData.phone,
-          formData.upiId
-        );
         toast.success("Account created successfully!");
       }
       router.push("/admin");
