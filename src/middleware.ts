@@ -24,8 +24,8 @@ export async function middleware(request: NextRequest) {
       redirect: '/login'
     },
     superadmin: {
-      allowed: ['/superadmin', '/admin', '/dashboard'],
-      redirect: '/superlogin'
+      allowed: ['/superadmin', '/admin', '/profile'],
+      redirect: '/superLogin'
     }
   };
 
