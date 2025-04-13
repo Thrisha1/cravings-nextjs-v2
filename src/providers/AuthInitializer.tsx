@@ -2,13 +2,17 @@
 "use client";
 
 import { useEffect } from "react";
-import { useAuthStore } from "@/store/authStore"; // adjust path
+import { useAuthStore } from "@/store/authStore";
 
 const AuthInitializer = () => {
   const { fetchUser } = useAuthStore();
 
   useEffect(() => {
-    fetchUser();
+    console.log("AuthInitializer started");
+    
+    fetchUser().catch((error) => {
+      console.error("Failed to fetch user:", error);
+    });
   }, [fetchUser]);
 
   return null;

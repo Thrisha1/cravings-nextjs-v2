@@ -3,10 +3,25 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import { getUserByIdQuery, partnerMutation, partnerQuery, userLoginMutation, userLoginQuery, partnerLoginQuery, superAdminLoginQuery, partnerIdQuery, superAdminIdQuery } from "@/api/auth";
 import { encryptText, decryptText } from "@/lib/encrtption";
 
-export interface Partner {
+// Base interface with common properties
+interface BaseUser {
   id: string;
-  name: string;
   email: string;
+  role: 'user' | 'partner' | 'superadmin';
+}
+
+export interface User extends BaseUser {
+  role: 'user';
+  password: string;
+  full_name: string;
+  phone: string;
+  crave_coins: number;
+  location: string | null;
+}
+
+export interface Partner extends BaseUser {
+  role: 'partner';
+  name: string;
   password: string;
   store_name: string;
   location: string;
@@ -15,31 +30,18 @@ export interface Partner {
   description: string | null;
   phone: string;
   district: string;
-  role: string;
 }
 
-export interface User {
-  id: string;
-  email: string;
+export interface SuperAdmin extends BaseUser {
+  role: 'superadmin';
   password: string;
-  full_name: string;
-  phone: string;
-  crave_coins: number;
-  location: string | null;
-  role:string;
 }
 
-interface SuperAdmin {
-  id: string;
-  email: string;
-  password: string;
-  role: string;
-}
+// Union type for all possible user types
+export type AuthUser = User | Partner | SuperAdmin;
 
 interface AuthState {
-  userData: User | null;
-  partnerData: Partner | null;
-  superAdminData: SuperAdmin | null;
+  userData: AuthUser | null;
   loading: boolean;
   error: string | null;
   signOut: () => Promise<void>;
@@ -52,7 +54,7 @@ interface AuthState {
     location: string,
     phone: string,
     upiId: string
-  ) => Promise<User | void>;
+  ) => Promise<void>;
   signInWithPhone: (phone: string) => Promise<void>;
   signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
   signInSuperAdminWithEmail: (email: string, password: string) => Promise<void>;
@@ -61,27 +63,28 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   userData: null,
-  partnerData: null,
-  superAdminData: null,
   loading: true,
   error: null,
 
   fetchUser: async () => {
     try {
+      set({ loading: true });
       const stored = localStorage.getItem("sysbio");
       if (!stored) return;
   
-      const decrypted = decryptText(stored) as { id: string; role: string };
+      const decrypted = decryptText(stored) as { id: string; role: AuthUser['role'] };
   
       if (!decrypted || !decrypted.id || !decrypted.role) {
         throw new Error("Invalid session data");
       }
   
       const { id, role } = decrypted;
+
+      let result;
   
       if (role === "user") {
         const response = await fetchFromHasura(getUserByIdQuery, { id });
-        const user = response?.users?.[0];
+        const user = await response?.users_by_pk
         if (user) {
           set({
             userData: {
@@ -98,24 +101,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       } else if (role === "partner") {
         const response = await fetchFromHasura(partnerIdQuery, { id });
-        const partner = response?.partners?.[0];
+        const partner = response?.partners_by_pk
         if (partner) {
-          set({ partnerData: partner });
+          set({ 
+            userData: {
+              ...partner,
+              role: "partner"
+            } 
+          });
         }
       } else if (role === "superadmin") {
-        const response = await fetchFromHasura(superAdminIdQuery, {
-          id
-        });
-        const superAdmin = response?.super_admins?.[0];
+        const response = await fetchFromHasura(superAdminIdQuery, { id });
+        const superAdmin = response?.super_admins_by_pk
         if (superAdmin) {
-          set({ superAdminData: superAdmin });
+          set({ 
+            userData: {
+              ...superAdmin,
+              role: "superadmin"
+            }
+          });
         }
       }
+      
+      console.log("result : ",result);
+      
+      set({ loading: false });
     } catch (error) {
       console.error("Error fetching user data:", error);
     }
   },
-  
 
   signOut: async () => {
     try {
@@ -128,12 +142,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   resetPassword: async (email: string) => {
-    // try {
-    //   await auth.sendPasswordResetEmail(email);
-    // } catch (error) {
-    //   set({ error: (error as Error).message });
-    //   throw error;
-    // }
+    // Implementation remains the same
   },
 
   signUpWithEmailForPartner: async (
@@ -146,20 +155,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     password: string,
   ) => {
     try {
-      // First check if partner exists
-      interface PartnerResponse {
-        partners: Partner[];
-      }
-
       const existingPartner = await fetchFromHasura(partnerQuery, {
         email: email
-      }) as PartnerResponse;
+      }) as { partners: Partner[] };
 
       if (existingPartner?.partners?.length > 0) {
         throw new Error("A partner account with this email already exists");
       }
 
-      // Create new partner in Hasura
       const partnerData = {
         email: email,
         password: password,
@@ -174,25 +177,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         role: "partner",
       };
 
-      interface PartnerMutationResponse {
-        insert_partners_one: Partner;
-      }
-
       const response = await fetchFromHasura(partnerMutation, {
         object: partnerData
-      }) as PartnerMutationResponse;
+      }) as { insert_partners_one: Partner };
 
       if (!response?.insert_partners_one) {
         throw new Error("Failed to create partner account");
       }
 
-      // Set the partner data in state
+      const newPartner = response.insert_partners_one;
       set({
-        partnerData: response.insert_partners_one
+        userData: {
+          ...newPartner,
+          role: "partner"
+        }
       });
 
       const Data = {
-        id: response.insert_partners_one.id,
+        id: newPartner.id,
         role: "partner",
       }
 
@@ -206,16 +208,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signInPartnerWithEmail: async (email: string, password: string) => {
-    
     try {
-      interface PartnerLoginResponse {
-        partners: Partner[];
-      }
-  
       const response = await fetchFromHasura(partnerLoginQuery, {
         email: email,
         password: password
-      }) as PartnerLoginResponse;
+      }) as { partners: Partner[] };
   
       if (!response?.partners?.length) {
         throw new Error("Invalid email or password");
@@ -235,142 +232,95 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const partnerHashedId = encryptText(Data);
       localStorage.setItem("sysbio", partnerHashedId);
 
-      // Set the partner data in state
       set({
-        partnerData: partner
+        userData: {
+          ...partner,
+          role: "partner"
+        }
       });
   
     } catch (error) {
       console.error("Partner login failed:", error);
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error("Failed to sign in. Please try again");
+      throw error instanceof Error ? error : new Error("Failed to sign in. Please try again");
     }
   },
 
   signInWithPhone: async (phone: string): Promise<void> => {
     try {
-      // Create standardized email and password from phone
       const email = `${phone}@user.com`;
 
-      // Define the response type
-      interface HasuraUserResponseType {
-        users: {
-          id: string;
-          email: string;
-          full_name: string;
-          phone: string;
-          crave_coins: number;
-          location: string;
-        }[];
-      }
-
-      // check user already exist in hasura
       const hasuraUserResponse = await fetchFromHasura(userLoginQuery, {
         email: email
-      }) as HasuraUserResponseType;
+      }) as { users: User[] };
 
-      // if user already exist in hasura then no need to create just login using email and password
       if (hasuraUserResponse?.users?.length > 0) {
-        console.log("user already exist in hasura");
         const user = hasuraUserResponse.users[0];
-        if (user) {
-
-          const Data = {
-            id: user.id,
-            role: "user",
-          }
-          // hash the userid and store it in local storage
-          const userhashedId = encryptText(Data);
-          localStorage.setItem("sysbio", userhashedId);
-
-          set({
-            userData: {
-              id: user.id,
-              email: user.email,
-              full_name: user.full_name,
-              phone: user.phone,
-              crave_coins: user.crave_coins,
-              location: user.location,
-              password: "",
-              role: "user",
-            }
-          });
+        
+        const Data = {
+          id: user.id,
+          role: "user",
         }
+        
+        const userhashedId = encryptText(Data);
+        localStorage.setItem("sysbio", userhashedId);
+
+        set({
+          userData: {
+            ...user,
+            role: "user"
+          }
+        });
         return;
       }
-      else {
-        const hasuraUser={
-          email: email,
-          password: phone,
-          full_name: `User${phone.slice(0, 5)}`,
-          phone: phone,
-          crave_coins: 100,
-          location: null,
-        }
-        try {
-          const response = await fetchFromHasura(userLoginMutation, {
-            object: hasuraUser
-          });
-
-          if (!response?.insert_users_one) {
-            throw new Error("Failed to create user"); 
-          }
-
-          const user = response.insert_users_one;
-
-          const Data = {
-            id: user.id,
-            role: "user",
-          }
-
-          // hash the userid and store it in local storage
-          const userhashedId = encryptText(Data);
-          localStorage.setItem("sysbio", userhashedId);
-
-          set({
-            userData: {
-              id: user.id,
-              email: user.email,
-              full_name: user.full_name,
-              phone: user.phone,
-              crave_coins: user.crave_coins,
-              location: user.location,
-              password: "",
-              role: "user",
-            }  
-          })
-
-          return;
-
-        } catch (error) {
-          console.error("Failed to insert user into Hasura:", error);
-          throw new Error("Failed to create user profile");
-        }
-
+      
+      // Create new user
+      const hasuraUser = {
+        email: email,
+        password: phone,
+        full_name: `User${phone.slice(0, 5)}`,
+        phone: phone,
+        crave_coins: 100,
+        location: null,
+        role: "user"
       }
+      
+      const response = await fetchFromHasura(userLoginMutation, {
+        object: hasuraUser
+      }) as { insert_users_one: User };
+
+      if (!response?.insert_users_one) {
+        throw new Error("Failed to create user"); 
+      }
+
+      const user = response.insert_users_one;
+
+      const Data = {
+        id: user.id,
+        role: "user",
+      }
+
+      const userhashedId = encryptText(Data);
+      localStorage.setItem("sysbio", userhashedId);
+
+      set({
+        userData: {
+          ...user,
+          role: "user"
+        }  
+      });
 
     } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error("An unexpected error occurred");
+      console.error("Phone sign-in failed:", error);
+      throw error instanceof Error ? error : new Error("An unexpected error occurred");
     }
   },
   
-
   signInSuperAdminWithEmail: async (email: string, password: string) => {
     try {
-
-      interface SuperAdminLoginResponse {
-        super_admins: SuperAdmin[];
-      }
-
       const response = await fetchFromHasura(superAdminLoginQuery, {
         email: email,
         password: password
-      }) as SuperAdminLoginResponse;
+      }) as { super_admins: SuperAdmin[] };
 
       if (!response?.super_admins?.length) {
         throw new Error("Invalid email or password");
@@ -386,17 +336,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const superAdminHashedId = encryptText(Data);
       localStorage.setItem("sysbio", superAdminHashedId);
 
-      // Set the super admin data in state
       set({
-        superAdminData: superAdmin
+        userData: {
+          ...superAdmin,
+          role: "superadmin"
+        }
       });
 
     } catch (error) {
       console.error("Super admin login failed:", error);
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error("Failed to sign in. Please try again");
+      throw error instanceof Error ? error : new Error("Failed to sign in. Please try again");
     }
   },
 }));

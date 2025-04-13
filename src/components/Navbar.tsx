@@ -1,7 +1,7 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
 import { Button } from "./ui/button";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore, AuthUser } from "@/store/authStore";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { UtensilsCrossed, Menu, X, Banknote } from "lucide-react";
@@ -15,7 +15,7 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const location = pathname.split("?")[0];
-  const { userData, partnerData, superAdminData } = useAuthStore();
+  const { userData } = useAuthStore(); // Now we only use userData
   const { offersClaimable } = useClaimedOffersStore();
   const [isOpen, setIsOpen] = useState(false);
   const [userLocation, setUserLocation] = useState("");
@@ -43,7 +43,9 @@ export function Navbar() {
     if (location) {
       setUserLocation(location);
     }
-  }, [userData, superAdminData, partnerData]);
+    console.log("userData", userData);
+    
+  }, [userData]); // Only depend on userData now
 
   const NavLinks = () => (
     <>
@@ -52,10 +54,10 @@ export function Navbar() {
           href: `${userLocation ? `/offers${userLocation}` : "/offers"}`,
           label: "Offers",
         },
-        ...(userData?.role === "hotel"
+        ...(userData?.role === 'partner'
           ? [{ href: "/admin", label: "Admin" }]
           : []),
-        ...(userData?.role === "superadmin"
+        ...(userData?.role === 'superadmin'
           ? [{ href: "/superadmin", label: "Super Admin" }]
           : []),
       ].map((link) => (
@@ -73,14 +75,14 @@ export function Navbar() {
           {link.label}
         </Link>
       ))}
-      {!(userData || partnerData || superAdminData)  && (
+      {!userData && (
         <Link href="/partner" onClick={() => setIsOpen(false)}>
           <Button className="text-white font-medium bg-orange-600 hover:bg-orange-50 hover:border-orange-600 hover:text-orange-600 px-5 text-[1rem] py-3 rounded-full transition-all duration-300">
             Partner with Us
           </Button>
         </Link>
       )}
-      {(userData || partnerData || superAdminData)  && (
+      {userData && (
         <div className="flex w-full">
           <div className="flex items-center gap-2 flex-col sm:flex-row justify-end">
             <Link
@@ -103,14 +105,11 @@ export function Navbar() {
                 />
               </svg>
               <span>
-                {userData && !partnerData && !superAdminData 
+                {userData.role === 'user'
                   ? userData.full_name
-                  : partnerData && !userData && !superAdminData
-                  ? partnerData.store_name 
-                  : superAdminData && !userData && !partnerData
-                  ? "Super Admin"
-                  : userData?.email
-                }
+                  : userData.role === 'partner'
+                  ? userData.store_name 
+                  : "Super Admin"}
               </span>
             </Link>
           </div>
@@ -143,19 +142,12 @@ export function Navbar() {
                   <span className="text-xl font-bold text-gray-900">
                     Cravings
                   </span>
-                  {/* <Image
-                    src={"/christmas-hat.webp"}
-                    alt="christmas hat"
-                    width={30}
-                    height={30}
-                    className="absolute -top-2 -left-4 "
-                  /> */}
                 </div>
               </Link>
             </div>
 
             <div className="flex items-center gap-5">
-              {(userData || partnerData || superAdminData) && (
+              {userData && (
                 <div
                   onClick={() => {
                     router.push("/coupons");
@@ -185,7 +177,7 @@ export function Navbar() {
                 </div>
               )}
 
-              {!(userData || partnerData || superAdminData)  && (
+              {!userData && (
                 <Button
                   onClick={() => router.push("/login")}
                   size="lg"
