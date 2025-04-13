@@ -1,8 +1,0 @@
-- name: cravings-whale
-  kind: postgres
-  configuration:
-    connection_info:
-      database_url: "{{ env('DATABASE_URL') }}"
-      isolation_level: read-committed
-      use_prepared_statements: false
-  tables: "!include cravings-whale/tables/tables.yaml"
