@@ -41,3 +41,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+hasura/config.yaml
+hasura/metadata/databases/databases.yaml
+
