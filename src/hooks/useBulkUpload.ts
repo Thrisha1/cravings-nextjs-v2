@@ -1,28 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useMenuStore, getMenuItemImage } from "@/store/menuStore";
 import { MenuItem } from "@/components/bulkMenuUpload/EditItemModal";
+import { MenuItem as MenuItemStore } from "@/store/menuStore_hasura";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
-import { useCategoryStore } from "@/store/categoryStore";
-import { uploadFileToS3 } from "@/app/actions/aws-s3";
-import { addDoc, collection } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useMenuStore } from "@/store/menuStore_hasura";
+import { getImageSource } from "@/lib/getImageSource";
 
 export const useBulkUpload = () => {
-  const { addCategory } = useCategoryStore();
   const [jsonInput, setJsonInput] = useState("");
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [selectAll, setSelectAll] = useState(false);
-  const { user } = useAuthStore();
-  const {
-    addItem,
-    items: menu,
-    fetchMenu,
-    setSelectedHotelId,
-  } = useMenuStore();
   const { userData } = useAuthStore();
+  const { addItem, items: menu, fetchMenu , fetchCategorieImages } = useMenuStore();
   const [editingItem, setEditingItem] = useState<{
     index: number;
     item: MenuItem;
@@ -54,7 +45,7 @@ export const useBulkUpload = () => {
   };
 
   useEffect(() => {
-    if (userData?.role === "hotel") {
+    if (userData?.role === "partner") {
       fetchMenu();
     }
   }, [fetchMenu, userData?.role]);
@@ -119,7 +110,6 @@ export const useBulkUpload = () => {
   };
 
   const handleHotelSelect = async (hotelId: string) => {
-    setSelectedHotelId(hotelId);
     await fetchMenu(hotelId);
   };
 
@@ -135,72 +125,29 @@ export const useBulkUpload = () => {
 
     setIsUploading((prev) => ({ ...prev, [index]: true }));
     try {
-      const categoryId = await addCategory(item.category);
 
-      let imageUrl = item.image;
-
-      if (!item.image.includes("cravingsbucket.s3")) {
-        // Load original base64 image into <img>
-        const img = document.createElement("img");
-        img.crossOrigin = "anonymous";
-        img.src = imageUrl;
-        await new Promise((resolve) => (img.onload = resolve));
-      
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("Failed to get canvas context");
-      
-        if (item.image.includes("assets.swiggy")) {
-          // Crop 500x500 from x:96, y:0 for swiggy assets
-          canvas.width = 500;
-          canvas.height = 500;
-          ctx.drawImage(img, 96, 0, 500, 500, 0, 0, 500, 500);
-        } else {
-          // Resize image with aspect ratio and max height
-          const MAX_HEIGHT = 300;
-          const aspectRatio = img.width / img.height;
-          canvas.height = Math.min(img.height, MAX_HEIGHT);
-          canvas.width = canvas.height * aspectRatio;
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        }
-      
-        const webpBase64WithPrefix: string = await new Promise((resolve, reject) => {
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) return reject(new Error("Canvas toBlob failed"));
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            },
-            "image/webp",
-            0.8
-          );
-        });
-      
-        const fileName = `${user?.uid}/${item.category}/${item.name}-${Date.now()}.webp`;
-        const url = await uploadFileToS3(webpBase64WithPrefix, fileName);
-      
-        await addDoc(collection(db, "dishes"), {
-          name: item.name,
-          category: item.category.toLowerCase(),
-          url: url,
-          createdAt: new Date(),
-          addedBy: user?.uid,
-          imageSource: "user-upload",
-        });
-      
-        imageUrl = url;
+      const convertImageToLocalBlob = async (url: string) => {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
       }
-      
 
-      await addItem({
+      let image_url = item.image;
+
+      if(image_url.length > 0) {
+        image_url = await convertImageToLocalBlob(item.image);
+      }
+
+      const newItem = {
         name: item.name,
-        price: Number(item.price),
-        image: imageUrl || "",
-        description: item.description || "",
-        category: categoryId || "",
-        hotelId: hotelId || userData?.id || "",
-      });
+        price: item.price,
+        image_url: image_url,
+        image_source: getImageSource(item.image),
+        description: item.description,
+        category: item.category,
+      } as Omit<MenuItemStore, "id">;
+
+      await addItem(newItem);
 
       const updatedItems = [...menuItems];
       updatedItems[index] = { ...updatedItems[index], isAdded: true };
@@ -298,10 +245,11 @@ export const useBulkUpload = () => {
         const updatedItems = [...menuItems];
 
         if (!validatedItem.image) {
-          const urls = await getMenuItemImage(
-            validatedItem.category,
-            validatedItem.name
-          );
+          // const urls = await getMenuItemImage(
+          //   validatedItem.category,
+          //   validatedItem.name
+          // );
+          const urls: string[] = [];
           if (urls && urls.length > 0) {
             validatedItem.image = urls[0];
           } else {
@@ -344,7 +292,7 @@ export const useBulkUpload = () => {
     setMenuItems(updatedItems);
 
     try {
-      const urls = await getMenuItemImage(category, updatedItems[index].name);
+      const urls = (await fetchCategorieImages(category)).map((img) => img.image_url);
       if (urls && urls.length > 0) {
         updatedItems[index].image = urls[0];
         setMenuItems([...updatedItems]);

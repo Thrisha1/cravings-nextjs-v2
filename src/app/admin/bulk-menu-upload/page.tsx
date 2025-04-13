@@ -14,7 +14,7 @@ import { KimiAiLink } from "@/components/ui/KimiAiLink";
 
 const BulkUploadPage = () => {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { userData } = useAuthStore();
   const {
     jsonInput,
     menuItems,
@@ -85,7 +85,7 @@ const BulkUploadPage = () => {
 
               <Button
                 className="text-[13px] w-full"
-                onClick={() => handleUploadSelected(user?.uid as string)}
+                onClick={() => handleUploadSelected(userData?.id as string)}
                 disabled={isBulkUploading}
               >
                 {isBulkUploading ? (
@@ -123,7 +123,7 @@ const BulkUploadPage = () => {
               isUploading={isUploading[index]}
               onSelect={() => handleSelectItem(index)}
               onAddToMenu={() =>
-                handleAddToMenu(item, index, user?.uid as string)
+                handleAddToMenu(item, index, userData?.id as string)
               }
               onEdit={() => handleEdit(index, item)}
               onDelete={() => handleDelete(index)}

@@ -34,19 +34,26 @@ interface CategoryImages {
   name: string;
 }
 
+interface GroupedItems {
+  [key: string]: MenuItem[];
+}
+
 interface MenuState {
   items: MenuItem[];
+  groupedItems : GroupedItems;
   categoryImages: CategoryImages[];
   addItem: (item: Omit<MenuItem, "id">) => Promise<void>;
   fetchMenu: (hotelId?: string) => Promise<MenuItem[] | []>;
   updateItem: (id: string, updatedItem: Partial<MenuItem>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
   fetchCategorieImages: (category: string) => Promise<CategoryImages[]>;
+  groupItems: () => void;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
   items: [],
   categoryImages: [],
+  groupedItems: {},
 
   fetchMenu: async (hotelId?: string) => {
     const userData = useAuthStore.getState().userData as AuthUser;
@@ -72,6 +79,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           })
         )) || [];
       set({ items });
+      get().groupItems();
       return items;
     } catch (error) {
       console.error("Error fetching menu: ", error);
@@ -93,12 +101,19 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       if (!category_id) throw new Error("Category ID not found");
 
-      const getProcessedBase64Url = await processImage(item.image_url);
+      let s3Url = "";
 
-      const s3Url = await uploadFileToS3(
-        getProcessedBase64Url,
-        `${userData.id}/menu/${item.name}.webp`
-      );
+      if (item.image_url) {
+        const getProcessedBase64Url = await processImage(
+          item.image_url,
+          item.image_source || ""
+        );
+
+        s3Url = await uploadFileToS3(
+          getProcessedBase64Url,
+          `${userData.id}/menu/${item.name}_${item.category}_${Date.now()}.webp`
+        );
+      }
 
       const newMenu = {
         name: item.name,
@@ -116,7 +131,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       console.log("Item added: ", itemRes);
 
-      set({ items: [...get().items, item] });
+      set({
+        items: [...get().items, { ...item, image_url: newMenu.image_url }],
+      });
+      get().groupItems();
     } catch (error) {
       console.error(error);
     }
@@ -137,17 +155,26 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         changedItem = { ...changedItem, category_id: catid };
       }
 
-
-      if(updatedItem.image_url) {
-        const getProcessedBase64Url = await processImage(updatedItem.image_url);
+      if (updatedItem.image_url) {
+        const getProcessedBase64Url = await processImage(
+          updatedItem.image_url,
+          updatedItem.image_source || ""
+        );
         console.log("Processed image URL: ", getProcessedBase64Url);
-        
+
         const s3Url = await uploadFileToS3(
           getProcessedBase64Url,
-          `${userData.id}/menu/${updatedItem.name}.webp`
+          `${userData.id}/menu/${updatedItem.name}_${
+            updatedItem.category
+          }_${Date.now()}.webp`
         );
 
         changedItem = { ...changedItem, image_url: s3Url || "" };
+        updatedItem = {
+          ...updatedItem,
+          image_url: s3Url || "",
+          image_source: updatedItem.image_source || "",
+        };
       }
 
       await fetchFromHasura(updateMenu, {
@@ -159,6 +186,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         item.id === id ? { ...item, ...updatedItem } : item
       );
       set({ items });
+      get().groupItems();
     } catch (error) {
       console.error("Error ", error);
     }
@@ -171,6 +199,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       });
       const items = get().items.filter((item) => item.id !== id);
       set({ items });
+      get().groupItems();
     } catch (error) {
       console.error("Error ", error);
     }
@@ -202,5 +231,18 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       set({ categoryImages: [] });
       return [];
     }
+  },
+
+  groupItems: () => {
+    const items = get().items;
+    const groupedItems: GroupedItems = items.reduce((acc, item) => {
+      if (!acc[item.category]) {
+        acc[item.category] = [];
+      }
+      acc[item.category].push(item);
+      return acc;
+    }, {} as GroupedItems);
+
+    set({ groupedItems });
   },
 }));

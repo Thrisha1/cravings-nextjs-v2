@@ -10,11 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { toast } from "sonner";
-import { uploadFileToS3 } from "@/app/actions/aws-s3";
-import { addDoc, collection } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useMenuStore } from "@/store/menuStore";
-import { useAuthStore } from "@/store/authStore";
+
 
 interface AIImageGenerateModalProps {
   isOpen: boolean;

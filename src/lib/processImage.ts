@@ -1,6 +1,9 @@
-export const processImage = async (localBlobUrl: string): Promise<string> => {
+import { getImageSource } from "./getImageSource";
+
+export const processImage = async (localBlobUrl: string , imageSource : string): Promise<string> => {
+
     // Check if the URL should not be processed
-    if (localBlobUrl.includes('cravingsbucket')) {
+    if (imageSource === 'cravingsbucket' || localBlobUrl.includes('cravingsbucket')) {
       return localBlobUrl;
     }
   
@@ -27,7 +30,7 @@ export const processImage = async (localBlobUrl: string): Promise<string> => {
     let height = img.height;
   
     // Handle Swiggy images - crop to 500x500 at specific position
-    if (localBlobUrl.includes('swiggy')) {
+    if (imageSource === 'swiggy') {
       const sourceX = 96;
       const sourceY = 0;
       const cropSize = 500;

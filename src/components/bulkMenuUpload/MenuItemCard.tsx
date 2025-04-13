@@ -50,13 +50,14 @@ export const MenuItemCard = ({
 
       <CardContent className="space-y-3 ">
         {item.image.length > 9 && (
-          <Image
-            src={item.image}
-            alt={item.name}
-            width={200}
-            height={200}
-            className="w-full h-40 object-cover rounded-md cursor-pointer"
-          />
+          <div className="relative w-40 h-40 overflow-hidden rounded-md ">
+            <Image
+              src={item.image}
+              alt={item.name}
+              fill
+              className="w-full h-full object-cover"
+            />
+          </div>
         )}
         <p className="text-gray-600">{item.description}</p>
         <div className="flex gap-2 items-center ">

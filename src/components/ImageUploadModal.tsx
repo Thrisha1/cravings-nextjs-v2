@@ -9,6 +9,8 @@ import { useAuthStore } from "@/store/authStore";
 import { addDoc, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+//component not using
+
 const ImageUploadModal = ({
   isOpen,
   onOpenChange,

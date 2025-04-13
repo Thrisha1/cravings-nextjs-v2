@@ -20,25 +20,32 @@ import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
 import { toast } from "sonner";
 import { deleteFileFromS3 } from "@/app/actions/aws-s3";
-import { useCategoryStore } from "@/store/categoryStore_hasura";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 
 export function MenuTab() {
-  const { items, addItem, fetchMenu, updateItem, deleteItem } = useMenuStore();
+  const {
+    items: menu,
+    addItem,
+    fetchMenu,
+    updateItem,
+    deleteItem,
+    groupedItems,
+  } = useMenuStore();
   const [isCategoryEditing, setIsCategoryEditing] = useState(false);
   const [editingCategory, seteditingCategory] = useState({
     id: "",
     name: "",
   });
-  const [categoriesdItems, setCategoriesdItems] = useState<
-    Record<string, MenuItem[]>
-  >({});
   const { adminOffers, fetchAdminOffers } = useAdminOfferStore();
-  const { categories } = useCategoryStore();
   const { userData } = useAuthStore();
   const [catUpated, setCatUpdated] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const pathname = useSearchParams();
+  const [filteredGroupedItems, setFilteredGroupedItems] = useState(
+    {} as Record<string, MenuItem[]>
+  );
   const [editingItem, setEditingItem] = useState<{
     id: string;
     name: string;
@@ -62,14 +69,23 @@ export function MenuTab() {
   }, [isEditModalOpen]);
 
   useEffect(() => {
-    console.log(items);
-  }, [items]);
+    console.log("pathname:", pathname);
+    
+    if (!groupedItems) return;
 
-  const filteredItems = useMemo(() => {
-    return items.filter((item) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [items, searchQuery]);
+    const filtered: Record<string, MenuItem[]> = {};
+
+    Object.entries(groupedItems).forEach(([category, categoryItems]) => {
+      const filteredCategoryItems = categoryItems.filter((item) =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+      if (filteredCategoryItems.length > 0) {
+        filtered[category] = filteredCategoryItems;
+      }
+    });
+    setFilteredGroupedItems(filtered);
+  }, [groupedItems, searchQuery , pathname]);
 
   const handleAddItem = (item: {
     name: string;
@@ -124,23 +140,6 @@ export function MenuTab() {
     });
     setIsEditModalOpen(true);
   };
-  useEffect(() => {
-    const convertToCategorised = async () => {
-      if (filteredItems.length > 0) {
-        const acc: Record<string, MenuItem[]> = {};
-
-        for (const item of filteredItems) {
-          if (item.category) {
-            acc[item.category] = acc[item.category] || [];
-            acc[item.category].push(item);
-          }
-        }
-        setCategoriesdItems(acc);
-      }
-    };
-
-    convertToCategorised();
-  }, [filteredItems, catUpated]);
 
   const handleCategoryUpdate = async (cat: string, catId: string) => {
     setIsCategoryEditing(true);
@@ -208,7 +207,7 @@ export function MenuTab() {
       )}
 
       <div className="grid gap-4 divide-y-2 divide-gray-300 ">
-        {Object.entries(categoriesdItems)
+        {Object.entries(filteredGroupedItems)
           .sort()
           .map(([category, items], index) => {
             return (
@@ -236,13 +235,12 @@ export function MenuTab() {
                       <CardHeader className="flex flex-row justify-between">
                         <div>
                           {item.image_url.length > 0 && (
-                            <div>
+                            <div className="relative w-32 h-32 overflow-hidden">
                               <Image
                                 src={item.image_url}
                                 alt={item.name}
-                                width={200}
-                                height={200}
-                                className="w-full h-32 object-cover rounded-lg"
+                                fill
+                                className="w-full h-full object-cover rounded-lg"
                               />
                             </div>
                           )}
@@ -262,20 +260,31 @@ export function MenuTab() {
                           <label className="mr-2">Mark as Top 3:</label>
                           <Switch
                             checked={item.is_top}
-                            onCheckedChange={() => {
-                              const topItemsCount = filteredItems.filter(
-                                (i) => i.is_top
-                              ).length;
-                              if (item.is_top) {
-                                updateItem(item.id as string, {
-                                  is_top: false,
-                                });
-                              } else if (topItemsCount < 3) {
-                                updateItem(item.id as string, { is_top: true });
-                              } else {
-                                toast.error(
-                                  "You can only mark up to 3 items as Top 3."
+                            onCheckedChange={async () => {
+                              try {
+                                const currentTopItems = menu.filter(
+                                  (i) => i.is_top === true
                                 );
+
+                                const topItemsCount = currentTopItems.length;
+
+                                if (item.is_top) {
+                                  await updateItem(item.id as string, {
+                                    is_top: false,
+                                  });
+                                } else if (topItemsCount < 3) {
+                                  await updateItem(item.id as string, {
+                                    is_top: true,
+                                  });
+                                } else {
+                                  toast.error(
+                                    "You can only mark up to 3 items as Top 3."
+                                  );
+                                  return;
+                                }
+                              } catch (error) {
+                                toast.error("Failed to update item status");
+                                console.error(error);
                               }
                             }}
                           />
