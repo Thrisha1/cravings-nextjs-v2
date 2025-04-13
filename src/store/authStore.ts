@@ -59,12 +59,22 @@ interface AuthState {
   signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
   signInSuperAdminWithEmail: (email: string, password: string) => Promise<void>;
   fetchUser: () => Promise<void>;
+  isLoggedIn: () => Promise<boolean>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   userData: null,
   loading: true,
   error: null,
+
+  isLoggedIn : async () => {
+    const sysbio = localStorage.getItem("sysbio");
+    if (!sysbio) {
+      return false;
+    }else{
+      return true;
+    }
+  },
 
   fetchUser: async () => {
     try {
@@ -96,7 +106,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               location: user.location,
               password: "",
               role: "user"
-            }
+            } as User
           });
         }
       } else if (role === "partner") {
@@ -106,8 +116,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           set({ 
             userData: {
               ...partner,
+              password: "",
               role: "partner"
-            } 
+            }  as Partner
           });
         }
       } else if (role === "superadmin") {
@@ -117,13 +128,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           set({ 
             userData: {
               ...superAdmin,
+              password: "",
               role: "superadmin"
-            }
+            } as SuperAdmin
           });
         }
       }
-      
-      console.log("result : ",result);
       
       set({ loading: false });
     } catch (error) {

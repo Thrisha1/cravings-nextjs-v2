@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { useCategoryStore } from "@/store/categoryStore";
 import CategoryUpdateModal from "./CategoryUpdateModal";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 export function MenuTab() {
   const { items, addItem, updateItem, deleteItem } = useMenuStore();
@@ -34,7 +35,7 @@ export function MenuTab() {
   >({});
   const { getCategoryById } = useCategoryStore();
   const { adminOffers, fetchAdminOffers } = useAdminOfferStore();
-  const { user } = useAuthStore();
+  const { userData } = useAuthStore();
   const [catUpated, setCatUpdated] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -49,10 +50,10 @@ export function MenuTab() {
   } | null>(null);
 
   useEffect(() => {
-    if (user?.uid) {
-      fetchAdminOffers(user.uid);
+    if (userData?.id) {
+      fetchAdminOffers(userData?.id);
     }
-  }, [user, fetchAdminOffers]);
+  }, [userData, fetchAdminOffers]);
 
   useEffect(() => {
     if (!isEditModalOpen) {
@@ -79,7 +80,7 @@ export function MenuTab() {
       image: item.image,
       description: item.description,
       category: item.category,
-      hotelId: user?.uid || "",
+      hotelId: userData?.id as string,
     });
   };
 
