@@ -1,3 +1,5 @@
+/*...........query...........*/
+
 export const getInactivePartnersQuery = `
   query GetInactivePartners {
     partners(where: { status: { _eq: "inactive" } }) {
@@ -15,6 +17,18 @@ export const getInactivePartnersQuery = `
   }
 `;
 
+export const getAllPartnerUpiIdsQuery = `
+  query GetAllPartnerUpiIds {
+    partners {
+      id
+      upi_id
+      store_name
+    }
+  }
+`;
+
+/*...........mutation...........*/
+
 export const updatePartnerStatusMutation = `
   mutation UpdatePartnerStatus($id: uuid!, $status: String!) {
     update_partners_by_pk(pk_columns: { id: $id }, _set: { status: $status }) {
@@ -23,6 +37,17 @@ export const updatePartnerStatusMutation = `
     }
   }
 `;
+
+export const updateUpiIdMutation = `
+  mutation UpdateUpiId($id: uuid!, $upi_id: String!) {
+    update_partners_by_pk(pk_columns: { id: $id }, _set: { upi_id: $upi_id }) {
+      id
+      upi_id
+    }
+  }
+`;
+
+/*...........types...........*/
 
 export interface Partner {
   id: string;

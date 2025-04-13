@@ -71,7 +71,7 @@ export const partnerLoginQuery = `
 
 export const superAdminLoginQuery = `
   query SuperAdminLogin($email: String!, $password: String!) {
-    super_admins(where: {email: {_eq: $email}, password: {_eq: $password}}) {
+    super_admin(where: {email: {_eq: $email}, password: {_eq: $password}}) {
       id
       email
     }
@@ -80,7 +80,7 @@ export const superAdminLoginQuery = `
 
 export const superAdminIdQuery = `
   query GetSuperAdminById($id: uuid!) {
-    super_admins_by_pk(id: $id) {
+    super_admin_by_pk(id: $id) {
       id
       email
     }

@@ -14,16 +14,16 @@ export default function Admin() {
   const { userData } = useAuthStore();
 
   // Strict partner role check and redirect
-  useEffect(() => {
-    const sysbio = localStorage.getItem("sysbio");
-    if (!sysbio) {
-      redirect("/login");
-    } else if (userData?.role !== "partner") {
-      redirect("/offers"); 
-    } else {
-      fetchMenu();
-    }
-  }, [userData, fetchMenu]);
+  // useEffect(() => {
+  //   const sysbio = localStorage.getItem("sysbio");
+  //   if (!sysbio) {
+  //     redirect("/login");
+  //   } else if (userData?.role !== "partner") {
+  //     redirect("/offers"); 
+  //   } else {
+  //     fetchMenu();
+  //   }
+  // }, [userData, fetchMenu]);
 
 
 if ((userData as Partner)?.status === "inactive") {
