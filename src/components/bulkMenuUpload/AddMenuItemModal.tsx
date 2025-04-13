@@ -41,8 +41,6 @@ export function AddMenuItemModal({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-  const { getCategoryId } = useCategoryStore();
-  const { user } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,11 +50,7 @@ export function AddMenuItemModal({
     }
     setIsSubmitting(true);
     try {
-      const catId = await getCategoryId(newItem.category, user?.uid || "");
-      await onSubmit({
-        ...newItem,
-        category: catId as string,
-      });
+      await onSubmit(newItem);
 
       setNewItem({
         name: "",
@@ -150,7 +144,6 @@ export function AddMenuItemModal({
               !newItem.name ||
               !newItem.price ||
               !newItem.category ||
-              !newItem.image ||
               isSubmitting
             }
             type="submit"

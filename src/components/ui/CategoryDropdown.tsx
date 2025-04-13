@@ -6,12 +6,12 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select"; // Adjust import as necessary
-import { useCategoryStore } from "@/store/categoryStore";
 import { Input } from "./input";
 import { Button } from "./button";
 import { Dialog, DialogContent } from "./dialog";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
+import { useCategoryStore } from "@/store/categoryStore_hasura";
 
 interface CategoryDropdownProps {
   value: string;
@@ -25,19 +25,21 @@ export const CategoryDropdown = ({
   const [isModalOpen, setModalOpen] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuthStore();
+  const { userData } = useAuthStore();
   const { categories, fetchCategories, addCategory  } = useCategoryStore();
 
   useEffect(() => {
-    if (user) {
-      fetchCategories(user?.uid);
+    if (userData) {
+      fetchCategories(userData.id);
     }
-  }, [user]);
+  }, [userData]);
 
   const handleOnChange = async(value: string) => {
     if (value === "new-cat") {
       setModalOpen(true);
     } else {
+      console.log("Selected category:", value);
+      
       onChange(value);
     }
   };
@@ -56,13 +58,13 @@ export const CategoryDropdown = ({
             Create New Category
           </SelectItem>
           {categories.length > 0
-            ? categories?.map((category, index) => (
+            ? categories?.map((category) => (
                 <SelectItem
                   className="capitalize"
-                  key={`${category + index}`}
-                  value={category}
+                  key={`${category.id}`}
+                  value={category.name}
                 >
-                  {category}
+                  {category.name}
                 </SelectItem>
               ))
             : null}

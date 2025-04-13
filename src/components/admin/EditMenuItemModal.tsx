@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import CategoryDropdown from "@/components/ui/CategoryDropdown";
 import { ImageGridModal } from "../bulkMenuUpload/ImageGridModal";
-import { useCategoryStore } from "@/store/categoryStore";
 import { useAuthStore } from "@/store/authStore";
+import { useCategoryStore } from "@/store/categoryStore_hasura";
 
 interface EditMenuItemModalProps {
   isOpen: boolean;
@@ -45,48 +45,17 @@ export function EditMenuItemModal({
 }: EditMenuItemModalProps) {
   const [editingItem, setEditingItem] = useState(item );
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-  const { getCategoryById, getCategoryId } = useCategoryStore();
-  const [categoryName, setCategoryName] = useState("");
-  const { user } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingItem.name || !editingItem.price || !categoryName) {
+    if (!editingItem.name || !editingItem.price || !editingItem.category) {
       alert("Please fill all the fields");
       return;
     }
 
-    let catId = await getCategoryId(editingItem.category, user?.uid || "");
-    if (!catId) {
-      catId = item.category;
-    }
-
-    const updatedItem = {
-      ...editingItem,
-      category: catId,
-    };
-
-    onSubmit(updatedItem);
+    onSubmit(editingItem);
     onOpenChange(false);
   };
-
-  useEffect(() => {
-    const fetchCatName = async () => {
-      const catName = await getCategoryById(item.category);
-
-      if (catName) {
-        setCategoryName(catName);
-      } else {
-        setCategoryName("Unknown Category");
-      }
-    };
-
-    fetchCatName();
-
-
-  }, [item, isOpen, editingItem, isImageModalOpen]);
-
- 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -129,7 +98,7 @@ export function EditMenuItemModal({
             isOpen={isImageModalOpen}
             onOpenChange={setIsImageModalOpen}
             itemName={editingItem.name}
-            category={categoryName}
+            category={editingItem.category}
             currentImage={editingItem.image}
             onSelectImage={(newImageUrl: string) => {
               setEditingItem((prev) => ({ ...prev, image: newImageUrl }));
@@ -163,10 +132,9 @@ export function EditMenuItemModal({
             }
           />
           <CategoryDropdown
-            value={categoryName}
+            value={editingItem.category}
             onChange={(value) => {
               setEditingItem({ ...editingItem, category: value });
-              setCategoryName(value);
             }}
           />
           {children}

@@ -28,16 +28,12 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
   isOpen,
   onOpenChange,
   itemName,
-  category,
   addNewImage,
 }) => {
   const [prompt, setPrompt] = useState(itemName);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [saving , setSaving] = useState(false);
-  const { clearDishCache } = useMenuStore();
-  const { user } = useAuthStore();
 
   const handleGenerateImage = async () => {
     setLoading(true);
@@ -47,7 +43,7 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
         setLoading(false);
         return;
       }
-  
+
       const encodedPrompt = encodeURIComponent(prompt);
       const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&width=512&height=512`;
 
@@ -55,7 +51,7 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
       setImageUrl(objectUrl);
-      
+
       setGeneratedImage(imageUrl);
       toast.success("Image generated successfully!");
     } catch (error) {
@@ -65,50 +61,14 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
       setLoading(false);
     }
   };
-  
+
   const handleSaveImage = async () => {
-    if (!generatedImage) {
+    if (!imageUrl) {
       toast.error("No image to save!");
       return;
     }
-  
-    setSaving(true);
-    try {
-      const sanitizedCategory = category.replace(/\s/g, "_").replace(/&/g, "_");
-      const sanitizedItemName = itemName.replace(/\s/g, "_") + "_" + Date.now();
-  
-      const imgUrl = await uploadFileToS3(
-        generatedImage,
-        `dishes/${sanitizedCategory}/${sanitizedItemName}.jpg`
-      );
-  
-      if (!imgUrl) {
-        throw new Error("Failed to upload image to S3");
-      }
-  
-      const dishesRef = collection(db, "dishes");
-      await addDoc(dishesRef, {
-        name: itemName,
-        category: category,
-        url: imgUrl,
-        createdAt: new Date(),
-        addedBy : user?.uid,
-        imageSource: "ai",
-      });
-  
-      clearDishCache();
-      addNewImage(imgUrl);
-      toast.success("Image saved successfully!");
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Error saving image:", error);
-      toast.error("Failed to save image!");
-    } finally {
-      setSaving(false);
-    }
+    addNewImage(imageUrl);
   };
-  
-  
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -134,12 +94,12 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
           onChange={(e) => setPrompt(e.target.value)}
           className="border rounded p-2 w-full mb-4 bg-white"
         />
-        <Button onClick={handleGenerateImage} disabled={loading || saving}>
+        <Button onClick={handleGenerateImage} disabled={loading}>
           {loading ? "Generating..." : "Generate Image"}
         </Button>
         {generatedImage && (
-          <Button disabled={saving || loading} onClick={handleSaveImage}>
-            {saving ? "Saving..." : "Save Image"}
+          <Button disabled={loading} onClick={handleSaveImage}>
+            Save Image
           </Button>
         )}
       </DialogContent>

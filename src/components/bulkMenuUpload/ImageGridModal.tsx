@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Loader2, Check, AlertCircle, Upload } from "lucide-react";
 import AIImageGenerateModal from "@/components/AIImageGenerateModal";
 import ImageUploadModal from "../ImageUploadModal";
+import { useMenuStore } from "@/store/menuStore_hasura";
 
 interface ImageGridModalProps {
   isOpen: boolean;
@@ -29,18 +30,15 @@ export function ImageGridModal({
   );
   const [error, setError] = useState<string | null>(null);
   const [isAIImageModalOpen, setAIImageModalOpen] = useState(false);
-  const [isImageUploadModalOpen , setImageUploadModalOpen] = useState(false);
+  const { fetchCategorieImages } = useMenuStore();
+  const [isImageUploadModalOpen, setImageUploadModalOpen] = useState(false);
 
   const fetchImages = async () => {
     if (isOpen && itemName && category) {
       setError(null);
       try {
-        const urls = await getMenuItemImage(category, itemName);
-        console.log("Fetched URLs:", itemName, category, urls);
-        
-        if (urls.length === 0) {
-          // setError(`No images found for "${itemName}" in category "${category}"`);
-        }
+        const menus = await fetchCategorieImages(category);
+        const urls = menus.map((menu) => menu.image_url);
         setImageUrls(urls);
         setLoadingStates(
           urls.reduce((acc, url) => ({ ...acc, [url]: true }), {})
@@ -57,6 +55,21 @@ export function ImageGridModal({
     setLoadingStates((prev) => ({ ...prev, [url]: true }));
   };
 
+  const handleImageUpload = (e: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const blobUrl = URL.createObjectURL(file);    
+    addNewImage(blobUrl);
+
+    return () => URL.revokeObjectURL(blobUrl);
+  };
+
+  const handleAiImageUpload = (url: string) => {
+    addNewImage(url);
+    setAIImageModalOpen(false);
+  }
+
   useEffect(() => {
     fetchImages();
   }, [isOpen, itemName, category]);
@@ -71,15 +84,23 @@ export function ImageGridModal({
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-1">
-            <div
+            <label
+              htmlFor="image-upload"
               className="aspect-square cursor-pointer group bg-gray-100 rounded-md relative"
-              onClick={() => setImageUploadModalOpen(true)}
             >
               <div className="z-10 absolute grid place-items-center top-1/2 left-1/2 text-center -translate-x-1/2 -translate-y-1/2 text-xl font-bold">
                 <Upload className="w-8 h-8 " />
                 Upload
               </div>
-            </div>
+              <input
+                type="file"
+                id="image-upload"
+                name="image-upload"
+                accept="image/*"
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                onChange={handleImageUpload}
+              />
+            </label>
 
             <div
               className="aspect-square cursor-pointer group bg-gray-100 rounded-md relative"
@@ -92,7 +113,7 @@ export function ImageGridModal({
 
             {imageUrls.map((url, index) => (
               <div
-                key={url}
+                key={url + index}
                 className="relative aspect-square cursor-pointer group"
                 onClick={() => onSelectImage(url)}
               >
@@ -134,7 +155,7 @@ export function ImageGridModal({
       </DialogContent>
 
       <AIImageGenerateModal
-        addNewImage={addNewImage}
+        addNewImage={handleAiImageUpload}
         category={category}
         itemName={itemName}
         isOpen={isAIImageModalOpen}

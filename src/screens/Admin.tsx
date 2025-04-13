@@ -10,7 +10,6 @@ import { redirect } from "next/navigation";
 import { Partner } from "@/api/partners";
 
 export default function Admin() {
-  const { fetchMenu } = useMenuStore();
   const { userData } = useAuthStore();
 
   // Strict partner role check and redirect
@@ -20,10 +19,8 @@ export default function Admin() {
       redirect("/login");
     } else if (userData?.role !== "partner") {
       redirect("/offers"); 
-    } else {
-      fetchMenu();
     }
-  }, [userData, fetchMenu]);
+  }, [userData]);
 
 
 if ((userData as Partner)?.status === "inactive") {

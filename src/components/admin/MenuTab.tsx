@@ -9,22 +9,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch"; // Import the Switch component
-import { MenuItem, useMenuStore } from "@/store/menuStore";
 import { useAdminOfferStore } from "@/store/useAdminOfferStore";
 import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { AddMenuItemModal } from "../bulkMenuUpload/AddMenuItemModal";
 import { EditMenuItemModal } from "./EditMenuItemModal";
-import { deleteFileFromS3 } from "@/app/actions/aws-s3";
-import { toast } from "sonner";
-import { useCategoryStore } from "@/store/categoryStore";
 import CategoryUpdateModal from "./CategoryUpdateModal";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
+import { Switch } from "../ui/switch";
+import { toast } from "sonner";
+import { deleteFileFromS3 } from "@/app/actions/aws-s3";
+import { useCategoryStore } from "@/store/categoryStore_hasura";
 
 export function MenuTab() {
-  const { items, addItem, updateItem, deleteItem } = useMenuStore();
+  const { items, addItem, fetchMenu, updateItem, deleteItem } = useMenuStore();
   const [isCategoryEditing, setIsCategoryEditing] = useState(false);
   const [editingCategory, seteditingCategory] = useState({
     id: "",
@@ -33,8 +32,8 @@ export function MenuTab() {
   const [categoriesdItems, setCategoriesdItems] = useState<
     Record<string, MenuItem[]>
   >({});
-  const { getCategoryById } = useCategoryStore();
   const { adminOffers, fetchAdminOffers } = useAdminOfferStore();
+  const { categories } = useCategoryStore();
   const { userData } = useAuthStore();
   const [catUpated, setCatUpdated] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -52,6 +51,7 @@ export function MenuTab() {
   useEffect(() => {
     if (userData?.id) {
       fetchAdminOffers(userData?.id);
+      fetchMenu();
     }
   }, [userData, fetchAdminOffers]);
 
@@ -60,6 +60,10 @@ export function MenuTab() {
       setEditingItem(null);
     }
   }, [isEditModalOpen]);
+
+  useEffect(() => {
+    console.log(items);
+  }, [items]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) =>
@@ -77,10 +81,11 @@ export function MenuTab() {
     addItem({
       name: item.name,
       price: parseFloat(item.price),
-      image: item.image,
+      image_url: item.image,
       description: item.description,
       category: item.category,
-      hotelId: userData?.id as string,
+      image_source: "local",
+      is_top: false,
     });
   };
 
@@ -95,7 +100,7 @@ export function MenuTab() {
     updateItem(item.id, {
       name: item.name,
       price: parseFloat(item.price),
-      image: item.image,
+      image_url: item.image,
       description: item.description,
       category: item.category,
     });
@@ -122,13 +127,12 @@ export function MenuTab() {
   useEffect(() => {
     const convertToCategorised = async () => {
       if (filteredItems.length > 0) {
-        const acc: Record<string, typeof filteredItems> = {};
+        const acc: Record<string, MenuItem[]> = {};
 
         for (const item of filteredItems) {
-          const category = await getCategoryById(item.category);
-          if (category) {
-            acc[category] = acc[category] || [];
-            acc[category].push(item);
+          if (item.category) {
+            acc[item.category] = acc[item.category] || [];
+            acc[item.category].push(item);
           }
         }
         setCategoriesdItems(acc);
@@ -136,7 +140,7 @@ export function MenuTab() {
     };
 
     convertToCategorised();
-  }, [filteredItems, getCategoryById, catUpated]);
+  }, [filteredItems, catUpated]);
 
   const handleCategoryUpdate = async (cat: string, catId: string) => {
     setIsCategoryEditing(true);
@@ -206,9 +210,9 @@ export function MenuTab() {
       <div className="grid gap-4 divide-y-2 divide-gray-300 ">
         {Object.entries(categoriesdItems)
           .sort()
-          .map(([category, items]) => {
+          .map(([category, items], index) => {
             return (
-              <div key={category} className="pb-10">
+              <div key={category + index} className="pb-10">
                 <div className="flex items-center gap-2 group max-w-fit">
                   <h1 className="text-2xl lg:text-4xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent">
                     {category}
@@ -231,10 +235,10 @@ export function MenuTab() {
                     >
                       <CardHeader className="flex flex-row justify-between">
                         <div>
-                          {item.image.length > 0 && (
+                          {item.image_url.length > 0 && (
                             <div>
                               <Image
-                                src={item.image}
+                                src={item.image_url}
                                 alt={item.name}
                                 width={200}
                                 height={200}
@@ -257,15 +261,17 @@ export function MenuTab() {
                         <div className="flex items-center mt-2">
                           <label className="mr-2">Mark as Top 3:</label>
                           <Switch
-                            checked={item.isTop}
+                            checked={item.is_top}
                             onCheckedChange={() => {
                               const topItemsCount = filteredItems.filter(
-                                (i) => i.isTop
+                                (i) => i.is_top
                               ).length;
-                              if (item.isTop) {
-                                updateItem(item.id, { isTop: false });
+                              if (item.is_top) {
+                                updateItem(item.id as string, {
+                                  is_top: false,
+                                });
                               } else if (topItemsCount < 3) {
-                                updateItem(item.id, { isTop: true });
+                                updateItem(item.id as string, { is_top: true });
                               } else {
                                 toast.error(
                                   "You can only mark up to 3 items as Top 3."
@@ -280,10 +286,10 @@ export function MenuTab() {
                           variant="outline"
                           onClick={() =>
                             openEditModal({
-                              id: item.id,
+                              id: item.id as string,
                               name: item.name,
                               price: item.price,
-                              image: item.image,
+                              image: item.image_url,
                               description: item.description || "",
                               category: item.category,
                             })
@@ -303,8 +309,8 @@ export function MenuTab() {
                               );
                               return;
                             }
-                            deleteItem(item.id);
-                            await deleteFileFromS3(item.image);
+                            deleteItem(item.id as string);
+                            await deleteFileFromS3(item.image_url);
                           }}
                         >
                           Delete
