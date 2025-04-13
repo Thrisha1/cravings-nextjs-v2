@@ -1,3 +1,20 @@
+/*...........query...........*/
+
+
+export const getMenu = `
+    query GetMenu($partner_id: uuid!) {
+        menu(where: {partner_id: {_eq: $partner_id}} , limit: 100) {
+            id
+            name
+            category { name }
+            image_url
+            image_source
+            partner_id
+            price
+        }
+    }
+`;
+
 
 /*...........mutation...........*/
 
@@ -7,7 +24,7 @@ export const addMenu = `
         returning {
             id
             name
-            category_id
+            category { name }
             image_url
             image_source
             partner_id

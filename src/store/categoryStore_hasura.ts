@@ -1,48 +1,36 @@
-
-import { getPartnerCategories } from "@/api/category";
+import { addCategory, getCategory, getPartnerCategories } from "@/api/category";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { create } from "zustand";
+import { useAuthStore } from "@/store/authStore";
+
+export interface Category {
+  id: string;
+  name: string;
+  partner_id?: string;
+}
 
 interface CategoryState {
-  categories: string[];
-  loading: boolean;
-  error: string | null;
-  fetchCategories: (addedBy?: string) => Promise<string[]>;
-  addCategory: (cat: string) => Promise<string | void>;
+  categories: Category[];
+  fetchCategories: (addedBy: string) => Promise<Category[] | void>;
+  addCategory: (cat: string) => Promise<Category | void>;
 }
 
 export const useCategoryStore = create<CategoryState>((set, get) => ({
   categories: [],
-  loading: false,
-  error: null,
 
-  fetchCategories: async (addedBy?: string) => {
+  fetchCategories: async (addedBy: string) => {
     try {
-      set({ loading: true, error: null });
-
       if (get().categories.length > 0) {
-        set({ loading: false });
-        return get().categories as string[];
+        return get().categories as Category[];
       }
 
-      let categories: string[] = [];
+      const categories = await fetchFromHasura(getPartnerCategories, {
+        partner_id: addedBy,
+      }).then((res) => res.category);
 
-      if (!addedBy) {
-        categories = (await getDocs(collection(db, "categories"))).docs.map(
-          (doc) => doc.data().name
-        );
-      } else {
-        categories = (
-          await getDocs(
-            query(collection(db, "categories"), where("addedBy", "==", addedBy))
-          )
-        ).docs.map((doc) => doc.data().name);
-      }
-
-      set({ categories, loading: false });
-      return categories as string[];
+      set({ categories });
+      return categories as Category[];
     } catch (error: unknown) {
-      set({ loading: false, error: "Failed to fetch categories" });
       console.error(
         "Fetch categories error:",
         error instanceof Error ? error.message : String(error)
@@ -53,39 +41,36 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
   addCategory: async (cat) => {
     try {
-      set({ loading: true, error: null });
 
-      const allCategories = fetchFromHasura(
-        getPartnerCategories,
-        { partner_id: auth.currentUser?.uid }
-      );
+      if(!cat) throw new Error("Category name is required");
 
-      const isCategoryExists = allCategories.find(
-        (category) =>
-          category.name.toLowerCase() === cat.toLowerCase() &&
-          category.addedBy === auth.currentUser?.uid
-      );
+      const userData = useAuthStore.getState().userData;
 
-      if (isCategoryExists) {
-        set({ loading: false, error: "Category already exists" });
-        return isCategoryExists.id;
+      const category = await fetchFromHasura(getCategory, {
+        name: cat.toLowerCase(),
+        partner_id: userData?.id,
+      }).then((res) => res.category[0]);
+
+      console.log("Category fetched: ", category);
+
+      if (category) {
+        return category;
       }
 
-      const addedCat = await addDoc(collection(db, "categories"), {
-        name: cat.toLowerCase(),
-        addedBy: auth.currentUser?.uid,
+      const addedCat = await fetchFromHasura(addCategory, {
+        category: {
+          name: cat?.toLowerCase(),
+          partner_id: userData?.id,
+        },
+      }).then((res) => res.insert_category.returning[0]);
+
+      set({
+        categories: [...get().categories, { name: cat, id: addedCat.id }],
       });
 
-      set((state) => ({
-        categories: [...state.categories, cat.toLowerCase()],
-        loading: false,
-      }));
-
-      return addedCat.id;
+      return addedCat as Category;
     } catch (error: unknown) {
       console.error(error);
-      set({ loading: false, error: "Failed to add category" });
     }
-  }
-
+  },
 }));
