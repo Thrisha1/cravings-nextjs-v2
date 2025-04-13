@@ -23,7 +23,7 @@ const ImageUploadModal = ({
   itemName: string;
 }) => {
   const [image, setImage] = useState("");
-  const { user } = useAuthStore();
+  const { userData } = useAuthStore();
   const [loading, setLoading] = useState(false);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

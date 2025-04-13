@@ -10,7 +10,6 @@ import { redirect } from "next/navigation";
 import { Partner } from "@/api/partners";
 
 export default function Admin() {
-  const { fetchMenu } = useMenuStore();
   const { userData } = useAuthStore();
 
   // Strict partner role check and redirect
