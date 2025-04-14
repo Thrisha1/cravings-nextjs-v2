@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { type Offer } from '@/store/offerStore';
+import { Offer } from '@/store/offerStore_hasura';
 import { useState } from 'react';
 
 interface OfferTicketProps {
@@ -21,8 +21,8 @@ export function OfferTicket({ isOpen, onClose, offer, token }: OfferTicketProps)
   const handleClaim = async () => {
     try {
       setIsLoading(true);
-      console.log(offer.hotelLocation);
-      window.open(offer.hotelLocation, '_blank');
+      console.log(offer.partner?.location);
+      window.open(offer.partner?.location, '_blank');
     } catch (error) {
       console.error('Failed to process claim:', error);
     } finally {
@@ -41,12 +41,12 @@ export function OfferTicket({ isOpen, onClose, offer, token }: OfferTicketProps)
             <div className="space-y-4">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-bold text-xl">{offer.dishName}</h3>
-                  <p className="text-gray-600">{offer.hotelName}</p>
+                  <h3 className="font-bold text-xl">{offer.menu.name}</h3>
+                  <p className="text-gray-600">{offer.partner?.store_name}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-500 line-through">₹{offer.originalPrice}</p>
-                  <p className="text-xl font-bold text-orange-600">₹{offer.newPrice}</p>
+                  <p className="text-sm text-gray-500 line-through">₹{offer.menu.price}</p>
+                  <p className="text-xl font-bold text-orange-600">₹{offer.offer_price}</p>
                 </div>
               </div>
               

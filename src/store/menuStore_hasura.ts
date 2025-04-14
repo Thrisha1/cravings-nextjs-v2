@@ -239,7 +239,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       if (!acc[item.category]) {
         acc[item.category] = [];
       }
-      acc[item.category].push(item);
+      acc[item.category.toLowerCase()].push(item);
+      console.log("Grouped items: ", acc);
+      
       return acc;
     }, {} as GroupedItems);
 

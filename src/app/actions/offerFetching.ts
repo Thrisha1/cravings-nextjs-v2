@@ -1,30 +1,8 @@
 "use server";
 
-import { db } from "@/lib/firebase";
-import { Offer } from "@/store/offerStore";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { unstable_cache } from "next/cache";
+import { Offer } from "@/store/offerStore_hasura";
 import { isHotelNear } from "./isHotelNear";
 import Fuse from "fuse.js";
-
-
-export const getOffers = unstable_cache(
-  async () => {
-    console.log("Fetching offers...");
-    
-    const now = new Date().toISOString();
-    const offersCollection = collection(db, "offers");
-    const offersQuery = query(offersCollection, where("toTime", ">", now));
-    const querySnapshot = await getDocs(offersQuery);
-    const offers: Offer[] = [];
-    querySnapshot.forEach((doc) => {
-      offers.push({ id: doc.id, ...doc.data() } as Offer);
-    });
-    return offers;
-  },
-  ["offers"],
-  { tags: ["offers"] }
-);
 
 export const filterAndSortOffers = async ({
   offers,
@@ -46,18 +24,18 @@ export const filterAndSortOffers = async ({
 
   // Filter offers based on validity and location
   const currentOffers = offers.filter((offer) => {
-    const isValid = new Date(offer.toTime) > new Date();
-    const matchesLocation = !location || offer.area === location;
+    const isValid = new Date(offer.end_time) > new Date();
+    const matchesLocation = !location || offer.partner?.location === location;
     return isValid && matchesLocation;
   });
 
-  // Add the distance to each offer
-  const offersWithDistancePromises = currentOffers.map(async (offer) => {
-    const distance = await isHotelNear(offer.hotelLocation, { lat, lon });
-    return { ...offer, distance }; // Attach the distance to each offer
-  });
+  // // Add the distance to each offer
+  // const offersWithDistancePromises = currentOffers.map(async (offer) => {
+  //   const distance = await isHotelNear(offer.partner?.location as string, { lat, lon });
+  //   return { ...offer, distance }; // Attach the distance to each offer
+  // });
 
-  const offersWithDistance = await Promise.all(offersWithDistancePromises);
+  // const offersWithDistance = await Promise.all(offersWithDistancePromises);
 
   // Configure Fuse.js for fuzzy searching
   const fuseOptions = {
@@ -77,43 +55,43 @@ export const filterAndSortOffers = async ({
   };
 
   // Create a Fuse instance with the offers
-  const fuse = new Fuse(offersWithDistance, fuseOptions);
+  const fuse = new Fuse(currentOffers, fuseOptions);
 
   // Perform fuzzy search if there's a search query
-  let filteredOffersWithDistance = offersWithDistance;
+  let allOffers = currentOffers;
   if (query) {
     const fuseResults = fuse.search(query);
-    filteredOffersWithDistance = fuseResults.map((result) => result.item);
+    allOffers = fuseResults.map((result) => result.item);
   }
 
   // Log invalid distances for debugging
-  filteredOffersWithDistance.forEach((offer) => {
-    if (typeof offer.distance !== "number") {
-      console.error(`Invalid distance for offer ${offer.id}:`, offer.distance);
-    }
-  });
+  // allOffers.forEach((offer) => {
+  //   if (typeof offer.distance !== "number") {
+  //     console.error(`Invalid distance for offer ${offer.id}:`, offer.distance);
+  //   }
+  // });
 
   // Sorting logic based on active tab
   if (activeTab === "popular") {
     // Sort by enquiries (descending order)
-    filteredOffersWithDistance.sort((a: Offer, b: Offer) => b.enquiries - a.enquiries);
+    allOffers.sort((a: Offer, b: Offer) => b.enquiries - a.enquiries);
   } else if (activeTab === "money saver") {
     // Sort by discount percentage (descending order)
-    filteredOffersWithDistance.sort((a: Offer, b: Offer) => {
+    allOffers.sort((a: Offer, b: Offer) => {
       const discountA =
-        ((a.originalPrice - a.newPrice) / a.originalPrice) * 100;
+        ((a.menu.price - a.offer_price) / a.menu.price) * 100;
       const discountB =
-        ((b.originalPrice - b.newPrice) / b.originalPrice) * 100;
+        ((b.menu.price - b.offer_price) / b.menu.price) * 100;
       return discountB - discountA; // Higher discount comes first
     });
   } else {
     // Default sorting: sort by creation date (newest first) and then by distance
-    filteredOffersWithDistance.sort(
+    allOffers.sort(
       (a: Offer, b: Offer) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-    filteredOffersWithDistance.sort((a, b) => a.distance - b.distance);
+    // allOffers.sort((a, b) => a.distance - b.distance);
   }
 
-  return filteredOffersWithDistance;
+  return allOffers;
 };
