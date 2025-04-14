@@ -1,21 +1,20 @@
-import { db } from "@/lib/firebase";
+
+import { getPartnerAndOffersQuery, Partner } from "@/api/partners";
+import { fetchFromHasura } from "@/lib/hasuraClient";
 import HotelMenuPage from "@/screens/HotelMenuPage";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-} from "firebase/firestore";
+import { MenuItem } from "@/store/menuStore_hasura";
+import { Offer } from "@/store/offerStore_hasura";
 import { unstable_cache } from "next/cache";
 import React from "react";
-import { Offer } from "@/store/offerStore";
-import { UserData } from "@/store/authStore";
-import { useAuthStore } from "@/store/authStore";
 
 type SearchParams = Promise<{ [key: string]: string | undefined }>;
 type Params = Promise<{ id: string }>;
+
+
+interface UserData extends Partner {
+  offers: Offer[];
+  menu: MenuItem[];
+}
 
 const HotelPage = async ({
   searchParams,
@@ -27,76 +26,17 @@ const HotelPage = async ({
   const { query: search, qrScan } = await searchParams;
   const { id } = await params;
 
-  // Cached version of getHotelOffers
-
-  const getHotelOffers = unstable_cache(
+  const getHotelData = unstable_cache(
     async (id: string) => {
       try {
-        const offersQuery = query(
-          collection(db, "offers"), 
-          where("hotelId", "==", id),
-          where("toTime", ">", new Date().toISOString())
-        );
-        const offers = await getDocs(offersQuery);
-        const offersData = offers.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-          } as Offer;
-        });
-        return offersData;
-      } catch (error) {
-        console.error(error);
-        return [];
-      }
-    },
-    [id || ""],
-    { tags: [id || ""] }
-  );
-
-  // Non-cached version of getHotelOffers
-  
-  // const getHotelOffers = async (id: string) => {
-  //   try {
-  //     const offersQuery = query(
-  //       collection(db, "offers"),
-  //       where("hotelId", "==", id),
-  //       where("toTime", ">", new Date().toISOString())
-  //     );
-  //     const offers = await getDocs(offersQuery);
-  //     const offersData = offers.docs.map((doc) => {
-  //       const data = doc.data();
-  //       return {
-  //         id: doc.id,
-  //         ...data,
-  //       } as Offer;
-  //     });
-  //     return offersData;
-  //   } catch (error) {
-  //     console.error(error);
-  //     return [];
-  //   }
-  // };
-  
-
-  // Cached version of getHotelData
-
-  const getHotelData = 
-  unstable_cache(
-    async (id: string) => {
-      try {
-        const usersCollection = doc(db, "users", id);
-        const user = await getDoc(usersCollection);
-        const userData = user.data();
-
-        if (!userData) {
-          return null;
-        }
+        
+        const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
+          id : id
+        })
 
         return {
           id,
-          ...userData as UserData,
+          ...(partnerData.partners[0]),
         } as UserData;
       } catch (error) {
         console.error("Error fetching hotel data:", error);
@@ -107,37 +47,8 @@ const HotelPage = async ({
     { tags: [id || ""] }
   );
 
-  // const getHotelData = async (id: string) => {
-  //   try {
-  //     const usersCollection = doc(db, "users", id);
-  //     const user = await getDoc(usersCollection);
-  //     const userData = user.data();
-
-  //     if (!userData) {
-  //       return null;
-  //     }
-
-  //     return {
-  //       id,
-  //       ...userData as UserData,
-  //     } as UserData;
-  //   } catch (error) {
-  //     console.error("Error fetching hotel data:", error);
-  //     return null;
-  //   }
-  // };
-
-  const offers = id ? await getHotelOffers(id) : null;
   const hoteldata = id ? await getHotelData(id) : null;
-
-  
-  // const menuItems = (hoteldata?.menu || []).map((item: MenuItem) => ({
-  //   id: item.id,
-  //   name: item.name,
-  //   price: item.price,
-  //   description: item.description,
-  //   image: item.image || "/image_placeholder.webp",
-  // })) as MenuItem[];
+  const offers = hoteldata?.offers;
 
   let filteredOffers: Offer[] = [];
   if (offers) {
@@ -151,8 +62,10 @@ const HotelPage = async ({
   }
 
   // Use the store to fetch UPI data
-  const { fetchAndCacheUpiData } = useAuthStore.getState();
-  const upiData = id ? await fetchAndCacheUpiData(id) : null;
+  const upiData = {
+    userId: hoteldata?.id || "",
+    upiId: hoteldata?.upi_id || "fake-dummy-not-from-db@okaxis",
+  }
 
   return (
     <HotelMenuPage

@@ -3,8 +3,6 @@ import React, { Suspense, useEffect, useState } from "react";
 // import NoOffersFound from "@/components/NoOffersFound";
 import SearchBox from "@/components/SearchBox";
 import Image from "next/image";
-import { Offer } from "@/store/offerStore";
-import { useAuthStore, UserData } from "@/store/authStore";
 import OfferCardMin from "@/components/OfferCardMin";
 
 import {
@@ -37,7 +35,6 @@ import ReviewsList from "@/components/hotelDetail/ReviewsList";
 import RateThis from "@/components/RateThis";
 import { useReviewsStore } from "@/store/reviewsStore";
 import PaymentHistoryModal from "@/components/PaymentHistoryModal";
-import { UpiData } from "@/store/authStore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -62,6 +59,10 @@ import { useMenuStore } from "@/store/menuStore";
 //   CarouselContent,
 // } from "@/components/ui/carousel";
 import MenuItemsList from "@/components/hotelDetail/MenuItemsList";
+import { Partner } from "@/api/partners";
+import { Offer } from "@/store/offerStore_hasura";
+import { UpiData } from "@/types/upiData";
+import { useAuthStore } from "@/store/authStore";
 
 export type MenuItem = {
   description: string;
@@ -73,7 +74,7 @@ export type MenuItem = {
 
 interface HotelMenuPageProps {
   offers: Offer[];
-  hoteldata: UserData;
+  hoteldata: Partner;
   qrScan: string | null;
   upiData: UpiData | null;
 }
@@ -85,12 +86,7 @@ const HotelMenuPage = ({
   upiData,
 }: HotelMenuPageProps) => {
   const {
-    user,
-    userData,
-    fetchUserVisit,
-    handleFollow,
-    handleUnfollow,
-    userVisit,
+    userData
     signInWithPhone,
   } = useAuthStore();
   const router = useRouter();
