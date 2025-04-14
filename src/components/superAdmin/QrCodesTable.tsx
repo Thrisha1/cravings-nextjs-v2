@@ -1,0 +1,284 @@
+"use client";
+
+import { useState } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import { UPDATE_QR_CODE, DELETE_QR_CODE, INSERT_QR_CODE } from "@/api/qrcodes";
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+
+interface QrCode {
+  id: string;
+  qr_number: number;
+  table_number: string;
+  no_of_scans: number;
+}
+
+export function QrCodesTable({
+  qrCodes: initialQrCodes,
+  partnerId,
+}: {
+  qrCodes: QrCode[];
+  partnerId: string;
+}) {
+  const [qrCodes, setQrCodes] = useState<QrCode[]>(initialQrCodes);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editedQr, setEditedQr] = useState<Partial<QrCode>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newQr, setNewQr] = useState({
+    qr_number: 0,
+    table_number: '',
+    no_of_scans: 0,
+  });
+
+  const handleEdit = (qr: QrCode) => {    
+    setEditingId(qr.id);
+    setEditedQr({
+      qr_number: qr.qr_number,
+      table_number: qr.table_number,
+      no_of_scans: qr.no_of_scans,
+    });
+  };
+
+  const handleSave = async (id: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetchFromHasura(UPDATE_QR_CODE, {
+        id,
+        changes: {
+          qr_number: editedQr.qr_number,
+          table_number: editedQr.table_number,
+          no_of_scans: editedQr.no_of_scans,
+        },
+      });
+
+      if (response?.update_qr_codes_by_pk) {
+        setQrCodes((prev) =>
+          prev.map((qr) =>
+            qr.id === id
+              ? {
+                  ...qr,
+                  qr_number: editedQr.qr_number ?? qr.qr_number,
+                  table_number: editedQr.table_number ?? qr.table_number,
+                  no_of_scans: editedQr.no_of_scans ?? qr.no_of_scans,
+                }
+              : qr
+          )
+        );
+        toast.success("QR code updated successfully");
+        setEditingId(null);
+      }
+    } catch (error) {
+      toast.error("Failed to update QR code");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetchFromHasura(DELETE_QR_CODE, { id });
+
+      if (response?.delete_qr_codes_by_pk) {
+        setQrCodes((prev) => prev.filter((qr) => qr.id !== id));
+        toast.success("QR code deleted successfully");
+      }
+    } catch (error) {
+      toast.error("Failed to delete QR code");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetchFromHasura(INSERT_QR_CODE, {
+        object: {
+          qr_number: newQr.qr_number,
+          table_number: newQr.table_number,
+          partner_id: partnerId,
+          no_of_scans: 0,
+        },
+      });
+
+      if (response?.insert_qr_codes_one) {
+        setQrCodes((prev) => [...prev, response.insert_qr_codes_one]);
+        toast.success("QR code created successfully");
+        setIsCreateDialogOpen(false);
+        setNewQr({ qr_number: 0, table_number: '', no_of_scans: 0 });
+      }
+    } catch (error) {
+      toast.error("Failed to create QR code");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={() => setIsCreateDialogOpen(true)}>Create New QR Code</Button>
+      </div>
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader className="bg-gray-100">
+            <TableRow>
+              <TableHead className="px-4 py-3">QR ID</TableHead>
+              <TableHead className="px-4 py-3">QR Number</TableHead>
+              <TableHead className="px-4 py-3">Table Number</TableHead>
+              <TableHead className="px-4 py-3">Scans</TableHead>
+              <TableHead className="px-4 py-3">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {qrCodes.map((qr) => (
+              <TableRow key={qr.id}>
+                <TableCell className="px-4 py-3 font-medium">{qr.id}</TableCell>
+                <TableCell className="px-4 py-3">
+                  {editingId === qr.id ? (
+                    <Input
+                      type="number"
+                      value={editedQr.qr_number ?? qr.qr_number}
+                      onChange={(e) =>
+                        setEditedQr({
+                          ...editedQr,
+                          qr_number: parseInt(e.target.value),
+                        })
+                      }
+                      className="w-24"
+                    />
+                  ) : (
+                    qr.qr_number
+                  )}
+                </TableCell>
+                <TableCell className="px-4 py-3">
+                  {editingId === qr.id ? (
+                    <Input
+                      value={editedQr.table_number ?? qr.table_number}
+                      onChange={(e) =>
+                        setEditedQr({
+                          ...editedQr,
+                          table_number: e.target.value,
+                        })
+                      }
+                      className="w-32"
+                    />
+                  ) : (
+                    qr.table_number
+                  )}
+                </TableCell>
+                <TableCell className="px-4 py-3">
+                  {editingId === qr.id ? (
+                    <Input
+                      type="number"
+                      value={editedQr.no_of_scans ?? qr.no_of_scans}
+                      onChange={(e) =>
+                        setEditedQr({
+                          ...editedQr,
+                          no_of_scans: parseInt(e.target.value),
+                        })
+                      }
+                      className="w-24"
+                    />
+                  ) : (
+                    qr.no_of_scans
+                  )}
+                </TableCell>
+                <TableCell className="px-4 py-3 space-x-2">
+                  {editingId === qr.id ? (
+                    <>
+                      <Button onClick={() => handleSave(qr.id)} disabled={isLoading}>
+                        {isLoading ? "Saving..." : "Save"}
+                      </Button>
+                      <Button variant="outline" onClick={() => setEditingId(null)} disabled={isLoading}>
+                        Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button onClick={() => handleEdit(qr)} disabled={isLoading}>
+                        Edit
+                      </Button>
+                      <Button variant="destructive" onClick={() => handleDelete(qr.id)} disabled={isLoading}>
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Create QR Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New QR Code</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="qrNumber" className="text-right">
+                QR Number
+              </Label>
+              <Input
+                id="qrNumber"
+                type="number"
+                value={newQr.qr_number}
+                onChange={(e) =>
+                  setNewQr({ ...newQr, qr_number: parseInt(e.target.value) })
+                }
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="tableNumber" className="text-right">
+                Table Number
+              </Label>
+              <Input
+                id="tableNumber"
+                value={newQr.table_number}
+                onChange={(e) =>
+                  setNewQr({ ...newQr, table_number: e.target.value })
+                }
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={handleCreate}
+              disabled={isLoading || !newQr.qr_number || !newQr.table_number}
+            >
+              {isLoading ? "Creating..." : "Create QR Code"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

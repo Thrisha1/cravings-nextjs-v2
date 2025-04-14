@@ -1,4 +1,4 @@
-import AssignQrHotel from "@/components/superAdmin/AssignQrHotel";
+import AssignQrPartners from "@/components/superAdmin/AssignQrPartners";
 import BulkUpload from "@/components/superAdmin/BulkUpload";
 import OfferDetails from "@/components/superAdmin/OfferDetails";
 import PartnerVerification from "@/components/superAdmin/PartnerVerification";
@@ -24,7 +24,7 @@ const page = async (props: { searchParams: SearchParams }) => {
     },
     {
       name: "Assign QR",
-      component: <AssignQrHotel />,
+      component: <AssignQrPartners />,
       id: "assign-qr",
     },
     {
