@@ -1,5 +1,26 @@
 /*...........query...........*/
 
+export const getAllPartnersQuery = `
+  query GetAllPartners {
+    partners {
+      id
+      store_name
+      location
+      description
+      district
+      store_banner
+    }
+  }
+  `;
+
+export const getPartnerByIdQuery = `
+  query GetPartnerDsitricts() {
+    partners {
+      district
+    }
+  }
+  `; 
+
 export const getPartnerAndOffersQuery = `
 query GetPartnerAndOffersQuery($id: uuid! , $end_time: timestamptz!) @cached {
   partners(where: {id: {_eq: $id}}) {

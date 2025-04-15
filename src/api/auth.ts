@@ -102,7 +102,6 @@ export const getUserByIdQuery = `
   }
 `;
 
-
 /*...........mutation...........*/
 
 export const userLoginMutation = `
