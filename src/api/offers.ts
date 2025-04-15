@@ -23,12 +23,12 @@ export const getOfferById = `
       partner {
         district
         store_name
+        location
         id
       }
     }
   }
 `;
-
 
 export const getOffers = `
   query GetOffers @cached {
@@ -53,6 +53,7 @@ export const getOffers = `
       partner {
         district
         store_name
+        location
         id
       }
     }
@@ -129,3 +130,14 @@ export const deleteOffer = `
     }
   }
 `;
+
+export const incrementOfferEnquiry = `
+  mutation IncrementOfferEnquiry($id: uuid!) {
+    update_offers(where: { id: { _eq: $id } }, _inc: { enquiries: 1 }) {
+      affected_rows
+      returning {
+        id
+        enquiries
+      }
+    }
+  }`;

@@ -8,6 +8,7 @@ import {
   deleteOffer,
   getOffers,
   getPartnerOffers,
+  incrementOfferEnquiry,
 } from "@/api/offers";
 import { revalidateTag } from "@/app/actions/revalidate";
 
@@ -17,7 +18,8 @@ interface Category {
 
 interface Partner {
   district: string;
-  id : string;
+  location: string;
+  id: string;
   store_name: string;
 }
 
@@ -53,7 +55,8 @@ interface OfferState {
     end_time: string;
   }) => Promise<void>;
   fetchOffer: () => Promise<Offer[]>;
-  deleteOffer:(id: string) => Promise<void>;
+  deleteOffer: (id: string) => Promise<void>;
+  incrementOfferEnquiry: (offerId: string) => Promise<void>;
 }
 
 export const useOfferStore = create<OfferState>((set, get) => {
@@ -159,6 +162,16 @@ export const useOfferStore = create<OfferState>((set, get) => {
 
         set({
           offers: get().offers.filter((offer) => offer.id !== id),
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    },
+
+    incrementOfferEnquiry: async (offerId: string) => {
+      try {
+        await fetchFromHasura(incrementOfferEnquiry, {
+          id: offerId,
         });
       } catch (error) {
         console.error(error);
