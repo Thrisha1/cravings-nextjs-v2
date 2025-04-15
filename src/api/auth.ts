@@ -21,6 +21,7 @@ export const partnerQuery = `
     email
     password
     store_name
+    store_banner
     location
     status
     upi_id
@@ -38,6 +39,7 @@ export const partnerIdQuery = `
       email
       password
       store_name
+      store_banner
       location
       status
       upi_id
@@ -87,6 +89,19 @@ export const superAdminIdQuery = `
   }
 `;
 
+export const getUserByIdQuery = `
+  query GetUserById($id: uuid!) {
+    users_by_pk(id: $id) {
+      id
+      email
+      full_name
+      phone
+      crave_coins
+      location
+    }
+  }
+`;
+
 
 /*...........mutation...........*/
 
@@ -119,15 +134,15 @@ export const partnerMutation = `
   }
 }`;
 
-export const getUserByIdQuery = `
-  query GetUserById($id: uuid!) {
-    users_by_pk(id: $id) {
+export const deleteUserMutation = `
+  mutation DeleteUser($id: uuid!) {
+    delete_users_by_pk(id: $id) {
       id
       email
       full_name
-      phone
-      crave_coins
-      location
     }
   }
 `;
+
+
+

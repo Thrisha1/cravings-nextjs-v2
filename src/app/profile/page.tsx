@@ -23,17 +23,16 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import Image from "next/image";
 import { uploadFileToS3 } from "../actions/aws-s3";
+import { deleteUserMutation } from "@/api/auth";
+import { updateUpiIdMutation, updateStoreBannerMutation } from "@/api/partners";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import Link from "next/link";
 
 export default function ProfilePage() {
   const {
-    user,
     userData,
     loading: authLoading,
-    signOut,
-    updateUserData,
-    updateUpiData,
-    upiData,
-    fetchAndCacheUpiData,
+    signOut
   } = useAuthStore();
   const { claimedOffers, isLoading: claimedOffersLoading } =
     useClaimedOffersStore();
@@ -43,16 +42,29 @@ export default function ProfilePage() {
   const [upiId, setUpiId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
   const [bannerImage, setBannerImage] = useState<string | null>(
-    userData?.hotelBanner || null
-  );
+    userData?.role === 'partner' ? userData.store_banner || null : null
+  )
   const [isBannerUploading, setBannerUploading] = useState(false);
   const [isBannerChanged, setIsBannerChanged] = useState(false);
 
   const isLoading = authLoading || claimedOffersLoading;
 
+  useEffect(() => {
+    if(userData?.role === 'partner') {
+      setBannerImage(userData.store_banner || null); 
+    }
+  }, [userData]);
+
   const profile = {
-    name: userData?.fullName || "Guest",
+    name: userData?.role === 'partner' 
+      ? userData?.name 
+      : userData?.role === 'user' 
+        ? userData?.full_name 
+        : userData?.role === 'superadmin'
+          ? "Super Admin"
+          : "Guest",
     offersClaimed: claimedOffers.length || 0,
     restaurantsSubscribed: 0,
     claimedOffers: claimedOffers.map((offer) => ({
@@ -64,20 +76,20 @@ export default function ProfilePage() {
     })),
   };
 
-  useEffect(() => {
-    if (user && userData?.role === "hotel") {
-      fetchAndCacheUpiData(user.uid)
-        .then((data) => {
-          if (data) {
-            setUpiId(data.upiId);
-          }
-        })
-        .catch(console.error);
-    }
-  }, [user, userData?.role]);
+  // useEffect(() => {
+  //   if (userData && userData?.role === "partner") {
+  //     fetchAndCacheUpiData(user.uid)
+  //       .then((data) => {
+  //         if (data) {
+  //           setUpiId(data.upiId);
+  //         }
+  //       })
+  //       .catch(console.error);
+  //   }
+  // }, [user, userData?.role]);
 
   const handleDeleteAccount = async () => {
-    if (!user) {
+    if (!userData) {
       setError("No user is currently logged in.");
       return;
     }
@@ -86,9 +98,8 @@ export default function ProfilePage() {
     setError(null);
 
     try {
-      await updateUserData(user.uid, {
-        accountStatus: "inActive",
-        deletionRequestedAt: new Date().toISOString(),
+      await fetchFromHasura(deleteUserMutation, {
+        id: userData?.id,
       });
       signOut();
       router.push("/");
@@ -101,11 +112,14 @@ export default function ProfilePage() {
   };
 
   const handleSaveUpiId = async () => {
-    if (!user) return;
+    if (!userData) return;
 
     setIsSaving(true);
     try {
-      await updateUpiData(user.uid, upiId);
+      await fetchFromHasura(updateUpiIdMutation, {
+        id: userData?.id,
+        upi_id: upiId,
+      });
       toast.success("UPI ID updated successfully!");
       setIsEditing(false);
     } catch (error) {
@@ -139,7 +153,7 @@ export default function ProfilePage() {
   };
 
   const handleBannerUpload = async () => {
-    if (!user) return;
+    if (!userData) return;
   
     setBannerUploading(true);
     try {
@@ -181,7 +195,7 @@ export default function ProfilePage() {
       // Upload to S3
       const imgUrl = await uploadFileToS3(
         webpBase64WithPrefix,
-        `hotel_banners/${user.uid}.webp`
+        `hotel_banners/${userData.id}.webp`
       );
   
       if (!imgUrl) {
@@ -190,9 +204,10 @@ export default function ProfilePage() {
       console.log("Image uploaded to S3:", imgUrl);
 
       // Update user data
-      await updateUserData(user.uid, {
-        hotelBanner: imgUrl,
-      });
+      await fetchFromHasura(updateStoreBannerMutation, {
+        userId: userData?.id,
+        storeBanner: imgUrl, 
+      })
       toast.success("Banner updated successfully!");
  
       setIsBannerChanged(false);
@@ -242,6 +257,12 @@ export default function ProfilePage() {
                 <UtensilsCrossed className="sm:size-4 size-8 mr-2" />
                 {profile.restaurantsSubscribed} Restaurants Subscribed
               </Badge>
+              {userData?.role === "partner" && (
+                <Link href={`/hotels/${userData?.id}`} className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
+                  <Tag className="sm:size-4 size-8 mr-2" />
+                  View My Restaurant
+                </Link> 
+              )}
             </div>
           </CardContent>
         </Card>
@@ -286,7 +307,7 @@ export default function ProfilePage() {
         )}
 
         {/* Account Settings Section (Only for hotel) */}
-        {userData?.role === "hotel" && (
+        {userData?.role === "partner" && (
           <Card className="overflow-hidden hover:shadow-xl transition-shadow">
             <CardHeader>
               <CardTitle className="text-2xl font-bold">
@@ -370,12 +391,12 @@ export default function ProfilePage() {
                   ) : (
                     <div className="flex justify-between items-center w-full">
                       <span className="text-gray-700">
-                        {upiData?.upiId || "No UPI ID set"}
+                        {userData.role === 'partner' && userData.upi_id ? userData.upi_id : "No UPI ID set"}
                       </span>
                       <Button
                         onClick={() => {
                           setIsEditing(true);
-                          setUpiId(upiData?.upiId || "");
+                          setUpiId(userData.role === 'partner' && userData.upi_id? userData.upi_id : "");
                         }}
                         variant="ghost"
                         className="hover:bg-orange-100"
@@ -394,59 +415,61 @@ export default function ProfilePage() {
         )}
 
         {/* Danger Area */}
-        <Card className="overflow-hidden hover:shadow-xl transition-shadow border-red-500">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold text-red-600">
-              Danger Area
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-red-600">
-              Warning: Deleting your account is irreversible. All your data,
-              including claimed offers, will be permanently deleted.
-            </p>
+        {userData?.role === "user" && (
+          <Card className="overflow-hidden hover:shadow-xl transition-shadow border-red-500">
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold text-red-600">
+                Danger Area
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-red-600">
+                Warning: Deleting your account is irreversible. All your data,
+                including claimed offers, will be permanently deleted.
+              </p>
 
-            {/* Confirmation Modal */}
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" disabled={isDeleting}>
-                  {isDeleting ? "Deleting..." : "Delete My Account"}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="max-w-[90%] sm:max-w-lg rounded-xl">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Heads up! Your account is set to be deleted in 30 days. If
-                    you&apos;d like to keep your account active, simply log in
-                    before the deletion date (
-                    {new Date(
-                      new Date().setDate(new Date().getDate() + 30)
-                    ).toLocaleDateString("en-GB", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
-                    ).
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="gap-y-2">
-                  <AlertDialogCancel className="bg-gray-500 hover:bg-gray-600 px-3 py-1 rounded text-white">
-                    Cancel
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDeleteAccount}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    Delete Account
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+              {/* Confirmation Modal */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={isDeleting}>
+                    {isDeleting ? "Deleting..." : "Delete My Account"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="max-w-[90%] sm:max-w-lg rounded-xl">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Heads up! Your account is set to be deleted in 30 days. If
+                      you&apos;d like to keep your account active, simply log in
+                      before the deletion date (
+                      {new Date(
+                        new Date().setDate(new Date().getDate() + 30)
+                      ).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
+                      ).
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="gap-y-2">
+                    <AlertDialogCancel className="bg-gray-500 hover:bg-gray-600 px-3 py-1 rounded text-white">
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteAccount}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Delete Account
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
-            {error && <p className="text-red-600">{error}</p>}
-          </CardContent>
-        </Card>
+              {error && <p className="text-red-600">{error}</p>}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

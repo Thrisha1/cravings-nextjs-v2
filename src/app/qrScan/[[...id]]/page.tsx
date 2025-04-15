@@ -141,70 +141,68 @@ const QrScanPage = () => {
     return 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log("handling submit");
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  console.log("handling submit");
 
-    if (!userData) {
-      setIsSignedIn(false);
-      return;
-    }
+  if (!userData) {
+    setIsSignedIn(false);
+    return;
+  }
 
-    try {
-      setIsLoading(true);
+  setIsLoading(true);
+  try {
+    // Follow the partner
+    await fetchFromHasura(FOLLOW_PARTNER, {
+      userId: userData.id,
+      partnerId: hotelDetails?.hotelId,
+      phone: userData.role === "user" ? userData.phone : "",
+    });
 
-      // Follow the partner
-      await fetchFromHasura(FOLLOW_PARTNER, {
-        userId: userData.id,
-        partnerId: hotelDetails?.hotelId,
-        phone: userData.role === "user" ? userData.phone : "",
-      });
+    // Get user visits
+    // const visitsResponse = await fetchFromHasura(GET_USER_VISITS, {
+    //   userId: userData.id,
+    //   partnerId: hotelDetails?.hotelId,
+    // });
 
-      // Get user visits
-      // const visitsResponse = await fetchFromHasura(GET_USER_VISITS, {
-      //   userId: userData.id,
-      //   partnerId: hotelDetails?.hotelId,
-      // });
-
-      // const visits = [];
+    // const visits = [];
+    
+    // Check if recent visit (within last 2 hours)
+    // if (visits.length > 0) {
+    //   // const lastVisit = visits[0];
+    //   const now = new Date();
+    //   const lastVisitDate = new Date(lastVisit.createdAt);
+    //   const diffTime = Math.abs(now.getTime() - lastVisitDate.getTime());
+    //   const diffHours = diffTime / (1000 * 60 * 60);
       
-      // Check if recent visit (within last 2 hours)
-      // if (visits.length > 0) {
-      //   // const lastVisit = visits[0];
-      //   const now = new Date();
-      //   const lastVisitDate = new Date(lastVisit.createdAt);
-      //   const diffTime = Math.abs(now.getTime() - lastVisitDate.getTime());
-      //   const diffHours = diffTime / (1000 * 60 * 60);
-        
-      //   if (diffHours < 2) {
-      //     setIsRecentVisit(true);
-      //     setIsBillAmountSubmitted(true);
-      //     setIsLoading(false);
-      //     return;
-      //   }
-      // }
+    //   if (diffHours < 2) {
+    //     setIsRecentVisit(true);
+    //     setIsBillAmountSubmitted(true);
+    //     setIsLoading(false);
+    //     return;
+    //   }
+    // }
 
-      // Calculate discount
-      const calculatedDiscount = 0;
-      const amount = billAmount.replace("₹", "");
+    // Calculate discount
+    const calculatedDiscount = 0;
+    const amount = billAmount.replace("₹", "");
 
-      // Create payment record
-      await fetchFromHasura(CREATE_PAYMENT, {
-        partnerId: hotelDetails?.hotelId,
-        amount: Number(amount),
-        userId: userData.id,
-        discount: calculatedDiscount,
-      });
+    // Create payment record
+    await fetchFromHasura(CREATE_PAYMENT, {
+      partnerId: hotelDetails?.hotelId,
+      amount: Number(amount),
+      userId: userData.id,
+      discount: calculatedDiscount,
+    });
 
-      setDiscount(calculatedDiscount);
-      setIsBillAmountSubmitted(true);
-      setIsLoading(false);
-    } catch (error) {
-      console.error(error);
-      toast.error(error as string);
-      setIsLoading(false);
-    }
-  };
+    setDiscount(calculatedDiscount);
+    setIsBillAmountSubmitted(true);
+  } catch (error) {
+    console.error("Something went wrong");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

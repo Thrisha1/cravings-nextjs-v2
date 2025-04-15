@@ -43,7 +43,6 @@ export function Navbar() {
     if (location) {
       setUserLocation(location);
     }
-    console.log("userData", userData);
     
   }, [userData]); // Only depend on userData now
 

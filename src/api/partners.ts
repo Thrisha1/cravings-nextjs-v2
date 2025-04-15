@@ -83,6 +83,15 @@ export const updateUpiIdMutation = `
   }
 `;
 
+export const updateStoreBannerMutation = `
+  mutation UpdateStoreBanner($userId: uuid!, $storeBanner: String!) {
+    update_partners_by_pk(pk_columns: { id: $userId }, _set: { store_banner: $storeBanner }) {
+      id
+      store_banner
+    }
+  }
+`;
+
 /*...........types...........*/
 
 export interface Partner {

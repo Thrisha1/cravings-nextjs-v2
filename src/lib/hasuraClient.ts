@@ -28,15 +28,7 @@ export function fetchFromHasura(
       return result;
     })
     .catch((error: any) => {
-      if (error.response?.errors) {
-        error.response.errors.forEach((err: any) => {
-          console.error("GraphQL Error:", err.message);
-        });
-      } else {
-        console.error("Hasura Error:", JSON.stringify(error, null, 2));
-      }
-
-      // Optionally re-throw if you want to handle it outside
-      throw error;
+      console.error("Error from Hasura: ", error);
+      // throw error;
     });
 }
