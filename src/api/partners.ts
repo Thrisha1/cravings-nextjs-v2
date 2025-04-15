@@ -1,17 +1,22 @@
 /*...........query...........*/
 
 export const getAllPartnersQuery = `
-  query GetAllPartners {
-    partners {
-      id
-      store_name
-      location
-      description
-      district
-      store_banner
+query GetAllPartners($limit: Int, $offset: Int) {
+  partners(limit: $limit, offset: $offset) {
+    id
+    store_name
+    location
+    description
+    district
+    store_banner
+  }
+  partners_aggregate {
+    aggregate {
+      count
     }
   }
-  `;
+}`;
+
 
 export const getPartnerByIdQuery = `
   query GetPartnerDsitricts() {
