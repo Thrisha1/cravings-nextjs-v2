@@ -31,8 +31,8 @@ export const getOfferById = `
 `;
 
 export const getOffers = `
-  query GetOffers @cached {
-    offers(limit: 6, order_by: {created_at: desc}) {
+  query GetOffers {
+    offers(order_by: {created_at: desc}) {
       created_at
       id
       offer_price

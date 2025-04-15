@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { useAuthStore } from "./authStore";
-import { unstable_cache } from "next/cache";
+// import { unstable_cache } from "next/cache";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
 import {
@@ -64,18 +64,34 @@ export const useOfferStore = create<OfferState>((set, get) => {
     offers: [],
 
     fetchOffer: async () => {
+      console.log("Fetching offers");
+
       if (get().offers.length > 0) {
         return get().offers;
       }
 
       try {
+        // const offers = await unstable_cache(
+        //   async () => {
         const offers = await fetchFromHasura(getOffers);
+
+        // return off;
+        //   },
+        //   ["all-offers", "offers"],
+        //   {
+        //     tags: ["all-offers", "offers"],
+        //   }
+        // )();
         set({ offers: offers.offers });
         return offers.offers;
       } catch (error) {
         console.log(error);
         return get().offers;
       }
+    },
+
+    setOffers: (offers: Offer[]) => {
+      set({ offers });
     },
 
     fetchPartnerOffers: async (partnerId?: string) => {
@@ -92,10 +108,16 @@ export const useOfferStore = create<OfferState>((set, get) => {
           throw "No partner ID provided";
         }
 
+        // const offers = await unstable_cache(async () => {
         const offers = await fetchFromHasura(getPartnerOffers, {
           partner_id: targetId,
           end_time: time,
         });
+
+        //   return offs;
+        // }, ["partner-offers-" + targetId, "offers"], {
+        //   tags: ["partner-offers-" + targetId, "offers"]
+        // })();
 
         set({ offers: offers.offers });
       } catch (error) {
@@ -130,6 +152,8 @@ export const useOfferStore = create<OfferState>((set, get) => {
           ...newOffer,
         });
 
+        revalidateTag("offers");
+
         set({
           offers: [...get().offers, addedData.insert_offers.returning[0]],
         });
@@ -163,6 +187,8 @@ export const useOfferStore = create<OfferState>((set, get) => {
         set({
           offers: get().offers.filter((offer) => offer.id !== id),
         });
+
+        revalidateTag("offers");
       } catch (error) {
         console.error(error);
       }
@@ -173,6 +199,7 @@ export const useOfferStore = create<OfferState>((set, get) => {
         await fetchFromHasura(incrementOfferEnquiry, {
           id: offerId,
         });
+        revalidateTag("offers");
       } catch (error) {
         console.error(error);
       }
