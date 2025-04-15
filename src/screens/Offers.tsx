@@ -7,11 +7,11 @@ import OfferCard from "@/components/OfferCard";
 import NoOffersFound from "@/components/NoOffersFound";
 // import SurveyDialog from "@/components/SurveyDialog";
 import { useEffect, useState } from "react";
-import { Offer } from "@/store/offerStore";
 import { useSearchParams } from "next/navigation";
-import { filterAndSortOffers, getOffers } from "@/app/actions/offerFetching";
+import { filterAndSortOffers } from "@/app/actions/offerFetching";
 import OfferCardsLoading from "@/components/OfferCardsLoading";
 import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
+import { Offer, useOfferStore } from "@/store/offerStore_hasura";
 
 export default function Offers() {
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -19,9 +19,10 @@ export default function Offers() {
   const [isLoading, setLoading] = useState(true);
   
   const fetchOffers = async () => {
-    const offs = await getOffers();
+    const fetchOffer = useOfferStore.getState().fetchOffer;
+    const offers = await fetchOffer();
     const filteredOffs = await filterAndSortOffers({
-      offers: offs,
+      offers: offers,
       activeTab: searchParams.get("filter") || "all",
       searchQuery: searchParams.get("query") || "",
       location: searchParams.get("location") || null,
@@ -92,11 +93,11 @@ export default function Offers() {
                   <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
                     {offers.map((offer) => {
                       const discount = Math.round(
-                        ((offer.originalPrice - offer.newPrice) /
-                          offer.originalPrice) *
+                        ((offer.menu.price - offer.offer_price) /
+                          offer.menu.price) *
                           100
                       );
-                      const isUpcoming = new Date(offer.fromTime) > new Date();
+                      const isUpcoming = new Date(offer.start_time) > new Date();
 
                       return (
                         <OfferCard

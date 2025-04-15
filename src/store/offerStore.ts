@@ -100,6 +100,7 @@ export const useOfferStore = create<OfferState>((set) => {
         throw error;
       }
     },
+    
     addOffer: async (offer) => {
       const user = useAuthStore.getState().user;
       if (!user) return;

@@ -1,9 +1,9 @@
 import React from "react";
 import { Button } from "./ui/button";
-import { Offer } from "@/store/offerStore";
 import { CountdownTimer } from "./CountdownTimer";
 import { Banknote } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Offer } from "@/store/offerStore_hasura";
 
 type ClaimOfferButtonProps = {
   offer: Offer;
@@ -17,7 +17,7 @@ const buttonConfig = {
   upcoming: {
     text: (offer: Offer) => (
       <>
-        Offer Activates in: <CountdownTimer endTime={offer.toTime} />
+        Offer Activates in: <CountdownTimer endTime={new Date(offer.end_time)} />
       </>
     ),
     className: "bg-gray-100 text-[#E63946] shadow-xl border border-gray-200",
@@ -45,13 +45,13 @@ const getButtonState = (
   isClaimed: boolean,
   offersClaimable: number
 ) => {
-  if (new Date(offer.fromTime) > new Date()) {
+  if (new Date(offer.start_time) > new Date()) {
     return "upcoming";
   }
   if (isClaimed) {
     return "claimed";
   }
-  if (offersClaimable >= offer.originalPrice - offer.newPrice) {
+  if (offersClaimable >= offer.menu.price - offer.offer_price) {
     return "available";
   }
   return "offerNotClaimable";
@@ -74,7 +74,7 @@ const ClaimOfferButton: React.FC<ClaimOfferButtonProps> = ({
       onClick={() => {
         if (isClaimed) {
           setShowTicket(true);
-        } else if (offersClaimable >= offer.originalPrice - offer.newPrice) {
+        } else if (offersClaimable >= offer.menu.price - offer.offer_price) {
           handleClaimOffer();
         }else{
           router.push("/coupons")
@@ -84,7 +84,7 @@ const ClaimOfferButton: React.FC<ClaimOfferButtonProps> = ({
     >
       {buttonState === "available" && (
         <div className="flex items-center">
-          <span>-{offer.originalPrice - offer.newPrice}</span>
+          <span>-{offer.menu.price - offer.offer_price}</span>
           <Banknote className="w-4 h-4 mr-2 ml-1" />
           {typeof text === "function" ? text(offer) : text}
         </div>
@@ -94,7 +94,7 @@ const ClaimOfferButton: React.FC<ClaimOfferButtonProps> = ({
           {typeof text === "function" ? text(offer) : text}
           {buttonState === "offerNotClaimable" && (
             <span className="text-sm text-white">
-              You need {offer.originalPrice - offer.newPrice - offersClaimable} Rs more
+              You need {offer.menu.price - offer.offer_price - offersClaimable} Rs more
             </span>
           )}
         </div>

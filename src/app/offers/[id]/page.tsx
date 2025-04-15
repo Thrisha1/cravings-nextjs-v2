@@ -1,8 +1,9 @@
-import { db } from "@/lib/firebase";
+import { partnerIdQuery } from "@/api/auth";
+import { getOfferById } from "@/api/offers";
+import { fetchFromHasura } from "@/lib/hasuraClient";
 import OfferDetail from "@/screens/OfferDetail";
-import { UserData } from "@/store/authStore";
-import { Offer } from "@/store/offerStore";
-import { doc, getDoc } from "firebase/firestore";
+import { Partner } from "@/store/authStore";
+import { Offer } from "@/store/offerStore_hasura";
 import { Metadata } from "next";
 import { unstable_cache } from "next/cache";
 import React from "react";
@@ -16,14 +17,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const getOffer = unstable_cache(
     async (id: string) => {
-      const offerDocRef = doc(db, "offers", id);
-      const offerDoc = await getDoc(offerDocRef);
-      if (!offerDoc.exists()) {
+
+      if(!id){
+        throw new Error("offer ID not found");
+      }
+      
+
+      const offers = await fetchFromHasura(getOfferById, {
+        id: id,
+      })
+
+      if (offers.offers.length < 0) {
         throw new Error("Offer not found");
       }
-      const offer = { id: offerDoc.id, ...offerDoc.data() } as Offer;
-
-      return offer;
+      
+      return offers.offers[0] as Offer;
     },
     [id],
     { tags: [id] }
@@ -36,13 +44,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   return {
-    title: product.dishName,
-    icons: [product.dishImage],
-    description: `Get ${product.dishName} at ${product.hotelName} with Cravings for just ₹${product.newPrice}`,
+    title: product.menu.name,
+    icons: [product.menu.image_url],
+    description: `Get ${product.menu.name} at ${product.partner?.store_name} with Cravings for just ₹${product.offer_price}`,
     openGraph: {
-      images: [product.dishImage],
-      title: product.dishName,
-      description: `Get ${product.dishName} at ${product.hotelName} with Cravings for just ₹${product.newPrice}`,
+      images: [product.menu.image_url],
+      title: product.menu.name,
+      description: `Get ${product.menu.name} at ${product.partner?.store_name} with Cravings for just ₹${product.offer_price}`,
     },
   };
 }
@@ -52,14 +60,17 @@ const page = async ({ params }: Props) => {
 
   const getOffer = unstable_cache(
     async (id: string) => {
-      const offerDocRef = doc(db, "offers", id);
-      const offerDoc = await getDoc(offerDocRef);
-      if (!offerDoc.exists()) {
-        throw new Error("Offer not found");
-      }
-      const offer = { id: offerDoc.id, ...offerDoc.data() } as Offer;
 
-      return offer;
+      if(!id){
+        throw new Error("Offer ID not found");
+      }
+      
+      
+      const offers = await fetchFromHasura(getOfferById, {
+        id: id,
+      })
+
+      return offers.offers[0] as Offer;
     },
     [offerId],
     { tags: [offerId] }
@@ -69,22 +80,30 @@ const page = async ({ params }: Props) => {
 
   const getHotelData = unstable_cache(
     async (id: string) => {
-      const usersCollection = doc(db, "users", id);
-      const user = await getDoc(usersCollection);
-      const userData = user.data();
+
+      if(!id){
+        throw new Error("Partner ID not found");
+      }
+      
+      const userData = await fetchFromHasura(partnerIdQuery , {
+        id : id,
+      })
+
+      console.log("User Data", userData);
+      
 
       return {
         id,
         ...userData,
-      } as UserData;
+      } as Partner;
     },
-    [offerData.hotelId || ""],
+    [offerData.id || ""],
     {
-      tags: [offerData.hotelId || ""],
+      tags: [offerData.id || ""],
     }
   );
 
-  const hotelData = await getHotelData(offerData?.hotelId);
+  const hotelData = await getHotelData(offerData?.partner?.id as string);
 
   return <OfferDetail offer={offerData} hotelData={hotelData} />;
 };
