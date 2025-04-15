@@ -244,7 +244,7 @@ const QrScanPage = () => {
           return;
         } else {
           const upiData = upiResponse.partners[0];
-          const upiId = upiData.upiId;
+          const upiId = upiData.upi_id;
           const finalAmount =
             Number(billAmount.replace("₹", "")) -
             (Number(billAmount.replace("₹", "")) * discount) / 100;
