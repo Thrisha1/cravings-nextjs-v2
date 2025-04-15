@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import LocationAccess from "./LocationAccess";
-import SyncUserOfferCoupons from "./SyncUserOfferCoupons";
+// import SyncUserOfferCoupons from "./SyncUserOfferCoupons";
 
 export function Navbar() {
   const router = useRouter();
@@ -122,10 +122,10 @@ export function Navbar() {
 
   return (
     <>
-      <Suspense>
+      {/* <Suspense>
         <SyncUserOfferCoupons />
         <LocationAccess />
-      </Suspense>
+      </Suspense> */}
       <nav className="w-full bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">

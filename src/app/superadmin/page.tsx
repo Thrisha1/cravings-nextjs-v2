@@ -1,6 +1,6 @@
 import AssignQrPartners from "@/components/superAdmin/AssignQrPartners";
-import BulkUpload from "@/components/superAdmin/BulkUpload";
-import OfferDetails from "@/components/superAdmin/OfferDetails";
+// import BulkUpload from "@/components/superAdmin/BulkUpload";
+// import OfferDetails from "@/components/superAdmin/OfferDetails";
 import PartnerVerification from "@/components/superAdmin/PartnerVerification";
 import UpdateHotelUpiId from "@/components/superAdmin/UpdateHotelUpiId";
 import { ChevronRight } from "lucide-react";
@@ -17,21 +17,21 @@ const page = async (props: { searchParams: SearchParams }) => {
       component: <PartnerVerification />,
       id: "partner-verification",
     },
-    {
-      name: "Offer Details",
-      component: <OfferDetails />,
-      id: "offer-Details",
-    },
+    // {
+    //   name: "Offer Details",
+    //   component: <OfferDetails />,
+    //   id: "offer-Details",
+    // },
     {
       name: "Assign QR",
       component: <AssignQrPartners />,
       id: "assign-qr",
     },
-    {
-      name: "Bulk Upload",
-      component: <BulkUpload />,
-      id: "bulk-upload",
-    },
+    // {
+    //   name: "Bulk Upload",
+    //   component: <BulkUpload />,
+    //   id: "bulk-upload",
+    // },
     {
       name: "Update Hotel UPI ID",
       component: <UpdateHotelUpiId />,

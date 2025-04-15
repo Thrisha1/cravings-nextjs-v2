@@ -12,8 +12,6 @@ import Image from "next/image";
 import { toast } from "sonner";
 import CategoryDropdown from "@/components/ui/CategoryDropdown";
 import { ImageGridModal } from "./ImageGridModal";
-import { useCategoryStore } from "@/store/categoryStore";
-import { useAuthStore } from "@/store/authStore";
 
 interface AddMenuItemModalProps {
   isOpen: boolean;

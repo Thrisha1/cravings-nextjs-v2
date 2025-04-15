@@ -14,7 +14,7 @@ import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { AddMenuItemModal } from "../bulkMenuUpload/AddMenuItemModal";
 import { EditMenuItemModal } from "./EditMenuItemModal";
-import CategoryUpdateModal from "./CategoryUpdateModal";
+// import CategoryUpdateModal from "./CategoryUpdateModal";
 import Image from "next/image";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
@@ -195,7 +195,7 @@ export function MenuTab() {
         />
       )}
 
-      {isCategoryEditing && (
+      {/* {isCategoryEditing && (
         <CategoryUpdateModal
           catId={editingCategory?.id || ""}
           cat={editingCategory?.name || ""}
@@ -204,7 +204,7 @@ export function MenuTab() {
           catUpdated={catUpated}
           onOpenChange={() => setIsCategoryEditing(false)}
         />
-      )}
+      )} */}
 
       <div className="grid gap-4 divide-y-2 divide-gray-300 ">
         {Object.entries(filteredGroupedItems)

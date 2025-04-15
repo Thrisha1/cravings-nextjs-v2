@@ -27,36 +27,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import QrHotelAssignmentModal from "@/components/QrHotelAssignmentModal";
+// import QrHotelAssignmentModal from "@/components/QrHotelAssignmentModal";
 import Error from "@/app/hotels/error";
 import ShowAllBtn from "@/components/hotelDetail/ShowAllBtn";
-import ReviewsList from "@/components/hotelDetail/ReviewsList";
+// import ReviewsList from "@/components/hotelDetail/ReviewsList";
 import RateThis from "@/components/RateThis";
-import { useReviewsStore } from "@/store/reviewsStore";
-import PaymentHistoryModal from "@/components/PaymentHistoryModal";
+// import { useReviewsStore } from "@/store/reviewsStore";
+// import PaymentHistoryModal from "@/components/PaymentHistoryModal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  collection,
-  DocumentData,
-  // getCountFromServer,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  QueryDocumentSnapshot,
-  startAfter,
-  where,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
-// import CategoryList from "@/components/CategoryList";
-// import MenuItemCard from "@/components/MenuItemCard";
-import { useMenuStore } from "@/store/menuStore";
-// import {
-//   Carousel,
-//   CarouselItem,
-//   CarouselContent,
-// } from "@/components/ui/carousel";
 import MenuItemsList from "@/components/hotelDetail/MenuItemsList";
 import { Offer } from "@/store/offerStore_hasura";
 import { UpiData } from "@/types/upiData";
@@ -97,7 +76,7 @@ const HotelMenuPage = ({
   const error = searchParams.get("error");
   const [showVisitModal, setShowVisitModal] = useState(false);
   const [showAllOffers, setShowAllOffers] = useState(false);
-  const { getAverageReviewByHotelId } = useReviewsStore();
+  // const { getAverageReviewByHotelId } = useReviewsStore();
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [userPhone, setUserPhone] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
@@ -229,7 +208,7 @@ const HotelMenuPage = ({
 
   return (
     <main className="overflow-x-hidden bg-gradient-to-b from-orange-50 to-orange-100 relative">
-      <Suspense>
+      {/* <Suspense>
         {userData?.role === "superadmin" && qrId && (
           <QrHotelAssignmentModal
             qrId={qrId || ""}
@@ -243,7 +222,7 @@ const HotelMenuPage = ({
           />
         )}
 
-        {/* {userVisit && qrId && (
+        {userVisit && qrId && (
           <VisitModal
             isOpen={showVisitModal}
             hotelId={hoteldata?.id as string}
@@ -254,8 +233,8 @@ const HotelMenuPage = ({
             lastDiscountedVisit={userVisit.lastDiscountedVisit}
             upiData={upiData}
           />
-        )} */}
-      </Suspense>
+        )}
+      </Suspense> */}
 
       {hoteldata ? (
         <>
@@ -377,12 +356,12 @@ const HotelMenuPage = ({
               </div>
 
               {/* ratings  */}
-              <Suspense>
+              {/* <Suspense>
                 <div className="flex items-center  gap-2 text-black/60 text-sm w-fit">
                   <Star className="text-orange-600 fill-orange-600" size={20} />
                   {getAverageReviewByHotelId(hoteldata?.id as string)}
                 </div>
-              </Suspense>
+              </Suspense> */}
             </div>
 
             {qrId && (
@@ -495,9 +474,9 @@ const HotelMenuPage = ({
             </section>
 
             {/* reviews  */}
-            <section className="px-3 pt-5 pb-10 ">
+            {/* <section className="px-3 pt-5 pb-10 ">
               <ReviewsList hotelId={hoteldata?.id as string} />
-            </section>
+            </section> */}
 
             {/* Add this after the hotel info section */}
             <div className="flex items-center gap-2 mt-4">
@@ -513,13 +492,13 @@ const HotelMenuPage = ({
           </div>
 
           {/* Add PaymentHistoryModal */}
-          <PaymentHistoryModal
+          {/* <PaymentHistoryModal
             isOpen={showPaymentHistory}
             onClose={() => setShowPaymentHistory(false)}
             hotelData={hoteldata}
             userId={userData?.id as string}
             upiData={upiData}
-          />
+          /> */}
         </>
       ) : (
         <Error />

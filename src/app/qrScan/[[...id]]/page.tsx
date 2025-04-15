@@ -6,7 +6,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { FileClock, UtensilsCrossed } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
-import PartnerLoginModal from "@/components/PartnerLoginModal";
+// import PartnerLoginModal from "@/components/PartnerLoginModal";
 import {
   Dialog,
   DialogContent,

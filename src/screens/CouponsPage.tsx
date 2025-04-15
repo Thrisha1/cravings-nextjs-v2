@@ -5,18 +5,18 @@ import { useRouter } from "next/navigation";
 import React, { useEffect } from "react";
 
 const CouponsPage = () => {
-  const { user } = useAuthStore();
+  const { userData } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
+    if (!userData) {
       router.replace("/offers");
       return;
     }
-  }, [user]);
+  }, [userData]);
 
   const handleInvite = () => {
-    const shareData = user?.uid;
+    const shareData = userData?.id;
 
     const encryptedData = btoa(JSON.stringify(shareData));
 

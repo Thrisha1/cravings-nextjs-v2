@@ -23,7 +23,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import DiscountBadge from "@/components/DiscountBadge";
 import Link from "next/link";
-import { useReviewsStore } from "@/store/reviewsStore";
+// import { useReviewsStore } from "@/store/reviewsStore";
 import { Offer } from "@/store/offerStore_hasura";
 import { Button } from "@/components/ui/button";
 import { useClaimedOffersStore } from "@/store/claimedOfferStore_hasura";
@@ -40,7 +40,7 @@ export default function OfferDetail({
   const navigate = useRouter();
   const { userData } = useAuthStore();
   const [isClaimed, setClaimed] = useState(false);
-  const { getAverageReviewByHotelId } = useReviewsStore();
+  // const { getAverageReviewByHotelId } = useReviewsStore();
   const { addClaimedOffer, claimedOffers, fetchCalimedOfferByOfferId } =
     useClaimedOffersStore();
   const [showClaimModalOpen, setClaimModalOpen] = useState(false);
@@ -133,7 +133,7 @@ export default function OfferDetail({
               <div className="grid">
                 <UtensilsCrossed />
                 <span>{offer.partner?.store_name}</span>
-                <Suspense>
+                {/* <Suspense>
                   <div className="flex items-center mt-1  gap-2 text-black/60 text-sm w-fit">
                     <Star
                       className="text-orange-600 fill-orange-600"
@@ -141,7 +141,7 @@ export default function OfferDetail({
                     />
                     {getAverageReviewByHotelId(hotelData?.id as string) ?? 0}
                   </div>
-                </Suspense>
+                </Suspense> */}
                 <span className="text-sm mt-1">
                   {/* Followers : {hotelData?.followers?.length ?? 0} */}
                 </span>
