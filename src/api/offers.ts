@@ -21,7 +21,7 @@ export const getOfferById = `
         id
       }
       partner {
-        location
+        district
         store_name
         id
       }
@@ -51,7 +51,7 @@ export const getOffers = `
         id
       }
       partner {
-        location
+        district
         store_name
         id
       }

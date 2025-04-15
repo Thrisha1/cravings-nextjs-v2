@@ -201,7 +201,7 @@ export default function OfferDetail({
                   )}
                   <div className="flex items-center text-lg text-gray-500">
                     <MapPin className="w-4 h-4 mr-2" />
-                    {offer.partner?.location}
+                    {offer.partner?.district}
                   </div>
                   <div className="flex flex-wrap gap-2 mt-4">
                     <Badge

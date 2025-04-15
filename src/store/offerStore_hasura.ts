@@ -16,7 +16,7 @@ interface Category {
 }
 
 interface Partner {
-  location: string;
+  district: string;
   id : string;
   store_name: string;
 }

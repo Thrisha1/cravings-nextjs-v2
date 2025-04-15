@@ -25,7 +25,7 @@ export const filterAndSortOffers = async ({
   // Filter offers based on validity and location
   const currentOffers = offers.filter((offer) => {
     const isValid = new Date(offer.end_time) > new Date();
-    const matchesLocation = !location || offer.partner?.location === location;
+    const matchesLocation = !location || offer.partner?.district === location;
     return isValid && matchesLocation;
   });
 

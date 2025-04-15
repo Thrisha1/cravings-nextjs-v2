@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/dialog";
 import QrHotelAssignmentModal from "@/components/QrHotelAssignmentModal";
 import Error from "@/app/hotels/error";
-import VisitModal from "@/components/VisitModal";
 import ShowAllBtn from "@/components/hotelDetail/ShowAllBtn";
 import ReviewsList from "@/components/hotelDetail/ReviewsList";
 import RateThis from "@/components/RateThis";
@@ -59,10 +58,10 @@ import { useMenuStore } from "@/store/menuStore";
 //   CarouselContent,
 // } from "@/components/ui/carousel";
 import MenuItemsList from "@/components/hotelDetail/MenuItemsList";
-import { Partner } from "@/api/partners";
 import { Offer } from "@/store/offerStore_hasura";
 import { UpiData } from "@/types/upiData";
 import { useAuthStore } from "@/store/authStore";
+import { HotelData } from "@/app/hotels/[id]/page";
 
 export type MenuItem = {
   description: string;
@@ -74,7 +73,7 @@ export type MenuItem = {
 
 interface HotelMenuPageProps {
   offers: Offer[];
-  hoteldata: Partner;
+  hoteldata: HotelData;
   qrScan: string | null;
   upiData: UpiData | null;
 }
@@ -86,7 +85,7 @@ const HotelMenuPage = ({
   upiData,
 }: HotelMenuPageProps) => {
   const {
-    userData
+    userData,
     signInWithPhone,
   } = useAuthStore();
   const router = useRouter();
@@ -102,55 +101,6 @@ const HotelMenuPage = ({
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [userPhone, setUserPhone] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
-  // const [menu, setMenu] = useState<MenuItem[]>([]);
-  const [lastVisible, setLastVisible] =
-    useState<QueryDocumentSnapshot<DocumentData> | null>(null);
-  const { fetchTopMenuItems } = useMenuStore();
-  const [topMenuItems, setTopMenuItems] = useState<MenuItem[]>([]);
-
-  const fetchMenuItems = async (isInitial: boolean) => {
-    try {
-      const menuRef = collection(db, "menuItems");
-
-      // Use the correct field for filtering
-      let q = query(
-        menuRef,
-        where("hotelId", "==", hoteldata.id),
-        orderBy("name"),
-        limit(4)
-      );
-
-      if (!isInitial && lastVisible) {
-        q = query(
-          menuRef,
-          where("hotelId", "==", hoteldata.id), // Check if this should be "hotelId"
-          orderBy("name"),
-          startAfter(lastVisible),
-          limit(4)
-        );
-      }
-
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]);
-      }
-
-      // Extract menu array from document
-      // const menuItems = querySnapshot.docs.map((doc) => {
-      //   return {
-      //     id: doc.id,
-      //     ...doc.data(),
-      //   } as MenuItem;
-      // });
-
-      // setMenu((prevMenu: MenuItem[]) =>
-      //   isInitial ? menuItems : [...prevMenu, ...menuItems]
-      // );
-    } catch (error) {
-      console.error("Error fetching menu items:", error);
-    }
-  };
 
   const isLoggedIn = () => {
     console.log("isLoggedIn", userData);
@@ -189,8 +139,8 @@ const HotelMenuPage = ({
   const handleQrScan = async () => {
     const handleFollowUpdate = async () => {
       try {
-        await handleFollow(hoteldata?.id as string);
-        await fetchUserVisit(user?.uid as string, hoteldata?.id as string);
+        // await handleFollow(hoteldata?.id as string);
+        // await fetchUserVisit(user?.uid as string, hoteldata?.id as string);
         toast.success("Following");
         await revalidateTag(hoteldata?.id as string);
         const url = new URLSearchParams(searchParams.toString());
@@ -221,13 +171,13 @@ const HotelMenuPage = ({
   };
 
   useEffect(() => {
-    const isFollowed =
-      hoteldata?.followers?.some(
-        (follower) => follower.user === (user?.uid ?? "?")
-      ) ?? false;
+    const isFollowed = false;
+      // hoteldata?.followers?.some(
+      //   (follower) => follower.user === (user?.uid ?? "?")
+      // ) ?? false;
 
     setIsFollowed(isFollowed);
-  }, [hoteldata, user?.uid]);
+  }, [hoteldata]);
 
   useEffect(() => {
     localStorage.removeItem("previousRoute");
@@ -271,17 +221,11 @@ const HotelMenuPage = ({
 
   useEffect(() => {
     // getMenuItemsCount();
-    fetchMenuItems(true);
-  }, []);
+    // fetchMenuItems(true);
+    console.log("hoteldata" , hoteldata);
+    
+  }, [hoteldata]);
 
-  useEffect(() => {
-    const fetchItems = async () => {
-      const items = await fetchTopMenuItems(hoteldata?.id as string);
-      setTopMenuItems(items as MenuItem[]);
-    };
-
-    fetchItems();
-  }, [fetchTopMenuItems, hoteldata?.id]);
 
   return (
     <main className="overflow-x-hidden bg-gradient-to-b from-orange-50 to-orange-100 relative">
@@ -290,7 +234,7 @@ const HotelMenuPage = ({
           <QrHotelAssignmentModal
             qrId={qrId || ""}
             currentHotelId={hoteldata?.id || null}
-            currentHotelName={hoteldata?.hotelName || null}
+            currentHotelName={hoteldata?.store_name || null}
             isOpen={showQrAssignModal}
             onClose={() => {
               setShowQrAssignModal(false);
@@ -299,7 +243,7 @@ const HotelMenuPage = ({
           />
         )}
 
-        {userVisit && qrId && (
+        {/* {userVisit && qrId && (
           <VisitModal
             isOpen={showVisitModal}
             hotelId={hoteldata?.id as string}
@@ -310,7 +254,7 @@ const HotelMenuPage = ({
             lastDiscountedVisit={userVisit.lastDiscountedVisit}
             upiData={upiData}
           />
-        )}
+        )} */}
       </Suspense>
 
       {hoteldata ? (
@@ -355,7 +299,7 @@ const HotelMenuPage = ({
           {/* banner Image  */}
           <div className="w-screen h-[200px] absolute top-0 z-0">
             <Image
-              src={hoteldata?.hotelBanner || "/hotelDetailsBanner.jpeg"}
+              src={hoteldata?.store_banner || "/hotelDetailsBanner.jpeg"}
               alt={"Hotel Banner"}
               fill
               className="w-auto h-auto object-cover"
@@ -376,7 +320,7 @@ const HotelMenuPage = ({
             {/* hotel name  */}
             <div className="flex justify-between pt-5 md:pt-10">
               <h1 className="text-lg relative flex lg:items-center max-w-[50%] md:text-3xl font-semibold  capitalize">
-                <span>{hoteldata?.hotelName}</span>
+                <span>{hoteldata?.store_name}</span>
                 <VerifiedIcon className="ml-2 text-green-600" />
               </h1>
 
@@ -385,13 +329,13 @@ const HotelMenuPage = ({
                   try {
                     if (isFollowed) {
                       setIsFollowed(false); // Immediately toggle state
-                      await handleUnfollow(hoteldata?.id as string);
+                      // await handleUnfollow(hoteldata?.id as string);
                       toast.error("Unfollowed successfully");
                       await revalidateTag(hoteldata?.id as string);
                     } else {
-                      if (user) {
+                      if (userData) {
                         setIsFollowed(true); // Immediately toggle state
-                        await handleFollow(hoteldata?.id as string);
+                        // await handleFollow(hoteldata?.id as string);
                         toast.success("Followed successfully");
                         await revalidateTag(hoteldata?.id as string);
                       } else {
@@ -418,7 +362,7 @@ const HotelMenuPage = ({
                   {" "}
                   <Users size={20} /> Followers :{" "}
                 </span>{" "}
-                <span>{hoteldata?.followers?.length ?? 0}</span>
+                {/* <span>{hoteldata?.followers?.length ?? 0}</span> */}
               </div>
 
               <div
@@ -429,7 +373,7 @@ const HotelMenuPage = ({
                   {" "}
                   <MapPin size={20} /> Area :{" "}
                 </span>{" "}
-                <span>{hoteldata?.area}</span>{" "}
+                <span>{hoteldata?.district}</span>{" "}
               </div>
 
               {/* ratings  */}
@@ -443,14 +387,14 @@ const HotelMenuPage = ({
 
             {qrId && (
               <div>
-                {userVisit && (
+                {/* {userVisit && (
                   <Button
                     onClick={() => setShowVisitModal(true)}
                     className="bg-orange-600 hover:bg-orange-500 w-full text-white block mb-4"
                   >
                     Get Discount
                   </Button>
-                )}
+                )} */}
                 <Button
                   onClick={() => setShowPaymentHistory(true)}
                   className="bg-orange-600 hover:bg-orange-500 w-full text-white block mb-4"
@@ -476,8 +420,8 @@ const HotelMenuPage = ({
                     >
                       {displayedOffers.map((offer: Offer) => {
                         const discount = Math.round(
-                          ((offer.originalPrice - offer.newPrice) /
-                            offer.originalPrice) *
+                          ((offer.menu.price - offer.offer_price) /
+                            offer.menu.price) *
                             100
                         );
 
@@ -503,14 +447,14 @@ const HotelMenuPage = ({
               </section>
             )}
 
-            {topMenuItems.length > 0 && (
+            {hoteldata.menus?.filter((items) => items.is_top === true).length > 0 && (
               <div className="p-4 py-10">
                 <h1 className="text-2xl font-bold mb-4 text-center">
                   Top 3 Items ⭐
                 </h1>
 
                 <div className="grid divide-y-2 gap-1 divide-orange-200">
-                  {topMenuItems.map((item) => (
+                  {hoteldata.menus?.filter((items) => items.is_top === true).map((item) => (
                     <div key={item.id} className="py-6 rounded animate-bg px-2 flex-1">
                       <div className="flex justify-between items-start">
                         <div className="grid gap-2 ">
@@ -524,10 +468,10 @@ const HotelMenuPage = ({
                             {item.description}
                           </span>
                         </div>
-                        {item.image.length > 0 && (
+                        {item.image_url.length > 0 && (
                           <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden ">
                             <Image
-                              src={item.image}
+                              src={item.image_url}
                               alt={item.name}
                               fill
                               className="object-cover w-full h-full"
@@ -542,7 +486,7 @@ const HotelMenuPage = ({
             )}
 
             <section className="px-[7%]">
-              <MenuItemsList hotelId={hoteldata?.id as string} />
+              <MenuItemsList hoteldata={hoteldata} />
             </section>
 
             {/* rate this hotel  */}
@@ -573,7 +517,7 @@ const HotelMenuPage = ({
             isOpen={showPaymentHistory}
             onClose={() => setShowPaymentHistory(false)}
             hotelData={hoteldata}
-            userId={user?.uid as string}
+            userId={userData?.id as string}
             upiData={upiData}
           />
         </>

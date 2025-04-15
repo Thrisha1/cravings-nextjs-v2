@@ -1,12 +1,16 @@
 /*...........query...........*/
 
 export const getPartnerAndOffersQuery = `
-query GetPartnerAndOffersQuery {
-  partners(where: {id: {_eq: "0f61a766-73fb-40ba-83b8-bbe5ca2342cf"}}) {
+query GetPartnerAndOffersQuery($id: uuid! , $end_time: timestamptz!) @cached {
+  partners(where: {id: {_eq: $id}}) {
     district
-    menus(limit: 10) {
+    location
+    store_banner
+    store_name
+    menus {
       category {
         name
+        id
       }
       description
       id
@@ -15,7 +19,7 @@ query GetPartnerAndOffersQuery {
       name
       price
     }
-    offers(limit: 10, where: {end_time: {_gt: "2025-03-01T00:00:00+00:00"}}) {
+    offers(where: {end_time: {_gt: $end_time}}) {
       end_time
       enquiries
       id

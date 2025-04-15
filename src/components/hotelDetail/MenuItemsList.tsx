@@ -1,38 +1,19 @@
-import { useCategoryStore } from "@/store/categoryStore";
-import { useMenuStore } from "@/store/menuStore";
-import type { MenuItem } from "@/store/menuStore";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Accordion, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { AccordionContent } from "@radix-ui/react-accordion";
 import Image from "next/image";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
 
-const MenuItemsList = ({ hotelId }: { hotelId: string }) => {
-  const { fetchMenu } = useMenuStore();
-  const { getCategoryById } = useCategoryStore();
-  const [items, setMenuItems] = useState<MenuItem[] | []>([]);
-  const [categorisedItems, setCategorisedItems] = React.useState<{
-    [key: string]: MenuItem[];
-  }>({});
-
-  useEffect(() => {
-    const fetchData = async () => {
-      await fetchMenu(hotelId)
-        .then((data) => {
-          setMenuItems(data);
-        })
-        .catch((error) => {
-          console.error("Error fetching menu items:", error);
-        });
-    };
-    fetchData();
-  }, []);
+const MenuItemsList = ({ hoteldata } : {
+  hoteldata : HotelData
+}) => {
+  const [categorisedItems, setCategorisedItems] = React.useState<Record<string, HotelDataMenus[]>>({});
 
   useEffect(() => {
     const fetchGroupedItems = async () => {
-      const groupedItems: { [key: string]: MenuItem[] } = {};
-      for (const item of items) {
-        const category =
-          (await getCategoryById(item.category)) || "Uncategorized";
+      const groupedItems: { [key: string]: HotelDataMenus[] } = {};
+      for (const item of hoteldata.menus) {
+        const category = item.category.name;
         if (!groupedItems[category]) {
           groupedItems[category] = [];
         }
@@ -44,10 +25,10 @@ const MenuItemsList = ({ hotelId }: { hotelId: string }) => {
       setCategorisedItems(sortedItems);
     };
 
-    if (items) {
+    if (hoteldata.menus.length > 0) {
       fetchGroupedItems();
     }
-  }, [items]);
+  }, [hoteldata.menus]);
 
   return (
     <>
@@ -82,10 +63,10 @@ const MenuItemsList = ({ hotelId }: { hotelId: string }) => {
                             {item.description}
                           </span>
                         </div>
-                        {item.image.length > 0 && (
+                        {item.image_url.length > 0 && (
                           <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden ">
                             <Image
-                              src={item.image}
+                              src={item.image_url}
                               alt={item.name}
                               fill
                               className="object-cover w-full h-full"

@@ -82,7 +82,7 @@ const OfferCard = ({
                   )}
                   <div className="flex items-center text-sm text-gray-500">
                     <MapPin className="w-4 h-4 mr-2" />
-                    {offer.partner?.location}
+                    {offer.partner?.district}
                   </div>
                   {/* {(offer.distance ?? 0) > 0 && (
                     <p className="text-sm text-gray-500 flex items-center gap-2">
