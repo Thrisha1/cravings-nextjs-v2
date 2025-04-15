@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '2mb'
     },
   },
+  allowedDevOrigins: ['192.168.20.6', 'localhost'],
   eslint: {
     ignoreDuringBuilds: true,
   },

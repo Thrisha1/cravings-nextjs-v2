@@ -1,20 +1,11 @@
 "use client";
 
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-} from "firebase/firestore";
-import { FileClock, UtensilsCrossed } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { toast } from "sonner";
+import { FileClock, UtensilsCrossed } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
 import PartnerLoginModal from "@/components/PartnerLoginModal";
 import {
   Dialog,
@@ -25,8 +16,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import {
+  GET_HOTEL_DETAILS,
+  FOLLOW_PARTNER,
+  GET_USER_VISITS,
+  CREATE_PAYMENT,
+  GET_UPI_DETAILS, 
+} from "@/api/payments";
 
-interface hotelDetails {
+interface HotelDetails {
   hotelId: string;
   hotelName: string;
   hotelArea: string;
@@ -76,19 +75,16 @@ const upiApps: UPIApp[] = [
   },
 ];
 
+
 const QrScanPage = () => {
   const [billAmount, setBillAmount] = useState<string>("");
-  const [hotelDetails, setHotelDetails] = useState<hotelDetails>();
+  const [hotelDetails, setHotelDetails] = useState<HotelDetails>();
   const params = useParams();
   const ids = params.id as string[];
   const id = ids[0];
   const {
-    user,
+    userData,
     signInWithPhone,
-    fetchUserVisit,
-    handleFollow,
-    updateUserVisits,
-    updateUserPayment,
   } = useAuthStore();
   const [isSignedIn, setIsSignedIn] = useState<boolean>(true);
   const [phoneNumber, setPhoneNumber] = useState<string>("");
@@ -105,12 +101,17 @@ const QrScanPage = () => {
   const getHotelDetails = async () => {
     try {
       if (id) {
-        const qrCodeRef = doc(db, "qrcodes", id);
-        const qrCodeSnap = await getDoc(qrCodeRef);
-
-        if (qrCodeSnap.exists()) {
-          const qrData = qrCodeSnap.data();
-          setHotelDetails(qrData as hotelDetails);
+        const response = await fetchFromHasura(GET_HOTEL_DETAILS, {
+          qrCodeId: id,
+        });
+        
+        if (response.qr_codes && response.qr_codes.length > 0) {
+          const qrData = response.qr_codes[0];
+          setHotelDetails({
+            hotelId: qrData.partner_id,
+            hotelName: qrData.partner.store_name,
+            hotelArea: qrData.partner.district,
+          });
         } else {
           throw new Error("QR code not found");
         }
@@ -118,16 +119,33 @@ const QrScanPage = () => {
         throw new Error("ID is null");
       }
     } catch (error) {
-      toast.error("Upi pyament not available");
+      toast.error("Upi payment not available");
       console.error(error);
     }
+  };
+
+  const calculateDiscount = (visits: any[]) => {
+    if (visits.length === 0) return 0;
+    
+    const lastVisit = visits[0];
+    const now = new Date();
+    const lastVisitDate = new Date(lastVisit.createdAt);
+    const diffTime = Math.abs(now.getTime() - lastVisitDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Simple discount logic - 10% discount if last visit was more than 7 days ago
+    if (diffDays > 7) {
+      return 10;
+    }
+    
+    return 0;
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log("handling submit");
 
-    if (!user) {
+    if (!userData) {
       setIsSignedIn(false);
       return;
     }
@@ -135,40 +153,50 @@ const QrScanPage = () => {
     try {
       setIsLoading(true);
 
-      console.log("handling follow");
+      // Follow the partner
+      await fetchFromHasura(FOLLOW_PARTNER, {
+        userId: userData.id,
+        partnerId: hotelDetails?.hotelId,
+        phone: userData.role === "user" ? userData.phone : "",
+      });
 
-      await handleFollow(hotelDetails?.hotelId as string);
-      const uv = await fetchUserVisit(
-        user.uid,
-        hotelDetails?.hotelId as string
-      );
+      // Get user visits
+      // const visitsResponse = await fetchFromHasura(GET_USER_VISITS, {
+      //   userId: userData.id,
+      //   partnerId: hotelDetails?.hotelId,
+      // });
 
-      if (uv?.isRecentVisit) {
-        setIsRecentVisit(true);
-        setIsBillAmountSubmitted(true);
-        setIsLoading(false);
-        return;
-      }
+      // const visits = [];
+      
+      // Check if recent visit (within last 2 hours)
+      // if (visits.length > 0) {
+      //   // const lastVisit = visits[0];
+      //   const now = new Date();
+      //   const lastVisitDate = new Date(lastVisit.createdAt);
+      //   const diffTime = Math.abs(now.getTime() - lastVisitDate.getTime());
+      //   const diffHours = diffTime / (1000 * 60 * 60);
+        
+      //   if (diffHours < 2) {
+      //     setIsRecentVisit(true);
+      //     setIsBillAmountSubmitted(true);
+      //     setIsLoading(false);
+      //     return;
+      //   }
+      // }
 
-      console.log("fetching discount");
-
-      const dis = 0;
-      // await getDiscount(
-      //   (uv?.numberOfVisits as number) + 1,
-      //   uv?.lastDiscountedVisit as string | null
-      // );
+      // Calculate discount
+      const calculatedDiscount = 0;
       const amount = billAmount.replace("₹", "");
 
-      console.log("updating user visits");
-      await updateUserVisits(
-        user.uid,
-        hotelDetails?.hotelId as string,
-        Number(amount),
-        dis
-      );
+      // Create payment record
+      await fetchFromHasura(CREATE_PAYMENT, {
+        partnerId: hotelDetails?.hotelId,
+        amount: Number(amount),
+        userId: userData.id,
+        discount: calculatedDiscount,
+      });
 
-      console.log("done");
-      setDiscount(dis);
+      setDiscount(calculatedDiscount);
       setIsBillAmountSubmitted(true);
       setIsLoading(false);
     } catch (error) {
@@ -203,22 +231,19 @@ const QrScanPage = () => {
   const handlePayNow = async () => {
     try {
       setIsLoading(true);
-      await updateUserPayment(
-        user?.uid as string,
-        hotelDetails?.hotelId as string
-      );
-      const upiRef = collection(db, "upi_ids");
-      const q = query(
-        upiRef,
-        where("userId", "==", hotelDetails?.hotelId as string)
-      );
-      const upiDocSnap = await getDocs(q);
-      if (!upiDocSnap.empty) {
+      
+      // Get UPI details
+      const upiResponse = await fetchFromHasura(GET_UPI_DETAILS, {
+        partnerId: hotelDetails?.hotelId,
+      });
+      
+      if (upiResponse.partners && upiResponse.partners.length > 0) {
         const isIphone = /iPad|iPhone|iPod/.test(navigator.userAgent);
         if (isIphone) {
           setShowPaymentModal(true);
+          return;
         } else {
-          const upiData = upiDocSnap.docs[0].data();
+          const upiData = upiResponse.partners[0];
           const upiId = upiData.upiId;
           const finalAmount =
             Number(billAmount.replace("₹", "")) -
@@ -240,18 +265,15 @@ const QrScanPage = () => {
     }
   };
 
-  const handleUPIPayment = (app: UPIApp) => {
+  const handleUPIPayment = async (app: UPIApp) => {
     setShowPaymentModal(false);
 
-    const upiRef = collection(db, "upi_ids");
-    const q = query(
-      upiRef,
-      where("userId", "==", hotelDetails?.hotelId as string)
-    );
-    getDocs(q).then((upiDocSnap) => {
-      if (!upiDocSnap.empty) {
-        const upiData = upiDocSnap.docs[0].data();
-        const upiId = upiData.upiId;
+    await fetchFromHasura(GET_UPI_DETAILS, {
+      partnerId: hotelDetails?.hotelId,
+    }).then((upiResponse) => {
+      if (upiResponse.partners && upiResponse.partners.length > 0) {
+        const upiData = upiResponse.partners[0];
+        const upiId = upiData.upi_id;     
         const finalAmount =
           Number(billAmount.replace("₹", "")) -
           (Number(billAmount.replace("₹", "")) * discount) / 100;
@@ -265,12 +287,20 @@ const QrScanPage = () => {
 
         window.location.href = paymentUrl;
       }
-    });
+    })
+    .catch((error) => {
+      console.error("Error fetching UPI details:", error);
+      toast.error("Error fetching UPI details");
+    })
   };
 
   useEffect(() => {
+    // Check if user is already logged in
+    if (userData) {
+      setIsSignedIn(true);
+    }
     getHotelDetails();
-  }, []);
+  }, [userData]);
 
   return (
     <main className="px-[7.5%] pt-[12%] pb-[20%] bg-orange-600 h-[100dvh] flex flex-col overflow-hidden">
