@@ -7,16 +7,21 @@ import { updatePartnerStatusMutation } from "@/api/partners";
 import { Button } from "@/components/ui/button";
 import { Phone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { revalidateTag } from "@/app/actions/revalidate";
 
 export default function PartnerCard({ partner }: { partner: Partner }) {
   const removePartner = usePartnerStore((state) => state.removePartner);
 
   const updateStatus = async (status: "active" | "rejected") => {
-    await fetchFromHasura(updatePartnerStatusMutation, {
+    (await fetchFromHasura(updatePartnerStatusMutation, {
       id: partner.id,
       status,
-    }) as UpdatePartnerStatusResponse;
+    })) as UpdatePartnerStatusResponse;
     removePartner(partner.id);
+
+    if (status === "active") {
+      revalidateTag("partners");
+    }
   };
 
   return (
@@ -30,14 +35,24 @@ export default function PartnerCard({ partner }: { partner: Partner }) {
         <p className="text-sm text-gray-500">District: {partner.district}</p>
 
         <div className="flex gap-3 mt-4">
-          <Button className="bg-green-600" onClick={() => updateStatus("active")}>
+          <Button
+            className="bg-green-600"
+            onClick={() => updateStatus("active")}
+          >
             Approve
           </Button>
-          <Button className="bg-red-600" onClick={() => updateStatus("rejected")}>
+          <Button
+            className="bg-red-600"
+            onClick={() => updateStatus("rejected")}
+          >
             Reject
           </Button>
           {partner.phone && (
-            <Button variant="outline" size="icon" onClick={() => window.open(`tel:${partner.phone}`)}>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => window.open(`tel:${partner.phone}`)}
+            >
               <Phone className="w-4 h-4" />
             </Button>
           )}

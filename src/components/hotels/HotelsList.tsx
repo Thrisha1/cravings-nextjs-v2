@@ -2,20 +2,12 @@
 
 import { getAllPartnersQuery } from "@/api/partners";
 import { fetchFromHasura } from "@/lib/hasuraClient";
+import { Partner } from "@/store/authStore";
+import { usePartnerStore } from "@/store/partnerStore";
 import Image from "next/image";
 import Link from "next/link";
-import { log } from "node:console";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useInView } from "react-intersection-observer";
-
-interface Partner {
-  id: string;
-  store_name: string;
-  store_banner: string;
-  description: string;
-  district: string;
-  location: string;
-}
 
 interface HotelsListProps {
   initialPartners: Partner[];
@@ -26,30 +18,31 @@ export default function HotelsList({
   initialPartners,
   totalCount,
 }: HotelsListProps) {
-  const { ref, inView , entry } = useInView({
+  const { ref, inView, entry } = useInView({
     /* Optional options */
     threshold: 0,
   });
-  const [partners, setPartners] = useState<Partner[]>(initialPartners);
+  const { partners, setPartners, fetchPartners } = usePartnerStore();
 
   const loadMore = async () => {
     if (!inView) return;
 
-    console.log("Loading more partners...", partners.length);
-
     if (partners.length == totalCount) return;
 
-    const { partners: p } = await fetchFromHasura(getAllPartnersQuery, {
-      offset: partners.length,
-      limit: 6,
-    });
+    console.log("Loading more partners...", partners.length);
 
-    setPartners((prev) => [...prev, ...p]);
+    await fetchPartners(6, partners.length);
   };
 
   useEffect(() => {
+    if (partners.length === 0) {
+      setPartners(initialPartners);
+    }
+  }, [initialPartners]);
+
+  useEffect(() => {
     loadMore();
-  }, [inView , entry]);
+  }, [inView, entry]);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">

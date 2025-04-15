@@ -2,8 +2,8 @@
 
 export const getAllPartnersQuery = `
 query GetAllPartners($limit: Int, $offset: Int) {
-  partners(limit: $limit, offset: $offset) {
-    id
+  partners(limit: $limit, offset: $offset , where: {status: {_eq: "active"}}) {
+    id 
     store_name
     location
     description

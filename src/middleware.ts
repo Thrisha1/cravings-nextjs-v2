@@ -40,7 +40,7 @@ export async function middleware(request: NextRequest) {
   // If no auth token, redirect based on the route
   if (!authToken) {
     const isSuperadminRoute = pathname.startsWith('/superadmin');
-    const redirectPath = isSuperadminRoute ? '/superlogin' : '/login';
+    const redirectPath = isSuperadminRoute ? '/superLogin' : '/login';
     return NextResponse.redirect(new URL(redirectPath, request.url));
   }
 
