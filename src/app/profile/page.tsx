@@ -244,7 +244,7 @@ export default function ProfilePage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-4">
+            <div className="flex md:flex-row flex-col gap-4">
               <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
                 <Tag className="sm:size-4 size-8 mr-2" />
                 {profile.offersClaimed} Offers Claimed
