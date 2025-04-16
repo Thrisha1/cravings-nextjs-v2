@@ -68,10 +68,9 @@ export function CategoryUpdateModal({
             <Label htmlFor="priority">Priority (lower numbers show first)</Label>
             <Input
               id="priority"
-              type="number"
+              type="text"
               value={priority}
-              onChange={(e) => setPriority(Number(e.target.value) || 0)}
-              min="0"
+              onChange={(e) => setPriority(Number(e.target.value))}
             />
           </div>
           <Button onClick={handleSubmit} disabled={isLoading}>
