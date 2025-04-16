@@ -336,13 +336,13 @@ const HotelMenuPage = ({
 
             {/* hotel details  */}
             <div className="pb-5 md:pb-10 pt-2 grid gap-2">
-              <div className="flex items-center gap-2 text-black/60 text-sm w-fit">
+              {/* <div className="flex items-center gap-2 text-black/60 text-sm w-fit">
                 <span className="flex items-center gap-1">
                   {" "}
                   <Users size={20} /> Followers :{" "}
                 </span>{" "}
-                {/* <span>{hoteldata?.followers?.length ?? 0}</span> */}
-              </div>
+                <span>{hoteldata?.followers?.length ?? 0}</span>
+              </div> */}
 
               <div
                 onClick={() => router.push(hoteldata?.location ?? "")}
@@ -469,9 +469,9 @@ const HotelMenuPage = ({
             </section>
 
             {/* rate this hotel  */}
-            <section className="px-3 pt-10 pb-5 flex sm:justify-center sm:pt-20 sm:pb-10">
+            {/* <section className="px-3 pt-10 pb-5 flex sm:justify-center sm:pt-20 sm:pb-10">
               <RateThis type="hotel" />
-            </section>
+            </section> */}
 
             {/* reviews  */}
             {/* <section className="px-3 pt-5 pb-10 ">
@@ -479,7 +479,7 @@ const HotelMenuPage = ({
             </section> */}
 
             {/* Add this after the hotel info section */}
-            <div className="flex items-center gap-2 mt-4">
+            {/* <div className="flex items-center gap-2 mt-4">
               <Button
                 variant="ghost"
                 onClick={() => setShowPaymentHistory(true)}
@@ -488,7 +488,7 @@ const HotelMenuPage = ({
                 <History className="w-5 h-5" />
                 <span>Payment History</span>
               </Button>
-            </div>
+            </div> */}
           </div>
 
           {/* Add PaymentHistoryModal */}

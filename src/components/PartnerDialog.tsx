@@ -238,7 +238,7 @@ export function PartnerDialog() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between space-x-2 mt-6">
+          {/* <div className="flex items-center justify-between space-x-2 mt-6">
             <Label htmlFor="auth-method" className="text-sm text-gray-600">
               {"Sign up with Email"}
             </Label>
@@ -250,9 +250,7 @@ export function PartnerDialog() {
               }
               className="data-[state=checked]:bg-orange-600"
             />
-          </div>
-
-          {authMethod === "email" && (
+          </div> */}
             <>
               <div className="space-y-2 text-gray-700">
                 <Label htmlFor="email">Email</Label>
@@ -283,33 +281,14 @@ export function PartnerDialog() {
                 />
               </div>
             </>
-          )}
 
           <Button
             type="submit"
-            className={`w-full flex items-center justify-center gap-2 ${
-              authMethod === "google"
-                ? "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                : "bg-orange-600 hover:bg-orange-700 text-white"
-            }`}
+            className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white"
             disabled={isSubmitting}
           >
-            {isSubmitting ? (
-              "Please wait..."
-            ) : authMethod === "google" ? (
-              <>
-                <Image
-                  width={5}
-                  height={5}
-                  src="https://www.google.com/favicon.ico"
-                  alt="Google"
-                  className="w-5 h-5"
-                />
-                Sign up with Google
-              </>
-            ) : (
-              "Sign up with Email"
-            )}
+            
+              Sign up with Email
           </Button>
         </form>
       </ScrollArea>
