@@ -21,7 +21,7 @@ const page = async ({
 
   console.log("Table Number:", tableNumber);
 
-  if (tableNumber === 0) {
+  if (tableNumber !== 0) {
     return <HotelPage params={params} searchParams={searchParams} hId={qr_codes[0].partner_id} />;
   } else {
     return <QrPayment />;
