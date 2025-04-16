@@ -1,23 +1,28 @@
 import { GET_QR_TABLE } from "@/api/qrcodes";
+import HotelPage from "@/app/hotels/[id]/page";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import QrPayment from "@/screens/QrPayment";
-import { redirect } from "next/navigation";
 import React from "react";
 
-const page = async ({ params }: { params: Promise<{ id: string }> }) => {
+const page = async ({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ [key: string]: string | undefined }>;
+  searchParams: Promise<{ query: string , qrScan: string }>;
+}) => {
   const { id } = await params;
 
   const { qr_codes } = await fetchFromHasura(GET_QR_TABLE, {
-    id: id[0],
+    id: id?.[0],
   });
 
   const tableNumber = qr_codes[0].table_number;
 
   console.log("Table Number:", tableNumber);
-  
 
   if (tableNumber === 0) {
-    return redirect(`/hotels/${qr_codes[0].partner_id}/`);
+    return <HotelPage params={params} searchParams={searchParams} hId={qr_codes[0].partner_id} />;
   } else {
     return <QrPayment />;
   }

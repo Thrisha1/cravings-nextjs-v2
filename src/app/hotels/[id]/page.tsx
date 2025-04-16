@@ -8,9 +8,6 @@ import React from "react";
 import { Partner } from "@/store/authStore";
 import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
 
-type SearchParams = Promise<{ [key: string]: string | undefined }>;
-type Params = Promise<{ id: string }>;
-
 export interface HotelDataMenus extends Omit<MenuItem, 'category'> {
   category: {
     name: string;
@@ -26,16 +23,22 @@ export interface HotelData extends Partner {
 const HotelPage = async ({
   searchParams,
   params,
+  hId
 }: {
-  searchParams: SearchParams;
-  params: Params;
+  searchParams: Promise<{ [key: string]: string | undefined }>;
+  params: Promise<{ [key: string]: string | undefined }>;
+  hId: string;
 }) => {
   const { query: search, qrScan } = await searchParams;
   const { id } = await params;
 
+  const hotelId = Array.isArray(id) ? hId : id;
+  
+
   const getHotelData = unstable_cache(
     async (id: string) => {
       try {
+        
         const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
           id,
           end_time: getTimestampWithTimezone(new Date())
@@ -49,11 +52,11 @@ const HotelPage = async ({
         return null;
       }
     },
-    [id || ""],
-    { tags: [id || ""] }
+    [hotelId || ""],
+    { tags: [hotelId || ""] }
   );
 
-  const hoteldata = id ? await getHotelData(id) : null;
+  const hoteldata = hotelId ? await getHotelData(hotelId) : null;
   const offers = hoteldata?.offers;
 
   let filteredOffers: Offer[] = [];

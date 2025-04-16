@@ -25,7 +25,7 @@ const MenuItemsList = ({ hoteldata } : {
       setCategorisedItems(sortedItems);
     };
 
-    if (hoteldata.menus.length > 0) {
+    if (hoteldata?.menus?.length > 0) {
       fetchGroupedItems();
     }
   }, [hoteldata.menus]);
