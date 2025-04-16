@@ -1,3 +1,11 @@
+export const GET_QR_TABLE = `
+query GetQrTable($id: uuid!) {
+  qr_codes(where: {id: {_eq: $id}}) {
+    table_number,
+    partner_id
+  }
+}`;
+
 export const GET_QR_CODES_BY_PARTNER = `
   query GetQrCodesByPartner($partner_id: uuid!) {
     qr_codes(where: {partner_id: {_eq: $partner_id}}) {
