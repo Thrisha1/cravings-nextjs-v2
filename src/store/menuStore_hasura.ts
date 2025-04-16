@@ -11,6 +11,7 @@ import { AuthUser, useAuthStore } from "./authStore";
 import { useCategoryStore } from "./categoryStore_hasura";
 import { processImage } from "@/lib/processImage";
 import { uploadFileToS3 } from "@/app/actions/aws-s3";
+import { revalidateTag } from "@/app/actions/revalidate";
 
 export interface MenuItem {
   id?: string;
@@ -141,6 +142,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       set({
         items: [...get().items, { ...item, image_url: newMenu.image_url }],
       });
+      revalidateTag(userData?.id)
       get().groupItems();
     } catch (error) {
       console.error(error);
@@ -192,6 +194,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         item.id === id ? { ...item, ...updatedItem } : item
       );
       set({ items });
+      revalidateTag(userData?.id)
       get().groupItems();
     } catch (error) {
       console.error("Error ", error);
@@ -231,6 +234,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       });
 
       set({ categoryImages: images.menu });
+      revalidateTag(userData?.id)
       return images.menu as CategoryImages[];
     } catch (error) {
       console.error("Error ", error);

@@ -53,8 +53,8 @@ const HotelPage = async ({
         return null;
       }
     },
-    [hotelId || ""],
-    { tags: [hotelId || ""] }
+    [hotelId as string , "hotel-data"],
+    { tags: [hotelId as string , "hotel-data"] }
   );
 
   const hoteldata = hotelId ? await getHotelData(hotelId) : null;
