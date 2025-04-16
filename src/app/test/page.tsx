@@ -126,7 +126,7 @@ const Page = () => {
         {items.map((item) => (
           <div key={item.id} className="p-4 border-b">
             <h2 className="text-lg font-bold">{item.name}</h2>
-            <p>Category: {item.category}</p>
+            <p>Category: {item.category.name}</p>
             <p>Price: {item.price}</p>
             <img src={item.image_url} alt={item.name} className="w-32 h-32" />
             <p>Image Source: {item.image_source}</p>
