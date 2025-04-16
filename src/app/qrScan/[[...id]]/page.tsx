@@ -19,7 +19,7 @@ const page = async ({
 
   const tableNumber = qr_codes[0].table_number;
 
-  console.log("Table Number:", tableNumber);
+  // console.log("Table Number:", tableNumber);
 
   if (tableNumber !== 0) {
     return <HotelPage params={params} searchParams={searchParams} hId={qr_codes[0].partner_id} />;

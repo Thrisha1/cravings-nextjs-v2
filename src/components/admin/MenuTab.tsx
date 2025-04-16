@@ -14,7 +14,7 @@ import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { AddMenuItemModal } from "../bulkMenuUpload/AddMenuItemModal";
 import { EditMenuItemModal } from "./EditMenuItemModal";
-// import CategoryUpdateModal from "./CategoryUpdateModal";
+import { CategoryUpdateModal } from "./CategoryUpdateModal";
 import Image from "next/image";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
@@ -32,17 +32,18 @@ export function MenuTab() {
     groupedItems,
   } = useMenuStore();
   const [isCategoryEditing, setIsCategoryEditing] = useState(false);
-  const [editingCategory, seteditingCategory] = useState({
+  const [editingCategory, setEditingCategory] = useState({
     id: "",
     name: "",
+    priority: 0,
   });
   const { adminOffers, fetchAdminOffers } = useAdminOfferStore();
   const { userData } = useAuthStore();
-  const [catUpated, setCatUpdated] = useState(false);
+  const [catUpdated, setCatUpdated] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const pathname = useSearchParams();
+  const searchParams = useSearchParams();
   const [filteredGroupedItems, setFilteredGroupedItems] = useState(
     {} as Record<string, MenuItem[]>
   );
@@ -60,7 +61,7 @@ export function MenuTab() {
       fetchAdminOffers(userData?.id);
       fetchMenu();
     }
-  }, [userData, fetchAdminOffers]);
+  }, [userData, fetchAdminOffers, fetchMenu, catUpdated]);
 
   useEffect(() => {
     if (!isEditModalOpen) {
@@ -69,8 +70,6 @@ export function MenuTab() {
   }, [isEditModalOpen]);
 
   useEffect(() => {
-    console.log("pathname:", pathname);
-    
     if (!groupedItems) return;
 
     const filtered: Record<string, MenuItem[]> = {};
@@ -84,41 +83,56 @@ export function MenuTab() {
         filtered[category] = filteredCategoryItems;
       }
     });
+
     setFilteredGroupedItems(filtered);
-  }, [groupedItems, searchQuery , pathname]);
+  }, [groupedItems, searchQuery, searchParams]);
 
   const handleAddItem = (item: {
     name: string;
     price: string;
     image: string;
     description: string;
-    category: string;
+    category: string; // Form input is string
   }) => {
     addItem({
       name: item.name,
       price: parseFloat(item.price),
       image_url: item.image,
       description: item.description,
-      category: item.category,
+      category: {
+        id: "temp-id-" + Math.random().toString(36).substring(2, 9), // Temporary ID
+        name: item.category,
+        priority: 0, // Default priority
+      },
       image_source: "local",
       is_top: false,
     });
   };
-
+  
   const handleEditItem = (item: {
     id: string;
     name: string;
     price: string;
     image: string;
     description: string;
-    category: string;
+    category: string; // Form input is string
   }) => {
+    const existingItem = menu.find(menuItem => menuItem.id === item.id);
+    
+    if (!existingItem) {
+      throw new Error("Item not found");
+    }
+  
     updateItem(item.id, {
       name: item.name,
       price: parseFloat(item.price),
       image_url: item.image,
       description: item.description,
-      category: item.category,
+      category: {
+        id: existingItem.category.id, // Keep existing ID
+        name: item.category, // Update name from form
+        priority: existingItem.category.priority, // Keep existing priority
+      },
     });
   };
 
@@ -141,12 +155,28 @@ export function MenuTab() {
     setIsEditModalOpen(true);
   };
 
-  const handleCategoryUpdate = async (cat: string, catId: string) => {
+  const handleCategoryUpdate = (category: string, categoryItems: MenuItem[]) => {
+    if (categoryItems.length === 0) {
+      toast.error("No items in this category to update");
+      return;
+    }
+  
+    // Find first item that has a category ID (if any)
+    const categoryWithId = categoryItems.find(item => item.id);
+    // console.log("Category with ID:", categoryWithId);
+    
+  
     setIsCategoryEditing(true);
-    seteditingCategory({
-      id: catId,
-      name: cat,
+    setEditingCategory({
+      id: categoryWithId?.category.id!, // We've verified this exists
+      name: category,
+      priority: categoryWithId?.category.priority || 0,
     });
+  };
+  
+  const getCategoryPriority = (category: string) => {
+    const categoryItem = menu.find(item => item.category.name === category);
+    return categoryItem?.category.priority || 0;
   };
 
   return (
@@ -195,142 +225,143 @@ export function MenuTab() {
         />
       )}
 
-      {/* {isCategoryEditing && (
+      {isCategoryEditing && (
         <CategoryUpdateModal
-          catId={editingCategory?.id || ""}
-          cat={editingCategory?.name || ""}
+          catId={editingCategory.id}
+          cat={editingCategory.name}
+          priority={editingCategory.priority}
           isOpen={isCategoryEditing}
           setCatUpdated={setCatUpdated}
-          catUpdated={catUpated}
+          catUpdated={catUpdated}
           onOpenChange={() => setIsCategoryEditing(false)}
         />
-      )} */}
+      )}
 
-      <div className="grid gap-4 divide-y-2 divide-gray-300 ">
+      <div className="grid gap-4 divide-y-2 divide-gray-300">
         {Object.entries(filteredGroupedItems)
-          .sort()
-          .map(([category, items], index) => {
-            return (
-              <div key={category + index} className="pb-10">
-                <div className="flex items-center gap-2 group max-w-fit">
-                  <h1 className="text-2xl lg:text-4xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent">
-                    {category}
-                  </h1>
-                  <button
-                    onClick={() => {
-                      handleCategoryUpdate(category, items[0].category);
-                    }}
-                    className="group-hover:opacity-100 opacity-0 transition-opacity duration-300"
-                  >
-                    <Pen />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ">
-                  {items.map((item) => (
-                    <Card
-                      className="rounded-xl overflow-hidden grid"
-                      key={item.id}
-                    >
-                      <CardHeader className="flex flex-row justify-between">
-                        <div>
-                          {item.image_url.length > 0 && (
-                            <div className="relative w-32 h-32 overflow-hidden">
-                              <Image
-                                src={item.image_url}
-                                alt={item.name}
-                                fill
-                                className="w-full h-full object-cover rounded-lg"
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <CardTitle>{item.name}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-2xl font-bold">
-                          ₹{item.price.toFixed(2)}
-                        </p>
-                        {item.description && (
-                          <p className="text-gray-600 mt-2">
-                            {item.description}
-                          </p>
-                        )}
-                        <div className="flex items-center mt-2">
-                          <label className="mr-2">Mark as Top 3:</label>
-                          <Switch
-                            checked={item.is_top}
-                            onCheckedChange={async () => {
-                              try {
-                                const currentTopItems = menu.filter(
-                                  (i) => i.is_top === true
-                                );
-
-                                const topItemsCount = currentTopItems.length;
-
-                                if (item.is_top) {
-                                  await updateItem(item.id as string, {
-                                    is_top: false,
-                                  });
-                                } else if (topItemsCount < 3) {
-                                  await updateItem(item.id as string, {
-                                    is_top: true,
-                                  });
-                                } else {
-                                  toast.error(
-                                    "You can only mark up to 3 items as Top 3."
-                                  );
-                                  return;
-                                }
-                              } catch (error) {
-                                toast.error("Failed to update item status");
-                                console.error(error);
-                              }
-                            }}
-                          />
-                        </div>
-                      </CardContent>
-                      <CardFooter className="flex justify-end space-x-2">
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            openEditModal({
-                              id: item.id as string,
-                              name: item.name,
-                              price: item.price,
-                              image: item.image_url,
-                              description: item.description || "",
-                              category: item.category,
-                            })
-                          }
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={async () => {
-                            const isOfferActive = adminOffers.some(
-                              (offer) => offer.menuItemId === item.id
-                            );
-                            if (isOfferActive) {
-                              alert(
-                                `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
-                              );
-                              return;
-                            }
-                            deleteItem(item.id as string);
-                            await deleteFileFromS3(item.image_url);
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
+          .sort(([categoryA], [categoryB]) => {
+            const priorityA = getCategoryPriority(categoryA);
+            const priorityB = getCategoryPriority(categoryB);
+            return priorityA - priorityB;
+          })
+          .map(([category, items], index) => (
+            <div key={category + index} className="pb-10">
+              <div className="flex items-center gap-2 group max-w-fit">
+                <h1 className="text-2xl lg:text-4xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent">
+                  {category}
+                </h1>
+                <button
+                  onClick={() => handleCategoryUpdate(category, items)}
+                  className="group-hover:opacity-100 opacity-0 transition-opacity duration-300"
+                >
+                  <Pen />
+                </button>
               </div>
-            );
-          })}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {items.map((item) => (
+                  <Card
+                    className="rounded-xl overflow-hidden grid"
+                    key={item.id}
+                  >
+                    <CardHeader className="flex flex-row justify-between">
+                      <div>
+                        {item.image_url.length > 0 && (
+                          <div className="relative w-32 h-32 overflow-hidden">
+                            <Image
+                              src={item.image_url}
+                              alt={item.name}
+                              fill
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <CardTitle>{item.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-2xl font-bold">
+                        ₹{item.price.toFixed(2)}
+                      </p>
+                      {item.description && (
+                        <p className="text-gray-600 mt-2">
+                          {item.description}
+                        </p>
+                      )}
+                      <div className="flex items-center mt-2">
+                        <label className="mr-2">Mark as Top 3:</label>
+                        <Switch
+                          checked={item.is_top}
+                          onCheckedChange={async () => {
+                            try {
+                              const currentTopItems = menu.filter(
+                                (i) => i.is_top === true
+                              );
+
+                              const topItemsCount = currentTopItems.length;
+
+                              if (item.is_top) {
+                                await updateItem(item.id as string, {
+                                  is_top: false,
+                                });
+                              } else if (topItemsCount < 3) {
+                                await updateItem(item.id as string, {
+                                  is_top: true,
+                                });
+                              } else {
+                                toast.error(
+                                  "You can only mark up to 3 items as Top 3."
+                                );
+                                return;
+                              }
+                            } catch (error) {
+                              toast.error("Failed to update item status");
+                              console.error(error);
+                            }
+                          }}
+                        />
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          openEditModal({
+                            id: item.id as string,
+                            name: item.name,
+                            price: item.price,
+                            image: item.image_url,
+                            description: item.description || "",
+                            category: item.category.name,
+                          })
+                        }
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={async () => {
+                          const isOfferActive = adminOffers.some(
+                            (offer) => offer.menuItemId === item.id
+                          );
+                          if (isOfferActive) {
+                            alert(
+                              `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
+                            );
+                            return;
+                          }
+                          deleteItem(item.id as string);
+                          await deleteFileFromS3(item.image_url);
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ))}
       </div>
     </div>
   );

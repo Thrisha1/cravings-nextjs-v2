@@ -197,7 +197,7 @@ export default function ProfilePage() {
       if (!imgUrl) {
         throw new Error("Failed to upload image to S3");
       }
-      console.log("Image uploaded to S3:", imgUrl);
+      // console.log("Image uploaded to S3:", imgUrl);
 
       // Update user data
       await fetchFromHasura(updateStoreBannerMutation, {

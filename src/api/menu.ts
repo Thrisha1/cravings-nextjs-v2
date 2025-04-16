@@ -5,7 +5,11 @@ export const getMenu = `
         menu(where: {partner_id: {_eq: $partner_id}} , limit: 100) {
             id
             name
-            category { name }
+            category { 
+                id
+                name
+                priority
+            }
             image_url
             image_source
             partner_id
@@ -14,6 +18,19 @@ export const getMenu = `
             is_top
         }
     }
+`;
+
+export const update_category = `
+  mutation UpdateCategory($id: uuid!, $name: String, $priority: Int) {
+    update_category_by_pk(
+      pk_columns: { id: $id }
+      _set: { name: $name, priority: $priority }
+    ) {
+      id
+      name
+      priority
+    }
+  }
 `;
 
 export const getCategoryImages = `

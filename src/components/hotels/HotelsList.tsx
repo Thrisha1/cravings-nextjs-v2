@@ -29,7 +29,7 @@ export default function HotelsList({
 
     if (partners.length == totalCount) return;
 
-    console.log("Loading more partners...", partners.length);
+    // console.log("Loading more partners...", partners.length);
 
     await fetchPartners(6, partners.length);
   };

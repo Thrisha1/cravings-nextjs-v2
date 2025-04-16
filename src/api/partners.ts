@@ -37,6 +37,7 @@ query GetPartnerAndOffersQuery($id: uuid! , $end_time: timestamptz!) @cached {
       category {
         name
         id
+        priority
       }
       description
       id

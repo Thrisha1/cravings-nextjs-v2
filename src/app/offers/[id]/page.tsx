@@ -89,7 +89,7 @@ const page = async ({ params }: Props) => {
         id : id,
       })
 
-      console.log("User Data", userData);
+      // console.log("User Data", userData);
       
 
       return {

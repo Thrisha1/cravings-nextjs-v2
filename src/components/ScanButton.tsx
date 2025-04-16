@@ -5,7 +5,7 @@ const ScanButton = () => {
   const requestVideoPermission = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      console.log('Video stream acquired:', stream);
+      // console.log('Video stream acquired:', stream);
       alert('Video permission granted!');
       // Do something with the video stream
     } catch (error) {

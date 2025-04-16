@@ -15,7 +15,11 @@ import { uploadFileToS3 } from "@/app/actions/aws-s3";
 export interface MenuItem {
   id?: string;
   name: string;
-  category: string;
+  category: {
+    id: string;
+    name: string;
+    priority: number;
+  };
   category_id?: string;
   image_url: string;
   image_source?: string;
@@ -29,7 +33,9 @@ interface CategoryImages {
   image_url: string;
   image_source: string;
   category: {
+    id: string;
     name: string;
+    priority: number;
   };
   name: string;
 }
@@ -74,7 +80,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           res.menu.map((mi: any) => {
             return {
               ...mi,
-              category: mi.category.name,
+              category:{
+                id: mi.category.id,
+                name: mi.category.name,
+                priority: mi.category.priority,
+              }
             };
           })
         )) || [];
@@ -86,17 +96,16 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       set({ items: [] });
       return [];
     }
-  },
+  },  
 
   addItem: async (item) => {
     try {
-      console.log("Adding item: ", item);
       const userData = useAuthStore.getState().userData as AuthUser;
       const addCategory = useCategoryStore.getState().addCategory;
 
       if (!userData) throw new Error("User data not found");
 
-      const category = await addCategory(item.category);
+      const category = await addCategory(item.category.name);
       const category_id = category?.id;
 
       if (!category_id) throw new Error("Category ID not found");
@@ -129,8 +138,6 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         menu: [newMenu],
       });
 
-      console.log("Item added: ", itemRes);
-
       set({
         items: [...get().items, { ...item, image_url: newMenu.image_url }],
       });
@@ -150,7 +157,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       let changedItem = { ...otherItems };
 
       if (category) {
-        const cat = categories.find((cat) => cat.name === category);
+        const cat = categories.find((cat) => cat.name === category.name);
         catid = cat?.id;
         changedItem = { ...changedItem, category_id: catid };
       }
@@ -160,7 +167,6 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           updatedItem.image_url,
           updatedItem.image_source || ""
         );
-        console.log("Processed image URL: ", getProcessedBase64Url);
 
         const s3Url = await uploadFileToS3(
           getProcessedBase64Url,
@@ -235,16 +241,38 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
   groupItems: () => {
     const items = get().items;
-    const groupedItems: GroupedItems = items.reduce((acc, item) => {
-      if (!acc[item.category]) {
-        acc[item.category] = [];
+    
+    // 1. Group items by category name (case-insensitive)
+    const groupedByName: GroupedItems = items.reduce((acc, item) => {
+      const categoryName = item.category.name.toLowerCase();
+      if (!acc[categoryName]) {
+        acc[categoryName] = [];
       }
-      acc[item.category.toLowerCase()].push(item);
-      console.log("Grouped items: ", acc);
-      
+      acc[categoryName].push(item);
       return acc;
     }, {} as GroupedItems);
-
-    set({ groupedItems });
+  
+    // 2. Extract categories with their priority and original name
+    const categories = Object.entries(groupedByName).map(([lowerCaseName, items]) => {
+      // Get the original case name from the first item
+      const originalName = items[0].category.name;
+      const priority = items[0]?.category?.priority || 0;
+      return {
+        displayName: originalName, // Preserve original capitalization
+        lowerCaseName,
+        priority,
+        items
+      };
+    });
+  
+    // 3. Sort categories by priority (ascending)
+    categories.sort((a, b) => a.priority - b.priority);
+  
+    // 4. Create the final grouped object with original names
+    const groupedByPriority: GroupedItems = {};
+    categories.forEach(category => {
+      groupedByPriority[category.displayName] = category.items;
+    });
+    set({ groupedItems: groupedByPriority });
   },
 }));

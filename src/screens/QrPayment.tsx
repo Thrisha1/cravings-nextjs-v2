@@ -143,7 +143,6 @@ const QrPayment = () => {
 
 const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault();
-  console.log("handling submit");
 
   if (!userData) {
     setIsSignedIn(false);

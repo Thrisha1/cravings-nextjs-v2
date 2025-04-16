@@ -12,6 +12,7 @@ export interface HotelDataMenus extends Omit<MenuItem, 'category'> {
   category: {
     name: string;
     id: string;
+    priority: number;
   }
 }
 

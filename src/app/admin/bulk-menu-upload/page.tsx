@@ -41,7 +41,7 @@ const BulkUploadPage = () => {
   } = useBulkUpload();
 
   useEffect(() => {
-    console.log("Menu Items:", menuItems);
+    // console.log("Menu Items:", menuItems);
     
   },[menuItems]);
 

@@ -65,7 +65,6 @@ export const useOfferStore = create<OfferState>((set, get) => {
     offers: [],
 
     fetchOffer: async () => {
-      console.log("Fetching offers");
 
       if (get().offers.length > 0) {
         return get().offers;
@@ -146,8 +145,6 @@ export const useOfferStore = create<OfferState>((set, get) => {
           partner_id: user.id,
           start_time: getTimestampWithTimezone(new Date(offer.start_time)),
         };
-
-        console.log(newOffer);
 
         const addedData = await fetchFromHasura(addOffer, {
           ...newOffer,

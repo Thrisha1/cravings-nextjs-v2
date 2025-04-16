@@ -51,8 +51,6 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         partner_id: userData?.id,
       }).then((res) => res.category[0]);
 
-      console.log("Category fetched: ", category);
-
       if (category) {
         return category;
       }

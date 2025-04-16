@@ -82,7 +82,6 @@ const HotelMenuPage = ({
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
   const isLoggedIn = () => {
-    console.log("isLoggedIn", userData);
 
     if (userData) {
       return;
@@ -201,7 +200,6 @@ const HotelMenuPage = ({
   useEffect(() => {
     // getMenuItemsCount();
     // fetchMenuItems(true);
-    console.log("hoteldata" , hoteldata);
     
   }, [hoteldata]);
 
@@ -434,31 +432,34 @@ const HotelMenuPage = ({
 
                 <div className="grid divide-y-2 gap-1 divide-orange-200">
                   {hoteldata.menus?.filter((items) => items.is_top === true).map((item) => (
-                    <div key={item.id} className="py-6 rounded animate-bg px-2 flex-1">
-                      <div className="flex justify-between items-start">
-                        <div className="grid gap-2 ">
-                          <span className="capitalize  text-xl font-bold">
-                            {item.name}
-                          </span>
-                          <span className="font-bold text-xl text-orange-500">
-                            ₹{item.price}
-                          </span>
-                          <span className="text-sm text-black/50">
-                            {item.description}
-                          </span>
-                        </div>
-                        {item.image_url.length > 0 && (
-                          <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden ">
-                            <Image
-                              src={item.image_url}
-                              alt={item.name}
-                              fill
-                              className="object-cover w-full h-full"
-                            />
+                    <div key={item.id} className="py-6 rounded animate-bg px-4 flex-1">
+                      <div className="flex flex-col items-center gap-y-2 justify-between items-start w-full">
+                        <div className="flex justify-between w-full">
+                          <div className="flex flex-col justify-center w-1/2">
+                            <span className="capitalize  text-xl font-bold">
+                              {item.name}
+                            </span>
+                            <span className="font-bold text-xl text-orange-500">
+                              ₹{item.price}
+                            </span>
                           </div>
-                        )}
+                          {item.image_url.length > 0 && (
+                            <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden ">
+                              <Image
+                                src={item.image_url}
+                                alt={item.name}
+                                fill
+                                className="object-cover w-full h-full"
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm text-black/50">
+                          {item.description}
+                        </span>
                       </div>
                     </div>
+                    
                   ))}
                 </div>
               </div>

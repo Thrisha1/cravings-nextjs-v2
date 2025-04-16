@@ -21,7 +21,7 @@ export function OfferTicket({ isOpen, onClose, offer, token }: OfferTicketProps)
   const handleClaim = async () => {
     try {
       setIsLoading(true);
-      console.log(offer.partner?.district);
+      // console.log(offer.partner?.district);
       window.open(offer.partner?.district, '_blank');
     } catch (error) {
       console.error('Failed to process claim:', error);

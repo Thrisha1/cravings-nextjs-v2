@@ -38,7 +38,7 @@ export const CategoryDropdown = ({
     if (value === "new-cat") {
       setModalOpen(true);
     } else {
-      console.log("Selected category:", value);
+      // console.log("Selected category:", value);
       
       onChange(value);
     }

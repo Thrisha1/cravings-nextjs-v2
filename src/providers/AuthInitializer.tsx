@@ -8,7 +8,6 @@ const AuthInitializer = () => {
   const { fetchUser } = useAuthStore();
 
   useEffect(() => {
-    console.log("AuthInitializer started");
     
     fetchUser().catch((error) => {
       console.error("Failed to fetch user:", error);
