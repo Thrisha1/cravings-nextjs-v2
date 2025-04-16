@@ -7,8 +7,8 @@ import {
   getMenu,
   updateMenu,
 } from "@/api/menu";
-import { AuthUser, useAuthStore } from "./authStore";
-import { useCategoryStore } from "./categoryStore_hasura";
+import { AuthUser, Partner, useAuthStore } from "./authStore";
+import { Category, useCategoryStore } from "./categoryStore_hasura";
 import { processImage } from "@/lib/processImage";
 import { uploadFileToS3 } from "@/app/actions/aws-s3";
 import { revalidateTag } from "@/app/actions/revalidate";
@@ -47,7 +47,7 @@ interface GroupedItems {
 
 interface MenuState {
   items: MenuItem[];
-  groupedItems : GroupedItems;
+  groupedItems: GroupedItems;
   categoryImages: CategoryImages[];
   addItem: (item: Omit<MenuItem, "id">) => Promise<void>;
   fetchMenu: (hotelId?: string) => Promise<MenuItem[] | []>;
@@ -55,6 +55,7 @@ interface MenuState {
   deleteItem: (id: string) => Promise<void>;
   fetchCategorieImages: (category: string) => Promise<CategoryImages[]>;
   groupItems: () => void;
+  updatedCategories: (categories: Category[]) => void;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -81,11 +82,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           res.menu.map((mi: any) => {
             return {
               ...mi,
-              category:{
+              category: {
                 id: mi.category.id,
                 name: mi.category.name,
                 priority: mi.category.priority,
-              }
+              },
             };
           })
         )) || [];
@@ -97,7 +98,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       set({ items: [] });
       return [];
     }
-  },  
+  },
 
   addItem: async (item) => {
     try {
@@ -142,7 +143,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       set({
         items: [...get().items, { ...item, image_url: newMenu.image_url }],
       });
-      revalidateTag(userData?.id)
+      revalidateTag(userData?.id);
       get().groupItems();
     } catch (error) {
       console.error(error);
@@ -158,8 +159,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       let catid;
       let changedItem = { ...otherItems };
 
-      if (category) {
-        const cat = categories.find((cat) => cat.id === category.id);
+      if (category?.id !== undefined) {
+        const cat = categories.find(
+          (cat) =>
+            cat.name.toLowerCase().trim() === category.name.toLowerCase().trim()
+        );
         catid = cat?.id;
         changedItem = { ...changedItem, category_id: catid };
       }
@@ -194,7 +198,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         item.id === id ? { ...item, ...updatedItem } : item
       );
       set({ items });
-      revalidateTag(userData?.id)
+      revalidateTag(userData?.id);
       get().groupItems();
     } catch (error) {
       console.error("Error ", error);
@@ -234,7 +238,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       });
 
       set({ categoryImages: images.menu });
-      revalidateTag(userData?.id)
+      revalidateTag(userData?.id);
       return images.menu as CategoryImages[];
     } catch (error) {
       console.error("Error ", error);
@@ -245,7 +249,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
   groupItems: () => {
     const items = get().items;
-    
+
     // 1. Group items by category name (case-insensitive)
     const groupedByName: GroupedItems = items.reduce((acc, item) => {
       const categoryName = item.category.name.toLowerCase();
@@ -255,28 +259,58 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       acc[categoryName].push(item);
       return acc;
     }, {} as GroupedItems);
-  
+
     // 2. Extract categories with their priority and original name
-    const categories = Object.entries(groupedByName).map(([lowerCaseName, items]) => {
-      // Get the original case name from the first item
-      const originalName = items[0].category.name;
-      const priority = items[0]?.category?.priority || 0;
-      return {
-        displayName: originalName, // Preserve original capitalization
-        lowerCaseName,
-        priority,
-        items
-      };
-    });
-  
+    const categories = Object.entries(groupedByName).map(
+      ([lowerCaseName, items]) => {
+        // Get the original case name from the first item
+        const originalName = items[0].category.name;
+        const priority = items[0]?.category?.priority || 0;
+        return {
+          displayName: originalName, // Preserve original capitalization
+          lowerCaseName,
+          priority,
+          items,
+        };
+      }
+    );
+
     // 3. Sort categories by priority (ascending)
     categories.sort((a, b) => a.priority - b.priority);
-  
+
     // 4. Create the final grouped object with original names
     const groupedByPriority: GroupedItems = {};
-    categories.forEach(category => {
+    categories.forEach((category) => {
       groupedByPriority[category.displayName] = category.items;
     });
     set({ groupedItems: groupedByPriority });
+  },
+
+  updatedCategories: async (categories: Category[]) => {
+
+    const fetchCategories = useCategoryStore.getState().fetchCategories;
+    const user = useAuthStore.getState().userData as Partner;
+
+    let allCats = categories;
+
+    if (!categories || categories.length === 0) {
+      allCats = await fetchCategories(user.id) || [];
+    }
+
+    const updatedItems = get().items.map((item: MenuItem) => {
+      const category = allCats?.find((cat) => cat.id === item.category.id);
+
+      return {
+        ...item,
+        category_id: category?.id || item.category_id,
+        category: {
+          ...item.category,
+          name: category?.name || item.category.name,
+          priority: category?.priority || item.category.priority,
+        },
+      };
+    });
+    set({ items: updatedItems });
+    get().groupItems();
   },
 }));

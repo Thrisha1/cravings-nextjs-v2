@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { fetchFromHasura } from "@/lib/hasuraClient";
-import { update_category } from "@/api/menu"; 
 import { toast } from "sonner";
+import { Category, useCategoryStore } from "@/store/categoryStore_hasura";
+import { useMenuStore } from "@/store/menuStore_hasura";
 
 interface CategoryUpdateModalProps {
   catId: string;
@@ -29,15 +29,16 @@ export function CategoryUpdateModal({
     const [categoryName, setCategoryName] = useState(cat);
     const [priority, setPriority] = useState(initialPriority);
     const [isLoading, setIsLoading] = useState(false);
-  
+    const { updateCategory } = useCategoryStore();
+
     const handleSubmit = async () => {  
       try {
         setIsLoading(true);
-        await fetchFromHasura(update_category, {
+        await updateCategory({
           id: catId,
           name: categoryName,
-          priority: Number(priority),
-        });
+          priority,
+        } as Category);
         setCatUpdated(!catUpdated);
         onOpenChange(false);
         toast.success("Category updated successfully");

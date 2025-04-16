@@ -108,30 +108,30 @@ export function MenuTab() {
       is_top: false,
     });
   };
-  
+
   const handleEditItem = (item: {
     id: string;
     name: string;
     price: string;
     image: string;
     description: string;
-    category: string; // Form input is string
+    category: string;
   }) => {
-    const existingItem = menu.find(menuItem => menuItem.id === item.id);
-    
+    const existingItem = menu.find((menuItem) => menuItem.id === item.id);
+
     if (!existingItem) {
       throw new Error("Item not found");
     }
-  
+
     updateItem(item.id, {
       name: item.name,
       price: parseFloat(item.price),
       image_url: item.image,
       description: item.description,
       category: {
-        id: existingItem.category.id, // Keep existing ID
-        name: item.category, // Update name from form
-        priority: existingItem.category.priority, // Keep existing priority
+        id: existingItem.category.id,
+        name: item.category,
+        priority: existingItem.category.priority,
       },
     });
   };
@@ -155,17 +155,19 @@ export function MenuTab() {
     setIsEditModalOpen(true);
   };
 
-  const handleCategoryUpdate = (category: string, categoryItems: MenuItem[]) => {
+  const handleCategoryUpdate = (
+    category: string,
+    categoryItems: MenuItem[]
+  ) => {
     if (categoryItems.length === 0) {
       toast.error("No items in this category to update");
       return;
     }
-  
+
     // Find first item that has a category ID (if any)
-    const categoryWithId = categoryItems.find(item => item.id);
+    const categoryWithId = categoryItems.find((item) => item.id);
     // console.log("Category with ID:", categoryWithId);
-    
-  
+
     setIsCategoryEditing(true);
     setEditingCategory({
       id: categoryWithId?.category.id!, // We've verified this exists
@@ -173,9 +175,9 @@ export function MenuTab() {
       priority: categoryWithId?.category.priority || 0,
     });
   };
-  
+
   const getCategoryPriority = (category: string) => {
-    const categoryItem = menu.find(item => item.category.name === category);
+    const categoryItem = menu.find((item) => item.category.name === category);
     return categoryItem?.category.priority || 0;
   };
 
@@ -284,9 +286,7 @@ export function MenuTab() {
                         ₹{item.price.toFixed(2)}
                       </p>
                       {item.description && (
-                        <p className="text-gray-600 mt-2">
-                          {item.description}
-                        </p>
+                        <p className="text-gray-600 mt-2">{item.description}</p>
                       )}
                       <div className="flex items-center mt-2">
                         <label className="mr-2">Mark as Top 3:</label>

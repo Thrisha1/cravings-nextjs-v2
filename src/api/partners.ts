@@ -27,7 +27,7 @@ export const getPartnerByIdQuery = `
   `; 
 
 export const getPartnerAndOffersQuery = `
-query GetPartnerAndOffersQuery($id: uuid! , $end_time: timestamptz!) @cached {
+query GetPartnerAndOffersQuery($id: uuid! , $end_time: timestamptz!) {
   partners(where: {id: {_eq: $id}}) {
     district
     location

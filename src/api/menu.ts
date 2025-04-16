@@ -1,7 +1,7 @@
 /*...........query...........*/
 
 export const getMenu = `
-    query GetMenu($partner_id: uuid!)  @cached {
+    query GetMenu($partner_id: uuid!)  {
         menu(where: {partner_id: {_eq: $partner_id}} , limit: 100) {
             id
             name
@@ -34,7 +34,7 @@ export const update_category = `
 `;
 
 export const getCategoryImages = `
-  query GetMenuCategoryImages($partner_id: uuid!, $category: String!) @cached {
+  query GetMenuCategoryImages($partner_id: uuid!, $category: String!) {
     menu(
       where: {
         category: { name: { _eq: $category } },

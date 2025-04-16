@@ -29,6 +29,6 @@ export function fetchFromHasura(
     })
     .catch((error: any) => {
       console.error("Error from Hasura: ", error);
-      // throw error;
+      throw error;
     });
 }
