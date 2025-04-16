@@ -40,6 +40,7 @@ export interface Offer {
   items_available: number;
   offer_price: number;
   start_time: string;
+  deletion_status?: number;
   menu: MenuItem;
   partner?: Partner;
 }

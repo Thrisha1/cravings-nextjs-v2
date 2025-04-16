@@ -202,20 +202,28 @@ export default function OfferDetail({
               )}
 
               <div className={`h-[36px] w-full`}>
-                {userData ? (
-                  <Button
-                    onClick={handleClaimOffer}
-                    className="w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm"
-                  >
-                    {isClaimed ? "Claimed" : "Claim Offer"}
+                {offer.deletion_status === 1 ? (
+                  <Button className="w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-gray-600 hover:bg-gray-700 rounded-sm">
+                    Expired
                   </Button>
                 ) : (
-                  <Link
-                    className={`w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm `}
-                    href={"/login"}
-                  >
-                    Claim Offer
-                  </Link>
+                  <>
+                    {userData ? (
+                      <Button
+                        onClick={handleClaimOffer}
+                        className="w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm"
+                      >
+                        {isClaimed ? "Claimed" : "Claim Offer"}
+                      </Button>
+                    ) : (
+                      <Link
+                        className={`w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm `}
+                        href={"/login"}
+                      >
+                        Claim Offer
+                      </Link>
+                    )}
+                  </>
                 )}
               </div>
             </div>

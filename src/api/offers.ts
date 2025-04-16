@@ -1,7 +1,7 @@
 /*...........query...........*/
 
 export const getOfferById = `
-  query GetOfferById($id: uuid!) @cached {
+  query GetOfferById($id: uuid!) {
     offers(where: {id: {_eq: $id}}) {
       created_at
       id
@@ -10,6 +10,7 @@ export const getOfferById = `
       enquiries
       items_available
       start_time
+      deletion_status
       menu {
         category {
           name
@@ -29,10 +30,12 @@ export const getOfferById = `
     }
   }
 `;
-
 export const getOffers = `
   query GetOffers {
-    offers(order_by: {created_at: desc}) {
+    offers(
+      where: { deletion_status: { _eq: 0 } },
+      order_by: { created_at: desc }
+    ) {
       created_at
       id
       offer_price
@@ -62,7 +65,7 @@ export const getOffers = `
 
 export const getPartnerOffers = `
   query GetPartnerOffers($partner_id: uuid!, $end_time: timestamptz!) @cached {
-  offers(where: {partner_id: {_eq: $partner_id}, end_time: {_gt: $end_time}}) {
+  offers(where: {deletion_status: {_eq: 0 } ,partner_id: {_eq: $partner_id}, end_time: {_gt: $end_time}}) {
     created_at
     id
     offer_price
@@ -121,12 +124,12 @@ mutation AddOffer($created_at: timestamptz!, $end_time: timestamptz!, $items_ava
 `;
 
 export const deleteOffer = `
-  mutation DeleteOffer($id: uuid!) {
-    delete_offers(where: { id: { _eq: $id } }) {
-      affected_rows
-      returning {
-        id
-      }
+mutation SoftDeleteOffer($id: uuid!) {
+    update_offers(
+      where: { id: { _eq: $id } },
+      _set: { deletion_status: 1 }
+    ){
+      affected_rows 
     }
   }
 `;
