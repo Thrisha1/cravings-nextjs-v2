@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UtensilsCrossed, Tag, LogOutIcon, Pencil } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
-import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -27,15 +26,11 @@ import { deleteUserMutation } from "@/api/auth";
 import { updateUpiIdMutation, updateStoreBannerMutation } from "@/api/partners";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import Link from "next/link";
+import { useClaimedOffersStore } from "@/store/claimedOfferStore_hasura";
 
 export default function ProfilePage() {
-  const {
-    userData,
-    loading: authLoading,
-    signOut
-  } = useAuthStore();
-  const { claimedOffers, isLoading: claimedOffersLoading } =
-    useClaimedOffersStore();
+  const { userData, loading: authLoading, signOut } = useAuthStore();
+  const { claimedOffers } = useClaimedOffersStore();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,35 +39,36 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
 
   const [bannerImage, setBannerImage] = useState<string | null>(
-    userData?.role === 'partner' ? userData.store_banner || null : null
-  )
+    userData?.role === "partner" ? userData.store_banner || null : null
+  );
   const [isBannerUploading, setBannerUploading] = useState(false);
   const [isBannerChanged, setIsBannerChanged] = useState(false);
 
-  const isLoading = authLoading || claimedOffersLoading;
+  const isLoading = authLoading ;
 
   useEffect(() => {
-    if(userData?.role === 'partner') {
-      setBannerImage(userData.store_banner || null); 
+    if (userData?.role === "partner") {
+      setBannerImage(userData.store_banner || null);
     }
   }, [userData]);
 
   const profile = {
-    name: userData?.role === 'partner' 
-      ? userData?.name 
-      : userData?.role === 'user' 
-        ? userData?.full_name 
-        : userData?.role === 'superadmin'
-          ? "Super Admin"
-          : "Guest",
+    name:
+      userData?.role === "partner"
+        ? userData?.name
+        : userData?.role === "user"
+        ? userData?.full_name
+        : userData?.role === "superadmin"
+        ? "Super Admin"
+        : "Guest",
     offersClaimed: claimedOffers.length || 0,
     restaurantsSubscribed: 0,
     claimedOffers: claimedOffers.map((offer) => ({
-      id: offer.offerId,
-      foodName: offer.offerDetails.dishName,
-      restaurant: offer.offerDetails.hotelName,
-      originalPrice: offer.offerDetails.originalPrice,
-      newPrice: offer.offerDetails.newPrice,
+      id: offer.id,
+      foodName: offer.offer?.menu.name,
+      restaurant: offer.partner?.store_name,
+      originalPrice: offer.offer?.menu.price,
+      newPrice: offer.offer?.offer_price,
     })),
   };
 
@@ -154,25 +150,25 @@ export default function ProfilePage() {
 
   const handleBannerUpload = async () => {
     if (!userData) return;
-  
+
     setBannerUploading(true);
     try {
       // Convert the bannerBase64 to WebP
       const img = document.createElement("img");
       img.src = bannerImage as string;
       await new Promise((resolve) => (img.onload = resolve));
-  
+
       const canvas = document.createElement("canvas");
       const maxWidth = 500;
       const ratio = maxWidth / img.width;
       canvas.width = maxWidth;
       canvas.height = img.height * ratio;
-  
+
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Failed to get canvas context");
-  
+
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  
+
       const webpBase64WithPrefix: string = await new Promise(
         (resolve, reject) => {
           canvas.toBlob(
@@ -181,7 +177,7 @@ export default function ProfilePage() {
                 reject(new Error("Failed to convert image to WebP"));
                 return;
               }
-  
+
               const reader = new FileReader();
               reader.onloadend = () => resolve(reader.result as string);
               reader.readAsDataURL(blob);
@@ -191,13 +187,13 @@ export default function ProfilePage() {
           );
         }
       );
-  
+
       // Upload to S3
       const imgUrl = await uploadFileToS3(
         webpBase64WithPrefix,
         `hotel_banners/${userData.id}.webp`
       );
-  
+
       if (!imgUrl) {
         throw new Error("Failed to upload image to S3");
       }
@@ -206,10 +202,10 @@ export default function ProfilePage() {
       // Update user data
       await fetchFromHasura(updateStoreBannerMutation, {
         userId: userData?.id,
-        storeBanner: imgUrl, 
-      })
+        storeBanner: imgUrl,
+      });
       toast.success("Banner updated successfully!");
- 
+
       setIsBannerChanged(false);
     } catch (error) {
       console.error("Error updating banner:", error);
@@ -220,7 +216,7 @@ export default function ProfilePage() {
       setBannerUploading(false);
     }
   };
-  
+
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
   }
@@ -258,10 +254,13 @@ export default function ProfilePage() {
                 {profile.restaurantsSubscribed} Restaurants Subscribed
               </Badge>
               {userData?.role === "partner" && (
-                <Link href={`/hotels/${userData?.id}`} className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
+                <Link
+                  href={`/hotels/${userData?.id}`}
+                  className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
+                >
                   <Tag className="sm:size-4 size-8 mr-2" />
                   View My Restaurant
-                </Link> 
+                </Link>
               )}
             </div>
           </CardContent>
@@ -293,10 +292,10 @@ export default function ProfilePage() {
                     </div>
                     <div className="text-right">
                       <p className="text-gray-500 line-through text-sm">
-                        ₹{offer.originalPrice.toFixed(0)}
+                        ₹{offer?.originalPrice?.toFixed(0)}
                       </p>
                       <p className="text-xl font-bold text-orange-600">
-                        ₹{offer.newPrice.toFixed(0)}
+                        ₹{offer?.newPrice?.toFixed(0)}
                       </p>
                     </div>
                   </div>
@@ -391,12 +390,18 @@ export default function ProfilePage() {
                   ) : (
                     <div className="flex justify-between items-center w-full">
                       <span className="text-gray-700">
-                        {userData.role === 'partner' && userData.upi_id ? userData.upi_id : "No UPI ID set"}
+                        {userData.role === "partner" && userData.upi_id
+                          ? userData.upi_id
+                          : "No UPI ID set"}
                       </span>
                       <Button
                         onClick={() => {
                           setIsEditing(true);
-                          setUpiId(userData.role === 'partner' && userData.upi_id? userData.upi_id : "");
+                          setUpiId(
+                            userData.role === "partner" && userData.upi_id
+                              ? userData.upi_id
+                              : ""
+                          );
                         }}
                         variant="ghost"
                         className="hover:bg-orange-100"
@@ -437,7 +442,9 @@ export default function ProfilePage() {
                 </AlertDialogTrigger>
                 <AlertDialogContent className="max-w-[90%] sm:max-w-lg rounded-xl">
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogTitle>
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
                       Heads up! Your account is set to be deleted in 30 days. If
                       you&apos;d like to keep your account active, simply log in

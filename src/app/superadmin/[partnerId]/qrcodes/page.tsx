@@ -2,12 +2,13 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import { GET_QR_CODES_BY_PARTNER } from "@/api/qrcodes";
 import { QrCodesTable } from "@/components/superAdmin/QrCodesTable";
 
+
 export default async function PartnerQrCodesPage({
   params,
 }: {
-  params: { partnerId: string };
+  params: Promise<{ partnerId: string }>;
 }) {
-  const { partnerId } = params;
+  const { partnerId } = await params;
   const response = await fetchFromHasura(GET_QR_CODES_BY_PARTNER, {
     partner_id: partnerId,
   });

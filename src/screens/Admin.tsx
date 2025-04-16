@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+// import { useEffect, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MenuTab } from "@/components/admin/MenuTab";
 import { OffersTab } from "@/components/admin/OffersTab";
-import { useMenuStore } from "@/store/menuStore";
+// import { useMenuStore } from "@/store/menuStore";
 import { useAuthStore } from "@/store/authStore";
-import { redirect } from "next/navigation";
+// import { redirect } from "next/navigation";
 import { Partner } from "@/api/partners";
 
 export default function Admin() {

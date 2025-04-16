@@ -1,13 +1,13 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
-import { useAuthStore, AuthUser } from "@/store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { UtensilsCrossed, Menu, X, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
-import { useClaimedOffersStore } from "@/store/claimedOffersStore";
+// import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import LocationAccess from "./LocationAccess";
 // import SyncUserOfferCoupons from "./SyncUserOfferCoupons";
 
@@ -16,10 +16,10 @@ export function Navbar() {
   const pathname = usePathname();
   const location = pathname.split("?")[0];
   const { userData } = useAuthStore(); // Now we only use userData
-  const { offersClaimable } = useClaimedOffersStore();
+  // const { offersClaimable } = useClaimedOffersStore();
   const [isOpen, setIsOpen] = useState(false);
   const [userLocation, setUserLocation] = useState("");
-  const [isTooltipOpen, setIsTooltipOpen] = useState(true);
+  // const [isTooltipOpen, setIsTooltipOpen] = useState(true);
 
   // Add array of paths where navbar should be hidden
   const hiddenPaths = [

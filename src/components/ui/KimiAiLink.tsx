@@ -1,76 +1,51 @@
-import { addCategory, getCategory, getPartnerCategories } from "@/api/category";
-import { fetchFromHasura } from "@/lib/hasuraClient";
-import { create } from "zustand";
-import { useAuthStore } from "@/store/authStore";
+import { toast } from "sonner";
 
-export interface Category {
-  id: string;
-  name: string;
-  partner_id?: string;
+interface KimiAiLinkProps {
+  className?: string;
 }
 
-interface CategoryState {
-  categories: Category[];
-  fetchCategories: (addedBy: string) => Promise<Category[] | void>;
-  addCategory: (cat: string) => Promise<Category | void>;
+export function KimiAiLink({ className = "" }: KimiAiLinkProps) {
+  const handleClick = async () => {
+    if (!document.hasFocus()) {
+      window.focus();
+    }
+    navigator.clipboard.writeText(
+      `Extract the menu items from the provided text and convert them into a valid JSON array following these specifications:
+      
+      1. Required JSON Structure for each item:
+      {
+        "name": "string (item name)",
+        "price": number (numeric value only),
+        "description": "string (brief 5-10 word description)",
+        "category": "string"
+      }
+
+      3. Rules:
+      - Price must be a number (no currency symbols)
+      - Descriptions should be concise but descriptive
+      - Output must be valid JSON (no trailing commas)
+      - Return only the JSON array with no additional text
+      
+      4. Example Output:
+      [
+        {
+          "name": "Example Dish",
+          "price": 200,
+          "description": "Brief description of the dish",
+          "category": "Mandhi Session"
+        }
+      ]`
+    );
+    toast.success("Prompt copied to clipboard!");
+    window.open("https://kimi.moonshot.cn/", "_blank");
+  };
+
+  return (
+    <div
+      onClick={handleClick}
+      className={`underline text-sm py-2 text-blue-500 hover:text-blue-600 block text-right ${className}`}
+    >
+      Go to KIMI.ai {"(prompt is copied to clipboard)"} {"->"}
+    </div>
+  );
 }
-
-export const useCategoryStore = create<CategoryState>((set, get) => ({
-  categories: [],
-
-  fetchCategories: async (addedBy: string) => {
-    try {
-      if (get().categories.length > 0) {
-        return get().categories as Category[];
-      }
-
-      const categories = await fetchFromHasura(getPartnerCategories, {
-        partner_id: addedBy,
-      }).then((res) => res.category);
-
-      set({ categories });
-      return categories as Category[];
-    } catch (error: unknown) {
-      console.error(
-        "Fetch categories error:",
-        error instanceof Error ? error.message : String(error)
-      );
-      return [];
-    }
-  },
-
-  addCategory: async (cat) => {
-    try {
-
-      if(!cat) throw new Error("Category name is required");
-
-      const userData = useAuthStore.getState().userData;
-
-      const category = await fetchFromHasura(getCategory, {
-        name: cat.toLowerCase(),
-        partner_id: userData?.id,
-      }).then((res) => res.category[0]);
-
-      console.log("Category fetched: ", category);
-
-      if (category) {
-        return category;
-      }
-
-      const addedCat = await fetchFromHasura(addCategory, {
-        category: {
-          name: cat?.toLowerCase(),
-          partner_id: userData?.id,
-        },
-      }).then((res) => res.insert_category.returning[0]);
-
-      set({
-        categories: [...get().categories, { name: cat, id: addedCat.id }],
-      });
-
-      return addedCat as Category;
-    } catch (error: unknown) {
-      console.error(error);
-    }
-  },
-}));

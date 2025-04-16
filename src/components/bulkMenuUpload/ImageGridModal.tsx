@@ -1,10 +1,10 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useState, useEffect } from "react";
-import { getMenuItemImage } from "@/store/menuStore";
+// import { getMenuItemImage } from "@/store/menuStore";
 import Image from "next/image";
 import { Loader2, Check, AlertCircle, Upload } from "lucide-react";
 import AIImageGenerateModal from "@/components/AIImageGenerateModal";
-import ImageUploadModal from "../ImageUploadModal";
+// import ImageUploadModal from "../ImageUploadModal";
 import { useMenuStore } from "@/store/menuStore_hasura";
 
 interface ImageGridModalProps {
@@ -162,13 +162,13 @@ export function ImageGridModal({
         onOpenChange={setAIImageModalOpen}
       />
 
-      <ImageUploadModal
+      {/* <ImageUploadModal
         isOpen={isImageUploadModalOpen}
         onOpenChange={setImageUploadModalOpen}
         addNewImage={addNewImage}
         category={category}
         itemName={itemName}
-      />
+      /> */}
     </Dialog>
   );
 }
