@@ -159,7 +159,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       let changedItem = { ...otherItems };
 
       if (category) {
-        const cat = categories.find((cat) => cat.name === category.name);
+        const cat = categories.find((cat) => cat.id === category.id);
         catid = cat?.id;
         changedItem = { ...changedItem, category_id: catid };
       }

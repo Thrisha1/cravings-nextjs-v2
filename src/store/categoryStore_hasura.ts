@@ -27,6 +27,8 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       const categories = await fetchFromHasura(getPartnerCategories, {
         partner_id: addedBy,
       }).then((res) => res.category);
+      console.log("categories", categories);
+      
 
       set({ categories });
       return categories as Category[];
@@ -47,7 +49,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       const userData = useAuthStore.getState().userData;
 
       const category = await fetchFromHasura(getCategory, {
-        name: cat.toLowerCase(),
+        name: cat.toLowerCase().trim(),
         partner_id: userData?.id,
       }).then((res) => res.category[0]);
 
@@ -57,13 +59,13 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const addedCat = await fetchFromHasura(addCategory, {
         category: {
-          name: cat?.toLowerCase(),
+          name: cat?.toLowerCase().trim(),
           partner_id: userData?.id,
         },
       }).then((res) => res.insert_category.returning[0]);
 
       set({
-        categories: [...get().categories, { name: cat, id: addedCat.id }],
+        categories: [...get().categories, { name: cat.toLowerCase().trim(), id: addedCat.id }],
       });
 
       return addedCat as Category;

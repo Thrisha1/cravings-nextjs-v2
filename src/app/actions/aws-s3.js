@@ -11,13 +11,17 @@ const s3Client = new S3Client({
     accessKeyId: process.env.NEXT_PUBLIC_S3_ACCESS_KEY,
     secretAccessKey: process.env.NEXT_PUBLIC_S3_SECRET_KEY,
   },
-  requestTimeout: 120000, 
+  requestTimeout: 120000,
   maxAttempts: 3,
 });
 
 export async function uploadFileToS3(file, filename) {
   try {
     if (!file) throw new Error("File not provided");
+
+    if (file.includes("cravingsbucket")) {
+      return file;
+    }
 
     let buffer;
     let contentType;
