@@ -13,7 +13,12 @@ export const useBulkUpload = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const { userData } = useAuthStore();
-  const { addItem, items: menu, fetchMenu , fetchCategorieImages } = useMenuStore();
+  const {
+    addItem,
+    items: menu,
+    fetchMenu,
+    fetchCategorieImages,
+  } = useMenuStore();
   const [editingItem, setEditingItem] = useState<{
     index: number;
     item: MenuItem;
@@ -85,7 +90,11 @@ export const useBulkUpload = () => {
         image: item.image || "",
         isSelected: false,
         isAdded: false,
-        category: item.category || "",
+        category: {
+          name: item.category,
+          id: item.category,
+          priority: 0,
+        },
       }));
 
       setMenuItems(initialItems);
@@ -123,16 +132,15 @@ export const useBulkUpload = () => {
 
     setIsUploading((prev) => ({ ...prev, [index]: true }));
     try {
-
       const convertImageToLocalBlob = async (url: string) => {
         const response = await fetch(url);
         const blob = await response.blob();
         return URL.createObjectURL(blob);
-      }
+      };
 
       let image_url = item.image;
 
-      if(image_url.length > 0) {
+      if (image_url.length > 0) {
         image_url = await convertImageToLocalBlob(item.image);
       }
 
@@ -279,7 +287,10 @@ export const useBulkUpload = () => {
     await handleAddToMenu(item, index, hotelId);
   };
 
-  const handleCategoryChange = async (index: number, category: { name: string; id: string; priority: number }) => {
+  const handleCategoryChange = async (
+    index: number,
+    category: { name: string; id: string; priority: number }
+  ) => {
     const updatedItems = [...menuItems];
     updatedItems[index] = {
       ...updatedItems[index],
@@ -290,7 +301,9 @@ export const useBulkUpload = () => {
     setMenuItems(updatedItems);
 
     try {
-      const urls = (await fetchCategorieImages(category.name)).map((img) => img.image_url);
+      const urls = (await fetchCategorieImages(category.name)).map(
+        (img) => img.image_url
+      );
       if (urls && urls.length > 0) {
         updatedItems[index].image = urls[0];
         setMenuItems([...updatedItems]);
