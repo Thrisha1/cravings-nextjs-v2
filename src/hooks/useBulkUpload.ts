@@ -279,7 +279,7 @@ export const useBulkUpload = () => {
     await handleAddToMenu(item, index, hotelId);
   };
 
-  const handleCategoryChange = async (index: number, category: string) => {
+  const handleCategoryChange = async (index: number, category: { name: string; id: string; priority: number }) => {
     const updatedItems = [...menuItems];
     updatedItems[index] = {
       ...updatedItems[index],
@@ -290,7 +290,7 @@ export const useBulkUpload = () => {
     setMenuItems(updatedItems);
 
     try {
-      const urls = (await fetchCategorieImages(category)).map((img) => img.image_url);
+      const urls = (await fetchCategorieImages(category.name)).map((img) => img.image_url);
       if (urls && urls.length > 0) {
         updatedItems[index].image = urls[0];
         setMenuItems([...updatedItems]);

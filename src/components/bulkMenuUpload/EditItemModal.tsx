@@ -12,7 +12,6 @@ import Image from "next/image";
 import { useState } from "react";
 
 export interface MenuItem {
-  category: string;
   id?: string;
   name: string;
   price: number;
@@ -20,6 +19,11 @@ export interface MenuItem {
   description: string;
   isAdded?: boolean;
   isSelected?: boolean;
+  category: {
+    name: string;
+    id: string;
+    priority: number;
+  };
 }
 
 interface EditItemModalProps {
@@ -82,7 +86,7 @@ export const EditItemModal = ({
             isOpen={isImageModalOpen}
             onOpenChange={setIsImageModalOpen}
             itemName={editingItem.item.name}
-            category={editingItem.item.category.toLowerCase()}
+            category={editingItem.item.category.name.toLowerCase()}
             currentImage={editingItem.item.image}
             onSelectImage={(newImageUrl: string) => {
               onEdit("image", newImageUrl);

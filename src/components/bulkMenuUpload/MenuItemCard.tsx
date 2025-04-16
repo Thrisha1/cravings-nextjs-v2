@@ -27,7 +27,7 @@ export const MenuItemCard = ({
   onEdit,
   onDelete,
 }: MenuItemCardProps) => {
-  const [itemCategory, setItemCategory] = useState(item.category);
+  const [itemCategory, setItemCategory] = useState(item.category.name);
   return (
     <Card className="relative grid">
       {item.isAdded && (
@@ -71,7 +71,7 @@ export const MenuItemCard = ({
             value={itemCategory}
             onChange={(e) => {
               setItemCategory(e.target.value);
-              item.category = e.target.value;
+              item.category.name = e.target.value;
             }}
           />
         </div>

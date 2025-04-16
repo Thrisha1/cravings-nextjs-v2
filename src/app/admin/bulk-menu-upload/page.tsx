@@ -129,9 +129,7 @@ const BulkUploadPage = () => {
               onEdit={() => handleEdit(index, item)}
               onDelete={() => handleDelete(index)}
               onImageClick={(index, url) => handleImageClick(index, url)}
-              onCategoryChange={(category) =>
-                handleCategoryChange(index, category)
-              }
+              onCategoryChange={(category) => handleCategoryChange(index, { name: category, priority: 0, id: item.category.id })}
             />
           ))}
         </div>
