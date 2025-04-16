@@ -25,7 +25,7 @@ import { Switch } from "@/components/ui/switch";
 
 export function PartnerDialog() {
   const router = useRouter();
-  const { signUpWithEmailForPartner } =
+  const { signUpWithEmailForPartner, loading } =
     useAuthStore();
   const { locations } = useLocationStore();
   const [formData, setFormData] = useState({
@@ -85,7 +85,6 @@ export function PartnerDialog() {
     }
 
     try {
-      if (authMethod === "email") {
         await signUpWithEmailForPartner(
           formData.hotelName,
           formData.phone,
@@ -96,11 +95,9 @@ export function PartnerDialog() {
           formData.password,
         );
         toast.success("Account created successfully!");
-        router.push("/admin");
-      } else {
-        toast.success("Account created successfully!");
-      }
-      router.push("/admin");
+        setTimeout(() => {
+          router.push("/admin");
+        }, 1000);
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "An unexpected error occurred"
@@ -287,8 +284,11 @@ export function PartnerDialog() {
             className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white"
             disabled={isSubmitting}
           >
-            
-              Sign up with Email
+            {loading ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-800"></div>
+            ): (
+              "Sign up with Email"
+            )}
           </Button>
         </form>
       </ScrollArea>

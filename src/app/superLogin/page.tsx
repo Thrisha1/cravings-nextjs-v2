@@ -26,7 +26,9 @@ export default function page() {
     signInSuperAdminWithEmail(partnerData.email, partnerData.password)
       .then((res) => {
         setIsLoading(false);
-        navigate.push("/superadmin");
+        setTimeout(() => {
+          navigate.push("/superadmin");
+        }, 1000);
       })
       .catch((err) => {
         setIsLoading(false);

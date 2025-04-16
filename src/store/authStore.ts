@@ -180,6 +180,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     email: string,
     password: string,
   ) => {
+    set({ loading: true, error: null });
     try {
       const existingPartner = await fetchFromHasura(partnerQuery, { email });
       if (existingPartner?.partners?.length > 0) {
@@ -208,7 +209,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       const newPartner = response.insert_partners_one;
       setAuthCookie({ id: newPartner.id, role: "partner" });
-      set({ userData: { ...newPartner, role: "partner" } });
+      set({ userData: { ...newPartner, role: "partner" }, loading: false });
     } catch (error) {
       console.error("Partner registration failed:", error);
       throw error;

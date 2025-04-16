@@ -17,17 +17,6 @@ export const partnerQuery = `
   query GetPartnerByEmail($email: String!) {
   partners(where: {email: {_eq: $email}}, limit: 1) {
     id
-    name
-    email
-    password
-    store_name
-    store_banner
-    location
-    status
-    upi_id
-    description
-    phone
-    district
   }
 }`;
 
