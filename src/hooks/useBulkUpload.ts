@@ -35,9 +35,7 @@ export const useBulkUpload = () => {
     ) {
       throw new Error("Price is required and must be a number");
     }
-    if (!item.description || typeof item.description !== "string") {
-      throw new Error("Description is required and must be a string");
-    }
+
     return {
       ...item,
       price: Number(item.price),
