@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { useAuthStore } from "@/store/authStore";
 import { update_category } from "@/api/menu";
 import { useMenuStore } from "./menuStore_hasura";
+import { revalidateTag } from "@/app/actions/revalidate";
 
 export interface Category {
   id: string;
@@ -81,6 +82,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
   updateCategory: async (cat: Category) => {
     try {
       const updatedCategories = useMenuStore.getState().updatedCategories;
+      const user = useAuthStore.getState().userData;
 
       const updatedCat = {
         id: cat.id,
@@ -105,6 +107,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       });
 
       // to update categorys of menu items
+      revalidateTag(user?.id as string);
       updatedCategories(get().categories);
 
     } catch (error) {
