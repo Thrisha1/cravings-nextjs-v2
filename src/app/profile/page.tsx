@@ -21,16 +21,17 @@ import { AlertDialogCancel } from "@radix-ui/react-alert-dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import Image from "next/image";
-import { uploadFileToS3 } from "../actions/aws-s3";
+import { deleteFileFromS3, uploadFileToS3 } from "../actions/aws-s3";
 import { deleteUserMutation } from "@/api/auth";
 import { updateUpiIdMutation, updateStoreBannerMutation } from "@/api/partners";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import Link from "next/link";
 import { useClaimedOffersStore } from "@/store/claimedOfferStore_hasura";
 import { revalidateTag } from "../actions/revalidate";
+import { processImage } from "@/lib/processImage";
 
 export default function ProfilePage() {
-  const { userData, loading: authLoading, signOut } = useAuthStore();
+  const { userData, loading: authLoading, signOut, setState } = useAuthStore();
   const { claimedOffers } = useClaimedOffersStore();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -120,6 +121,7 @@ export default function ProfilePage() {
         upi_id: upiId,
       });
       revalidateTag(userData?.id as string);
+      setState({ upi_id: upiId });
       toast.success("UPI ID updated successfully!");
       setIsEditing(false);
     } catch (error) {
@@ -138,13 +140,9 @@ export default function ProfilePage() {
       if (!files || !files[0]) return;
       const file = files[0];
 
-      //convert to base64
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        const base64String = reader.result as string;
-        setBannerImage(base64String);
-      };
+      //convert to local blob
+      const blobUrl = URL.createObjectURL(file);
+      setBannerImage(blobUrl);
 
       setIsBannerChanged(true);
     } catch (error) {
@@ -157,61 +155,68 @@ export default function ProfilePage() {
 
     setBannerUploading(true);
     try {
-      // Convert the bannerBase64 to WebP
-      const img = document.createElement("img");
-      img.src = bannerImage as string;
-      await new Promise((resolve) => (img.onload = resolve));
+      toast.loading("Updating banner...");
 
-      const canvas = document.createElement("canvas");
-      const maxWidth = 500;
-      const ratio = maxWidth / img.width;
-      canvas.width = maxWidth;
-      canvas.height = img.height * ratio;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Failed to get canvas context");
-
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      const webpBase64WithPrefix: string = await new Promise(
-        (resolve, reject) => {
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) {
-                reject(new Error("Failed to convert image to WebP"));
-                return;
-              }
-
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            },
-            "image/webp",
-            0.8
-          );
-        }
+      const webpBase64WithPrefix = await processImage(
+        bannerImage as string,
+        "local"
       );
+
+      let prevImgUrl =
+        userData.role === "partner" ? userData?.store_banner : "";
+
+      //Has previous uploaded image delete it
+      if (prevImgUrl?.includes("cravingsbucket")) {
+        await deleteFileFromS3(prevImgUrl);
+      }
+
+      let nextVersion = "v0";
+
+      // Check if the image URL already has a version number
+      if (prevImgUrl) {
+        const onlyImageName = prevImgUrl
+          .split(
+            "https://cravingsbucket.s3.ap-southeast-2.amazonaws.com/hotel_banners/"
+          )
+          .pop();
+
+        if (onlyImageName && onlyImageName.includes("_v")) {
+          const versionPart = onlyImageName.split("_v").pop();
+          const removedExtension = versionPart?.split(".").shift();
+          const versionNumber = parseInt(removedExtension || "0");
+
+          const incrementedVersion = versionNumber + 1;
+          nextVersion = `v${incrementedVersion}`;
+        } else {
+          nextVersion = "v0";
+        }
+      }
 
       // Upload to S3
       const imgUrl = await uploadFileToS3(
         webpBase64WithPrefix,
-        `hotel_banners/${userData.id}.webp`
+        `hotel_banners/${userData.id + "_" + nextVersion}.webp`
       );
+
+      setBannerImage(imgUrl);
+      setState({ store_banner: imgUrl });
 
       if (!imgUrl) {
         throw new Error("Failed to upload image to S3");
       }
-      // console.log("Image uploaded to S3:", imgUrl);
+      // // console.log("Image uploaded to S3:", imgUrl);
 
       // Update user data
       await fetchFromHasura(updateStoreBannerMutation, {
         userId: userData?.id,
         storeBanner: imgUrl,
       });
+      toast.dismiss();
       toast.success("Banner updated successfully!");
       revalidateTag(userData?.id as string);
       setIsBannerChanged(false);
     } catch (error) {
+      toast.dismiss();
       console.error("Error updating banner:", error);
       toast.error(
         error instanceof Error ? error.message : "Failed to update banner"
@@ -354,7 +359,12 @@ export default function ProfilePage() {
 
                 {isBannerChanged && (
                   <div className="mt-2 flex justify-end">
-                    <Button onClick={handleBannerUpload}>
+                    <Button
+                      disabled={isBannerUploading}
+                      onClick={
+                        isBannerUploading ? undefined : handleBannerUpload
+                      }
+                    >
                       {isBannerUploading ? "Uploading...." : "Update Banner"}
                     </Button>
                   </div>

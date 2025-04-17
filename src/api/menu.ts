@@ -2,7 +2,7 @@
 
 export const getMenu = `
     query GetMenu($partner_id: uuid!)  {
-        menu(where: {partner_id: {_eq: $partner_id}} , limit: 100) {
+        menu(where: {partner_id: {_eq: $partner_id} , deletion_status: {_eq: 0}} , limit: 100) {
             id
             name
             category { 
@@ -59,7 +59,11 @@ export const addMenu = `
         returning {
             id
             name
-            category { name }
+            category { 
+                id
+                name
+                priority
+            }
             image_url
             image_source
             partner_id
@@ -75,24 +79,29 @@ export const updateMenu = `
         update_menu(where: {id: {_eq: $id}}, _set: $menu) {
             returning {
                 id
+            name
+            category { 
+                id
                 name
-                category { name }
-                image_url
-                image_source
-                partner_id
-                price
-                description
-                is_top
+                priority
+            }
+            image_url
+            image_source
+            partner_id
+            price
+            description
+            is_top
             }
         }
     }
 `;
 
 export const deleteMenu = `
-    mutation DeleteMenu($id: uuid!) {
-        delete_menu(where: {id: {_eq: $id}}) {
+    mutation UpdateMenuDeletionStatus($id: uuid!) {
+        update_menu(where: {id: {_eq: $id}}, _set: {deletion_status: 1}) {
             returning {
                 id
+                deletion_status
             }
         }
     }

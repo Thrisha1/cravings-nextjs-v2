@@ -23,12 +23,14 @@ import { toast } from "sonner";
 import { useMenuStore } from "@/store/menuStore_hasura";
 import { useOfferStore } from "@/store/offerStore_hasura";
 import Image from "next/image";
+import { formatDate } from "@/lib/formatDate";
 
 export function OffersTab() {
   const { items } = useMenuStore();
   const { addOffer, fetchPartnerOffers, offers, deleteOffer } = useOfferStore();
   const { userData } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [isOfferFetched, setIsOfferFetched] = useState(false);
   const [newOffer, setNewOffer] = useState({
     menuItemId: "",
     newPrice: "",
@@ -55,6 +57,9 @@ export function OffersTab() {
     (async () => {
       if (userData) {
         await fetchPartnerOffers();
+        setTimeout(() => {
+          setIsOfferFetched(true);
+        }, 2000);
       }
     })();
   }, [userData]);
@@ -119,7 +124,7 @@ export function OffersTab() {
       (item) => item.id === newOffer.menuItemId
     );
 
-    if(correspondingItem?.image_url === "") {
+    if (correspondingItem?.image_url === "") {
       toast.error("Please upload an image for the menu item");
       setAdding(false);
       return;
@@ -263,56 +268,64 @@ export function OffersTab() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {offers.map((offer) => {
-          return (
-            <Card key={offer.id}>
-              <CardHeader>
-                <CardTitle className="text-lg">{offer.menu.name}</CardTitle>
-                <div className="relative w-32 h-32 rounded-md overflow-hidden">
-                  <Image
-                    src={offer.menu.image_url}
-                    alt={offer.menu.name}
-                    fill
-                    className="object-cover w-full h-full "
-                  />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="text-lg">
-                    Original Price: ₹{offer.menu.price.toFixed(2)}
-                  </p>
-                  <p className="text-2xl font-bold text-green-600">
-                    Offer Price: ₹{offer.offer_price.toFixed(2)}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    From: {new Date(offer.start_time).toLocaleString()}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    To: {new Date(offer.end_time).toLocaleString()}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Created At: {new Date(offer.created_at).toLocaleString()}
-                  </p>
-                  <Button
-                    disabled={isDeleting[offer.id]}
-                    variant="destructive"
-                    className="w-full mt-2"
-                    onClick={
-                      isDeleting[offer.id]
-                        ? undefined
-                        : handleOfferDelete(offer.id)
-                    }
-                  >
-                    {isDeleting[offer.id] ? "Deleting..." : "Delete Offer"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <>
+        {offers.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {offers.map((offer) => {
+              return (
+                <Card key={offer.id}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{offer.menu.name}</CardTitle>
+                    <div className="relative w-32 h-32 rounded-md overflow-hidden">
+                      <Image
+                        src={offer.menu.image_url}
+                        alt={offer.menu.name}
+                        fill
+                        className="object-cover w-full h-full "
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <p className="text-lg">
+                        Original Price: ₹{offer.menu.price.toFixed(2)}
+                      </p>
+                      <p className="text-2xl font-bold text-green-600">
+                        Offer Price: ₹{offer.offer_price.toFixed(2)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        From: {formatDate(offer.start_time)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        To: {formatDate(offer.end_time)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Created At: {formatDate(offer.created_at)}
+                      </p>
+                      <Button
+                        disabled={isDeleting[offer.id]}
+                        variant="destructive"
+                        className="w-full mt-2"
+                        onClick={
+                          isDeleting[offer.id]
+                            ? undefined
+                            : handleOfferDelete(offer.id)
+                        }
+                      >
+                        {isDeleting[offer.id] ? "Deleting..." : "Delete Offer"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center mt-4">
+            {isOfferFetched ? "No Offers Found!" : "Loading Offers...."}
+          </div>
+        )}
+      </>
     </div>
   );
 }

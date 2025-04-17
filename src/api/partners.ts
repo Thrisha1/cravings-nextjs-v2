@@ -33,7 +33,7 @@ query GetPartnerAndOffersQuery($id: uuid! , $end_time: timestamptz!) {
     location
     store_banner
     store_name
-    menus {
+    menus(where: {deletion_status: {_eq: 0}}) {
       category {
         name
         id
@@ -46,7 +46,7 @@ query GetPartnerAndOffersQuery($id: uuid! , $end_time: timestamptz!) {
       name
       price
     }
-    offers(where: {end_time: {_gt: $end_time}}) {
+    offers(where: {_and: [{end_time: {_gt: $end_time}}, {deletion_status: {_eq: 0}}]}) {
       end_time
       enquiries
       id

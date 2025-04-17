@@ -291,7 +291,7 @@ const HotelMenuPage = ({
           </div>
 
           {/* offers listing  */}
-          <div className="relative max-w-7xl mx-auto pb-[80px] bg-gradient-to-b from-orange-50 to-orange-100 pt-[20px] mt-[160px] lg:mt-[200px] rounded-t-3xl">
+          <div className="relative max-w-7xl min-h-screen  mx-auto pb-[80px] bg-gradient-to-b from-orange-50 to-orange-100 pt-[20px] mt-[160px] lg:mt-[200px] rounded-t-3xl">
             <div className="lg:hidden bg-orange-200 h-2 w-[20%] rounded-full absolute top-4 left-1/2 -translate-x-1/2" />
 
             {/* hotel name  */}
@@ -482,7 +482,14 @@ const HotelMenuPage = ({
               </div>
             )}
 
-            <section className="px-[calc(7%+12px)]">
+            <section
+              className={`px-[calc(7%+12px)] ${
+                hoteldata.menus?.filter((items) => items.is_top === true)
+                  .length === 0
+                  ? "mt-10"
+                  : "mt-5"
+              }`}
+            >
               <MenuItemsList hoteldata={hoteldata} />
             </section>
 

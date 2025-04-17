@@ -138,12 +138,12 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         description: item.description || "",
       };
 
-      const itemRes = await fetchFromHasura(addMenu, {
+      const { insert_menu } = await fetchFromHasura(addMenu, {
         menu: [newMenu],
-      });
+      });  
 
       set({
-        items: [...get().items, { ...item, image_url: newMenu.image_url }],
+        items: [...get().items, insert_menu.returning[0]],
       });
       revalidateTag(userData?.id);
       get().groupItems();

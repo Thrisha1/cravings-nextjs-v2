@@ -148,11 +148,19 @@ export const useOfferStore = create<OfferState>((set, get) => {
           start_time: getTimestampWithTimezone(new Date(offer.start_time)),
         };
 
+        console.log("prev offer end time " , offer.end_time);
+        console.log("new offer end time " , newOffer.end_time);
+        
+
         const addedData = await fetchFromHasura(addOffer, {
           ...newOffer,
         });
 
+        console.log("added offer end time " , addedData.insert_offers.returning[0].end_time);
+        
+
         revalidateTag("offers");
+        revalidateTag(user.id);
 
         set({
           offers: [...get().offers, addedData.insert_offers.returning[0]],
@@ -194,6 +202,7 @@ export const useOfferStore = create<OfferState>((set, get) => {
         });
 
         revalidateTag("offers");
+        revalidateTag(user.id);
         toast.dismiss();
         toast.success("Offer deleted successfully");
       } catch (error) {

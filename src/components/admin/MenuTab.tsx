@@ -21,6 +21,7 @@ import { Switch } from "../ui/switch";
 import { toast } from "sonner";
 import { deleteFileFromS3 } from "@/app/actions/aws-s3";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
+import { set } from "firebase/database";
 
 export function MenuTab() {
   const {
@@ -44,6 +45,7 @@ export function MenuTab() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchParams = useSearchParams();
+  const [isMenuItemsFetching, setIsMenuItemsFetching] = useState(true);
   const [filteredGroupedItems, setFilteredGroupedItems] = useState(
     {} as Record<string, MenuItem[]>
   );
@@ -85,6 +87,9 @@ export function MenuTab() {
     });
 
     setFilteredGroupedItems(filtered);
+    setTimeout(() => {
+      setIsMenuItemsFetching(false);
+    }, 2000);
   }, [groupedItems, searchQuery, searchParams]);
 
   const handleAddItem = (item: {
@@ -239,130 +244,143 @@ export function MenuTab() {
         />
       )}
 
-      <div className="grid gap-4 divide-y-2 divide-gray-300">
-        {Object.entries(filteredGroupedItems)
-          .sort(([categoryA], [categoryB]) => {
-            const priorityA = getCategoryPriority(categoryA);
-            const priorityB = getCategoryPriority(categoryB);
-            return priorityA - priorityB;
-          })
-          .map(([category, items], index) => (
-            <div key={category + index} className="pb-10">
-              <div className="flex items-center gap-2 group max-w-fit">
-                <h1 className="text-2xl lg:text-4xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent">
-                  {category}
-                </h1>
-                <button
-                  onClick={() => handleCategoryUpdate(category, items)}
-                  className="group-hover:opacity-100 opacity-0 transition-opacity duration-300"
-                >
-                  <Pen />
-                </button>
-              </div>
+      {/* Menu Items */}
+      <>
+        {Object.entries(filteredGroupedItems).length > 0 ? (
+          <div className="grid gap-4 divide-y-2 divide-gray-300">
+            {Object.entries(filteredGroupedItems)
+              .sort(([categoryA], [categoryB]) => {
+                const priorityA = getCategoryPriority(categoryA);
+                const priorityB = getCategoryPriority(categoryB);
+                return priorityA - priorityB;
+              })
+              .map(([category, items], index) => (
+                <div key={category + index} className="pb-10">
+                  <div className="flex items-center gap-2 group max-w-fit">
+                    <h1 className="text-2xl lg:text-4xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent">
+                      {category}
+                    </h1>
+                    <button
+                      onClick={() => handleCategoryUpdate(category, items)}
+                      className="group-hover:opacity-100 opacity-0 transition-opacity duration-300"
+                    >
+                      <Pen />
+                    </button>
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {items.map((item) => (
-                  <Card
-                    className="rounded-xl overflow-hidden grid"
-                    key={item.id}
-                  >
-                    <CardHeader className="flex flex-row justify-between">
-                      <div>
-                        {item.image_url.length > 0 && (
-                          <div className="relative w-32 h-32 overflow-hidden">
-                            <Image
-                              src={item.image_url}
-                              alt={item.name}
-                              fill
-                              className="w-full h-full object-cover rounded-lg"
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {items.map((item) => (
+                      <Card
+                        className="rounded-xl overflow-hidden grid"
+                        key={item.id}
+                      >
+                        <CardHeader className="flex flex-row justify-between">
+                          <div>
+                            {item.image_url.length > 0 && (
+                              <div className="relative w-32 h-32 overflow-hidden">
+                                <Image
+                                  src={item.image_url}
+                                  alt={item.name}
+                                  fill
+                                  className="w-full h-full object-cover rounded-lg"
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <CardTitle>{item.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-2xl font-bold">
+                            ₹{item.price.toFixed(2)}
+                          </p>
+                          {item.description && (
+                            <p className="text-gray-600 mt-2">
+                              {item.description}
+                            </p>
+                          )}
+                          <div className="flex items-center mt-2">
+                            <label className="mr-2">Mark as Top 3:</label>
+                            <Switch
+                              checked={item.is_top}
+                              onCheckedChange={async () => {
+                                try {
+                                  const currentTopItems = menu.filter(
+                                    (i) => i.is_top === true
+                                  );
+
+                                  const topItemsCount = currentTopItems.length;
+
+                                  if (item.is_top) {
+                                    await updateItem(item.id as string, {
+                                      is_top: false,
+                                    });
+                                  } else if (topItemsCount < 3) {
+                                    await updateItem(item.id as string, {
+                                      is_top: true,
+                                    });
+                                  } else {
+                                    toast.error(
+                                      "You can only mark up to 3 items as Top 3."
+                                    );
+                                    return;
+                                  }
+                                } catch (error) {
+                                  toast.error("Failed to update item status");
+                                  console.error(error);
+                                }
+                              }}
                             />
                           </div>
-                        )}
-                      </div>
-                      <CardTitle>{item.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-2xl font-bold">
-                        ₹{item.price.toFixed(2)}
-                      </p>
-                      {item.description && (
-                        <p className="text-gray-600 mt-2">{item.description}</p>
-                      )}
-                      <div className="flex items-center mt-2">
-                        <label className="mr-2">Mark as Top 3:</label>
-                        <Switch
-                          checked={item.is_top}
-                          onCheckedChange={async () => {
-                            try {
-                              const currentTopItems = menu.filter(
-                                (i) => i.is_top === true
+                        </CardContent>
+                        <CardFooter className="flex justify-end space-x-2">
+                          <Button
+                            variant="outline"
+                            onClick={() =>
+                              openEditModal({
+                                id: item.id as string,
+                                name: item.name,
+                                price: item.price,
+                                image: item.image_url,
+                                description: item.description || "",
+                                category: item.category.name,
+                              })
+                            }
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={async (e) => {
+                              e.currentTarget.disabled = true;
+                              e.currentTarget.innerText = "Deleting...";
+                              const isOfferActive = adminOffers.some(
+                                (offer) => offer.menuItemId === item.id
                               );
-
-                              const topItemsCount = currentTopItems.length;
-
-                              if (item.is_top) {
-                                await updateItem(item.id as string, {
-                                  is_top: false,
-                                });
-                              } else if (topItemsCount < 3) {
-                                await updateItem(item.id as string, {
-                                  is_top: true,
-                                });
-                              } else {
-                                toast.error(
-                                  "You can only mark up to 3 items as Top 3."
+                              if (isOfferActive) {
+                                alert(
+                                  `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
                                 );
                                 return;
                               }
-                            } catch (error) {
-                              toast.error("Failed to update item status");
-                              console.error(error);
-                            }
-                          }}
-                        />
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        onClick={() =>
-                          openEditModal({
-                            id: item.id as string,
-                            name: item.name,
-                            price: item.price,
-                            image: item.image_url,
-                            description: item.description || "",
-                            category: item.category.name,
-                          })
-                        }
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={async () => {
-                          const isOfferActive = adminOffers.some(
-                            (offer) => offer.menuItemId === item.id
-                          );
-                          if (isOfferActive) {
-                            alert(
-                              `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
-                            );
-                            return;
-                          }
-                          deleteItem(item.id as string);
-                          await deleteFileFromS3(item.image_url);
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          ))}
-      </div>
+                              await deleteItem(item.id as string);
+                              if(item.image_url) await deleteFileFromS3(item.image_url);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              ))}
+          </div>
+        ) : (
+          <div className="text-center">
+            {isMenuItemsFetching ? "Loading Menu...." : "No Menu Items Added!"}
+          </div>
+        )}
+      </>
     </div>
   );
 }

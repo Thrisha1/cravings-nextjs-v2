@@ -1,28 +1,32 @@
 import { create } from "zustand";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { 
-  getUserByIdQuery, 
-  partnerMutation, 
-  partnerQuery, 
-  userLoginMutation, 
-  userLoginQuery, 
-  partnerLoginQuery, 
-  superAdminLoginQuery, 
-  partnerIdQuery, 
-  superAdminIdQuery 
+import {
+  getUserByIdQuery,
+  partnerMutation,
+  partnerQuery,
+  userLoginMutation,
+  userLoginQuery,
+  partnerLoginQuery,
+  superAdminLoginQuery,
+  partnerIdQuery,
+  superAdminIdQuery,
 } from "@/api/auth";
 import { encryptText, decryptText } from "@/lib/encrtption";
-import { getAuthCookie, setAuthCookie, removeAuthCookie } from '@/app/auth/actions';
+import {
+  getAuthCookie,
+  setAuthCookie,
+  removeAuthCookie,
+} from "@/app/auth/actions";
 
 // Interfaces remain the same
 interface BaseUser {
   id: string;
   email: string;
-  role: 'user' | 'partner' | 'superadmin';
+  role: "user" | "partner" | "superadmin";
 }
 
 export interface User extends BaseUser {
-  role: 'user';
+  role: "user";
   password: string;
   full_name: string;
   phone: string;
@@ -31,7 +35,7 @@ export interface User extends BaseUser {
 }
 
 export interface Partner extends BaseUser {
-  role: 'partner';
+  role: "partner";
   name: string;
   password: string;
   store_name: string;
@@ -45,7 +49,7 @@ export interface Partner extends BaseUser {
 }
 
 export interface SuperAdmin extends BaseUser {
-  role: 'superadmin';
+  role: "superadmin";
   password: string;
 }
 
@@ -70,6 +74,7 @@ interface AuthState {
   signInSuperAdminWithEmail: (email: string, password: string) => Promise<void>;
   fetchUser: () => Promise<void>;
   isLoggedIn: () => boolean;
+  setState: (udpatedUser: Partial<User> | Partial<Partner>) => void;
 }
 
 // Cookie management functions
@@ -114,7 +119,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       const { id, role } = authData;
 
-
       if (role === "user") {
         const response = await fetchFromHasura(getUserByIdQuery, { id });
         const user = response?.users_by_pk;
@@ -128,32 +132,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               crave_coins: user.crave_coins,
               location: user.location,
               password: "",
-              role: "user"
-            } as User
+              role: "user",
+            } as User,
           });
         }
       } else if (role === "partner") {
         const response = await fetchFromHasura(partnerIdQuery, { id });
         const partner = response?.partners_by_pk;
         if (partner) {
-          set({ 
+          set({
             userData: {
               ...partner,
               password: "",
-              role: "partner"
-            } as Partner
+              role: "partner",
+            } as Partner,
           });
         }
       } else if (role === "superadmin") {
         const response = await fetchFromHasura(superAdminIdQuery, { id });
         const superAdmin = response?.super_admin_by_pk;
         if (superAdmin) {
-          set({ 
+          set({
             userData: {
               ...superAdmin,
               password: "",
-              role: "superadmin"
-            } as SuperAdmin
+              role: "superadmin",
+            } as SuperAdmin,
           });
         }
       }
@@ -178,7 +182,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     area: string,
     location: string,
     email: string,
-    password: string,
+    password: string
   ) => {
     set({ loading: true, error: null });
     try {
@@ -187,7 +191,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         throw new Error("A partner account with this email already exists");
       }
 
-      const response = await fetchFromHasura(partnerMutation, {
+      const response = (await fetchFromHasura(partnerMutation, {
         object: {
           email,
           password,
@@ -200,8 +204,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           phone,
           description: "",
           role: "partner",
-        }
-      }) as { insert_partners_one: Partner };
+        },
+      })) as { insert_partners_one: Partner };
 
       if (!response?.insert_partners_one) {
         throw new Error("Failed to create partner account");
@@ -218,13 +222,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signInPartnerWithEmail: async (email: string, password: string) => {
     try {
-      const response = await fetchFromHasura(partnerLoginQuery, {
-        email, password
-      }) as { partners: Partner[] };
-      
+      const response = (await fetchFromHasura(partnerLoginQuery, {
+        email,
+        password,
+      })) as { partners: Partner[] };
+
       const partner = response?.partners?.[0];
       if (!partner) throw new Error("Invalid credentials");
-      
+
       await setAuthCookie({ id: partner.id, role: "partner" });
       set({ userData: { ...partner, role: "partner" } });
     } catch (error) {
@@ -236,13 +241,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signInWithPhone: async (phone: string) => {
     try {
       const email = `${phone}@user.com`;
-      const response = await fetchFromHasura(userLoginQuery, { email }) as { users: User[] };
+      const response = (await fetchFromHasura(userLoginQuery, { email })) as {
+        users: User[];
+      };
 
       let user: User;
       if (response?.users?.length > 0) {
         user = response.users[0];
       } else {
-        const createResponse = await fetchFromHasura(userLoginMutation, {
+        const createResponse = (await fetchFromHasura(userLoginMutation, {
           object: {
             email,
             password: phone,
@@ -250,12 +257,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             phone,
             crave_coins: 100,
             location: null,
-            role: "user"
-          }
-        }) as { insert_users_one: User };
+            role: "user",
+          },
+        })) as { insert_users_one: User };
 
         if (!createResponse?.insert_users_one) {
-          throw new Error("Failed to create user"); 
+          throw new Error("Failed to create user");
         }
         user = createResponse.insert_users_one;
       }
@@ -267,13 +274,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       throw error;
     }
   },
-  
+
   signInSuperAdminWithEmail: async (email: string, password: string) => {
     try {
-      const response = await fetchFromHasura(superAdminLoginQuery, {
+      const response = (await fetchFromHasura(superAdminLoginQuery, {
         email,
-        password
-      }) as { super_admin: SuperAdmin[] };
+        password,
+      })) as { super_admin: SuperAdmin[] };
 
       if (!response?.super_admin?.length) {
         throw new Error("Invalid email or password");
@@ -286,5 +293,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.error("Super admin login failed:", error);
       throw error;
     }
+  },
+
+  setState: (udpatedUser: Partial<User> | Partial<Partner>) => {
+    set({
+      userData: {
+        ...get().userData,
+        ...udpatedUser,
+      } as AuthUser,
+    });
   },
 }));
