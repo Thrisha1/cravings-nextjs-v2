@@ -6,6 +6,7 @@ import { Loader2, Check, AlertCircle, Upload } from "lucide-react";
 import AIImageGenerateModal from "@/components/AIImageGenerateModal";
 // import ImageUploadModal from "../ImageUploadModal";
 import { useMenuStore } from "@/store/menuStore_hasura";
+import { DialogTitle } from "@radix-ui/react-dialog";
 
 interface ImageGridModalProps {
   isOpen: boolean;
@@ -31,12 +32,14 @@ export function ImageGridModal({
   const [error, setError] = useState<string | null>(null);
   const [isAIImageModalOpen, setAIImageModalOpen] = useState(false);
   const { fetchCategorieImages } = useMenuStore();
-  const [isImageUploadModalOpen, setImageUploadModalOpen] = useState(false);
 
   const fetchImages = async () => {
+
+    
     if (isOpen && itemName && category) {
       setError(null);
       try {
+
         const menus = await fetchCategorieImages(category);
         const urls = menus.map((menu) => menu.image_url);
         setImageUrls(urls);
@@ -77,6 +80,7 @@ export function ImageGridModal({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[90%] sm:max-w-4xl rounded-xl">
+        <DialogTitle className="text-lg font-bold">Select Image</DialogTitle>
         {error ? (
           <div className="flex flex-col items-center justify-center p-8 bg-red-50 rounded-lg">
             <AlertCircle className="w-12 h-12 text-red-500 mb-2" />

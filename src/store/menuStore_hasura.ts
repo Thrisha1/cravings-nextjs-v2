@@ -240,8 +240,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       if (!userData) throw new Error("User data not found");
 
       if (get().categoryImages.length > 0) {
+
         const hasImagesOfSameCat = get().categoryImages.some(
-          (img) => img.category.name === category
+          (img) => img?.category?.name === category
         );
         if (hasImagesOfSameCat) {
           return get().categoryImages;
