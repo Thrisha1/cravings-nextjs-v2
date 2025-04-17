@@ -27,6 +27,7 @@ import { updateUpiIdMutation, updateStoreBannerMutation } from "@/api/partners";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import Link from "next/link";
 import { useClaimedOffersStore } from "@/store/claimedOfferStore_hasura";
+import { revalidateTag } from "../actions/revalidate";
 
 export default function ProfilePage() {
   const { userData, loading: authLoading, signOut } = useAuthStore();
@@ -97,6 +98,7 @@ export default function ProfilePage() {
       await fetchFromHasura(deleteUserMutation, {
         id: userData?.id,
       });
+      revalidateTag(userData?.id as string);
       signOut();
       router.push("/");
     } catch (error) {
@@ -116,6 +118,7 @@ export default function ProfilePage() {
         id: userData?.id,
         upi_id: upiId,
       });
+      revalidateTag(userData?.id as string);
       toast.success("UPI ID updated successfully!");
       setIsEditing(false);
     } catch (error) {
@@ -205,7 +208,7 @@ export default function ProfilePage() {
         storeBanner: imgUrl,
       });
       toast.success("Banner updated successfully!");
-
+      revalidateTag(userData?.id as string);
       setIsBannerChanged(false);
     } catch (error) {
       console.error("Error updating banner:", error);
