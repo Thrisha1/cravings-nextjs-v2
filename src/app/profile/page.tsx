@@ -45,11 +45,12 @@ export default function ProfilePage() {
   const [isBannerUploading, setBannerUploading] = useState(false);
   const [isBannerChanged, setIsBannerChanged] = useState(false);
 
-  const isLoading = authLoading ;
+  const isLoading = authLoading;
 
   useEffect(() => {
     if (userData?.role === "partner") {
       setBannerImage(userData.store_banner || null);
+      setUpiId(userData.upi_id || "");
     }
   }, [userData]);
 
@@ -382,7 +383,7 @@ export default function ProfilePage() {
                       >
                         {isSaving ? (
                           <>
-                            <span className="animate-spin mr-2">⏳</span>
+                            {/* <span className="animate-spin mr-2">⏳</span>/ */}
                             Saving...
                           </>
                         ) : (
@@ -393,18 +394,12 @@ export default function ProfilePage() {
                   ) : (
                     <div className="flex justify-between items-center w-full">
                       <span className="text-gray-700">
-                        {userData.role === "partner" && userData.upi_id
-                          ? userData.upi_id
-                          : "No UPI ID set"}
+                        {upiId ? upiId : "No UPI ID set"}
                       </span>
                       <Button
                         onClick={() => {
                           setIsEditing(true);
-                          setUpiId(
-                            userData.role === "partner" && userData.upi_id
-                              ? userData.upi_id
-                              : ""
-                          );
+                          setUpiId(upiId ? upiId : "");
                         }}
                         variant="ghost"
                         className="hover:bg-orange-100"
