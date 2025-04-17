@@ -31,8 +31,8 @@ const SearchBox = () => {
   };
 
   return (
-    <div className="relative group">
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-orange-600" />
+    <div className="relative group px-4">
+      <Search className="absolute left-8 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 group-focus-within:text-orange-600" />
       <Input
         type="text"
         placeholder="Search Dishes or Hotels"

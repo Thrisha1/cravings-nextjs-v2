@@ -48,7 +48,7 @@ const MenuItemsList = ({ hoteldata }: { hoteldata: HotelData }) => {
   return (
     <>
       {Object.entries(categorisedItems).length > 0 && (
-        <div className="py-10">
+        <div className="pb-10">
           <h1 className="text-3xl font-bold text-center underline underline-offset-2">
             Menu
           </h1>

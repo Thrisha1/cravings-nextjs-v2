@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useState } from "react";
 import SearchBox from "@/components/SearchBox";
 import Image from "next/image";
 import OfferCardMin from "@/components/OfferCardMin";
+import Autoplay from "embla-carousel-autoplay";
 
 import {
   ArrowLeft,
@@ -41,6 +42,11 @@ import { Offer } from "@/store/offerStore_hasura";
 import { UpiData } from "@/types/upiData";
 import { useAuthStore } from "@/store/authStore";
 import { HotelData } from "@/app/hotels/[id]/page";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
 
 export type MenuItem = {
   description: string;
@@ -63,10 +69,7 @@ const HotelMenuPage = ({
   qrScan,
   upiData,
 }: HotelMenuPageProps) => {
-  const {
-    userData,
-    signInWithPhone,
-  } = useAuthStore();
+  const { userData, signInWithPhone } = useAuthStore();
   const router = useRouter();
   const [isFollowed, setIsFollowed] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -82,7 +85,6 @@ const HotelMenuPage = ({
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
   const isLoggedIn = () => {
-
     if (userData) {
       return;
     }
@@ -150,9 +152,9 @@ const HotelMenuPage = ({
 
   useEffect(() => {
     const isFollowed = false;
-      // hoteldata?.followers?.some(
-      //   (follower) => follower.user === (user?.uid ?? "?")
-      // ) ?? false;
+    // hoteldata?.followers?.some(
+    //   (follower) => follower.user === (user?.uid ?? "?")
+    // ) ?? false;
 
     setIsFollowed(isFollowed);
   }, [hoteldata]);
@@ -200,9 +202,7 @@ const HotelMenuPage = ({
   useEffect(() => {
     // getMenuItemsCount();
     // fetchMenuItems(true);
-    
   }, [hoteldata]);
-
 
   return (
     <main className="overflow-x-hidden bg-gradient-to-b from-orange-50 to-orange-100 relative">
@@ -291,11 +291,11 @@ const HotelMenuPage = ({
           </div>
 
           {/* offers listing  */}
-          <div className="relative max-w-7xl mx-auto px-3 pb-[80px] bg-gradient-to-b from-orange-50 to-orange-100 pt-[20px] mt-[160px] lg:mt-[200px] rounded-t-3xl">
+          <div className="relative max-w-7xl mx-auto pb-[80px] bg-gradient-to-b from-orange-50 to-orange-100 pt-[20px] mt-[160px] lg:mt-[200px] rounded-t-3xl">
             <div className="lg:hidden bg-orange-200 h-2 w-[20%] rounded-full absolute top-4 left-1/2 -translate-x-1/2" />
 
             {/* hotel name  */}
-            <div className="flex justify-between pt-5 md:pt-10">
+            <div className="flex justify-between px-3 pt-5 md:pt-10">
               <h1 className="text-lg relative flex lg:items-center max-w-[50%] md:text-3xl font-semibold  capitalize">
                 <span>{hoteldata?.store_name}</span>
                 <VerifiedIcon className="ml-2 text-green-600" />
@@ -333,7 +333,7 @@ const HotelMenuPage = ({
             </div>
 
             {/* hotel details  */}
-            <div className="pb-5 md:pb-10 pt-2 grid gap-2">
+            <div className="pb-5 md:pb-10 pt-2 px-3 grid gap-2">
               {/* <div className="flex items-center gap-2 text-black/60 text-sm w-fit">
                 <span className="flex items-center gap-1">
                   {" "}
@@ -363,7 +363,7 @@ const HotelMenuPage = ({
             </div>
 
             {qrId && (
-              <div>
+              <div className="px-3">
                 {/* {userVisit && (
                   <Button
                     onClick={() => setShowVisitModal(true)}
@@ -385,7 +385,7 @@ const HotelMenuPage = ({
 
             {/* available offer  */}
             {offers.length > 0 && (
-              <section>
+              <section className="px-3">
                 <h1 className="text-lg relative flex max-w-[50%] md:text-3xl font-semibold pt-5 capitalize">
                   Available Offers
                 </h1>
@@ -424,48 +424,65 @@ const HotelMenuPage = ({
               </section>
             )}
 
-            {hoteldata.menus?.filter((items) => items.is_top === true).length > 0 && (
-              <div className="p-4 py-10">
-                <h1 className="text-2xl font-bold mb-4 text-center">
+            {hoteldata.menus?.filter((items) => items.is_top === true).length >
+              0 && (
+              <div className="py-10">
+                <h1 className="text-2xl font-bold mb-10 text-center">
                   Top 3 Items ⭐
                 </h1>
 
-                <div className="grid divide-y-2 gap-1 divide-orange-200">
-                  {hoteldata.menus?.filter((items) => items.is_top === true).map((item) => (
-                    <div key={item.id} className="py-6 rounded animate-bg px-4 flex-1">
-                      <div className="flex flex-col items-center gap-y-2 justify-between items-start w-full">
-                        <div className="flex justify-between w-full">
-                          <div className="flex flex-col justify-center w-1/2">
-                            <span className="capitalize  text-xl font-bold">
-                              {item.name}
-                            </span>
-                            <span className="font-bold text-xl text-orange-500">
-                              ₹{item.price}
+                <Carousel
+                  plugins={[
+                    Autoplay({
+                      delay: 2000,
+                    }),
+                  ]}
+                >
+                  <CarouselContent className="gap-4 px-14 pb-9 mr-9">
+                    {hoteldata.menus
+                      ?.filter((items) => items.is_top === true)
+                      .map((item) => (
+                        <CarouselItem
+                          key={item.id}
+                          className="py-6 rounded-2xl border-[1px] border-black/10 px-6 bg-orange-50 shadow-xl"
+                        >
+                          <div className="flex flex-col gap-y-2 justify-between items-start w-full">
+                            <div className="flex justify-between w-full">
+                              <div className="flex flex-col justify-center w-1/2">
+                                <span className="capitalize  text-xl font-bold">
+                                  {item.name}
+                                </span>
+                                <span className="font-bold text-xl text-orange-500">
+                                  ₹{item.price}
+                                </span>
+                              </div>
+                              {item.image_url.length > 0 && (
+                                <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden ">
+                                  <Image
+                                    src={item.image_url}
+                                    alt={item.name}
+                                    fill
+                                    className="object-cover w-full h-full"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-sm text-black/50">
+                              {item.description}
                             </span>
                           </div>
-                          {item.image_url.length > 0 && (
-                            <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden ">
-                              <Image
-                                src={item.image_url}
-                                alt={item.name}
-                                fill
-                                className="object-cover w-full h-full"
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-sm text-black/50">
-                          {item.description}
-                        </span>
-                      </div>
-                    </div>
-                    
-                  ))}
-                </div>
+                        </CarouselItem>
+                      ))}
+                  </CarouselContent>
+                </Carousel>
+
+                {/* <div className="grid divide-y-2 gap-1 divide-orange-200">
+                  
+                </div> */}
               </div>
             )}
 
-            <section className="px-[7%]">
+            <section className="px-[calc(7%+12px)]">
               <MenuItemsList hoteldata={hoteldata} />
             </section>
 
