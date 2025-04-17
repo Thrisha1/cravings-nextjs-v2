@@ -124,7 +124,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
         s3Url = await uploadFileToS3(
           getProcessedBase64Url,
-          `${userData.id}/menu/${item.name}_${item.category}_${Date.now()}.webp`
+          `${userData.id}/menu/${item.name}_${item.category.name}_${Date.now()}.webp`
         );
       }
 
