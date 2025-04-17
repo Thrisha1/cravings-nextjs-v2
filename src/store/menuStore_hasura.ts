@@ -12,6 +12,7 @@ import { Category, useCategoryStore } from "./categoryStore_hasura";
 import { processImage } from "@/lib/processImage";
 import { uploadFileToS3 } from "@/app/actions/aws-s3";
 import { revalidateTag } from "@/app/actions/revalidate";
+import { toast } from "sonner";
 
 export interface MenuItem {
   id?: string;
@@ -102,6 +103,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
   addItem: async (item) => {
     try {
+      toast.loading("Adding item...");
       const userData = useAuthStore.getState().userData as AuthUser;
       const addCategory = useCategoryStore.getState().addCategory;
 
@@ -145,13 +147,18 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       });
       revalidateTag(userData?.id);
       get().groupItems();
+      toast.dismiss();
+      toast.success("Item added successfully");
     } catch (error) {
       console.error(error);
+      toast.dismiss();
+      toast.error("Failed to add item");
     }
   },
 
   updateItem: async (id, updatedItem) => {
     try {
+      toast.loading("Updating item...");
       const categories = useCategoryStore.getState().categories;
       const { category, ...otherItems } = updatedItem;
       const userData = useAuthStore.getState().userData as AuthUser;
@@ -200,21 +207,30 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       set({ items });
       revalidateTag(userData?.id);
       get().groupItems();
+      toast.dismiss();
+      toast.success("Item updated successfully");
     } catch (error) {
       console.error("Error ", error);
+      toast.dismiss();
+      toast.error("Failed to update item");
     }
   },
 
   deleteItem: async (id) => {
     try {
+      toast.loading("Deleting item...");
       await fetchFromHasura(deleteMenu, {
         id,
       });
       const items = get().items.filter((item) => item.id !== id);
       set({ items });
       get().groupItems();
+      toast.dismiss();
+      toast.success("Item deleted successfully");
     } catch (error) {
       console.error("Error ", error);
+      toast.dismiss();
+      toast.error("Failed to delete item");
     }
   },
 
@@ -287,7 +303,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   updatedCategories: async (categories: Category[]) => {
-
+    toast.loading("Updating categories...");
     const fetchCategories = useCategoryStore.getState().fetchCategories;
     const user = useAuthStore.getState().userData as Partner;
 
@@ -312,5 +328,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     });
     set({ items: updatedItems });
     get().groupItems();
+    toast.dismiss();
+    toast.success("Categories updated successfully");
   },
 }));

@@ -11,6 +11,7 @@ import {
   incrementOfferEnquiry,
 } from "@/api/offers";
 import { revalidateTag } from "@/app/actions/revalidate";
+import { toast } from "sonner";
 
 interface Category {
   name: string;
@@ -133,6 +134,7 @@ export const useOfferStore = create<OfferState>((set, get) => {
       end_time: string;
     }) => {
       try {
+        toast.loading("Adding offer...");
         const user = useAuthStore.getState().userData;
         if (!user) throw "Partner not found";
 
@@ -155,6 +157,8 @@ export const useOfferStore = create<OfferState>((set, get) => {
         set({
           offers: [...get().offers, addedData.insert_offers.returning[0]],
         });
+        toast.dismiss();
+        toast.success("Offer added successfully");
 
         // fetch(`${process.env.NEXT_PUBLIC_WWJS_API_URL}/api/offerAlert`, {
         //   method: "POST",
@@ -170,11 +174,14 @@ export const useOfferStore = create<OfferState>((set, get) => {
         // });
       } catch (error) {
         console.error(error);
+        toast.dismiss();
+        toast.error("Error adding offer");
       }
     },
 
     deleteOffer: async (id: string) => {
       try {
+        toast.loading("Deleting offer...");
         const user = useAuthStore.getState().userData;
         if (!user) throw "Partner not found";
 
@@ -187,8 +194,12 @@ export const useOfferStore = create<OfferState>((set, get) => {
         });
 
         revalidateTag("offers");
+        toast.dismiss();
+        toast.success("Offer deleted successfully");
       } catch (error) {
         console.error(error);
+        toast.dismiss();
+        toast.error("Error deleting offer");
       }
     },
 
