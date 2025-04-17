@@ -274,7 +274,7 @@ export function MenuTab() {
                         className="rounded-xl overflow-hidden grid"
                         key={item.id}
                       >
-                        <CardHeader className="flex flex-row justify-between">
+                        <CardHeader className="flex flex-row justify-between gap-4">
                           <div>
                             {item.image_url.length > 0 && (
                               <div className="relative w-32 h-32 overflow-hidden">
