@@ -146,6 +146,11 @@ const QrPayment = () => {
       return;
     }
 
+    if(userData.role !== "user"){
+      toast.error("You are not allowed to use this feature");
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { followers } = await fetchFromHasura(IS_FOLLOWING, {
