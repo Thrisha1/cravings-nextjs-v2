@@ -22,7 +22,8 @@ import {
   FOLLOW_PARTNER,
   GET_USER_VISITS,
   CREATE_PAYMENT,
-  GET_UPI_DETAILS, 
+  GET_UPI_DETAILS,
+  IS_FOLLOWING,
 } from "@/api/payments";
 
 interface HotelDetails {
@@ -75,17 +76,13 @@ const upiApps: UPIApp[] = [
   },
 ];
 
-
 const QrPayment = () => {
   const [billAmount, setBillAmount] = useState<string>("");
   const [hotelDetails, setHotelDetails] = useState<HotelDetails>();
   const params = useParams();
   const ids = params.id as string[];
   const id = ids[0];
-  const {
-    userData,
-    signInWithPhone,
-  } = useAuthStore();
+  const { userData, signInWithPhone } = useAuthStore();
   const [isSignedIn, setIsSignedIn] = useState<boolean>(true);
   const [phoneNumber, setPhoneNumber] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -104,7 +101,7 @@ const QrPayment = () => {
         const response = await fetchFromHasura(GET_HOTEL_DETAILS, {
           qrCodeId: id,
         });
-        
+
         if (response.qr_codes && response.qr_codes.length > 0) {
           const qrData = response.qr_codes[0];
           setHotelDetails({
@@ -126,82 +123,95 @@ const QrPayment = () => {
 
   const calculateDiscount = (visits: any[]) => {
     if (visits.length === 0) return 0;
-    
+
     const lastVisit = visits[0];
     const now = new Date();
     const lastVisitDate = new Date(lastVisit.createdAt);
     const diffTime = Math.abs(now.getTime() - lastVisitDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     // Simple discount logic - 10% discount if last visit was more than 7 days ago
     if (diffDays > 7) {
       return 10;
     }
-    
+
     return 0;
   };
 
-const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-  if (!userData) {
-    setIsSignedIn(false);
-    return;
-  }
+    if (!userData) {
+      setIsSignedIn(false);
+      return;
+    }
 
-  setIsLoading(true);
-  try {
-    // Follow the partner
-    await fetchFromHasura(FOLLOW_PARTNER, {
-      userId: userData.id,
-      partnerId: hotelDetails?.hotelId,
-      phone: userData.role === "user" ? userData.phone : "",
-    });
+    setIsLoading(true);
+    try {
+      const { followers } = await fetchFromHasura(IS_FOLLOWING, {
+        userId: userData.id,
+        partnerId: hotelDetails?.hotelId,
+      });
 
-    // Get user visits
-    // const visitsResponse = await fetchFromHasura(GET_USER_VISITS, {
-    //   userId: userData.id,
-    //   partnerId: hotelDetails?.hotelId,
-    // });
 
-    // const visits = [];
-    
-    // Check if recent visit (within last 2 hours)
-    // if (visits.length > 0) {
-    //   // const lastVisit = visits[0];
-    //   const now = new Date();
-    //   const lastVisitDate = new Date(lastVisit.createdAt);
-    //   const diffTime = Math.abs(now.getTime() - lastVisitDate.getTime());
-    //   const diffHours = diffTime / (1000 * 60 * 60);
-      
-    //   if (diffHours < 2) {
-    //     setIsRecentVisit(true);
-    //     setIsBillAmountSubmitted(true);
-    //     setIsLoading(false);
-    //     return;
-    //   }
-    // }
 
-    // Calculate discount
-    const calculatedDiscount = 0;
-    const amount = billAmount.replace("₹", "");
+      // Follow the partner
 
-    // Create payment record
-    await fetchFromHasura(CREATE_PAYMENT, {
-      partnerId: hotelDetails?.hotelId,
-      amount: Number(amount),
-      userId: userData.id,
-      discount: calculatedDiscount,
-    });
+      if (!followers || followers.length === 0) {
+        await fetchFromHasura(FOLLOW_PARTNER, {
+          userId: userData.id,
+          partnerId: hotelDetails?.hotelId,
+          phone: userData.role === "user" ? userData.phone : "",
+        });
+      }else{
+        console.log("Already following");
+        
+      }
 
-    setDiscount(calculatedDiscount);
-    setIsBillAmountSubmitted(true);
-  } catch (error) {
-    console.error("Something went wrong");
-  } finally {
-    setIsLoading(false);
-  }
-};
+      // Get user visits
+      // const visitsResponse = await fetchFromHasura(GET_USER_VISITS, {
+      //   userId: userData.id,
+      //   partnerId: hotelDetails?.hotelId,
+      // });
+
+      // const visits = [];
+
+      // Check if recent visit (within last 2 hours)
+      // if (visits.length > 0) {
+      //   // const lastVisit = visits[0];
+      //   const now = new Date();
+      //   const lastVisitDate = new Date(lastVisit.createdAt);
+      //   const diffTime = Math.abs(now.getTime() - lastVisitDate.getTime());
+      //   const diffHours = diffTime / (1000 * 60 * 60);
+
+      //   if (diffHours < 2) {
+      //     setIsRecentVisit(true);
+      //     setIsBillAmountSubmitted(true);
+      //     setIsLoading(false);
+      //     return;
+      //   }
+      // }
+
+      // Calculate discount
+      const calculatedDiscount = 0;
+      const amount = billAmount.replace("₹", "");
+
+      // Create payment record
+      await fetchFromHasura(CREATE_PAYMENT, {
+        partnerId: hotelDetails?.hotelId,
+        amount: Number(amount),
+        userId: userData.id,
+        discount: calculatedDiscount,
+      });
+
+      setDiscount(calculatedDiscount);
+      setIsBillAmountSubmitted(true);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -228,12 +238,12 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   const handlePayNow = async () => {
     try {
       setIsLoading(true);
-      
+
       // Get UPI details
       const upiResponse = await fetchFromHasura(GET_UPI_DETAILS, {
         partnerId: hotelDetails?.hotelId,
       });
-      
+
       if (upiResponse.partners && upiResponse.partners.length > 0) {
         const isIphone = /iPad|iPhone|iPod/.test(navigator.userAgent);
         if (isIphone) {
@@ -267,28 +277,29 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
     await fetchFromHasura(GET_UPI_DETAILS, {
       partnerId: hotelDetails?.hotelId,
-    }).then((upiResponse) => {
-      if (upiResponse.partners && upiResponse.partners.length > 0) {
-        const upiData = upiResponse.partners[0];
-        const upiId = upiData.upi_id;     
-        const finalAmount =
-          Number(billAmount.replace("₹", "")) -
-          (Number(billAmount.replace("₹", "")) * discount) / 100;
-
-        const paymentUrl = app.getUrl({
-          upiId,
-          merchantName: hotelDetails?.hotelName || "",
-          amount: finalAmount,
-          transactionId: Date.now().toString(),
-        });
-
-        window.location.href = paymentUrl;
-      }
     })
-    .catch((error) => {
-      console.error("Error fetching UPI details:", error);
-      toast.error("Error fetching UPI details");
-    })
+      .then((upiResponse) => {
+        if (upiResponse.partners && upiResponse.partners.length > 0) {
+          const upiData = upiResponse.partners[0];
+          const upiId = upiData.upi_id;
+          const finalAmount =
+            Number(billAmount.replace("₹", "")) -
+            (Number(billAmount.replace("₹", "")) * discount) / 100;
+
+          const paymentUrl = app.getUrl({
+            upiId,
+            merchantName: hotelDetails?.hotelName || "",
+            amount: finalAmount,
+            transactionId: Date.now().toString(),
+          });
+
+          window.location.href = paymentUrl;
+        }
+      })
+      .catch((error) => {
+        console.error("Error fetching UPI details:", error);
+        toast.error("Error fetching UPI details");
+      });
   };
 
   useEffect(() => {
@@ -344,7 +355,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       <section className={`flex flex-col flex-1 justify-end`}>
         {isSignedIn ? (
           <>
-            { isBillAmountSubmitted || isRecentVisit ? (
+            {isBillAmountSubmitted || isRecentVisit ? (
               <div className="flex flex-col flex-1 justify-between items-center">
                 <div></div>
                 <div className="flex flex-col gap-2">

@@ -29,6 +29,17 @@ export const FOLLOW_PARTNER = `
   }
 `;
 
+export const IS_FOLLOWING = `
+  query IsFollowing($userId: uuid!, $partnerId: uuid!) {
+    followers(
+      where: { user_id: { _eq: $userId }, partner_id: { _eq: $partnerId } }
+      limit: 1
+    ) {
+      id
+    }
+  }
+`;
+
 export const GET_USER_VISITS = `
   query GetUserVisits($userId: uuid!, $partnerId: uuid!) {
     qr_codes(
