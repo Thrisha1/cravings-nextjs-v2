@@ -32,7 +32,7 @@ export function CountdownTimer({ endTime, upcoming }: CountdownTimerProps) {
     const distance = end - now;
 
     if (distance <= 0) {
-      setTimeLeft({ days: 0, hours: 0, minutes: 0 });
+      setTimeLeft({ days: -1, hours: -1, minutes: -1 });
       return;
     }
 
@@ -56,6 +56,10 @@ export function CountdownTimer({ endTime, upcoming }: CountdownTimerProps) {
       clearInterval(interval);
     };
   }, [endTime]);
+
+  if (timeLeft.days < 0) {
+    return <span>Expired</span>;
+  }
 
   if (upcoming) {
     return <span>Upcoming</span>;

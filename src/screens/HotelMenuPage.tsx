@@ -84,6 +84,9 @@ const HotelMenuPage = ({
   const [userPhone, setUserPhone] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
+  //For reasurance
+  offers = offers.filter(offer => new Date(offer.end_time).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0));
+
   const isLoggedIn = () => {
     if (userData) {
       return;

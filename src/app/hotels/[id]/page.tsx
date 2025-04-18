@@ -61,13 +61,16 @@ const HotelPage = async ({
 
   let filteredOffers: Offer[] = [];
   if (offers) {
+    const today = new Date().setHours(0, 0, 0, 0);
     filteredOffers = search
-      ? offers.filter((offer) =>
-          Object.values(offer).some((value) =>
-            String(value).toLowerCase().includes(search.trim().toLowerCase())
+      ? offers
+          .filter(offer => new Date(offer.end_time).setHours(0, 0, 0, 0) < today)
+          .filter((offer) =>
+            Object.values(offer).some((value) =>
+              String(value).toLowerCase().includes(search.trim().toLowerCase())
+            )
           )
-        )
-      : offers;
+      : offers.filter(offer => new Date(offer.end_time).setHours(0, 0, 0, 0) >= today);
   }
 
   // Use the store to fetch UPI data

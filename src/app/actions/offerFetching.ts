@@ -25,7 +25,8 @@ export const filterAndSortOffers = async ({
   // Filter offers based on validity and location
   const currentOffers = offers.filter((offer) => {
     const matchesLocation = !location || offer.partner?.district === location;
-    return matchesLocation;
+    const isValid = new Date(offer.end_time).setHours(0,0,0,0) > new Date().setHours(0,0,0,0);
+    return matchesLocation && isValid;
   });
 
   // // Add the distance to each offer
