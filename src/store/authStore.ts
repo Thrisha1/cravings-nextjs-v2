@@ -17,6 +17,7 @@ import {
   setAuthCookie,
   removeAuthCookie,
 } from "@/app/auth/actions";
+import { sendRegistrationWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 
 // Interfaces remain the same
 interface BaseUser {
@@ -69,7 +70,7 @@ interface AuthState {
     phone: string,
     upiId: string
   ) => Promise<void>;
-  signInWithPhone: (phone: string) => Promise<void>;
+  signInWithPhone: (phone: string, partnerId?: string) => Promise<void>;
   signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
   signInSuperAdminWithEmail: (email: string, password: string) => Promise<void>;
   fetchUser: () => Promise<void>;
@@ -238,7 +239,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signInWithPhone: async (phone: string) => {
+  signInWithPhone: async (phone: string, partnerId?: string) => {
     try {
       const email = `${phone}@user.com`;
       const response = (await fetchFromHasura(userLoginQuery, { email })) as {
@@ -265,6 +266,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           throw new Error("Failed to create user");
         }
         user = createResponse.insert_users_one;
+
+        if (partnerId) {
+          await sendRegistrationWhatsAppMsg(user.id, partnerId);
+        } else {
+          await sendRegistrationWhatsAppMsg(user.id);
+        }
       }
 
       setAuthCookie({ id: user.id, role: "user" });

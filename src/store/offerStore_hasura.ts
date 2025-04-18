@@ -12,6 +12,7 @@ import {
 } from "@/api/offers";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { toast } from "sonner";
+import { sendOfferWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 
 interface Category {
   name: string;
@@ -66,7 +67,6 @@ export const useOfferStore = create<OfferState>((set, get) => {
     offers: [],
 
     fetchOffer: async () => {
-
       if (get().offers.length > 0) {
         return get().offers;
       }
@@ -110,7 +110,7 @@ export const useOfferStore = create<OfferState>((set, get) => {
 
         // const offers = await unstable_cache(async () => {
         const offers = await fetchFromHasura(getPartnerOffers, {
-          partner_id: targetId
+          partner_id: targetId,
         });
 
         //   return offs;
@@ -145,35 +145,24 @@ export const useOfferStore = create<OfferState>((set, get) => {
           partner_id: user.id,
           start_time: new Date(offer.start_time).toISOString(),
         };
-        
 
-        const addedData = await fetchFromHasura(addOffer, {
+        let addedOffer = await fetchFromHasura(addOffer, {
           ...newOffer,
         });
 
-
+        addedOffer = addedOffer.insert_offers.returning[0];
 
         revalidateTag("offers");
         revalidateTag(user.id);
 
         set({
-          offers: [...get().offers, addedData.insert_offers.returning[0]],
+          offers: [...get().offers, addedOffer],
         });
         toast.dismiss();
         toast.success("Offer added successfully");
 
-        // fetch(`${process.env.NEXT_PUBLIC_WWJS_API_URL}/api/offerAlert`, {
-        //   method: "POST",
-        //   headers: {
-        //     "Content-Type": "application/json",
-        //   },
-        //   body: JSON.stringify({
-        //     offer: { id: addedOffer.id, ...offerData },
-        //     hotel : { id: user.uid, ...userData },
-        //   }),
-        // }).catch((error) => {
-        //   console.error("Error sending message:", error);
-        // });
+        await sendOfferWhatsAppMsg(addedOffer.id);
+        
       } catch (error) {
         console.error(error);
         toast.dismiss();

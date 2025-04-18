@@ -230,7 +230,7 @@ const QrPayment = () => {
         throw new Error("Invalid phone number");
       }
       setIsLoading(true);
-      await signInWithPhone(cleanedPhone);
+      await signInWithPhone(cleanedPhone , hotelDetails?.hotelId);
       setIsSignedIn(true);
     } catch (error) {
       console.error(error);
