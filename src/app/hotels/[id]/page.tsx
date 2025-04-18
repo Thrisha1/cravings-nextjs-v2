@@ -6,7 +6,7 @@ import { Offer } from "@/store/offerStore_hasura";
 import { unstable_cache } from "next/cache";
 import React from "react";
 import { Partner } from "@/store/authStore";
-import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
+// import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
 
 export interface HotelDataMenus extends Omit<MenuItem, 'category'> {
   category: {
@@ -41,8 +41,7 @@ const HotelPage = async ({
       try {
         
         const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
-          id,
-          end_time: getTimestampWithTimezone(new Date())
+          id
         });
         return {
           id,

@@ -27,7 +27,7 @@ export const getPartnerByIdQuery = `
   `; 
 
 export const getPartnerAndOffersQuery = `
-query GetPartnerAndOffersQuery($id: uuid! , $end_time: timestamptz!) {
+query GetPartnerAndOffersQuery($id: uuid!) {
   partners(where: {id: {_eq: $id}}) {
     district
     location
@@ -46,7 +46,7 @@ query GetPartnerAndOffersQuery($id: uuid! , $end_time: timestamptz!) {
       name
       price
     }
-    offers(where: {_and: [{end_time: {_gt: $end_time}}, {deletion_status: {_eq: 0}}]}) {
+    offers(where: {_and: [{end_time: {_gt: "now()"}}, {deletion_status: {_eq: 0}}]}) {
       end_time
       enquiries
       id

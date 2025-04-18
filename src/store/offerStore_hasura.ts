@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { useAuthStore } from "./authStore";
 // import { unstable_cache } from "next/cache";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
+// import  from "@/lib/getTimeStampWithTimezon";
 import {
   addOffer,
   deleteOffer,
@@ -101,7 +101,6 @@ export const useOfferStore = create<OfferState>((set, get) => {
       }
 
       try {
-        const time = getTimestampWithTimezone(new Date());
         const userData = useAuthStore.getState().userData;
         const targetId = partnerId ? partnerId : userData?.id;
 
@@ -111,8 +110,7 @@ export const useOfferStore = create<OfferState>((set, get) => {
 
         // const offers = await unstable_cache(async () => {
         const offers = await fetchFromHasura(getPartnerOffers, {
-          partner_id: targetId,
-          end_time: time,
+          partner_id: targetId
         });
 
         //   return offs;
@@ -139,19 +137,21 @@ export const useOfferStore = create<OfferState>((set, get) => {
         if (!user) throw "Partner not found";
 
         const newOffer = {
-          created_at: getTimestampWithTimezone(new Date()),
-          end_time: getTimestampWithTimezone(new Date(offer.end_time)),
+          created_at: new Date().toISOString(),
+          end_time: new Date(offer.end_time).toISOString(),
           items_available: offer.items_available,
           menu_item_id: offer.menu_id,
           offer_price: offer.offer_price,
           partner_id: user.id,
-          start_time: getTimestampWithTimezone(new Date(offer.start_time)),
+          start_time: new Date(offer.start_time).toISOString(),
         };
         
 
         const addedData = await fetchFromHasura(addOffer, {
           ...newOffer,
         });
+
+
 
         revalidateTag("offers");
         revalidateTag(user.id);

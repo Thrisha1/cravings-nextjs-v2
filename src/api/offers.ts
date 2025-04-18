@@ -33,7 +33,7 @@ export const getOfferById = `
 export const getOffers = `
   query GetOffers {
     offers(
-      where: { deletion_status: { _eq: 0 } },
+      where: { deletion_status: { _eq: 0 } , end_time: { _gt: "now()" } },
       order_by: { created_at: desc }
     ) {
       created_at
@@ -64,8 +64,8 @@ export const getOffers = `
 `;
 
 export const getPartnerOffers = `
-  query GetPartnerOffers($partner_id: uuid!, $end_time: timestamptz!) {
-  offers(where: {deletion_status: {_eq: 0 } ,partner_id: {_eq: $partner_id}, end_time: {_gt: $end_time}}) {
+  query GetPartnerOffers($partner_id: uuid!) {
+  offers(where: {deletion_status: {_eq: 0 } ,partner_id: {_eq: $partner_id}, end_time: {_gt: "now()" }}) {
     created_at
     id
     offer_price

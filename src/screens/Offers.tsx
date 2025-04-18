@@ -19,8 +19,6 @@ export default function Offers({ offers : OFFERS }: { offers: Offer[] }) {
   const [isLoading, setLoading] = useState(true);
 
   const fetchOffers = async () => {
-    console.log(OFFERS);
-    
     const filteredOffs = await filterAndSortOffers({
       offers: OFFERS,
       activeTab: searchParams.get("filter") || "all",

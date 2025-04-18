@@ -46,7 +46,7 @@ export const useClaimedOffersStore = create<ClaimedOffersState>((set, get) => ({
       }
 
       const newClaim = {
-        claimed_time: getTimestampWithTimezone(new Date()),
+        claimed_time: new Date().toISOString(),
         offer_id: offer.id,
         user_id: user?.id ?? "",
         partner_id: offer.partner?.id ?? "",
