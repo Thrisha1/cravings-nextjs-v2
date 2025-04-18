@@ -17,7 +17,14 @@ const buttonConfig = {
   upcoming: {
     text: (offer: Offer) => (
       <>
-        Offer Activates in: <CountdownTimer endTime={new Date(offer.end_time)} />
+        Offer Activates in:{" "}
+        <CountdownTimer
+          endTime={offer.end_time}
+          upcoming={
+            new Date(offer.start_time).setHours(0, 0, 0, 0) >
+            new Date().setHours(0, 0, 0, 0)
+          }
+        />
       </>
     ),
     className: "bg-gray-100 text-[#E63946] shadow-xl border border-gray-200",
@@ -76,8 +83,8 @@ const ClaimOfferButton: React.FC<ClaimOfferButtonProps> = ({
           setShowTicket(true);
         } else if (offersClaimable >= offer.menu.price - offer.offer_price) {
           handleClaimOffer();
-        }else{
-          router.push("/coupons")
+        } else {
+          router.push("/coupons");
         }
       }}
       className={`w-full py-3 text-[16px] font-semibold transition-all ${className}`}
@@ -94,7 +101,8 @@ const ClaimOfferButton: React.FC<ClaimOfferButtonProps> = ({
           {typeof text === "function" ? text(offer) : text}
           {buttonState === "offerNotClaimable" && (
             <span className="text-sm text-white">
-              You need {offer.menu.price - offer.offer_price - offersClaimable} Rs more
+              You need {offer.menu.price - offer.offer_price - offersClaimable}{" "}
+              Rs more
             </span>
           )}
         </div>

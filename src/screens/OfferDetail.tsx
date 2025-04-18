@@ -160,7 +160,7 @@ export default function OfferDetail({
                 {!isUpcoming && (
                   <div className="flex items-center text-lg text-gray-500">
                     <Clock className="w-4 h-4 mr-2" />
-                    <CountdownTimer endTime={new Date(offer.end_time)} />
+                    <CountdownTimer endTime={offer.end_time} upcoming={new Date(offer.start_time).setHours(0,0,0,0) > new Date().setHours(0,0,0,0)} />
                   </div>
                 )}
                 <div className="flex items-center text-lg text-gray-500">
