@@ -2,6 +2,7 @@ import React from "react";
 import { CommonOffer } from "../superAdmin/OfferUploadSuperAdmin";
 import Image from "next/image";
 import { truncateWithEllipsis } from "@/lib/truncate";
+import Link from "next/link";
 
 type DistrictKeys =
   | "thiruvananthapuram"
@@ -38,7 +39,11 @@ const districtToShortForm: Record<DistrictKeys, string> = {
 
 const CommonOfferCard = ({ commonOffer }: { commonOffer: CommonOffer }) => {
   return (
-    <div className="relative overflow-hidden">
+    <Link
+      prefetch={true}
+      href={`/explore/${commonOffer.id}`}
+      className="relative overflow-hidden"
+    >
       <div className="relative aspect-[9/14] lg:aspect-[6/4] w-full rounded-xl overflow-hidden">
         <Image
           src={commonOffer.image_url as string}
@@ -70,7 +75,7 @@ const CommonOfferCard = ({ commonOffer }: { commonOffer: CommonOffer }) => {
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
 

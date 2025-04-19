@@ -33,7 +33,7 @@ export default function HomePage() {
 
         <div className="mt-12 flex items-center justify-center gap-4">
           <Button
-            onClick={() => navigate.push("/offers")}
+            onClick={() => navigate.push("/explore")}
             className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-6 text-lg rounded-full transition-all duration-300 shadow-lg hover:shadow-xl"
           >
             Let&apos;s Go

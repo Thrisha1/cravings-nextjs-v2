@@ -5,9 +5,14 @@ import { unstable_cache } from "next/cache";
 import React from "react";
 
 const page = async () => {
+  const limit = 8;
+
   const getCommonOffers = await unstable_cache(
     async () => {
-      return fetchFromHasura(getAllCommonOffers);
+      return fetchFromHasura(getAllCommonOffers, {
+        limit: limit,
+        offset: 0,
+      });
     },
     ["all-common-offers", "common-offers"],
     {
@@ -15,9 +20,9 @@ const page = async () => {
     }
   );
 
-  const { common_offers } = await getCommonOffers();
+  const { common_offers , common_offers_aggregate } = await getCommonOffers();
 
-  return <Explore commonOffers={common_offers} />;
+  return <Explore commonOffers={common_offers} limit={limit} totalOffers={common_offers_aggregate.aggregate.count} />;
 };
 
 export default page;

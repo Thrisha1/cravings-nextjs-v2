@@ -131,7 +131,7 @@ export default function OfferUploadSuperAdmin() {
       });
 
       toast.success("Item created successfully!");
-      revalidateTag("common-offers");
+      revalidateTag("all-common-offers");
     } catch (error) {
       console.error("Error creating item:", error);
       toast.error("Failed to create item. Please try again.");

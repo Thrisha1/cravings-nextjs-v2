@@ -39,8 +39,8 @@ mutation InsertCommonOffer(
 }`;
 
 export const getAllCommonOffers = `
-  query GetAllCommonOffers {
-    common_offers(order_by: {created_at: desc}) {
+  query GetAllCommonOffers($limit: Int , $offset: Int) {
+    common_offers(order_by: {created_at: desc} , limit: $limit, offset: $offset) {
       id
       partner_name
       item_name
@@ -52,6 +52,11 @@ export const getAllCommonOffers = `
       image_url
       district
       created_at
+    }
+    common_offers_aggregate {
+      aggregate {
+        count
+      }
     }
   }
 `;
