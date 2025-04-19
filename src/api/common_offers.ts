@@ -37,3 +37,21 @@ mutation InsertCommonOffer(
     created_at
   }
 }`;
+
+export const getAllCommonOffers = `
+  query GetAllCommonOffers {
+    common_offers(order_by: {created_at: desc}) {
+      id
+      partner_name
+      item_name
+      price
+      location
+      description
+      insta_link
+      likes
+      image_url
+      district
+      created_at
+    }
+  }
+`;

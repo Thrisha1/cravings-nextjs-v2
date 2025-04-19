@@ -12,6 +12,13 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { uploadCommonOffer } from "@/api/common_offers";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 export interface CommonOffer {
   partner_name: string;
@@ -25,6 +32,23 @@ export interface CommonOffer {
   id: string;
   district: string;
 }
+
+const KERALA_DISTRICTS = [
+  "Thiruvananthapuram",
+  "Kollam",
+  "Pathanamthitta",
+  "Alappuzha",
+  "Kottayam",
+  "Idukki",
+  "Ernakulam",
+  "Thrissur",
+  "Palakkad",
+  "Malappuram",
+  "Kozhikode",
+  "Wayanad",
+  "Kannur",
+  "Kasaragod",
+];
 
 export default function OfferUploadSuperAdmin() {
   const router = useRouter();
@@ -183,15 +207,24 @@ export default function OfferUploadSuperAdmin() {
             >
               District *
             </Label>
-            <Input
-              type="text"
-              id="district"
-              name="district"
+            <Select
               value={formData.district}
-              onChange={handleChange}
+              onValueChange={(value) =>
+                setFormData((prev) => ({ ...prev, district: value.toLowerCase() }))
+              }
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-md bg-white focus-visible:ring-orange-500"
-            />
+            >
+              <SelectTrigger className="w-full px-4 py-2 border border-gray-300 rounded-md bg-white focus-visible:ring-orange-500">
+                <SelectValue placeholder="Select district" />
+              </SelectTrigger>
+              <SelectContent>
+                {KERALA_DISTRICTS.map((district) => (
+                  <SelectItem key={district} value={district}>
+                    {district}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Location */}
