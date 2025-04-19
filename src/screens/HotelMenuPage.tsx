@@ -304,7 +304,7 @@ const HotelMenuPage = ({
                 <VerifiedIcon className="ml-2 text-green-600" />
               </h1>
 
-              <Button
+              {/* <Button
                 onClick={async () => {
                   try {
                     if (isFollowed) {
@@ -332,7 +332,7 @@ const HotelMenuPage = ({
                 className="bg-orange-600 hover:bg-orange-500"
               >
                 {isFollowed ? "Unfollow" : "Follow"}
-              </Button>
+              </Button> */}
             </div>
 
             {/* hotel details  */}

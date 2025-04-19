@@ -22,6 +22,8 @@ import { toast } from "sonner";
 import { deleteFileFromS3 } from "@/app/actions/aws-s3";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { set } from "firebase/database";
+import { Accordion, AccordionContent, AccordionItem } from "../ui/accordion";
+import { AccordionTrigger } from "@radix-ui/react-accordion";
 
 export function MenuTab() {
   const {
@@ -247,7 +249,7 @@ export function MenuTab() {
       {/* Menu Items */}
       <>
         {Object.entries(filteredGroupedItems).length > 0 ? (
-          <div className="grid gap-4 divide-y-2 divide-gray-300">
+          <Accordion type="single" className="grid gap-4" collapsible>
             {Object.entries(filteredGroupedItems)
               .sort(([categoryA], [categoryB]) => {
                 const priorityA = getCategoryPriority(categoryA);
@@ -255,18 +257,18 @@ export function MenuTab() {
                 return priorityA - priorityB;
               })
               .map(([category, items], index) => (
-                <div key={category + index} className="pb-10">
-                  <div className="flex items-center gap-2 group max-w-fit">
-                    <h1 className="text-2xl lg:text-4xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent">
-                      {category}
-                    </h1>
+                <AccordionItem value={category} key={category + index} >
+                  <AccordionTrigger className="flex items-center gap-2 group max-w-fit">
+                    <h1 className="text-xl lg:text-3xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent flex items-center gap-2"><div className="left-marker">▶</div> {category}</h1>
                     <button
                       onClick={() => handleCategoryUpdate(category, items)}
                       className="group-hover:opacity-100 opacity-0 transition-opacity duration-300"
                     >
                       <Pen />
                     </button>
-                  </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {items.map((item) => (
@@ -372,9 +374,10 @@ export function MenuTab() {
                       </Card>
                     ))}
                   </div>
-                </div>
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-          </div>
+          </Accordion>
         ) : (
           <div className="text-center">
             {isMenuItemsFetching ? "Loading Menu...." : "No Menu Items Added!"}

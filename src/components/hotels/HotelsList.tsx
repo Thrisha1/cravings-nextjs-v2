@@ -54,7 +54,7 @@ export default function HotelsList({
         >
           <div className="relative h-32 w-full">
             <Image
-              src={partner.store_banner || "/default-banner.jpg"}
+              src={partner.store_banner || "/image_placeholder.webp"}
               alt={partner.store_name}
               fill
               className="object-cover rounded-t-lg"

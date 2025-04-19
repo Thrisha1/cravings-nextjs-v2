@@ -333,7 +333,7 @@ const QrPayment = () => {
         </div>
 
         {/* discount history button  */}
-        <Link
+        {/* <Link
           href={
             hotelDetails
               ? `${window.location.origin}/hotels/${hotelDetails?.hotelId}?qid=${id}`
@@ -353,7 +353,7 @@ const QrPayment = () => {
               </p>
             </>
           ) : null}
-        </Link>
+        </Link> */}
       </div>
 
       {/* main section  */}

@@ -157,7 +157,7 @@ export default function OfferDetail({
             </Link>
             <div className="space-y-6 mt-5">
               <div className="space-y-3">
-                {!isUpcoming && (
+                {isUpcoming && (
                   <div className="flex items-center text-lg text-gray-500">
                     <Clock className="w-4 h-4 mr-2" />
                     <CountdownTimer endTime={offer.end_time} upcoming={new Date(offer.start_time).setHours(0,0,0,0) > new Date().setHours(0,0,0,0)} />
@@ -202,9 +202,9 @@ export default function OfferDetail({
               )}
 
               <div className={`h-[36px] w-full`}>
-                {offer.deletion_status === 1 ? (
-                  <Button className="w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-gray-600 hover:bg-gray-700 rounded-sm">
-                    Expired
+                {offer.deletion_status === 1 || isUpcoming ? (
+                  <Button disabled className="w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-gray-600 hover:bg-gray-700 rounded-sm">
+                    { isUpcoming ? "Upcoming" : "Expired"}
                   </Button>
                 ) : (
                   <>
