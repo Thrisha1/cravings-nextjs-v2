@@ -1,1 +1,9 @@
-[]
+- comment: ""
+  definition:
+    query:
+      collection_name: allowed-queries
+      query_name: GetOffers
+  methods:
+    - GET
+  name: GetOffers
+  url: getoffers

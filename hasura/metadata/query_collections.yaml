@@ -1,3 +1,32 @@
 - name: allowed-queries
   definition:
-    queries: []
+    queries:
+      - name: GetOffers
+        query: |
+          query GetOffers {
+            offers(order_by: {created_at:desc}) {
+              id
+              offer_price
+              end_time
+              enquiries
+              items_available
+              start_time
+              menu {
+                category {
+                  name
+                }
+                description
+                image_url
+                name
+                price
+                id
+              }
+              partner {
+                district
+                store_name
+                location
+                id
+              }
+              created_at
+            }
+          }
