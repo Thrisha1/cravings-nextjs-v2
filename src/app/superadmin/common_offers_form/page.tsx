@@ -20,7 +20,7 @@ export default function NewItemForm() {
     description: '',
     insta_link: '',
     offer_price: null as number | null,
-    image_file: null as File | null,
+    image_url: null as File | null,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -55,10 +55,10 @@ export default function NewItemForm() {
       let s3Url = '';
       
       // Upload image to S3 if exists
-      if (formData.image_file) {
+      if (formData.image_url) {
         const processedImage = await processImage(
-          await formData.image_file.arrayBuffer(),
-          formData.image_file.name
+          await formData.image_url.arrayBuffer(),
+          formData.image_url.name
         );
         
         s3Url = await uploadFileToS3(
