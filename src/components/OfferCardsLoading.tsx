@@ -3,9 +3,6 @@ import React from "react";
 const OfferCardsLoading = () => {
   return (
     <div className="mt-5">
-      {/* tabs  */}
-      <div className="w-full h-[44px] m-0 bg-orange-100 rounded animate-pulse"></div>
-
       <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10 mt-5 ">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={'loading' + i} className="bg-white w-full h-[277.6px] rounded-xl grid grid-rows-2 overflow-hidden animate-pulse" >
