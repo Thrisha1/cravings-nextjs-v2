@@ -45,10 +45,6 @@ export const getAllCommonOffers = `
       partner_name
       item_name
       price
-      location
-      description
-      insta_link
-      likes
       image_url
       district
       created_at
