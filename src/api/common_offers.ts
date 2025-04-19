@@ -56,3 +56,21 @@ export const getAllCommonOffers = `
     }
   }
 `;
+
+export const getCommonOfferById = `
+  query GetCommonOfferById($id: uuid!) {
+    common_offers_by_pk(id: $id) {
+      id
+      partner_name
+      item_name
+      price
+      location
+      description
+      insta_link
+      image_url
+      likes
+      district
+      created_at
+    }
+  }
+`;

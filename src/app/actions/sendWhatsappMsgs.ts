@@ -1,5 +1,7 @@
 "use server";
 
+
+
 export const sendOfferWhatsAppMsg = async (offer_id: string) => {
   try {
     fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/offerAlert`, {
@@ -9,6 +11,22 @@ export const sendOfferWhatsAppMsg = async (offer_id: string) => {
       },
       body: JSON.stringify({
         offer_id,
+      }),
+    })
+  } catch (error) {
+    console.error("Error sending WhatsApp message:", error);
+  }
+};
+
+export const sendCommonOfferWhatsAppMsg = async (common_offer_id: string) => {
+  try {
+    fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/commonOfferAlert`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        common_offer_id,
       }),
     })
   } catch (error) {

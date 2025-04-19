@@ -47,6 +47,7 @@ export interface Partner extends BaseUser {
   description: string | null;
   phone: string;
   district: string;
+  delivery_status: boolean;
 }
 
 export interface SuperAdmin extends BaseUser {

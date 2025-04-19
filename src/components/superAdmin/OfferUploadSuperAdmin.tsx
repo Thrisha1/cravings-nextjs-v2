@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { revalidateTag } from "@/app/actions/revalidate";
+import { sendCommonOfferWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 
 export interface CommonOffer {
   partner_name: string;
@@ -29,7 +30,7 @@ export interface CommonOffer {
   description: string | null;
   insta_link: string | null;
   likes: number;
-  image_url: string | null;
+  image_url: string;
   id: string;
   district: string;
 }
@@ -64,7 +65,7 @@ export default function OfferUploadSuperAdmin() {
     description: "",
     insta_link: "",
     likes: 0,
-    image_url: null,
+    image_url: "",
     id: "",
     district: "",
   });
@@ -126,12 +127,13 @@ export default function OfferUploadSuperAdmin() {
 
       const { id, ...payload } = itemData;
 
-      await fetchFromHasura(uploadCommonOffer, {
+      const { insert_common_offers_one } = await fetchFromHasura(uploadCommonOffer, {
         ...payload,
       });
 
       toast.success("Item created successfully!");
       revalidateTag("all-common-offers");
+      await sendCommonOfferWhatsAppMsg(insert_common_offers_one.id);
     } catch (error) {
       console.error("Error creating item:", error);
       toast.error("Failed to create item. Please try again.");

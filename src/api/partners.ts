@@ -31,6 +31,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
   partners(where: {id: {_eq: $id}}) {
     district
     location
+    delivery_status
     store_banner
     store_name
     menus(where: {deletion_status: {_eq: 0}}) {
@@ -97,6 +98,15 @@ export const updatePartnerStatusMutation = `
     update_partners_by_pk(pk_columns: { id: $id }, _set: { status: $status }) {
       id
       status
+    }
+  }
+`;
+
+export const updatePartnerDeliveryStatusMutation = `
+  mutation UpdatePartnerDeliveryStatus($id: uuid!, $delivery_status: String!) {
+    update_partners_by_pk(pk_columns: { id: $id }, _set: { delivery_status: $delivery_status }) {
+      id
+      delivery_status
     }
   }
 `;

@@ -45,6 +45,7 @@ export default function ProfilePage() {
   );
   const [isBannerUploading, setBannerUploading] = useState(false);
   const [isBannerChanged, setIsBannerChanged] = useState(false);
+  const [deliveryStatus, setDeliveryStatus] = useState<boolean>(false);
 
   const isLoading = authLoading;
 
@@ -52,6 +53,7 @@ export default function ProfilePage() {
     if (userData?.role === "partner") {
       setBannerImage(userData.store_banner || null);
       setUpiId(userData.upi_id || "");
+      setDeliveryStatus(userData.delivery_status);
     }
   }, [userData]);
 
