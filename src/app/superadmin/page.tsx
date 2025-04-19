@@ -1,4 +1,5 @@
 import AssignQrPartners from "@/components/superAdmin/AssignQrPartners";
+import OfferUploadSuperAdmin from "@/components/superAdmin/OfferUploadSuperAdmin";
 // import BulkUpload from "@/components/superAdmin/BulkUpload";
 // import OfferDetails from "@/components/superAdmin/OfferDetails";
 import PartnerVerification from "@/components/superAdmin/PartnerVerification";
@@ -36,6 +37,11 @@ const page = async (props: { searchParams: SearchParams }) => {
       name: "Update Hotel UPI ID",
       component: <UpdateHotelUpiId />,
       id: "update-hotel-upi-id",
+    },
+    {
+      name: "Offer Upload",
+      component: <OfferUploadSuperAdmin />,
+      id: "offer-upload",
     },
   ];
 
