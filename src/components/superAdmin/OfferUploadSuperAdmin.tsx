@@ -116,6 +116,7 @@ export default function OfferUploadSuperAdmin() {
       // Prepare item data for API
       const itemData = {
         ...formData,
+        district : formData.district.toLowerCase(),
         image_url: s3Url,
         location: formData.location || null,
         description: formData.description || null,
@@ -210,7 +211,7 @@ export default function OfferUploadSuperAdmin() {
             <Select
               value={formData.district}
               onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, district: value.toLowerCase() }))
+                setFormData((prev) => ({ ...prev, district: value }))
               }
               required
             >
