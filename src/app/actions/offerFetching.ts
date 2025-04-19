@@ -3,6 +3,7 @@
 import { Offer } from "@/store/offerStore_hasura";
 import { isHotelNear } from "./isHotelNear";
 import Fuse from "fuse.js";
+import { CommonOffer } from "@/components/superAdmin/OfferUploadSuperAdmin";
 
 export const filterAndSortOffers = async ({
   offers,
@@ -92,6 +93,54 @@ export const filterAndSortOffers = async ({
     );
     // allOffers.sort((a, b) => a.distance - b.distance);
   }
+
+  return allOffers;
+};
+
+
+export const filterAndSortCommonOffers = async ({
+  offers,
+  searchQuery = "",
+  location = null,
+}: {
+  offers: CommonOffer[];
+  searchQuery?: string;
+  location?: string | null;
+}) => {
+  // Convert search query to lowercase for case-insensitive matching
+  const query = searchQuery.toLowerCase();
+
+  // Filter offers based on validity and location
+  const currentOffers = offers.filter((offer) => {
+    const matchesLocation = !location || offer.district.toLowerCase() === location.toLowerCase();
+    return matchesLocation;
+  });
+
+  // Configure Fuse.js for fuzzy searching
+  const fuseOptions = {
+    keys: [
+      "item_name",
+      "partner_name",
+      "price",
+      "description",
+      "district",
+    ],
+    includeScore: true,
+    threshold: 0.3, 
+    ignoreLocation: true, 
+    minMatchCharLength: 2,
+  };
+
+  // Create a Fuse instance with the offers
+  const fuse = new Fuse(currentOffers, fuseOptions);
+
+  // Perform fuzzy search if there's a search query
+  let allOffers = currentOffers;
+  if (query) {
+    const fuseResults = fuse.search(query);
+    allOffers = fuseResults.map((result) => result.item);
+  }
+
 
   return allOffers;
 };
