@@ -1,6 +1,7 @@
 import React from "react";
 import { CommonOffer } from "../superAdmin/OfferUploadSuperAdmin";
 import Image from "next/image";
+import { truncateWithEllipsis } from "@/lib/truncate";
 
 type DistrictKeys =
   | "thiruvananthapuram"
@@ -51,10 +52,10 @@ const CommonOfferCard = ({ commonOffer }: { commonOffer: CommonOffer }) => {
       <div className="w-full h-full absolute top-0 left-0 bg-gradient-to-b from-transparent to-black rounded-xl">
         <div className="absolute bottom-0 left-0 p-3 w-full">
           <h1 className="text-white font-bold text-lg capitalize">
-            {commonOffer.item_name.toLowerCase()}
+            {truncateWithEllipsis(commonOffer.item_name.toLowerCase(), 35)}
           </h1>
-          <p className="text-white/80 text-sm capitalize">
-            {commonOffer.partner_name.toLowerCase()}
+          <p className="text-white/80 text-sm capitalize ">
+            {truncateWithEllipsis(commonOffer.partner_name.toLowerCase(), 30)}
           </p>
           <div className="flex justify-between items-center mt-2">
             <p className="text-orange-600 font-bold text-lg">
