@@ -49,9 +49,13 @@ export function Navbar() {
     <>
       {[
         {
-          href: `${userLocation ? `/offers${userLocation}` : "/offers"}`,
-          label: "Offers",
+          href : "/explore",
+          label: "Explore",
         },
+        // {
+        //   href: `${userLocation ? `/offers${userLocation}` : "/offers"}`,
+        //   label: "Offers",
+        // },
         ...(userData?.role === "partner"
           ? [{ href: "/admin", label: "Admin" }]
           : []),

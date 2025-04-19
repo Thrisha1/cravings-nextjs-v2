@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { revalidateTag } from "@/app/actions/revalidate";
 
 export interface CommonOffer {
   partner_name: string;
@@ -116,7 +117,7 @@ export default function OfferUploadSuperAdmin() {
       // Prepare item data for API
       const itemData = {
         ...formData,
-        district : formData.district.toLowerCase(),
+        district: formData.district.toLowerCase(),
         image_url: s3Url,
         location: formData.location || null,
         description: formData.description || null,
@@ -130,6 +131,7 @@ export default function OfferUploadSuperAdmin() {
       });
 
       toast.success("Item created successfully!");
+      revalidateTag("common-offers");
     } catch (error) {
       console.error("Error creating item:", error);
       toast.error("Failed to create item. Please try again.");

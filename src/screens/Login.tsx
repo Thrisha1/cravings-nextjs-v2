@@ -34,7 +34,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       await signInWithPhone(cleanedPhone);
-      navigate.push("/offers");
+      navigate.push("/explore");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
     } finally {

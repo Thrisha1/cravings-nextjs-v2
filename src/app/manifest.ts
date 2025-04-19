@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Cravings',
     short_name: 'Cravings',
     description: 'Find the best food deals in your area',
-    start_url: '/offers',
+    start_url: '/explore',
     display: 'fullscreen',
     background_color: '#ffffff',
     theme_color: '#000000',

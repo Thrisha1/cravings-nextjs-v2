@@ -59,7 +59,7 @@ export default function Offers({ offers : OFFERS }: { offers: Offer[] }) {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 px-3 py-3 relative pb-10">
       {/* <ScanButton /> */}
-      <CravingsCashInfoModal />
+      {/* <CravingsCashInfoModal /> */}
 
       {/* survey is currently turned off */}
 
