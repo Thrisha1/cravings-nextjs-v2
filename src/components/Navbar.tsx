@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { UtensilsCrossed, Menu, X, Banknote } from "lucide-react";
+import { UtensilsCrossed, Menu, X, Banknote, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 // import { useClaimedOffersStore } from "@/store/claimedOffersStore";
@@ -49,7 +49,7 @@ export function Navbar() {
     <>
       {[
         {
-          href : "/explore",
+          href: "/explore",
           label: "Explore",
         },
         // {
@@ -134,18 +134,34 @@ export function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <Link
-                href={userLocation ? `/offers${userLocation}` : "/offers"}
+              <div
+                onClick={()=>{
+                  router.back();
+                }}
                 className="flex items-center space-x-2"
               >
-                <UtensilsCrossed className="h-6 w-6 text-orange-600" />
+                {pathname === "/offers" || pathname === "/explore" ? (
+                  <>
+                    <UtensilsCrossed className="h-6 w-6 text-orange-600" />
 
-                <div className="relative">
-                  <span className="text-xl font-bold text-gray-900">
-                    Cravings
-                  </span>
-                </div>
-              </Link>
+                    <div className="relative">
+                      <span className="text-xl font-bold text-gray-900">
+                        Cravings
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <ChevronLeft className="h-6 w-6 text-orange-600" />
+
+                    <div className="relative">
+                      <span className="text-xl font-bold text-gray-900">
+                        Back
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-5">
