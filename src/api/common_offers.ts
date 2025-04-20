@@ -74,3 +74,10 @@ export const getCommonOfferById = `
     }
   }
 `;
+
+export const deleteCommonOffer = `
+  mutation DeleteCommonOffer($id: uuid!) {
+    delete_common_offers_by_pk(id: $id) {
+      id
+    }
+}`;

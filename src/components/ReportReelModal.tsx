@@ -24,7 +24,7 @@ const ReportReelModal = ({ className }: { className?: string }) => {
   const [reportReason, setReportReason] = useState("");
   const [additionalDetails, setAdditionalDetails] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { userData  } = useAuthStore();
+  const { userData } = useAuthStore();
   const params = useParams();
 
   const predefinedReasons = [
@@ -41,7 +41,8 @@ const ReportReelModal = ({ className }: { className?: string }) => {
     setIsLoading(true);
     toast.loading("Submitting your report...");
     try {
-      const sendedBy = (userData && userData.role == "user") ? userData.phone : "Anonymous";
+      const sendedBy =
+        userData && userData.role == "user" ? userData.phone : "Anonymous";
       const offerId = (params.id as string) || "Unknown";
       const reason = reportReason + "-" + additionalDetails;
 
@@ -67,7 +68,7 @@ const ReportReelModal = ({ className }: { className?: string }) => {
       <DialogTrigger asChild>
         <div
           onClick={() => setIsOpen(true)}
-          className={`flex items-center gap-2 cursor-pointer ${className}`}
+          className={`flex items-center gap-2 cursor-pointer text-red-500 ${className}`}
         >
           <OctagonAlert size={20} />
           <span>Report</span>
