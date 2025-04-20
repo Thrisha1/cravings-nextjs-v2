@@ -83,7 +83,7 @@ const Explore = ({
   },[isLoadingMore])
 
   return (
-    <div className="min-h-screen w-full bg-orange-50 px-3 py-3 relative pb-10">
+    <div className="min-h-[100dvh] w-full bg-orange-50 px-3 py-3 relative pb-24">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-start md:items-center gap-3 my-4">
           <div className="flex flex-col">

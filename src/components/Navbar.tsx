@@ -48,14 +48,15 @@ export function Navbar() {
   const NavLinks = () => (
     <>
       {[
+         {
+          href: `/offers`,
+          label: "Offers",
+        },
         {
           href: "/explore",
           label: "Explore",
         },
-        // {
-        //   href: `${userLocation ? `/offers${userLocation}` : "/offers"}`,
-        //   label: "Offers",
-        // },
+       
         ...(userData?.role === "partner"
           ? [{ href: "/admin", label: "Admin" }]
           : []),
@@ -140,7 +141,7 @@ export function Navbar() {
                 }}
                 className="flex items-center space-x-2"
               >
-                {pathname === "/offers" || pathname === "/explore" ? (
+                {pathname === "/offers" || pathname === "/explore" || pathname === "/" ? (
                   <>
                     <UtensilsCrossed className="h-6 w-6 text-orange-600" />
 

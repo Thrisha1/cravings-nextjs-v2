@@ -57,7 +57,7 @@ export default function Offers({ offers : OFFERS }: { offers: Offer[] }) {
   // }, [offers]);
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 px-3 py-3 relative pb-10">
+    <div className="min-h-[100dvh] w-full bg-gradient-to-b from-orange-50 to-orange-100 px-3 py-3 relative pb-24">
       {/* <ScanButton /> */}
       {/* <CravingsCashInfoModal /> */}
 

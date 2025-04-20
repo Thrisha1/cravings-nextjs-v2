@@ -44,22 +44,27 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
         <ReportReelModal className="text-red-500 absolute top-5 right-5 flex items-end gap-2" />
 
         <div className="text-start grid gap-2">
-          <h1 className="text-2xl font-extrabold capitalize text-orange-500 mt-5">
+          <h1 className="text-2xl font-extrabold text-orange-500 mt-5 capitalize">
             {" "}
-            <UtensilsCrossed size={50} /> {commonOffer.item_name}
+            <UtensilsCrossed size={50} /> {commonOffer.item_name.toLowerCase()}
           </h1>
           <p className="text-3xl text-orange-500 font-extrabold">
             {" "}
             <span className="text-lg font-medium">At Just</span> ₹
             {commonOffer.price}
           </p>
-          <p className="text-lg font-medium flex items-end">
+          <p className="text-lg font-medium gap-1 flex items-start capitalize ">
             {" "}
-            <Hotel size={25} /> {commonOffer.partner_name}
+            <Hotel size={25} />{" "}
+            <span className="flex-1">
+              {commonOffer.partner_name.toLowerCase()}
+            </span>
           </p>
-          <p className="text-lg flex items-end gap-1">
-            <Map size={25} /> {commonOffer.district}
-          </p>
+          {commonOffer?.district && (
+            <p className="text-lg flex items-end gap-1 capitalize">
+              <Map size={25} /> {commonOffer.district.toLowerCase()}
+            </p>
+          )}
 
           {commonOffer.location && (
             <Link
