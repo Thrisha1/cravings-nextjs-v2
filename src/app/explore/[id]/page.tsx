@@ -53,7 +53,7 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
             <span className="text-lg font-medium">At Just</span> ₹
             {commonOffer.price}
           </p>
-          <p className="text-lg font-medium gap-1 flex items-start capitalize ">
+          <p className=" mt-3 font-medium gap-1 flex items-start capitalize ">
             {" "}
             <Hotel size={25} />{" "}
             <span className="flex-1">
@@ -61,7 +61,7 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
             </span>
           </p>
           {commonOffer?.district && (
-            <p className="text-lg flex items-end gap-1 capitalize">
+            <p className=" flex items-end gap-1 capitalize">
               <Map size={25} /> {commonOffer.district.toLowerCase()}
             </p>
           )}
@@ -69,19 +69,26 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
           {commonOffer.location && (
             <Link
               href={commonOffer.location}
-              className="text-lg  text-orange-500 flex items-end gap-1"
+              className="  text-orange-500 flex items-end gap-1"
             >
               <MapPin size={25} />
               View Location
             </Link>
           )}
           <Link
-            className="text-lg  text-orange-500 flex items-end gap-1"
+            className="  text-orange-500 flex items-end gap-1"
             href={commonOffer?.insta_link as string}
           >
             <InstagramLogoIcon width={25} height={25} />
-            View Instagram
+            View On Instagram
           </Link>
+
+          {commonOffer?.description && (
+            <p className=" gap-1 text-black/80 mt-3">
+              <span className="text-lg font-medium">More Details:</span>{" "}
+              {commonOffer.description}
+            </p>
+          )}
         </div>
 
         <InstaReelEmbeded
