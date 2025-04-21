@@ -47,6 +47,7 @@ import {
 } from "../ui/select";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/formatDate";
+import convertLocToCoord from "@/app/actions/convertLocToCoord";
 
 const ExploreOfferManage = () => {
   const [offers, setOffers] = useState<CommonOffer[]>([]);
@@ -137,16 +138,30 @@ const ExploreOfferManage = () => {
       likes: offer.likes,
       district: offer.district.toLowerCase(),
       image_url: offer.image_url,
+      coordinates: offer.coordinates,
     });
   };
 
   const handleUpdate = async () => {
     if (!editingId) return;
 
+    toast.loading("Updating offer....", {
+      id: editingId,
+    });
+
+    const updatedFrom = editForm;
+
+    if (updatedFrom.coordinates?.type === "Need to update") {
+      const { location } = updatedFrom;
+      const coordinates = await convertLocToCoord(location as string);
+
+      updatedFrom.coordinates = coordinates;
+    }
+
     try {
       const updates = await fetchFromHasura(updateCommonOffer, {
         id: editingId,
-        object: editForm,
+        object: updatedFrom,
       });
 
       setOffers(
@@ -157,8 +172,10 @@ const ExploreOfferManage = () => {
         )
       );
       setEditingId(null);
+      toast.dismiss(editingId);
       toast.success("Offer updated successfully");
     } catch (error) {
+      toast.dismiss(editingId);
       toast.error("Failed to update offer");
       console.error("Error updating offer:", error);
     }
@@ -174,14 +191,26 @@ const ExploreOfferManage = () => {
     }
   };
 
-  const handleInputChange = (
+  const handleInputChange = async (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setEditForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+
+    if (name === "location") {
+      setEditForm((prev) => ({
+        ...prev,
+        location: value,
+        coordinates: {
+          type: "Need to update",
+          coordinates: [0, 0],
+        },
+      }));
+    } else {
+      setEditForm((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleDistrictChange = (value: string) => {
