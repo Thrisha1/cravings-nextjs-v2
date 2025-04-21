@@ -21,6 +21,7 @@ import {
 } from "../ui/select";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { sendCommonOfferWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
+import convertLocToCoord from "@/app/actions/convertLocToCoord";
 
 export interface CommonOffer {
   partner_name: string;
@@ -40,7 +41,7 @@ export interface CommonOffer {
   created_at?: string;
 }
 
-const KERALA_DISTRICTS = [
+export const KERALA_DISTRICTS = [
   "Thiruvananthapuram",
   "Kollam",
   "Pathanamthitta",
@@ -104,6 +105,11 @@ export default function OfferUploadSuperAdmin() {
     try {
       let s3Url = null;
 
+      if ((formData.location?.length ?? 0) <= 5) {
+        toast.error("Location should be provided!");
+        throw new Error("Location should be provided!");
+      }
+
       // Upload image to S3 if exists
       if (formData.image_url) {
         const processedImage = await processImage(
@@ -120,6 +126,8 @@ export default function OfferUploadSuperAdmin() {
         );
       }
 
+      const coordinates = await convertLocToCoord(formData.location as string);
+
       // Prepare item data for API
       const itemData = {
         ...formData,
@@ -128,6 +136,7 @@ export default function OfferUploadSuperAdmin() {
         location: formData.location || null,
         description: formData.description || null,
         insta_link: formData.insta_link || null,
+        coordinates
       };
 
       const { id, ...payload } = itemData;

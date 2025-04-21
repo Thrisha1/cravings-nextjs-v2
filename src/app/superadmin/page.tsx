@@ -1,4 +1,5 @@
 import AssignQrPartners from "@/components/superAdmin/AssignQrPartners";
+import ExploreOfferManage from "@/components/superAdmin/ExploreOfferManage";
 import OfferUploadSuperAdmin from "@/components/superAdmin/OfferUploadSuperAdmin";
 // import BulkUpload from "@/components/superAdmin/BulkUpload";
 // import OfferDetails from "@/components/superAdmin/OfferDetails";
@@ -42,6 +43,11 @@ const page = async (props: { searchParams: SearchParams }) => {
       name: "Offer Upload",
       component: <OfferUploadSuperAdmin />,
       id: "offer-upload",
+    },
+    {
+      name: "Explore",
+      component: <ExploreOfferManage />,
+      id: "explore-offer-manage",
     },
   ];
 

@@ -14,5 +14,5 @@ export function formatDate(input: string): string {
     timeZone: "Asia/Kolkata",
   };
 
-  return istDate.toLocaleString("en-US", options).replace(",", "");
+  return istDate.toLocaleString("en-US", options);
 }

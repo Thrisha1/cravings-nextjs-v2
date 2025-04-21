@@ -9,6 +9,7 @@ mutation InsertCommonOffer(
   $image_url: String
   $likes: Int
   $district: String!
+  $coordinates: geography!
 ) {
   insert_common_offers_one(
     object: {
@@ -22,6 +23,7 @@ mutation InsertCommonOffer(
       likes: $likes
       district: $district
       created_at: "now()"
+      coordinates: $coordinates
     }
   ) {
     id
@@ -35,6 +37,7 @@ mutation InsertCommonOffer(
     image_url
     district
     created_at
+    coordinates
   }
 }`;
 
@@ -45,6 +48,29 @@ export const getAllCommonOffers = `
       partner_name
       item_name
       price
+      image_url
+      district
+      created_at
+    }
+    common_offers_aggregate {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
+export const getAllCommonOffersAllFields = `
+  query GetAllCommonOffers($limit: Int , $offset: Int) {
+    common_offers(order_by: {created_at: desc} , limit: $limit, offset: $offset) {
+      id
+      partner_name
+      item_name
+      price
+      location
+      description
+      insta_link
+      likes
       image_url
       district
       created_at
@@ -81,3 +107,54 @@ export const deleteCommonOffer = `
       id
     }
 }`;
+
+
+export const updateCommonOffer = `
+  mutation UpdateCommonOffer( $object: common_offers_set_input!, $id: uuid!) {
+    update_common_offers_by_pk(pk_columns: {id: $id}, _set: $object) {
+      id
+      partner_name
+      item_name
+      price
+      location
+      description
+      insta_link
+      image_url
+      likes
+      district
+      created_at
+      coordinates
+    }
+  }`;
+
+  export const searchCommonOffers = `
+  query SearchCommonOffers($searchTerm: String!, $limit: Int!, $offset: Int!) {
+    common_offers(
+      where: {
+        _or: [
+          { partner_name: { _ilike: $searchTerm } },
+          { item_name: { _ilike: $searchTerm } },
+          { location: { _ilike: $searchTerm } },
+          { district: { _ilike: $searchTerm } },
+          { description: { _ilike: $searchTerm } }
+        ]
+      },
+      limit: $limit,
+      offset: $offset,
+      order_by: { created_at: desc }
+    ) {
+      id
+      partner_name
+      item_name
+      price
+      location
+      description
+      insta_link
+      likes
+      image_url
+      district
+      coordinates
+      created_at
+    }
+  }
+`;
