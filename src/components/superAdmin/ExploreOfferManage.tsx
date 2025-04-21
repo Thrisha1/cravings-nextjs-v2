@@ -193,7 +193,6 @@ const ExploreOfferManage = () => {
 
   return (
     <div className="container mx-auto p-4">
-
       <div className="flex items-center mb-4">
         <div className="relative w-full ">
           <Search className="absolute  left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -215,6 +214,7 @@ const ExploreOfferManage = () => {
           <Table className="bg-white">
             <TableHeader>
               <TableRow>
+                <TableHead>No.</TableHead>
                 <TableHead>Partner</TableHead>
                 <TableHead>Item</TableHead>
                 <TableHead>Price</TableHead>
@@ -227,10 +227,11 @@ const ExploreOfferManage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {offers.map((offer) => (
+              {offers.map((offer, index) => (
                 <TableRow key={offer.id}>
                   {editingId === offer.id ? (
                     <>
+                      <TableCell>{index + 1}</TableCell>
                       <TableCell>
                         <Input
                           name="partner_name"
@@ -318,6 +319,7 @@ const ExploreOfferManage = () => {
                     </>
                   ) : (
                     <>
+                      <TableCell>{index + 1}</TableCell>
                       <TableCell>{offer.partner_name}</TableCell>
                       <TableCell>{offer.item_name}</TableCell>
                       <TableCell>{offer.price}</TableCell>
