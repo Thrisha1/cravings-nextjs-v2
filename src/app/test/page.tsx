@@ -1,4 +1,5 @@
 "use client";
+import { getCommonOffersWithDistance } from "@/api/common_offers";
 import { CommonOffer } from "@/components/superAdmin/OfferUploadSuperAdmin";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import React, { useEffect, useState } from "react";
@@ -10,19 +11,15 @@ const Page = () => {
 
   const fetchOffers = async () => {
     try {
-      const response = await fetchFromHasura(`query GetAllCommonOffers {
-        common_offers(order_by: {created_at: desc} , where : {coordinates: {_is_null: true}}) {
-          id
-          partner_name
-          item_name
-          price
-          image_url
-          district
-          location
-          coordinates
-          created_at
-        }
-      }`);
+      const response = await fetchFromHasura(getCommonOffersWithDistance , {
+        userLat: 0,
+        userLon: 0,
+        limit: 10,
+        offset: 0,
+      });
+
+      console.log(response);
+      
 
       if (response.common_offers) {
         setOffers(response.common_offers);
@@ -79,7 +76,7 @@ const Page = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Common Offers</h1>
-      <div className="overflow-x-auto">
+      {/* <div className="overflow-x-auto">
         <table className="min-w-full bg-white border border-gray-200">
           <thead>
             <tr className="bg-gray-100">
@@ -129,7 +126,7 @@ const Page = () => {
             ))}
           </tbody>
         </table>
-      </div>
+      </div> */}
     </div>
   );
 };

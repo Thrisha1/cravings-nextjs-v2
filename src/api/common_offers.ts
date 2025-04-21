@@ -60,6 +60,33 @@ export const getAllCommonOffers = `
   }
 `;
 
+export const getCommonOffersWithDistance = `
+  query GetCommonOffersWithDistance(
+    $userLat: Float!
+    $userLon: Float!
+    $limit: Int!
+    $offset: Int!
+  ) {
+    common_offers(
+      limit: $limit
+      offset: $offset
+      order_by: { created_at: desc }
+    ) {
+      id
+      partner_name
+      item_name
+      price
+      image_url
+      district
+      distance: offer_distance(
+        coordinates,
+        $userLat,
+        $userLon
+      ) / 1000 
+    }
+  }
+`;
+
 export const getAllCommonOffersAllFields = `
   query GetAllCommonOffers($limit: Int , $offset: Int) {
     common_offers(order_by: {created_at: desc} , limit: $limit, offset: $offset) {

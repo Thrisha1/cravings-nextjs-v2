@@ -345,7 +345,7 @@ const HotelMenuPage = ({
                 <span>{hoteldata?.followers?.length ?? 0}</span>
               </div> */}
 
-              <div
+              {/* <div
                 onClick={() => router.push(hoteldata?.location ?? "")}
                 className="flex items-center gap-2 text-black/60 text-sm w-fit"
               >
@@ -354,7 +354,7 @@ const HotelMenuPage = ({
                   <MapPin size={20} /> Area :{" "}
                 </span>{" "}
                 <span>{hoteldata?.district}</span>{" "}
-              </div>
+              </div> */}
 
               {/* ratings  */}
               {/* <Suspense>
