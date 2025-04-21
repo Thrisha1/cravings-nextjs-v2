@@ -33,6 +33,11 @@ export interface CommonOffer {
   image_url: string;
   id: string;
   district: string;
+  coordinates?: {
+    type: string;
+    coordinates: number[];
+  };
+  created_at?: string;
 }
 
 const KERALA_DISTRICTS = [
@@ -127,9 +132,12 @@ export default function OfferUploadSuperAdmin() {
 
       const { id, ...payload } = itemData;
 
-      const { insert_common_offers_one } = await fetchFromHasura(uploadCommonOffer, {
-        ...payload,
-      });
+      const { insert_common_offers_one } = await fetchFromHasura(
+        uploadCommonOffer,
+        {
+          ...payload,
+        }
+      );
 
       toast.success("Item created successfully!");
       revalidateTag("all-common-offers");
