@@ -2,7 +2,7 @@
 
 export const getMenu = `
     query GetMenu($partner_id: uuid!)  {
-        menu(where: {partner_id: {_eq: $partner_id} , deletion_status: {_eq: 0}} , limit: 100) {
+        menu(where: {partner_id: {_eq: $partner_id} , deletion_status: {_eq: 0}} ) {
             id
             name
             category { 

@@ -74,6 +74,7 @@ export function MenuTab() {
   }, [isEditModalOpen]);
 
   useEffect(() => {
+
     if (!groupedItems) return;
 
     const filtered: Record<string, MenuItem[]> = {};
