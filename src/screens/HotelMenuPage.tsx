@@ -287,7 +287,7 @@ const HotelMenuPage = ({
 
             <div
               onClick={() => router.back()}
-              className="absolute cursor-pointer top-3 left-3 sm:top-7 sm:left-10 text-white z-[50] bg-orange-600 rounded-full p-2"
+              className="md:block hidden absolute cursor-pointer top-3 left-3 sm:top-7 sm:left-10 text-white z-[50] bg-orange-600 rounded-full p-2"
             >
               <ArrowLeft width={30} height={30} />
             </div>
