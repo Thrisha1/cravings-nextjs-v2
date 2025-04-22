@@ -56,20 +56,20 @@ export const EditItemModal = ({
           <div className="space-y-2">
             {editingItem.item.image ? (
               <div
-                className="relative h-[200px] w-full cursor-pointer"
-                onClick={() => setIsImageModalOpen(true)}
-              >
-                <Image
-                  src={editingItem.item.image}
-                  alt="Selected item"
-                  width={200}
-                  height={200}
-                  className="object-contain rounded-lg"
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
-                  <p className="text-white">Click to change image</p>
-                </div>
+              className="relative h-[200px] w-full cursor-pointer overflow-hidden"
+              onClick={() => setIsImageModalOpen(true)}
+            >
+              <Image
+                src={editingItem.item.image}
+                alt="Selected item"
+                fill
+                className="object-contain rounded-lg"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
+                <p className="text-white">Click to change images</p>
               </div>
+            </div>
             ) : (
               <Button
                 type="button"

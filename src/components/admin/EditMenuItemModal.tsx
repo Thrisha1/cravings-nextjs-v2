@@ -43,7 +43,7 @@ export function EditMenuItemModal({
   onSubmit,
   children,
 }: EditMenuItemModalProps) {
-  const [editingItem, setEditingItem] = useState(item);
+  const [editingItem, setEditingItem] = useState(item );
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,18 +68,18 @@ export function EditMenuItemModal({
           <div className="space-y-2">
             {editingItem.image ? (
               <div
-                className="relative h-[200px] w-full cursor-pointer"
+                className="relative h-[200px] w-full cursor-pointer overflow-hidden"
                 onClick={() => setIsImageModalOpen(true)}
               >
                 <Image
                   src={editingItem.image}
                   alt="Selected item"
-                  width={200}
-                  height={200}
-                  className="object-cover rounded-lg"
+                  fill
+                  className="object-contain rounded-lg"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
-                  <p className="text-white">Click to change image</p>
+                  <p className="text-white">Click to change images</p>
                 </div>
               </div>
             ) : (
