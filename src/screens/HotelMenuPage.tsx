@@ -282,7 +282,7 @@ const HotelMenuPage = ({
               src={hoteldata?.store_banner || "/hotelDetailsBanner.jpeg"}
               alt={"Hotel Banner"}
               fill
-              className="w-auto h-auto object-cover"
+              className="w-auto h-auto object-contain"
             />
 
             <div
