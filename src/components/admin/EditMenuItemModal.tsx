@@ -43,7 +43,7 @@ export function EditMenuItemModal({
   onSubmit,
   children,
 }: EditMenuItemModalProps) {
-  const [editingItem, setEditingItem] = useState(item );
+  const [editingItem, setEditingItem] = useState(item);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {

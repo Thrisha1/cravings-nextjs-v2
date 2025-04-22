@@ -64,7 +64,7 @@ export const EditItemModal = ({
                   alt="Selected item"
                   width={200}
                   height={200}
-                  className="object-cover rounded-lg"
+                  className="object-contain rounded-lg"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
                   <p className="text-white">Click to change image</p>
