@@ -14,14 +14,13 @@ import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { AddMenuItemModal } from "../bulkMenuUpload/AddMenuItemModal";
 import { EditMenuItemModal } from "./EditMenuItemModal";
-import { CategoryUpdateModal } from "./CategoryUpdateModal";
+import { CategoryManagementModal } from "./CategoryManagementModal";
 import Image from "next/image";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
 import { toast } from "sonner";
 import { deleteFileFromS3 } from "@/app/actions/aws-s3";
-import { useParams, usePathname, useSearchParams } from "next/navigation";
-import { set } from "firebase/database";
+import { useSearchParams } from "next/navigation";
 import { Accordion, AccordionContent, AccordionItem } from "../ui/accordion";
 import { AccordionTrigger } from "@radix-ui/react-accordion";
 
@@ -35,11 +34,6 @@ export function MenuTab() {
     groupedItems,
   } = useMenuStore();
   const [isCategoryEditing, setIsCategoryEditing] = useState(false);
-  const [editingCategory, setEditingCategory] = useState({
-    id: "",
-    name: "",
-    priority: 0,
-  });
   const { adminOffers, fetchAdminOffers } = useAdminOfferStore();
   const { userData } = useAuthStore();
   const [catUpdated, setCatUpdated] = useState(false);
@@ -163,27 +157,6 @@ export function MenuTab() {
     setIsEditModalOpen(true);
   };
 
-  const handleCategoryUpdate = (
-    category: string,
-    categoryItems: MenuItem[]
-  ) => {
-    if (categoryItems.length === 0) {
-      toast.error("No items in this category to update");
-      return;
-    }
-
-    // Find first item that has a category ID (if any)
-    const categoryWithId = categoryItems.find((item) => item.id);
-    // console.log("Category with ID:", categoryWithId);
-
-    setIsCategoryEditing(true);
-    setEditingCategory({
-      id: categoryWithId?.category.id!, // We've verified this exists
-      name: category,
-      priority: categoryWithId?.category.priority || 0,
-    });
-  };
-
   const getCategoryPriority = (category: string) => {
     const categoryItem = menu.find((item) => item.category.name === category);
     return categoryItem?.category.priority || 0;
@@ -207,6 +180,19 @@ export function MenuTab() {
             <Plus className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+
+      <div className="flex justify-end mb-4">
+        <Button
+          onClick={() => {
+            setIsCategoryEditing(true);
+          }}
+          variant="outline"
+          className="w-min flex gap-2"
+        >
+          <span>Category Update</span>
+          <Pen className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="relative mb-6">
@@ -236,14 +222,14 @@ export function MenuTab() {
       )}
 
       {isCategoryEditing && (
-        <CategoryUpdateModal
-          catId={editingCategory.id}
-          cat={editingCategory.name}
-          priority={editingCategory.priority}
-          isOpen={isCategoryEditing}
-          setCatUpdated={setCatUpdated}
-          catUpdated={catUpdated}
-          onOpenChange={() => setIsCategoryEditing(false)}
+        <CategoryManagementModal
+          open={isCategoryEditing}
+          categories={Object.entries(groupedItems).map(([category, items]) => ({
+            id: items[0].category.id,
+            name: category,
+            priority: items[0].category.priority,
+          }))}
+          onOpenChange={setIsCategoryEditing}
         />
       )}
 
@@ -263,12 +249,6 @@ export function MenuTab() {
                     <h1 className="text-xl lg:text-3xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent flex items-center gap-2">
                       <div className="left-marker">▶</div> {category}
                     </h1>
-                    <button
-                      onClick={() => handleCategoryUpdate(category, items)}
-                      className="group-hover:opacity-100 opacity-0 transition-opacity duration-300"
-                    >
-                      <Pen />
-                    </button>
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

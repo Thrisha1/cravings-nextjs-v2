@@ -16,6 +16,7 @@
     "@graphql-codegen/typescript": "^4.1.6",
     "@graphql-codegen/typescript-operations": "^4.6.0",
     "@graphql-codegen/typescript-react-query": "^6.1.0",
+    "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^3.9.0",
     "@huggingface/inference": "^3.1.5",
     "@radix-ui/react-accordion": "^1.2.4",

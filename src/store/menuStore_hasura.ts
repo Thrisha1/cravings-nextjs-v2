@@ -47,6 +47,28 @@ interface GroupedItems {
   [key: string]: MenuItem[];
 }
 
+const getBatchUpdateMutation = (updates: Category[]) => `
+  mutation UpdateCategoriesBatch {
+    ${updates
+      .map(
+        (update, index) => `
+      update_${index}: update_category_by_pk(
+        pk_columns: { id: "${update.id}" }
+        _set: {
+          ${update.name ? `name: "${update.name.replace(/"/g, '\\"')}"` : ""}
+          ${update.priority !== undefined ? `priority: ${update.priority}` : ""}
+        }
+      ) {
+        id
+        name
+        priority
+      }
+    `
+      )
+      .join("\n")}
+  }
+`;
+
 interface MenuState {
   items: MenuItem[];
   groupedItems: GroupedItems;
@@ -58,6 +80,7 @@ interface MenuState {
   fetchCategorieImages: (category: string) => Promise<CategoryImages[]>;
   groupItems: () => void;
   updatedCategories: (categories: Category[]) => void;
+  updateCategoriesAsBatch: (categories: Category[]) => Promise<Category[]>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -125,7 +148,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
         s3Url = await uploadFileToS3(
           getProcessedBase64Url,
-          `${userData.id}/menu/${item.name}_${item.category.name}_${Date.now()}.webp`
+          `${userData.id}/menu/${item.name}_${
+            item.category.name
+          }_${Date.now()}.webp`
         );
       }
 
@@ -141,7 +166,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       const { insert_menu } = await fetchFromHasura(addMenu, {
         menu: [newMenu],
-      });  
+      });
 
       set({
         items: [...get().items, insert_menu.returning[0]],
@@ -241,7 +266,6 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       if (!userData) throw new Error("User data not found");
 
       if (get().categoryImages.length > 0) {
-
         const hasImagesOfSameCat = get().categoryImages.some(
           (img) => img?.category?.name === category
         );
@@ -312,7 +336,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     let allCats = categories;
 
     if (!categories || categories.length === 0) {
-      allCats = await fetchCategories(user.id) || [];
+      allCats = (await fetchCategories(user.id)) || [];
     }
 
     const updatedItems = get().items.map((item: MenuItem) => {
@@ -332,5 +356,64 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     get().groupItems();
     toast.dismiss();
     toast.success("Categories updated successfully");
+  },
+
+  updateCategoriesAsBatch: async (categories: Category[]) => {
+    try {
+      toast.loading("Updating categories..");
+
+      if (!categories || categories.length === 0) {
+        throw new Error("No categories provided for update");
+      }
+
+      const updates = categories.map((cat) => ({
+        id: cat.id,
+        name: cat.name,
+        priority: cat.priority ?? 0,
+      }));
+
+      const CHUNK_SIZE = 20;
+
+      for (let i = 0; i < updates.length; i += CHUNK_SIZE) {
+        const chunk = updates.slice(i, i + CHUNK_SIZE);
+
+        const mutation = getBatchUpdateMutation(chunk);
+
+        const { data, errors } = await fetchFromHasura(mutation, {});
+
+        if (errors) {
+          throw new Error(`Failed to update chunk starting at index ${i}`);
+        }
+
+      }
+
+      const updatedItems = get().items.map((item: MenuItem) => {
+        const category = updates.find((cat) => cat.id === item.category.id);
+        
+        return category
+          ? {
+              ...item,
+              category_id: category.id,
+              category: {
+                ...item.category,
+                name: category.name,
+                priority: category.priority ?? 0,
+              },
+            }
+          : item;
+      });
+
+      set({ items: updatedItems });
+      get().groupItems();
+
+      toast.dismiss();
+      toast.success(`Successfully updated categories`);
+      return updates;
+    } catch (error) {
+      console.error("Batch update error:", error);
+      toast.dismiss();
+      toast.error("Failed to update categories");
+      throw error;
+    }
   },
 }));
