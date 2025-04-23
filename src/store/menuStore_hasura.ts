@@ -29,6 +29,7 @@ export interface MenuItem {
   price: number;
   description: string;
   is_top: boolean;
+  is_available: boolean;
 }
 
 interface CategoryImages {

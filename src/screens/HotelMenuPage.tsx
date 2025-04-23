@@ -282,15 +282,15 @@ const HotelMenuPage = ({
               src={hoteldata?.store_banner || "/hotelDetailsBanner.jpeg"}
               alt={"Hotel Banner"}
               fill
-              className="w-auto h-auto object-contain"
+              className="w-auto h-auto object-cover"
             />
 
-            <div
+            {/* <div
               onClick={() => router.back()}
               className="md:block hidden absolute cursor-pointer top-3 left-3 sm:top-7 sm:left-10 text-white z-[50] bg-orange-600 rounded-full p-2"
             >
               <ArrowLeft width={30} height={30} />
-            </div>
+            </div> */}
           </div>
 
           {/* offers listing  */}
@@ -450,9 +450,9 @@ const HotelMenuPage = ({
                           className="py-6 rounded-2xl border-[1px] border-black/10 px-6 bg-orange-50 shadow-xl"
                         >
                           <div className="flex flex-col gap-y-2 justify-between items-start w-full">
-                            <div className="flex justify-between w-full">
+                            <div className="flex justify-between w-full gap-3">
                               <div className="flex flex-col justify-center w-1/2">
-                                <span className="capitalize  text-xl font-bold">
+                                <span className="capitalize text-lg  sm:text-xl font-bold ">
                                   {item.name}
                                 </span>
                                 <span className="font-bold text-xl text-orange-500">
@@ -460,7 +460,7 @@ const HotelMenuPage = ({
                                 </span>
                               </div>
                               {item.image_url.length > 0 && (
-                                <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden ">
+                                <div className="w-[90px] h-[90px] sm:w-[100px] sm:h-[100px] relative rounded-3xl overflow-hidden ">
                                   <Image
                                     src={item.image_url}
                                     alt={item.name}

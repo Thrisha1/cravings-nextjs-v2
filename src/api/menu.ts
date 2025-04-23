@@ -16,6 +16,7 @@ export const getMenu = `
             price
             description
             is_top
+            is_available
         }
     }
 `;
@@ -91,6 +92,7 @@ export const updateMenu = `
             price
             description
             is_top
+            is_available
             }
         }
     }
