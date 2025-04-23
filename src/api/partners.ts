@@ -44,6 +44,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
       id
       image_url
       is_top
+      is_available
       name
       price
     }
