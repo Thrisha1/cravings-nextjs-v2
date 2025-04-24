@@ -71,6 +71,7 @@ export const addMenu = `
             price
             description
             is_top
+            is_available
         }
     }
 }`;
