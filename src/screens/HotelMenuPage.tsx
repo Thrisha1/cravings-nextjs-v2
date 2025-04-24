@@ -498,9 +498,9 @@ const HotelMenuPage = ({
             </section>
 
             {/* rate this hotel  */}
-            {/* <section className="px-3 pt-10 pb-5 flex sm:justify-center sm:pt-20 sm:pb-10">
-              <RateThis type="hotel" />
-            </section> */}
+            <section className="px-[7.5%] pt-10 pb-5 flex sm:justify-center sm:pt-20 sm:pb-10">
+              <RateThis type="hotel" hotel={hoteldata} />
+            </section>
 
             {/* reviews  */}
             {/* <section className="px-3 pt-5 pb-10 ">
