@@ -405,6 +405,8 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       set({ items: updatedItems });
       get().groupItems();
+      const user = useAuthStore.getState().userData as Partner;
+      revalidateTag(user?.id);
 
       toast.dismiss();
       toast.success(`Successfully updated categories`);
