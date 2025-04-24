@@ -105,13 +105,11 @@ export function CategoryManagementModal({
     setIsLoading(true);
     try {
       await updateCategoriesAsBatch(localCategories);
-      toast.success("Categories updated successfully");
       setIsLoading(false);
       onOpenChange(false);
     } catch (err) {
       setIsLoading(false);
       console.error("Error updating categories:", err);
-      toast.error("Failed to update categories");
     }
   };
 
