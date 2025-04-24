@@ -277,12 +277,13 @@ const HotelMenuPage = ({
           </Dialog>
 
           {/* banner Image  */}
-          <div className="w-screen h-[200px] absolute top-0 z-0">
+          <div className="w-screen h-[200px] flex justify-center items-center">
             <Image
               src={hoteldata?.store_banner || "/hotelDetailsBanner.jpeg"}
               alt={"Hotel Banner"}
-              fill
-              className="w-auto h-auto object-cover"
+              width={1000}
+              height={200}            
+              className="h-[200px] object-contain"
             />
 
             {/* <div
@@ -294,7 +295,7 @@ const HotelMenuPage = ({
           </div>
 
           {/* offers listing  */}
-          <div className="relative max-w-7xl min-h-screen  mx-auto pb-[80px] bg-gradient-to-b from-orange-50 to-orange-100 pt-[20px] mt-[160px] lg:mt-[200px] rounded-t-3xl">
+          <div className="relative max-w-7xl min-h-screen  mx-auto pb-[80px] bg-gradient-to-b from-orange-50 to-orange-100 pt-[20px] rounded-t-3xl">
             <div className="lg:hidden bg-orange-200 h-2 w-[20%] rounded-full absolute top-4 left-1/2 -translate-x-1/2" />
 
             {/* hotel name  */}
