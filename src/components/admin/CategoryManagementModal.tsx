@@ -127,7 +127,7 @@ export function CategoryManagementModal({
           </div>
           <DialogTitle>Manage Categories</DialogTitle>
           <DialogDescription>
-            Reorder categories by dragging or using the controls
+            Reorder categories by dragging or using the controls. Use actions arrows to move category to top or bottom.
           </DialogDescription>
         </DialogHeader>
 
