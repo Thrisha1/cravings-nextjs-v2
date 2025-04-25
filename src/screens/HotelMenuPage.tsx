@@ -287,9 +287,9 @@ const HotelMenuPage = ({
       {hoteldata ? (
         <>
           {/* theme change button  */}
-          {/* {auth?.id === hoteldata.id && (
-            <ThemeChangeButton onSave={handleSaveTheme} hotelData={hoteldata} />
-          )} */}
+          {(auth?.id === hoteldata.id) && (
+            <ThemeChangeButton onSave={handleSaveTheme} hotelData={hoteldata} theme={theme} />
+          )}
 
           <Dialog open={showAuthModal}>
             <DialogContent>
@@ -512,7 +512,7 @@ const HotelMenuPage = ({
                       .map((item) => (
                         <CarouselItem
                           key={item.id}
-                          className="py-6 rounded-2xl border-[1px] border-black/10 px-6 bg-orange-50 shadow-xl"
+                          className="py-6 rounded-2xl border-[1px] border-black/10 px-6 bg-white/50 shadow-xl"
                         >
                           <div className="flex flex-col gap-y-2 justify-between items-start w-full">
                             <div className="flex justify-between w-full gap-3">

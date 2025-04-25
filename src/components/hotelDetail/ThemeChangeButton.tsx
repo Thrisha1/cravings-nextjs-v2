@@ -16,7 +16,6 @@ export interface ThemeConfig {
   colors: {
     text: string;
     bg: string;
-    navbar: string;
     accent: string;
   };
   menuItemStyle: string;
@@ -24,10 +23,12 @@ export interface ThemeConfig {
 
 const ThemeChangeButton = ({
   hotelData,
+  theme,
   onSave,
 }: {
   hotelData: Partner;
   onSave: (config: ThemeConfig) => void;
+  theme: ThemeConfig | null;
 }) => {
   const [colorModalOpen, setColorModalOpen] = useState(false);
   const [menuStyleModalOpen, setMenuStyleModalOpen] = useState(false);
@@ -86,7 +87,7 @@ const ThemeChangeButton = ({
 
       {/* Color Picker Modal */}
       <ColorPickerModal
-        theme={JSON.parse(hotelData.theme || "{}") as ThemeConfig}
+        theme={theme}
         open={colorModalOpen}
         onOpenChange={setColorModalOpen}
         onSave={(colors) => onSave({
@@ -103,7 +104,6 @@ const ThemeChangeButton = ({
           colors: {
             text: "#000000",
             bg: "#ffffff",
-            navbar: "#ffffff",
             accent: "#000000"
           },
           menuItemStyle: style
