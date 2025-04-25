@@ -243,7 +243,7 @@ const HotelMenuPage = ({
   };
 
   const styles = {
-    backgroundColor: theme?.colors?.bg || "#f3f6eb",
+    backgroundColor: theme?.colors?.bg || "#FEF7ED",
     color: theme?.colors?.text || "#000",
     accent: theme?.colors?.accent || "#f97316",
   };

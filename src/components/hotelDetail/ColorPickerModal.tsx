@@ -35,10 +35,10 @@ const ColorPickerModal = ({
   onSave,
 }: ColorPickerModalProps) => {
   const [colors, setColors] = React.useState({
-    text: theme.colors.text || DEFAULT_COLORS.text,
-    bg: theme.colors.bg || DEFAULT_COLORS.bg,
-    navbar: theme.colors.navbar || DEFAULT_COLORS.navbar,
-    accent: theme.colors.accent || DEFAULT_COLORS.accent,
+    text: theme?.colors?.text || DEFAULT_COLORS.text,
+    bg: theme?.colors?.bg || DEFAULT_COLORS.bg,
+    navbar: theme?.colors?.navbar || DEFAULT_COLORS.navbar,
+    accent: theme?.colors?.accent || DEFAULT_COLORS.accent,
   });
   const [currentPicker, setCurrentPicker] =
     React.useState<keyof typeof colors>("text");

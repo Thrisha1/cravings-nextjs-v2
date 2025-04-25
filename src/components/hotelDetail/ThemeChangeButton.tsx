@@ -67,7 +67,7 @@ const ThemeChangeButton = ({
               </div>
             </Button>
             
-            <Button
+            {/* <Button
               variant="outline"
               className="flex items-center justify-start gap-3 h-14"
               onClick={() => setMenuStyleModalOpen(true)}
@@ -79,7 +79,7 @@ const ThemeChangeButton = ({
                   Modify how menu items are displayed
                 </p>
               </div>
-            </Button>
+            </Button> */}
           </div>
         </DialogContent>
       </Dialog>
