@@ -146,7 +146,7 @@ const QrPayment = () => {
       return;
     }
 
-    if(userData.role !== "user"){
+    if (userData.role !== "user") {
       toast.error("You are not allowed to use this feature");
       return;
     }
@@ -158,8 +158,6 @@ const QrPayment = () => {
         partnerId: hotelDetails?.hotelId,
       });
 
-
-
       // Follow the partner
 
       if (!followers || followers.length === 0) {
@@ -168,9 +166,8 @@ const QrPayment = () => {
           partnerId: hotelDetails?.hotelId,
           phone: userData.role === "user" ? userData.phone : "",
         });
-      }else{
+      } else {
         console.log("Already following");
-        
       }
 
       // Get user visits
@@ -220,17 +217,12 @@ const QrPayment = () => {
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!phoneNumber) {
+    if (!phoneNumber || phoneNumber.length !== 10) {
       return;
     }
     try {
-      let cleanedPhone = phoneNumber.replace("+91", "");
-      cleanedPhone = cleanedPhone.replace(" ", "");
-      if (cleanedPhone.length !== 10) {
-        throw new Error("Invalid phone number");
-      }
       setIsLoading(true);
-      await signInWithPhone(cleanedPhone , hotelDetails?.hotelId);
+      await signInWithPhone(phoneNumber, hotelDetails?.hotelId);
       setIsSignedIn(true);
     } catch (error) {
       console.error(error);
@@ -510,18 +502,22 @@ const QrPayment = () => {
                 value={phoneNumber}
                 onChange={(e) => {
                   let value = e.target.value.replace(/[^0-9]/g, "");
-                  if (value.startsWith("91")) {
-                    value = value.slice(2);
+                  // Limit to 10 digits
+                  if (value.length > 10) {
+                    value = value.slice(0, 10);
                   }
-                  const formattedValue = `+91 ${value}`;
-                  setPhoneNumber(formattedValue);
+                  setPhoneNumber(value);
                 }}
                 type="text"
                 placeholder="Enter phone number"
                 className="w-full p-2 rounded-md bg-white/10 text-white placeholder:text-white/70 focus:outline-none focus:border-white border-2 border-transparent"
+                maxLength={10}
+                minLength={10}
               />
               <button
-                disabled={!phoneNumber || isLoading}
+                disabled={
+                  !phoneNumber || phoneNumber.length !== 10 || isLoading
+                }
                 type="submit"
                 className="bg-white text-black px-4 py-2 rounded-md disabled:opacity-50"
               >

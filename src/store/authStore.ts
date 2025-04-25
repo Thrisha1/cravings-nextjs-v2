@@ -279,7 +279,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
 
-      setAuthCookie({ id: user.id, role: "user" });
+      setAuthCookie({ id: user.id, role: "user" ,  });
       set({ userData: { ...user, role: "user" } });
     } catch (error) {
       console.error("Phone sign-in failed:", error);

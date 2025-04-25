@@ -141,6 +141,17 @@ export const updatePartnerPlaceIdMutation = `
 }
 `;
 
+
+
+export const updatePartnerThemeMutation = `
+  mutation UpdatePartnerTheme($userId: uuid!, $theme: json!) {
+    update_partners_by_pk(pk_columns: { id: $userId }, _set: { theme: $theme }) {
+      id
+      theme
+    }
+}
+`;
+
 /*...........types...........*/
 
 export interface Partner {

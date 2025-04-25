@@ -4,7 +4,17 @@ import { AccordionContent } from "@radix-ui/react-accordion";
 import Image from "next/image";
 import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
 
-const MenuItemsList = ({ hoteldata }: { hoteldata: HotelData }) => {
+const MenuItemsList = ({
+  hoteldata,
+  styles,
+}: {
+  hoteldata: HotelData;
+  styles: {
+    backgroundColor: string;
+    color: string;
+    accent: string;
+  };
+}) => {
   const [categorisedItems, setCategorisedItems] = React.useState<
     Record<string, HotelDataMenus[]>
   >({});
@@ -60,28 +70,37 @@ const MenuItemsList = ({ hoteldata }: { hoteldata: HotelData }) => {
           <Accordion
             type="multiple"
             defaultValue={[Object.entries(categorisedItems)[0]?.[0]]}
-            className="mt-10"
+            className="mt-10 "
           >
             {Object.entries(categorisedItems).map(([category, items]) => (
               <AccordionItem value={category} key={category} className="mb-6">
                 <AccordionTrigger className="text-xl font-bold mb-2 capitalize">
                   {category + `(${items.length})`}
                 </AccordionTrigger>
-                <AccordionContent className="grid divide-y-2 divide-orange-200">
+                <AccordionContent className="grid divide-y-2 divide-black/20">
                   {items.map((item) => (
                     <div
                       key={item.id}
                       className="py-6 rounded px-4 flex-1 relative"
                     >
-                    
-
                       <div className="flex flex-col gap-y-2 justify-between items-start w-full">
                         <div className="flex justify-between w-full">
-                          <div className={`flex flex-col justify-center w-1/2 ${!item.is_available ? "opacity-25" : ""}`}>
+                          <div
+                            className={`flex flex-col justify-center w-1/2 ${
+                              !item.is_available ? "opacity-25" : ""
+                            }`}
+                          >
                             <span className="capitalize text-xl font-bold">
                               {item.name}
                             </span>
-                            <span className={`font-bold text-xl ${!item.is_available ? "text-black" : "text-orange-600"}`}>
+                            <span
+                              style={{
+                                color: !item.is_available
+                                  ? styles.color
+                                  : styles.accent,
+                              }}
+                              className={`font-bold text-xl`}
+                            >
                               ₹{item.price}
                             </span>
                           </div>
@@ -91,13 +110,19 @@ const MenuItemsList = ({ hoteldata }: { hoteldata: HotelData }) => {
                                 src={item.image_url}
                                 alt={item.name}
                                 fill
-                                className={`object-cover w-full h-full ${!item.is_available ? "grayscale" : ""}`}
+                                className={`object-cover w-full h-full ${
+                                  !item.is_available ? "grayscale" : ""
+                                }`}
                               />
-                                {!item.is_available && (<div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-sm font-semibold py-2 px-3 w-full">Unavailabe</div>)}
+                              {!item.is_available && (
+                                <div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-sm font-semibold py-2 px-3 w-full">
+                                  Unavailabe
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
-                        <span className="text-sm text-black/50">
+                        <span className="text-sm opacity-50">
                           {item.description}
                         </span>
                       </div>

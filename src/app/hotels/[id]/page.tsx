@@ -6,14 +6,15 @@ import { Offer } from "@/store/offerStore_hasura";
 import { unstable_cache } from "next/cache";
 import React from "react";
 import { Partner } from "@/store/authStore";
+import { getAuthCookie } from "@/app/auth/actions";
 // import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
 
-export interface HotelDataMenus extends Omit<MenuItem, 'category'> {
+export interface HotelDataMenus extends Omit<MenuItem, "category"> {
   category: {
     name: string;
     id: string;
     priority: number;
-  }
+  };
 }
 
 export interface HotelData extends Partner {
@@ -24,7 +25,7 @@ export interface HotelData extends Partner {
 const HotelPage = async ({
   searchParams,
   params,
-  hId
+  hId,
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
   params: Promise<{ [key: string]: string | undefined }>;
@@ -32,16 +33,14 @@ const HotelPage = async ({
 }) => {
   const { query: search, qrScan } = await searchParams;
   const { id } = await params;
-
+  const auth = await getAuthCookie();
   const hotelId = Array.isArray(id) ? hId : id;
-  
 
   const getHotelData = unstable_cache(
     async (id: string) => {
       try {
-        
         const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
-          id
+          id,
         });
         return {
           id,
@@ -52,8 +51,8 @@ const HotelPage = async ({
         return null;
       }
     },
-    [hotelId as string , "hotel-data"],
-    { tags: [hotelId as string , "hotel-data"] }
+    [hotelId as string, "hotel-data"],
+    { tags: [hotelId as string, "hotel-data"] }
   );
 
   const hoteldata = hotelId ? await getHotelData(hotelId) : null;
@@ -64,13 +63,17 @@ const HotelPage = async ({
     const today = new Date().setHours(0, 0, 0, 0);
     filteredOffers = search
       ? offers
-          .filter(offer => new Date(offer.end_time).setHours(0, 0, 0, 0) < today)
+          .filter(
+            (offer) => new Date(offer.end_time).setHours(0, 0, 0, 0) < today
+          )
           .filter((offer) =>
             Object.values(offer).some((value) =>
               String(value).toLowerCase().includes(search.trim().toLowerCase())
             )
           )
-      : offers.filter(offer => new Date(offer.end_time).setHours(0, 0, 0, 0) >= today);
+      : offers.filter(
+          (offer) => new Date(offer.end_time).setHours(0, 0, 0, 0) >= today
+        );
   }
 
   // Use the store to fetch UPI data
@@ -86,6 +89,8 @@ const HotelPage = async ({
       // menu={menuItems}
       qrScan={qrScan || null}
       upiData={upiData}
+      auth={auth || null}
+      theme={JSON.parse(hoteldata?.theme || "{}")}
     />
   );
 };

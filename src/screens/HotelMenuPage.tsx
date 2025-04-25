@@ -47,6 +47,11 @@ import {
   CarouselContent,
   CarouselItem,
 } from "@/components/ui/carousel";
+import ThemeChangeButton, {
+  ThemeConfig,
+} from "@/components/hotelDetail/ThemeChangeButton";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import { updatePartnerThemeMutation } from "@/api/partners";
 
 export type MenuItem = {
   description: string;
@@ -61,13 +66,20 @@ interface HotelMenuPageProps {
   hoteldata: HotelData;
   qrScan: string | null;
   upiData: UpiData | null;
+  auth: {
+    id: string;
+    role: string;
+  } | null;
+  theme: ThemeConfig | null;
 }
 
 const HotelMenuPage = ({
   offers,
   hoteldata,
+  auth,
   qrScan,
   upiData,
+  theme,
 }: HotelMenuPageProps) => {
   const { userData, signInWithPhone } = useAuthStore();
   const router = useRouter();
@@ -84,8 +96,14 @@ const HotelMenuPage = ({
   const [userPhone, setUserPhone] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
+  console.log("theme", theme);
+
   //For reasurance
-  offers = offers.filter(offer => new Date(offer.end_time).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0));
+  offers = offers.filter(
+    (offer) =>
+      new Date(offer.end_time).setHours(0, 0, 0, 0) <
+      new Date().setHours(0, 0, 0, 0)
+  );
 
   const isLoggedIn = () => {
     if (userData) {
@@ -207,8 +225,37 @@ const HotelMenuPage = ({
     // fetchMenuItems(true);
   }, [hoteldata]);
 
+  const handleSaveTheme = async (theme: ThemeConfig) => {
+    try {
+      toast.loading("Saving theme...");
+      await fetchFromHasura(updatePartnerThemeMutation, {
+        userId: hoteldata.id,
+        theme: JSON.stringify(theme),
+      });
+      toast.dismiss();
+      toast.success("Theme saved successfully");
+      revalidateTag(hoteldata.id);
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error saving theme:", error);
+      toast.error("Failed to save theme");
+    }
+  };
+
+  const styles = {
+    backgroundColor: theme?.colors?.bg || "#f3f6eb",
+    color: theme?.colors?.text || "#000",
+    accent: theme?.colors?.accent || "#f97316",
+  };
+
   return (
-    <main className="overflow-x-hidden bg-gradient-to-b from-orange-50 to-orange-100 relative">
+    <main
+      style={{
+        backgroundColor: styles.backgroundColor,
+        color: styles.color,
+      }}
+      className={`overflow-x-hidden relative`}
+    >
       {/* <Suspense>
         {userData?.role === "superadmin" && qrId && (
           <QrHotelAssignmentModal
@@ -239,6 +286,11 @@ const HotelMenuPage = ({
 
       {hoteldata ? (
         <>
+          {/* theme change button  */}
+          {auth?.id === hoteldata.id && (
+            <ThemeChangeButton onSave={handleSaveTheme} hotelData={hoteldata} />
+          )}
+
           <Dialog open={showAuthModal}>
             <DialogContent>
               <DialogHeader>
@@ -266,7 +318,11 @@ const HotelMenuPage = ({
                 <DialogFooter>
                   <Button
                     type="submit"
-                    className="bg-orange-600 hover:bg-orange-500 border-none outline-none"
+                    style={{
+                      backgroundColor: styles.backgroundColor,
+                      color: styles.color,
+                    }}
+                    className=" border-none outline-none"
                     disabled={isAuthLoading}
                   >
                     {isAuthLoading ? "Please wait..." : "Sign In"}
@@ -282,7 +338,7 @@ const HotelMenuPage = ({
               src={hoteldata?.store_banner || "/hotelDetailsBanner.jpeg"}
               alt={"Hotel Banner"}
               width={1000}
-              height={200}            
+              height={200}
               className="h-[200px] object-contain"
             />
 
@@ -295,8 +351,13 @@ const HotelMenuPage = ({
           </div>
 
           {/* offers listing  */}
-          <div className="relative max-w-7xl min-h-screen  mx-auto pb-[80px] bg-gradient-to-b from-orange-50 to-orange-100 pt-[20px] rounded-t-3xl">
-            <div className="lg:hidden bg-orange-200 h-2 w-[20%] rounded-full absolute top-4 left-1/2 -translate-x-1/2" />
+          <div
+            style={{
+              backgroundColor: styles.backgroundColor,
+            }}
+            className="relative max-w-7xl min-h-screen  mx-auto pb-[80px] pt-[20px] rounded-t-3xl"
+          >
+            <div className="lg:hidden bg-black opacity-50 h-2 w-[20%] rounded-full absolute top-4 left-1/2 -translate-x-1/2" />
 
             {/* hotel name  */}
             <div className="flex justify-between px-3 pt-5 md:pt-10">
@@ -378,7 +439,10 @@ const HotelMenuPage = ({
                 )} */}
                 <Button
                   onClick={() => setShowPaymentHistory(true)}
-                  className="bg-orange-600 hover:bg-orange-500 w-full text-white block mb-4"
+                  style={{
+                    backgroundColor: styles.accent,
+                  }}
+                  className=" w-full text-white block mb-4"
                 >
                   Discount History
                 </Button>
@@ -456,7 +520,12 @@ const HotelMenuPage = ({
                                 <span className="capitalize text-lg  sm:text-xl font-bold ">
                                   {item.name}
                                 </span>
-                                <span className="font-bold text-xl text-orange-500">
+                                <span
+                                  style={{
+                                    color: styles.accent,
+                                  }}
+                                  className="font-bold text-xl"
+                                >
                                   ₹{item.price}
                                 </span>
                               </div>
@@ -494,7 +563,7 @@ const HotelMenuPage = ({
                   : "mt-5"
               }`}
             >
-              <MenuItemsList hoteldata={hoteldata} />
+              <MenuItemsList styles={styles} hoteldata={hoteldata} />
             </section>
 
             {/* rate this hotel  */}
