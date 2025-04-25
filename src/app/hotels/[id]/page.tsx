@@ -7,6 +7,7 @@ import { unstable_cache } from "next/cache";
 import React from "react";
 import { Partner } from "@/store/authStore";
 import { getAuthCookie } from "@/app/auth/actions";
+import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
 // import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
 
 export interface HotelDataMenus extends Omit<MenuItem, "category"> {
@@ -82,6 +83,8 @@ const HotelPage = async ({
     upiId: hoteldata?.upi_id || "fake-dummy-not-from-db@okaxis",
   };
 
+  const theme = (typeof hoteldata?.theme === 'string' ? JSON.parse(hoteldata?.theme) : hoteldata?.theme || {}) as ThemeConfig;
+
   return (
     <HotelMenuPage
       offers={filteredOffers}
@@ -90,7 +93,7 @@ const HotelPage = async ({
       qrScan={qrScan || null}
       upiData={upiData}
       auth={auth || null}
-      theme={JSON.parse(hoteldata?.theme || "{}")}
+      theme={theme}
     />
   );
 };

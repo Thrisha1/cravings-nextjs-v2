@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +46,16 @@ const ColorPickerModal = ({
   const handleReset = () => {
     setColors(DEFAULT_COLORS);
   };
+
+  useEffect(() => {
+    setColors({
+      text: theme?.colors?.text || DEFAULT_COLORS.text,
+      bg: theme?.colors?.bg || DEFAULT_COLORS.bg,
+      navbar: theme?.colors?.navbar || DEFAULT_COLORS.navbar,
+      accent: theme?.colors?.accent || DEFAULT_COLORS.accent,
+    });
+  }
+  , [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

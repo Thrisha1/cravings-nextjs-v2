@@ -287,9 +287,9 @@ const HotelMenuPage = ({
       {hoteldata ? (
         <>
           {/* theme change button  */}
-          {auth?.id === hoteldata.id && (
+          {/* {auth?.id === hoteldata.id && (
             <ThemeChangeButton onSave={handleSaveTheme} hotelData={hoteldata} />
-          )}
+          )} */}
 
           <Dialog open={showAuthModal}>
             <DialogContent>
