@@ -23,7 +23,11 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { deleteFileFromS3, uploadFileToS3 } from "../actions/aws-s3";
 import { deleteUserMutation } from "@/api/auth";
-import { updateUpiIdMutation, updateStoreBannerMutation } from "@/api/partners";
+import {
+  updateUpiIdMutation,
+  updateStoreBannerMutation,
+  updatePartnerPlaceIdMutation,
+} from "@/api/partners";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import Link from "next/link";
 import { useClaimedOffersStore } from "@/store/claimedOfferStore_hasura";
@@ -37,15 +41,21 @@ export default function ProfilePage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [upiId, setUpiId] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState({
+    upiId: false,
+    placeId: false,
+  });
+  const [isEditing, setIsEditing] = useState({
+    upiId: false,
+    placeId: false,
+  });
+  const [placeId, setPlaceId] = useState("");
 
   const [bannerImage, setBannerImage] = useState<string | null>(
     userData?.role === "partner" ? userData.store_banner || null : null
   );
   const [isBannerUploading, setBannerUploading] = useState(false);
   const [isBannerChanged, setIsBannerChanged] = useState(false);
-  const [deliveryStatus, setDeliveryStatus] = useState<boolean>(false);
 
   const isLoading = authLoading;
 
@@ -53,7 +63,7 @@ export default function ProfilePage() {
     if (userData?.role === "partner") {
       setBannerImage(userData.store_banner || null);
       setUpiId(userData.upi_id || "");
-      setDeliveryStatus(userData.delivery_status);
+      setPlaceId(userData.place_id || "");
     }
   }, [userData]);
 
@@ -76,18 +86,6 @@ export default function ProfilePage() {
       newPrice: offer.offer?.offer_price,
     })),
   };
-
-  // useEffect(() => {
-  //   if (userData && userData?.role === "partner") {
-  //     fetchAndCacheUpiData(user.uid)
-  //       .then((data) => {
-  //         if (data) {
-  //           setUpiId(data.upiId);
-  //         }
-  //       })
-  //       .catch(console.error);
-  //   }
-  // }, [user, userData?.role]);
 
   const handleDeleteAccount = async () => {
     if (!userData) {
@@ -116,7 +114,9 @@ export default function ProfilePage() {
   const handleSaveUpiId = async () => {
     if (!userData) return;
 
-    setIsSaving(true);
+    setIsSaving((prev) => {
+      return { ...prev, upiId: true };
+    });
     try {
       await fetchFromHasura(updateUpiIdMutation, {
         id: userData?.id,
@@ -125,14 +125,16 @@ export default function ProfilePage() {
       revalidateTag(userData?.id as string);
       setState({ upi_id: upiId });
       toast.success("UPI ID updated successfully!");
-      setIsEditing(false);
+      setIsEditing((prev) => {
+        return { ...prev, upiId: false };
+      });
     } catch (error) {
       console.error("Error updating UPI ID:", error);
       toast.error(
         error instanceof Error ? error.message : "Failed to update UPI ID"
       );
     } finally {
-      setIsSaving(false);
+      setIsSaving((prev) => ({ ...prev, upiId: false }));
     }
   };
 
@@ -225,6 +227,47 @@ export default function ProfilePage() {
       );
     } finally {
       setBannerUploading(false);
+    }
+  };
+
+  const handleSavePlaceId = async () => {
+    try {
+      if (!userData) return;
+      toast.loading("Updating Place ID...");
+
+      if (!placeId) {
+        toast.dismiss();
+        toast.error("Please enter a valid Place ID");
+        return;
+      }
+
+      setIsSaving((prev) => {
+        return { ...prev, placeId: true };
+      });
+      await fetchFromHasura(updatePartnerPlaceIdMutation, {
+        userId: userData?.id,
+        placeId: placeId,
+      });
+      revalidateTag(userData?.id as string);
+      setState({ place_id: placeId });
+      toast.dismiss();
+      toast.success("Place ID updated successfully!");
+      setIsSaving((prev) => {
+        return { ...prev, placeId: false };
+      });
+      setIsEditing((prev) => {
+        return { ...prev, placeId: false };
+      });
+    } catch (error) {
+      setIsSaving((prev) => {
+        return { ...prev, placeId: false };
+      });
+      setIsEditing((prev) => {
+        return { ...prev, placeId: false };
+      });
+      toast.dismiss();
+      toast.error("Failed to update Place ID");
+      console.error("Error updating Place ID:", error);
     }
   };
 
@@ -378,7 +421,7 @@ export default function ProfilePage() {
                   UPI ID
                 </label>
                 <div className="flex gap-2">
-                  {isEditing ? (
+                  {isEditing.upiId ? (
                     <>
                       <Input
                         id="upiId"
@@ -390,10 +433,10 @@ export default function ProfilePage() {
                       />
                       <Button
                         onClick={handleSaveUpiId}
-                        disabled={isSaving || !upiId}
+                        disabled={isSaving.upiId || !upiId}
                         className="bg-orange-600 hover:bg-orange-700 text-white"
                       >
-                        {isSaving ? (
+                        {isSaving.upiId ? (
                           <>
                             {/* <span className="animate-spin mr-2">⏳</span>/ */}
                             Saving...
@@ -410,7 +453,7 @@ export default function ProfilePage() {
                       </span>
                       <Button
                         onClick={() => {
-                          setIsEditing(true);
+                          setIsEditing((prev) => ({ ...prev, upiId: true }));
                           setUpiId(upiId ? upiId : "");
                         }}
                         variant="ghost"
@@ -423,6 +466,60 @@ export default function ProfilePage() {
                 </div>
                 <p className="text-sm text-gray-500">
                   This UPI ID will be used for receiving payments from customers
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <label htmlFor="placeId" className="text-lg font-semibold">
+                  Place ID
+                </label>
+                <div className="flex gap-2">
+                  {isEditing.placeId ? (
+                    <>
+                      <Input
+                        id="placeId"
+                        type="text"
+                        placeholder="Enter your Place ID"
+                        value={placeId}
+                        onChange={(e) => setPlaceId(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleSavePlaceId}
+                        disabled={isSaving.placeId || !placeId}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isSaving.placeId ? <>Saving...</> : "Save"}
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-gray-700">
+                        {placeId ? placeId : "No Place ID set"}
+                      </span>
+                      <Button
+                        onClick={() => {
+                          setIsEditing((prev) => ({ ...prev, placeId: true }));
+                          setPlaceId(placeId ? placeId : "");
+                        }}
+                        variant="ghost"
+                        className="hover:bg-orange-100"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500">
+                  This Place ID will be used for reviews. Get your place Id here{" "}
+                  {"-->"}{" "}
+                  <Link
+                    className="underline text-orange-600"
+                    target="_blank"
+                    href={"https://makeweb.com.au/google-places-id-finder/"}
+                  >
+                    Get Place Id
+                  </Link>
                 </p>
               </div>
             </CardContent>

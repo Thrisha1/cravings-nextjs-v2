@@ -34,6 +34,8 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     delivery_status
     store_banner
     store_name
+    place_id
+    theme
     menus(where: {deletion_status: {_eq: 0}}) {
       category {
         name
@@ -128,6 +130,15 @@ export const updateStoreBannerMutation = `
       store_banner
     }
   }
+`;
+
+export const updatePartnerPlaceIdMutation = `
+  mutation UpdatePartnerPlaceId($userId: uuid!, $placeId: String!) {
+    update_partners_by_pk(pk_columns: { id: $userId }, _set: { place_id: $placeId }) {
+      id
+      place_id
+    }
+}
 `;
 
 /*...........types...........*/

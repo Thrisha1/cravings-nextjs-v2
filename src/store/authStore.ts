@@ -48,6 +48,8 @@ export interface Partner extends BaseUser {
   phone: string;
   district: string;
   delivery_status: boolean;
+  place_id?: string;
+  theme?: string;
 }
 
 export interface SuperAdmin extends BaseUser {
@@ -135,6 +137,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               location: user.location,
               password: "",
               role: "user",
+              place_id: user.place_id,
+              theme: user.theme,
             } as User,
           });
         }

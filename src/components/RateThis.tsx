@@ -35,7 +35,7 @@ const RateThis = ({ type , hotel }: RateThisProps) => {
     if (star >= 4) {
       setIsLoading(true)
       setTimeout(() => {
-        window.location.href =  hotel.location;
+        window.open(hotel.place_id ? `https://search.google.com/local/writereview?placeid=${hotel.place_id}` : hotel.location, '_blank', 'noopener,noreferrer');
       }, 2000)
     }
   }

@@ -35,6 +35,8 @@ export const partnerIdQuery = `
       description
       phone
       district
+      theme
+      place_id
     }
   }
 `;
