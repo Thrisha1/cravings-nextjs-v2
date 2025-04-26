@@ -96,8 +96,6 @@ const HotelMenuPage = ({
   const [userPhone, setUserPhone] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
-  console.log("theme", theme);
-
   //For reasurance
   offers = offers.filter(
     (offer) =>
@@ -287,8 +285,12 @@ const HotelMenuPage = ({
       {hoteldata ? (
         <>
           {/* theme change button  */}
-          {(auth?.id === hoteldata.id) && (
-            <ThemeChangeButton onSave={handleSaveTheme} hotelData={hoteldata} theme={theme} />
+          {auth?.id === hoteldata.id && (
+            <ThemeChangeButton
+              onSave={handleSaveTheme}
+              hotelData={hoteldata}
+              theme={theme}
+            />
           )}
 
           <Dialog open={showAuthModal}>
@@ -413,10 +415,16 @@ const HotelMenuPage = ({
               >
                 <span className="flex items-center gap-1">
                   {" "}
-                  <MapPin size={20} /> Area :{" "}
+                  <MapPin  <p>{hoteldata?.description}</p>size={20} /> Area :{" "}
                 </span>{" "}
                 <span>{hoteldata?.district}</span>{" "}
               </div> */}
+
+              {hoteldata?.description && (
+                <p className="text-sm opacity-60">
+                  {hoteldata?.description}
+                </p>
+              )}
 
               {/* ratings  */}
               {/* <Suspense>

@@ -27,30 +27,35 @@ import {
   updateUpiIdMutation,
   updateStoreBannerMutation,
   updatePartnerPlaceIdMutation,
+  updatePartnerDescriptionMutation,
 } from "@/api/partners";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import Link from "next/link";
 import { useClaimedOffersStore } from "@/store/claimedOfferStore_hasura";
 import { revalidateTag } from "../actions/revalidate";
 import { processImage } from "@/lib/processImage";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function ProfilePage() {
   const { userData, loading: authLoading, signOut, setState } = useAuthStore();
   const { claimedOffers } = useClaimedOffersStore();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [upiId, setUpiId] = useState("");
   const [isSaving, setIsSaving] = useState({
     upiId: false,
     placeId: false,
+    description : false,
   });
   const [isEditing, setIsEditing] = useState({
     upiId: false,
     placeId: false,
+    description : false,
   });
   const [placeId, setPlaceId] = useState("");
-
+  const [description, setDescription] = useState("");
   const [bannerImage, setBannerImage] = useState<string | null>(
     userData?.role === "partner" ? userData.store_banner || null : null
   );
@@ -64,6 +69,7 @@ export default function ProfilePage() {
       setBannerImage(userData.store_banner || null);
       setUpiId(userData.upi_id || "");
       setPlaceId(userData.place_id || "");
+      setDescription(userData.description || "");
     }
   }, [userData]);
 
@@ -271,6 +277,44 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSaveDescription = async () => {
+    try {
+      toast.loading("Updating description...");
+      setIsSaving((prev) => {
+        return { ...prev, description: true };
+      }
+      );
+      await fetchFromHasura(updatePartnerDescriptionMutation, {
+        userId: userData?.id,
+        description: description,
+      });
+      revalidateTag(userData?.id as string);
+      setState({ description: description });
+      toast.dismiss();
+      toast.success("Description updated successfully!");
+      setIsSaving((prev) => {
+        return { ...prev, description: false };
+      }
+      );
+      setIsEditing((prev) => {
+        return { ...prev, description: false };
+      }
+      );
+    } catch (error) {
+      setIsSaving((prev) => {
+        return { ...prev, description: false };
+      }
+      );
+      setIsEditing((prev) => {
+        return { ...prev, description: false };
+      }
+      );
+      toast.dismiss();
+      toast.error("Failed to update description");
+      console.error("Error updating description:", error);
+    }
+  }
+
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
   }
@@ -414,6 +458,58 @@ export default function ProfilePage() {
                     </Button>
                   </div>
                 )}
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <label htmlFor="bio" className="text-lg font-semibold">
+                  Bio
+                </label>
+                <div className="flex gap-2 w-full">
+                  {isEditing.description ? (
+                    <div className="grid gap-2 w-full">
+                      <Textarea
+                        id="bio"
+                        placeholder="Enter your Bio"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleSaveDescription}
+                        disabled={isSaving.description || !description}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isSaving.description ? (
+                          <>
+                            {/* <span className="animate-spin mr-2">⏳</span>/ */}
+                            Saving...
+                          </>
+                        ) : (
+                          "Save"
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-gray-700">
+                        {description ? description : "No Bio set"}
+                      </span>
+                      <Button
+                        onClick={() => {
+                          setIsEditing((prev) => ({ ...prev, description: true }));
+                          setDescription(description ? description : "");
+                        }}
+                        variant="ghost"
+                        className="hover:bg-orange-100"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500">
+                  This Bio will be used for your restaurant profile
+                </p>
               </div>
 
               <div className="space-y-2 pt-4">

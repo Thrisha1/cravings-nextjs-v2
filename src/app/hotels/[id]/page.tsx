@@ -8,7 +8,58 @@ import React from "react";
 import { Partner } from "@/store/authStore";
 import { getAuthCookie } from "@/app/auth/actions";
 import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
+import { Metadata } from "next";
 // import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id: hotelId } = await params;
+
+  const getHotelData = unstable_cache(
+    async (id: string) => {
+      try {
+        const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
+          id,
+        });
+        return {
+          id,
+          ...partnerData.partners[0],
+        } as HotelData;
+      } catch (error) {
+        console.error("Error fetching hotel data:", error);
+        return null;
+      }
+    },
+    [hotelId as string, "hotel-data"],
+    { tags: [hotelId as string, "hotel-data"] }
+  );
+
+  const hotel = await getHotelData(hotelId);
+
+  if (!hotel) {
+    throw new Error("Hotel not found");
+  }
+
+  return {
+    title: hotel.store_name,
+    icons: [hotel.store_banner || "/hotelDetailsBanner.jpeg"],
+    description:
+      hotel.description ||
+      "Welcome to " + hotel.store_name + "! Enjoy a comfortable stay with us.",
+    openGraph: {
+      images: [hotel.store_banner || "/hotelDetailsBanner.jpeg"],
+      title: hotel.store_name,
+      description:
+        hotel.description ||
+        "Welcome to " +
+          hotel.store_name +
+          "! Enjoy a comfortable stay with us.",
+    },
+  };
+}
 
 export interface HotelDataMenus extends Omit<MenuItem, "category"> {
   category: {
@@ -83,18 +134,27 @@ const HotelPage = async ({
     upiId: hoteldata?.upi_id || "fake-dummy-not-from-db@okaxis",
   };
 
-  const theme = (typeof hoteldata?.theme === 'string' ? JSON.parse(hoteldata?.theme) : hoteldata?.theme || {}) as ThemeConfig;
+  const theme = (
+    typeof hoteldata?.theme === "string"
+      ? JSON.parse(hoteldata?.theme)
+      : hoteldata?.theme || {}
+  ) as ThemeConfig;
 
   return (
-    <HotelMenuPage
-      offers={filteredOffers}
-      hoteldata={hoteldata as HotelData}
-      // menu={menuItems}
-      qrScan={qrScan || null}
-      upiData={upiData}
-      auth={auth || null}
-      theme={theme}
-    />
+    <>
+      <div style={{
+        display: "none",
+      }}>{JSON.stringify(hoteldata)}</div>
+      <HotelMenuPage
+        offers={filteredOffers}
+        hoteldata={hoteldata as HotelData}
+        // menu={menuItems}
+        qrScan={qrScan || null}
+        upiData={upiData}
+        auth={auth || null}
+        theme={theme}
+      />
+    </>
   );
 };
 

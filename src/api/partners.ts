@@ -32,6 +32,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     district
     location
     delivery_status
+    description
     store_banner
     store_name
     place_id
@@ -150,6 +151,16 @@ export const updatePartnerThemeMutation = `
       theme
     }
 }
+`;
+
+
+export const updatePartnerDescriptionMutation = `
+  mutation UpdatePartnerDescription($userId: uuid!, $description: String!) {
+    update_partners_by_pk(pk_columns: { id: $userId }, _set: { description: $description }) {
+      id
+      description
+    }
+  }
 `;
 
 /*...........types...........*/

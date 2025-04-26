@@ -44,7 +44,7 @@ const ThemeChangeButton = ({
             className="rounded-full w-10 h-10 bg-white shadow-md hover:bg-gray-100"
             aria-label="Change theme"
           >
-            <Paintbrush className="h-4 w-4" />
+            <Paintbrush className="h-4 w-4 text-black" />
           </Button>
         </DialogTrigger>
         
