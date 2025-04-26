@@ -53,12 +53,11 @@ export default function HotelsList({
           key={partner.id}
           className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col"
         >
-          <div className="relative h-32 w-full">
+          <div className="relative h-32 w-full overflow-hidden">
             <Img
               src={partner.store_banner || "/image_placeholder.webp"}
               alt={partner.store_name}
-              className="object-cover rounded-t-lg"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover rounded-t-lg w-full h-full"
             />
           </div>
 
