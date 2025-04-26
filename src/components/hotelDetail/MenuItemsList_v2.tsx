@@ -75,7 +75,7 @@ const MenuItemsList = ({
             style={{
               ...styles.border,
               color:
-                selectedCategory === category.name ? "white" : styles.color,
+                selectedCategory === category.name ? "white" : "black",
               backgroundColor:
                 selectedCategory === category.name ? styles.accent : "white",
             }}

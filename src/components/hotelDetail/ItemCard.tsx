@@ -14,7 +14,7 @@ const ItemCard = ({
     <div
       style={styles.border}
       key={item.id}
-      className="py-6 rounded-[35px] px-6 flex-1 relative bg-white"
+      className="py-6 rounded-[35px] px-6 flex-1 relative bg-white text-black"
     >
       <div className="flex flex-col gap-y-2 justify-between items-start w-full">
         <div className={`flex justify-between w-full`}>
