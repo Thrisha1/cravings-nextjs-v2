@@ -5,9 +5,7 @@ import Image from "next/image";
 import OfferCardMin from "@/components/OfferCardMin";
 import Autoplay from "embla-carousel-autoplay";
 
-import {
-  VerifiedIcon,
-} from "lucide-react";
+import { Heading, SearchIcon, VerifiedIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { revalidateTag } from "@/app/actions/revalidate";
@@ -26,7 +24,7 @@ import ShowAllBtn from "@/components/hotelDetail/ShowAllBtn";
 import RateThis from "@/components/RateThis";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import MenuItemsList from "@/components/hotelDetail/MenuItemsList";
+import MenuItemsList from "@/components/hotelDetail/MenuItemsList_v2";
 import { Offer } from "@/store/offerStore_hasura";
 import { useAuthStore } from "@/store/authStore";
 import { HotelData } from "@/app/hotels/[id]/page";
@@ -41,6 +39,8 @@ import ThemeChangeButton, {
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { updatePartnerThemeMutation } from "@/api/partners";
 import Img from "@/components/Img";
+import HeadingWithAccent from "@/components/HeadingWithAccent";
+import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
 
 export type MenuItem = {
   description: string;
@@ -49,6 +49,17 @@ export type MenuItem = {
   name: string;
   price: number;
 };
+
+export type Styles ={
+  backgroundColor: string;
+  color: string;
+  accent: string;
+  border: {
+    borderColor: string;
+    borderWidth: string;
+    borderStyle: string;
+  };
+}
 
 interface HotelMenuPageProps {
   offers: Offer[];
@@ -77,18 +88,16 @@ const HotelMenuPage = ({
       new Date().setHours(0, 0, 0, 0)
   );
 
-  const styles = {
+  const styles : Styles = {
     backgroundColor: theme?.colors?.bg || "#F5F5F5",
     color: theme?.colors?.text || "#000",
     accent: theme?.colors?.accent || "#EA580C",
-    border : {
-      color: theme?.colors?.text || "#000",
-      width: "1px",
-      style: "solid",
-      opacity: "0.5",
-    }
+    border: {
+      borderColor: theme?.colors?.text ? `${theme.colors.text}1D` : "#0000001D",
+      borderWidth: "1px",
+      borderStyle: "solid",
+    },
   };
-
 
   return (
     <main
@@ -96,21 +105,17 @@ const HotelMenuPage = ({
         backgroundColor: styles.backgroundColor,
         color: styles.color,
       }}
-      className={`overflow-x-hidden relative min-h-screen`}
+      className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 pb-40 `}
     >
-
-
       {/* top part  */}
-      <div>
-
+      <section className="px-[8%] pt-[20px] flex justify-between items-start">
         {/* hotel details  */}
-        <div className="px-[8%] pt-[20px]">
-
-          <div style={{
-            borderColor: styles.border.color,
-            borderWidth: styles.border.width,
-            borderStyle: styles.border.style,
-          }} className="relative h-[140px] aspect-square rounded-full overflow-hidden">
+        <div className="grid gap-3">
+          {/* banner image  */}
+          <div
+            style={styles.border}
+            className="relative h-[130px] aspect-square rounded-full overflow-hidden"
+          >
             <Img
               src={hoteldata?.store_banner || "/image_placeholder.webp"}
               alt={hoteldata?.store_name}
@@ -118,16 +123,49 @@ const HotelMenuPage = ({
             />
           </div>
 
+          <HeadingWithAccent
+            className={"font-black text-3xl max-w-[250px]"}
+            accent={styles.accent}
+          >
+            {hoteldata?.store_name}
+          </HeadingWithAccent>
+
+          <DescriptionWithTextBreak accent={styles.accent}>
+            {hoteldata?.description}
+          </DescriptionWithTextBreak>
         </div>
 
         {/* right top button  */}
         <div>
-
+          {hoteldata?.id === userData?.id && (
+            <ThemeChangeButton hotelData={hoteldata} theme={theme} />
+          )}
         </div>
+      </section>
 
-      </div>
+      {/* search bar  */}
+      <section className="px-[8%]">
+        <button
+          style={styles.border}
+          className="bg-white w-full h-[55px] rounded-full flex items-center px-4 gap-3 text-black/30"
+        >
+          <SearchIcon />
+          <span>Search</span>
+        </button>
+      </section>
 
-     
+      {/* offers  */}
+      <section></section>
+
+      {/* popular  */}
+      <section>
+      </section>
+
+      {/* menu  */}
+      <section>
+        <MenuItemsList styles={styles} menu={hoteldata.menus} />
+      </section>
+
     </main>
   );
 };

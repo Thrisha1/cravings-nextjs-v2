@@ -19,11 +19,16 @@ interface ColorPickerModalProps {
 
 const DEFAULT_COLORS = {
   text: "#000000",
-  bg: "#FEF6EB",
-  accent: "#E9701B",
+  bg: "#F5F5F5",
+  accent: "#EA580C",
 };
 
 const PRESETS = [
+  {
+    text: "#000000",
+    bg: "#FEF6EB",
+    accent: "#E9701B",
+  },
   {
     text: "#0D1321",
     bg: "#F0EBD8",

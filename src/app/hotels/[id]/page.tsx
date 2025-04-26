@@ -1,6 +1,6 @@
 import { getPartnerAndOffersQuery } from "@/api/partners";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import HotelMenuPage from "@/screens/HotelMenuPage";
+import HotelMenuPage from "@/screens/HotelMenuPage_v2";
 import { MenuItem } from "@/store/menuStore_hasura";
 import { Offer } from "@/store/offerStore_hasura";
 import { unstable_cache } from "next/cache";
@@ -143,8 +143,6 @@ const HotelPage = async ({
   return (
     <>
       <HotelMenuPage
-        qrScan={qrScan || ""}
-        upiData={upiData}
         offers={filteredOffers}
         hoteldata={hoteldata as HotelData}
         auth={auth || null}

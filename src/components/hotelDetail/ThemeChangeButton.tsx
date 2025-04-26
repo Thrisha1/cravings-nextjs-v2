@@ -8,7 +8,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Paintbrush, LayoutGrid } from "lucide-react";
+import { Paintbrush, LayoutGrid, Palette } from "lucide-react";
 import ColorPickerModal from "./ColorPickerModal";
 import MenuStyleModal from "./MenuStyleModal";
 import { toast } from "sonner";
@@ -55,18 +55,15 @@ const ThemeChangeButton = ({
 
 
   return (
-    <div className="absolute top-5 right-5 z-50">
+    <div>
       {/* Main theme button */}
       <Dialog>
         <DialogTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-full w-10 h-10 bg-white shadow-md hover:bg-gray-100"
+          <button
             aria-label="Change theme"
           >
-            <Paintbrush className="h-4 w-4 text-black" />
-          </Button>
+            <Palette className="h-8 w-8" strokeWidth={1.8} />
+          </button>
         </DialogTrigger>
         
         <DialogContent className="w-[95%] max-w-[425px] rounded-xl px-2 sm:px-6">
