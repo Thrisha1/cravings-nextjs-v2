@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { toast } from "sonner";
+import Img from "./Img";
 
 
 interface AIImageGenerateModalProps {
@@ -74,7 +75,7 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
         </DialogHeader>
         {imageUrl && (
           <div className="mb-4 flex justify-center">
-            <Image
+            <Img
               src={imageUrl}
               alt="Generated AI"
               width={300}

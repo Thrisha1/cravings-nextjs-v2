@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
+import Img from '../Img';
 
 export interface UnsplashImage {
     id: string;
@@ -63,10 +64,9 @@ export const ImageSearchModal = ({
                 className="relative h-28 sm:h-40 cursor-pointer"
                 onClick={() => onSelectImage(image.urls.regular)}
               >
-                <Image
+                <Img
                   src={image.urls.small}
                   alt="Search result"
-                  fill
                   className="object-cover rounded-md hover:opacity-80 transition-opacity"
                 />
               </div>

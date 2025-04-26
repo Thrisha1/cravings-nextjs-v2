@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Button } from "./ui/button";
 import DiscountBadge from "./DiscountBadge";
 import Link from "next/link";
+import Img from "./Img";
 
 const ClaimedOfferModal = ({
   isOpen,
@@ -23,7 +24,7 @@ const ClaimedOfferModal = ({
         <DiscountBadge discount={23} />
 
         <DialogHeader>
-          <Image
+          <Img
             src={offer.menu.image_url}
             alt={offer.menu.name}
             width={300}

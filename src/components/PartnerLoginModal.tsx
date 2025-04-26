@@ -146,7 +146,7 @@
 //                   "Please wait..."
 //                 ) : (
 //                   <>
-//                     <Image
+//                     <Img
 //                       width={5}
 //                       height={5}
 //                       src="https://www.google.com/favicon.ico"

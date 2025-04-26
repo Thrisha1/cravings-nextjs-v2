@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ImageGridModal } from "./ImageGridModal";
 import Image from "next/image";
 import { useState } from "react";
+import Img from "../Img";
 
 export interface MenuItem {
   id?: string;
@@ -59,10 +60,9 @@ export const EditItemModal = ({
               className="relative h-[200px] w-full cursor-pointer overflow-hidden"
               onClick={() => setIsImageModalOpen(true)}
             >
-              <Image
+              <Img
                 src={editingItem.item.image}
                 alt="Selected item"
-                fill
                 className="object-contain rounded-lg"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />

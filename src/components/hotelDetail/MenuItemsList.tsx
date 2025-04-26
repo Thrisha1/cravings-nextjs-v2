@@ -3,6 +3,7 @@ import { Accordion, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { AccordionContent } from "@radix-ui/react-accordion";
 import Image from "next/image";
 import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
+import Img from "../Img";
 
 const MenuItemsList = ({
   hoteldata,
@@ -106,10 +107,9 @@ const MenuItemsList = ({
                           </div>
                           {item.image_url.length > 0 && (
                             <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden">
-                              <Image
+                              <Img
                                 src={item.image_url}
                                 alt={item.name}
-                                fill
                                 className={`object-cover w-full h-full ${
                                   !item.is_available ? "grayscale" : ""
                                 }`}

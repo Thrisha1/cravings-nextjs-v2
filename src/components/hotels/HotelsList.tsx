@@ -8,6 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect } from "react";
 import { useInView } from "react-intersection-observer";
+import Img from "../Img";
 
 interface HotelsListProps {
   initialPartners: Partner[];
@@ -53,13 +54,11 @@ export default function HotelsList({
           className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col"
         >
           <div className="relative h-32 w-full">
-            <Image
+            <Img
               src={partner.store_banner || "/image_placeholder.webp"}
               alt={partner.store_name}
-              fill
               className="object-cover rounded-t-lg"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-              priority={false}
             />
           </div>
 

@@ -2,6 +2,7 @@
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useState } from "react";
+import Img from "./Img";
 
 const InstagramEmbed = dynamic(
   () => import("react-social-media-embed").then((mod) => mod.InstagramEmbed),
@@ -24,7 +25,7 @@ const InstaReelEmbed = ({ url, image }: { url: string; image: string }) => {
           width={328}
           className="-translate-y-20 -translate-x-[49px]  z-[10]"
         />
-        <Image
+        <Img
           src={image}
           alt="Instagram Reel"
           width={1}

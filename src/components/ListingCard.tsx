@@ -38,7 +38,7 @@
 //     >
 //       <Link href={`/offers/${offer.id}`}>
 //         <div className="flex relative">
-//           <Image
+//           <Img
 //             src={offer.dishImage}
 //             alt={offer.dishName}
 //             width={300}

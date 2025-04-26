@@ -24,6 +24,7 @@ import { useMenuStore } from "@/store/menuStore_hasura";
 import { useOfferStore } from "@/store/offerStore_hasura";
 import Image from "next/image";
 import { formatDate } from "@/lib/formatDate";
+import Img from "../Img";
 
 export function OffersTab() {
   const { items } = useMenuStore();
@@ -277,10 +278,9 @@ export function OffersTab() {
                   <CardHeader>
                     <CardTitle className="text-lg">{offer.menu.name}</CardTitle>
                     <div className="relative w-32 h-32 rounded-md overflow-hidden">
-                      <Image
+                      <Img
                         src={offer.menu.image_url}
                         alt={offer.menu.name}
-                        fill
                         className="object-cover w-full h-full "
                       />
                     </div>

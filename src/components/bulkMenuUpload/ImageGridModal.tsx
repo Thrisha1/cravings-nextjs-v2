@@ -7,6 +7,7 @@ import AIImageGenerateModal from "@/components/AIImageGenerateModal";
 // import ImageUploadModal from "../ImageUploadModal";
 import { useMenuStore } from "@/store/menuStore_hasura";
 import { DialogTitle } from "@radix-ui/react-dialog";
+import Img from "../Img";
 
 interface ImageGridModalProps {
   isOpen: boolean;
@@ -126,10 +127,9 @@ export function ImageGridModal({
                     <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
                   </div>
                 )}
-                <Image
+                <Img
                   src={url}
                   alt={`Option ${index + 1}`}
-                  fill
                   className="object-cover rounded-md"
                   onLoad={() =>
                     setLoadingStates((prev) => ({ ...prev, [url]: false }))

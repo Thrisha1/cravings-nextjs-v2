@@ -3,6 +3,7 @@ import React from "react";
 import { Card } from "./ui/card";
 import Image from "next/image";
 import DiscountBadge from "./DiscountBadge";import { Offer } from "@/store/offerStore_hasura";
+import Img from "./Img";
 ;
 
 const OfferCardMin = ({
@@ -26,13 +27,11 @@ const OfferCardMin = ({
       >
         {/* image container  */}
         <div className="relative">
-          <Image
+          <Img
             src={offer.menu.image_url !== "" ? offer.menu.image_url : "/image_placeholder.webp"}
             alt={offer.menu.name}
             width={300}
             height={300}
-            priority={false}
-            quality={60}
             className="w-full h-48 object-cover"
           />
 

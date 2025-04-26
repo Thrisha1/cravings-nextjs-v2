@@ -68,7 +68,7 @@ export default function Offers({ offers : OFFERS }: { offers: Offer[] }) {
       {/* christmas lights  */}
       {/* <div className="absolute top-0 gap-7 left-0 flex items-center max-w-screen overflow-hidden pointer-events-none">
         {[...Array(6)].map((_, i) => (
-          <Image
+          <Img
             key={i}
             src="/christmas-lights.png"
             alt="christmas lights"

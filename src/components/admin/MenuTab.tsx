@@ -23,6 +23,7 @@ import { deleteFileFromS3 } from "@/app/actions/aws-s3";
 import { useSearchParams } from "next/navigation";
 import { Accordion, AccordionContent, AccordionItem } from "../ui/accordion";
 import { AccordionTrigger } from "@radix-ui/react-accordion";
+import Img from "../Img";
 
 export function MenuTab() {
   const {
@@ -267,10 +268,9 @@ export function MenuTab() {
                             <div>
                               {item.image_url.length > 0 && (
                                 <div className="relative w-32 h-32 overflow-hidden">
-                                  <Image
+                                  <Img
                                     src={item.image_url}
                                     alt={item.name}
-                                    fill
                                     className={`w-full h-full object-cover rounded-lg ${
                                       item.is_available ? "" : " saturate-0"
                                     }`}

@@ -46,7 +46,7 @@
 //           </div>
 
 //           <div className="relative">
-//             <Image
+//             <Img
 //               src={menuItem.image}
 //               alt={menuItem.name}
 //               width={500}

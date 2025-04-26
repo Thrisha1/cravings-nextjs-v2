@@ -1,4 +1,5 @@
 "use client";
+import Img from "@/components/Img";
 import { useAuthStore } from "@/store/authStore";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -43,10 +44,9 @@ const CouponsPage = () => {
   return (
     <section className="bg-[#FFF6EB] min-h-[calc(100vh-64px)] grid place-content-center justify-items-center px-5 sm:px-[7.5%] lg:sm:px-[20%]">
       <div className="w-[250px] lg:w-[330px] aspect-square relative">
-        <Image
+        <Img
           src={"/rewards.png"}
           alt="rewards"
-          fill
           className="w-auto h-auto object-cover"
         />
       </div>

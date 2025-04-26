@@ -3,6 +3,7 @@ import { CommonOffer } from "../superAdmin/OfferUploadSuperAdmin";
 import Image from "next/image";
 import { truncateWithEllipsis } from "@/lib/truncate";
 import Link from "next/link";
+import Img from "../Img";
 
 type DistrictKeys =
   | "thiruvananthapuram"
@@ -45,10 +46,9 @@ const CommonOfferCard = ({ commonOffer }: { commonOffer: CommonOffer }) => {
       className="relative overflow-hidden"
     >
       <div className="relative aspect-[9/14] lg:aspect-[6/4] w-full rounded-xl overflow-hidden">
-        <Image
+        <Img
           src={commonOffer.image_url as string}
           alt={commonOffer.item_name}
-          fill
           className="w-full h-full object-cover "
         />
       </div>

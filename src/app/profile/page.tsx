@@ -35,6 +35,7 @@ import { useClaimedOffersStore } from "@/store/claimedOfferStore_hasura";
 import { revalidateTag } from "../actions/revalidate";
 import { processImage } from "@/lib/processImage";
 import { Textarea } from "@/components/ui/textarea";
+import Img from "@/components/Img";
 
 export default function ProfilePage() {
   const { userData, loading: authLoading, signOut, setState } = useAuthStore();
@@ -424,7 +425,7 @@ export default function ProfilePage() {
                   className="relative cursor-pointer w-full h-48 bg-gray-200 rounded-lg overflow-hidden"
                 >
                   {bannerImage ? (
-                    <Image
+                    <Img
                       src={bannerImage}
                       alt="Hotel Banner"
                       width={500}

@@ -6,6 +6,7 @@ import { MenuItem } from "@/components/bulkMenuUpload/EditItemModal";
 import { useState } from "react";
 import { Input } from "../ui/input";
 import Image from "next/image";
+import Img from "../Img";
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -51,10 +52,9 @@ export const MenuItemCard = ({
       <CardContent className="space-y-3 ">
         {item.image.length > 9 && (
           <div className="relative w-40 h-40 overflow-hidden rounded-md ">
-            <Image
+            <Img
               src={item.image}
               alt={item.name}
-              fill
               className="w-full h-full object-cover"
             />
           </div>

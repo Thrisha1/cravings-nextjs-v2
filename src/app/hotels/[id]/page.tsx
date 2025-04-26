@@ -142,15 +142,11 @@ const HotelPage = async ({
 
   return (
     <>
-      <div style={{
-        display: "none",
-      }}>{JSON.stringify(hoteldata)}</div>
       <HotelMenuPage
+        qrScan={qrScan || ""}
+        upiData={upiData}
         offers={filteredOffers}
         hoteldata={hoteldata as HotelData}
-        // menu={menuItems}
-        qrScan={qrScan || null}
-        upiData={upiData}
         auth={auth || null}
         theme={theme}
       />

@@ -7,6 +7,7 @@ import { CountdownTimer } from "./CountdownTimer";
 import DiscountBadge from "./DiscountBadge";
 import { useRouter } from "next/navigation";
 import { Offer } from "@/store/offerStore_hasura";
+import Img from "./Img";
 
 const OfferCard = ({
   offer,
@@ -31,14 +32,11 @@ const OfferCard = ({
       >
         {/* image container  */}
         <div className="relative">
-          <Image
+          <Img
             src={offer.menu.image_url || "/image_placeholder.webp"}
             alt={offer.menu.name}
             width={200}
             height={200}
-            priority={false}
-            loading="lazy"
-            quality={60}
             className="w-full h-32 object-cover"
           />
 

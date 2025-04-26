@@ -52,6 +52,7 @@ import ThemeChangeButton, {
 } from "@/components/hotelDetail/ThemeChangeButton";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { updatePartnerThemeMutation } from "@/api/partners";
+import Img from "@/components/Img";
 
 export type MenuItem = {
   description: string;
@@ -287,7 +288,6 @@ const HotelMenuPage = ({
           {/* theme change button  */}
           {auth?.id === hoteldata.id && (
             <ThemeChangeButton
-              onSave={handleSaveTheme}
               hotelData={hoteldata}
               theme={theme}
             />
@@ -336,7 +336,7 @@ const HotelMenuPage = ({
 
           {/* banner Image  */}
           <div className="w-screen h-[200px] flex justify-center items-center">
-            <Image
+            <Img
               src={hoteldata?.store_banner || "/hotelDetailsBanner.jpeg"}
               alt={"Hotel Banner"}
               width={1000}
@@ -539,10 +539,9 @@ const HotelMenuPage = ({
                               </div>
                               {item.image_url.length > 0 && (
                                 <div className="w-[90px] h-[90px] sm:w-[100px] sm:h-[100px] relative rounded-3xl overflow-hidden ">
-                                  <Image
+                                  <Img
                                     src={item.image_url}
                                     alt={item.name}
-                                    fill
                                     className="object-cover w-full h-full"
                                   />
                                 </div>

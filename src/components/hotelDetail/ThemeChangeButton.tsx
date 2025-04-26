@@ -11,6 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Paintbrush, LayoutGrid } from "lucide-react";
 import ColorPickerModal from "./ColorPickerModal";
 import MenuStyleModal from "./MenuStyleModal";
+import { toast } from "sonner";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import { updatePartnerThemeMutation } from "@/api/partners";
+import { revalidateTag } from "@/app/actions/revalidate";
 
 export interface ThemeConfig {
   colors: {
@@ -24,14 +28,31 @@ export interface ThemeConfig {
 const ThemeChangeButton = ({
   hotelData,
   theme,
-  onSave,
 }: {
   hotelData: Partner;
-  onSave: (config: ThemeConfig) => void;
   theme: ThemeConfig | null;
 }) => {
   const [colorModalOpen, setColorModalOpen] = useState(false);
   const [menuStyleModalOpen, setMenuStyleModalOpen] = useState(false);
+
+
+  const onSave = async (theme: ThemeConfig) => {
+    try {
+      toast.loading("Saving theme...");
+      await fetchFromHasura(updatePartnerThemeMutation, {
+        userId: hotelData.id,
+        theme: JSON.stringify(theme),
+      });
+      toast.dismiss();
+      toast.success("Theme saved successfully");
+      revalidateTag(hotelData.id);
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error saving theme:", error);
+      toast.error("Failed to save theme");
+    }
+  };
+
 
   return (
     <div className="absolute top-5 right-5 z-50">

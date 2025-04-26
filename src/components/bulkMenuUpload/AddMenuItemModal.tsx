@@ -12,6 +12,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import CategoryDropdown from "@/components/ui/CategoryDropdown";
 import { ImageGridModal } from "./ImageGridModal";
+import Img from "../Img";
 
 interface AddMenuItemModalProps {
   isOpen: boolean;
@@ -78,10 +79,9 @@ export function AddMenuItemModal({
                   className="relative h-[200px] w-full cursor-pointer"
                   onClick={() => setIsImageModalOpen(true)}
                 >
-                  <Image
+                  <Img
                     src={newItem.image}
                     alt="Selected item"
-                    fill
                     className="object-cover rounded-lg"
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">

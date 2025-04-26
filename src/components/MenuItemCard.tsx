@@ -5,6 +5,7 @@ import { Card } from "./ui/card";
 import Image from "next/image";
 import placeHolderImage from "../../public/image_placeholder.webp";
 import Link from "next/link";
+import Img from "./Img";
 // import { useReviewsStore } from "@/store/reviewsStore";
 
 
@@ -25,13 +26,11 @@ const MenuItemCard = ({ menuItem, hotelId }: { menuItem: MenuItem, hotelId: stri
       >
         {/* image container */}
         <div className="relative">
-          <Image
+          <Img
             src={((menuItem.image !== "") && !(menuItem.image.includes("pollinations"))) ? menuItem.image : placeHolderImage.src}
             alt={menuItem.name}
             width={300}
             height={300}
-            priority={false}
-            quality={60}
             className="w-full h-48 object-cover"
           
           />

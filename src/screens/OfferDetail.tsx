@@ -28,6 +28,7 @@ import { Offer } from "@/store/offerStore_hasura";
 import { Button } from "@/components/ui/button";
 import { useClaimedOffersStore } from "@/store/claimedOfferStore_hasura";
 import ClaimedOfferModal from "@/components/ClaimedOfferModal";
+import Img from "@/components/Img";
 
 export default function OfferDetail({
   offer,
@@ -84,13 +85,11 @@ export default function OfferDetail({
           </div>
 
           <div className="relative">
-            <Image
+            <Img
               src={offer.menu.image_url}
               alt={offer.menu.name}
               width={500}
               height={500}
-              priority={false}
-              quality={60}
               className="w-full h-64 object-cover"
             />
 

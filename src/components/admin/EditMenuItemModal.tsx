@@ -13,6 +13,7 @@ import CategoryDropdown from "@/components/ui/CategoryDropdown";
 import { ImageGridModal } from "../bulkMenuUpload/ImageGridModal";
 import { useAuthStore } from "@/store/authStore";
 import { useCategoryStore } from "@/store/categoryStore_hasura";
+import Img from "../Img";
 
 interface EditMenuItemModalProps {
   isOpen: boolean;
@@ -71,10 +72,9 @@ export function EditMenuItemModal({
                 className="relative h-[200px] w-full cursor-pointer overflow-hidden"
                 onClick={() => setIsImageModalOpen(true)}
               >
-                <Image
+                <Img
                   src={editingItem.image}
                   alt="Selected item"
-                  fill
                   className="object-contain rounded-lg"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
