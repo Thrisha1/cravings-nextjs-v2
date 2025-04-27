@@ -71,7 +71,7 @@ const RateThis = ({ type, hotel, styles }: RateThisProps) => {
           {/* You can add a spinner here if you want */}
         </div>
       ) : (
-        <div className="flex justify-between gap-1 max-w-lg mx-auto">
+        <div className="flex justify-between gap-1 sm:max-w-lg sm:mx-auto">
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
