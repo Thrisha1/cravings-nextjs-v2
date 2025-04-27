@@ -11,6 +11,8 @@ import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
 import { Category } from "@/store/categoryStore_hasura";
 import PopularItemsList from "@/components/hotelDetail/PopularItemsList";
 import OfferList from "@/components/hotelDetail/OfferList";
+import SearchMenu from "@/components/hotelDetail/SearchMenu";
+import HotelBanner from "@/components/hotelDetail/HotelBanner";
 
 export type MenuItem = {
   description: string;
@@ -47,8 +49,6 @@ const HotelMenuPage = ({
   auth,
   theme,
 }: HotelMenuPageProps) => {
-  
-
   const styles: Styles = {
     backgroundColor: theme?.colors?.bg || "#F5F5F5",
     color: theme?.colors?.text || "#000",
@@ -113,16 +113,7 @@ const HotelMenuPage = ({
         {/* hotel details  */}
         <div className="grid gap-3">
           {/* banner image  */}
-          <div
-            style={styles.border}
-            className="relative h-[130px] aspect-square rounded-full overflow-hidden"
-          >
-            <Img
-              src={hoteldata?.store_banner || "/image_placeholder.webp"}
-              alt={hoteldata?.store_name}
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <HotelBanner hoteldata={hoteldata} styles={styles} />
 
           <HeadingWithAccent
             className={"font-black text-3xl max-w-[250px]"}
@@ -146,13 +137,7 @@ const HotelMenuPage = ({
 
       {/* search bar  */}
       <section className="px-[8%]">
-        <button
-          style={styles.border}
-          className="bg-white w-full h-[55px] rounded-full flex items-center px-4 gap-3 text-black/30"
-        >
-          <SearchIcon />
-          <span>Search</span>
-        </button>
+        <SearchMenu styles={styles} menu={hoteldata.menus} />
       </section>
 
       {/* offers  */}
