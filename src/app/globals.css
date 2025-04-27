@@ -27,6 +27,7 @@ body {
   min-width: 100vw;
   min-height: 100vh;
   overflow-x: hidden;
+  background-color: #F5F5F5;
 }
 
 @layer base {

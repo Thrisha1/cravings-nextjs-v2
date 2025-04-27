@@ -107,7 +107,7 @@ const HotelMenuPage = ({
         backgroundColor: styles.backgroundColor,
         color: styles.color,
       }}
-      className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 pb-40 `}
+      className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 pb-40 lg:max-w-3xl mx-auto`}
     >
       {/* top part  */}
       <section className="px-[8%] pt-[20px] flex justify-between items-start">
