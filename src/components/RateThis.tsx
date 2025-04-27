@@ -52,7 +52,7 @@ const RateThis = ({ type, hotel, styles }: RateThisProps) => {
   };
 
   return (
-    <div className="grid gap-5 flex-1 sm:max-w-lg">
+    <div className="grid gap-5 flex-1 w-full">
       <div>
         <HeadingWithAccent
           accent={styles.accent}
@@ -71,7 +71,7 @@ const RateThis = ({ type, hotel, styles }: RateThisProps) => {
           {/* You can add a spinner here if you want */}
         </div>
       ) : (
-        <div className="flex justify-between gap-1">
+        <div className="flex justify-between gap-1 max-w-lg mx-auto">
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
