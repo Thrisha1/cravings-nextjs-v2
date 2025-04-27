@@ -53,6 +53,7 @@ import ThemeChangeButton, {
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { updatePartnerThemeMutation } from "@/api/partners";
 import Img from "@/components/Img";
+import { Styles } from "./HotelMenuPage_v2";
 
 export type MenuItem = {
   description: string;
@@ -241,10 +242,15 @@ const HotelMenuPage = ({
     }
   };
 
-  const styles = {
-    backgroundColor: theme?.colors?.bg || "#FEF7ED",
+  const styles: Styles = {
+    backgroundColor: theme?.colors?.bg || "#F5F5F5",
     color: theme?.colors?.text || "#000",
-    accent: theme?.colors?.accent || "#f97316",
+    accent: theme?.colors?.accent || "#EA580C",
+    border: {
+      borderColor: theme?.colors?.text ? `${theme.colors.text}1D` : "#0000001D",
+      borderWidth: "1px",
+      borderStyle: "solid",
+    },
   };
 
   return (
@@ -575,7 +581,7 @@ const HotelMenuPage = ({
 
             {/* rate this hotel  */}
             <section className="px-[7.5%] pt-10 pb-5 flex sm:justify-center sm:pt-20 sm:pb-10">
-              <RateThis type="hotel" hotel={hoteldata} />
+              <RateThis styles={styles} type="hotel" hotel={hoteldata} />
             </section>
 
             {/* reviews  */}
