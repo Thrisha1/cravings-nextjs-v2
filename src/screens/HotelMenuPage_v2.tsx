@@ -13,6 +13,7 @@ import PopularItemsList from "@/components/hotelDetail/PopularItemsList";
 import OfferList from "@/components/hotelDetail/OfferList";
 import SearchMenu from "@/components/hotelDetail/SearchMenu";
 import HotelBanner from "@/components/hotelDetail/HotelBanner";
+import RateThis from "@/components/RateThis";
 
 export type MenuItem = {
   description: string;
@@ -163,6 +164,12 @@ const HotelMenuPage = ({
           selectedCategory={selectedCategory}
           menu={hoteldata?.menus}
         />
+      </section>
+
+
+      {/* rating  */}
+      <section className="px-[8.5%] mt-10">
+        <RateThis styles={styles} hotel={hoteldata} type="hotel" />
       </section>
     </main>
   );

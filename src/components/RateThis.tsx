@@ -1,51 +1,67 @@
-import React, { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
-import { Partner } from '@/store/authStore'
+"use client";
+import React, { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { Partner } from "@/store/authStore";
+import { Styles } from "@/screens/HotelMenuPage_v2";
+import HeadingWithAccent from "./HeadingWithAccent";
 
 interface RateThisProps {
-  type: 'hotel' | 'menuItem'
-  itemId?: string,
-  hotel : Partner
+  type: "hotel" | "menuItem";
+  itemId?: string;
+  hotel: Partner;
+  styles: Styles;
 }
 
-const RateThis = ({ type , hotel }: RateThisProps) => {
-  const { id } = useParams()
-  const itemId = id || '';
-  const [rating, setRating] = useState(0)
-  const [hoveredRating, setHoveredRating] = useState(0)
-  const [isLoading, setIsLoading] = useState(false)
-  const [hasRated, setHasRated] = useState(false)
+const RateThis = ({ type, hotel, styles }: RateThisProps) => {
+  const { id } = useParams();
+  const itemId = id || "";
+  const [rating, setRating] = useState(0);
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasRated, setHasRated] = useState(false);
 
   useEffect(() => {
-    const savedRating = localStorage.getItem(`${type}_${itemId}_rating`)
+    const savedRating = localStorage.getItem(`${type}_${itemId}_rating`);
     if (savedRating) {
-      setRating(parseInt(savedRating))
-      setHasRated(true)
+      setRating(parseInt(savedRating));
+      setHasRated(true);
     }
-  }, [itemId, type])
+  }, [itemId, type]);
 
   const handleStarClick = (star: number) => {
-    if (hasRated) return
-    
-    setRating(star)
-    localStorage.setItem(`${type}_${itemId}_rating`, star.toString())
-    setHasRated(true)
+    if (hasRated) return;
+
+    setRating(star);
+    localStorage.setItem(`${type}_${itemId}_rating`, star.toString());
+    setHasRated(true);
 
     if (star >= 4) {
-      setIsLoading(true)
+      setIsLoading(true);
       setTimeout(() => {
-        window.open(hotel.place_id ? `https://search.google.com/local/writereview?placeid=${hotel.place_id}` : hotel.location, '_blank', 'noopener,noreferrer');
-      }, 2000)
+        window.open(
+          hotel.place_id
+            ? `https://search.google.com/local/writereview?placeid=${hotel.place_id}`
+            : hotel.location,
+          "_blank",
+          "noopener,noreferrer"
+        );
+        setIsLoading(false);
+        setRating(star);
+      }, 2000);
     }
-  }
+  };
 
   return (
     <div className="grid gap-5 flex-1 sm:max-w-lg">
       <div>
-        <h2 className="text-lg font-semibold sm:text-4xl sm:text-center">Rate this {type === 'hotel' ? 'hotel' : 'Item'}</h2>
-        <p className="text-sm text-gray-500 sm:text-center sm:text-base">
-          {hasRated ? 'Thanks for your rating!' : 'Tell others what you think'}
+        <HeadingWithAccent
+          accent={styles.accent}
+          className="text-2xl font-black sm:text-4xl text-center"
+        >
+          Rate this {type === "hotel" ? "hotel" : "Item"}
+        </HeadingWithAccent>
+        <p className="text-sm text-gray-500 text-center sm:text-base">
+          {hasRated ? "Thanks for your rating!" : "Tell others what you think"}
         </p>
       </div>
 
@@ -60,11 +76,17 @@ const RateThis = ({ type , hotel }: RateThisProps) => {
             <button
               key={star}
               disabled={hasRated}
+              style={{
+                color:
+                  star <= (hoveredRating || rating)
+                    ? styles.accent
+                    : `${styles.color}`,
+                transition: "color 0.2s ease-in-out",
+                opacity: star <= (hoveredRating || rating) ? 1 : 0.2,
+              }}
               className={`text-4xl cursor-pointer ${
-                star <= (hoveredRating || rating) 
-                  ? 'text-orange-600' 
-                  : 'text-gray-200'
-              } ${hasRated ? 'cursor-default' : 'cursor-pointer'}`}
+                hasRated ? "cursor-default" : "cursor-pointer"
+              }`}
               onClick={() => handleStarClick(star)}
               onMouseEnter={() => !hasRated && setHoveredRating(star)}
               onMouseLeave={() => !hasRated && setHoveredRating(0)}
@@ -81,7 +103,7 @@ const RateThis = ({ type , hotel }: RateThisProps) => {
         </p>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default RateThis
+export default RateThis;
