@@ -6,15 +6,17 @@ import Img from "../Img";
 const ItemCard = ({
   item,
   styles,
+  className
 }: {
   item: HotelDataMenus;
   styles: Styles;
+  className?: string;
 }) => {
   return (
     <div
       style={styles.border}
       key={item.id}
-      className="py-6 rounded-[35px] px-6 flex-1 relative bg-white text-black"
+      className={`py-8 rounded-[35px] px-6 flex-1 relative bg-white text-black ${className}`}
     >
       <div className="flex flex-col gap-y-2 justify-between items-start w-full">
         <div className={`flex justify-between w-full`}>
@@ -28,7 +30,7 @@ const ItemCard = ({
               style={{
                 color: !item.is_available ? styles.color : styles.accent,
               }}
-              className={`font-bold text-xl`}
+              className={`font-black text-2xl`}
             >
               ₹{item.price}
             </div>

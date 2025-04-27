@@ -1,3 +1,5 @@
+"use client";
+
 import { Partner } from "@/store/authStore";
 import React, { useState } from "react";
 import {

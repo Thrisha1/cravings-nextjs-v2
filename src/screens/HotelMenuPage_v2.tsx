@@ -1,46 +1,16 @@
-"use client";
-import React, { useEffect, useState } from "react";
-import SearchBox from "@/components/SearchBox";
-import Image from "next/image";
-import OfferCardMin from "@/components/OfferCardMin";
-import Autoplay from "embla-carousel-autoplay";
-
-import { Heading, SearchIcon, VerifiedIcon } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { revalidateTag } from "@/app/actions/revalidate";
-import { toast } from "sonner";
-import Link from "next/link";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import Error from "@/app/hotels/error";
-import ShowAllBtn from "@/components/hotelDetail/ShowAllBtn";
-import RateThis from "@/components/RateThis";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { SearchIcon } from "lucide-react";
 import MenuItemsList from "@/components/hotelDetail/MenuItemsList_v2";
 import { Offer } from "@/store/offerStore_hasura";
-import { useAuthStore } from "@/store/authStore";
 import { HotelData } from "@/app/hotels/[id]/page";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-} from "@/components/ui/carousel";
 import ThemeChangeButton, {
   ThemeConfig,
 } from "@/components/hotelDetail/ThemeChangeButton";
-import { fetchFromHasura } from "@/lib/hasuraClient";
-import { updatePartnerThemeMutation } from "@/api/partners";
 import Img from "@/components/Img";
 import HeadingWithAccent from "@/components/HeadingWithAccent";
 import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
+import { Category } from "@/store/categoryStore_hasura";
+import PopularItemsList from "@/components/hotelDetail/PopularItemsList";
+import OfferList from "@/components/hotelDetail/OfferList";
 
 export type MenuItem = {
   description: string;
@@ -50,7 +20,7 @@ export type MenuItem = {
   price: number;
 };
 
-export type Styles ={
+export type Styles = {
   backgroundColor: string;
   color: string;
   accent: string;
@@ -59,7 +29,7 @@ export type Styles ={
     borderWidth: string;
     borderStyle: string;
   };
-}
+};
 
 interface HotelMenuPageProps {
   offers: Offer[];
@@ -77,18 +47,9 @@ const HotelMenuPage = ({
   auth,
   theme,
 }: HotelMenuPageProps) => {
-  const { userData } = useAuthStore();
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  
 
-  //For reasurance
-  offers = offers.filter(
-    (offer) =>
-      new Date(offer.end_time).setHours(0, 0, 0, 0) <
-      new Date().setHours(0, 0, 0, 0)
-  );
-
-  const styles : Styles = {
+  const styles: Styles = {
     backgroundColor: theme?.colors?.bg || "#F5F5F5",
     color: theme?.colors?.text || "#000",
     accent: theme?.colors?.accent || "#EA580C",
@@ -98,6 +59,46 @@ const HotelMenuPage = ({
       borderStyle: "solid",
     },
   };
+
+  const getCategories = () => {
+    const uniqueCategoriesMap = new Map<string, Category>();
+
+    hoteldata.menus.forEach((item) => {
+      if (!uniqueCategoriesMap.has(item.category.name)) {
+        uniqueCategoriesMap.set(item.category.name, item.category);
+      }
+    });
+
+    const uniqueCategories = Array.from(uniqueCategoriesMap.values()).sort(
+      (a, b) => (a.priority || 0) - (b.priority || 0)
+    );
+    return uniqueCategories;
+  };
+
+  const getCategoryItems = (selectedCategory: string) => {
+    const filteredItems = hoteldata?.menus.filter(
+      (item) => item.category.name === selectedCategory
+    );
+    const sortedItems = [...filteredItems].sort((a, b) => {
+      if (a.image_url.length && !b.image_url.length) return -1;
+      if (!a.image_url.length && b.image_url.length) return 1;
+      return 0;
+    });
+
+    return sortedItems;
+  };
+
+  const getTopItems = () => {
+    const filteredItems = hoteldata?.menus.filter(
+      (item) => item.is_top === true
+    );
+    return filteredItems;
+  };
+
+  const topItems = getTopItems();
+  const categories = getCategories();
+  const selectedCategory = categories[0]?.name || "";
+  const items = getCategoryItems(selectedCategory);
 
   return (
     <main
@@ -137,7 +138,7 @@ const HotelMenuPage = ({
 
         {/* right top button  */}
         <div>
-          {hoteldata?.id === userData?.id && (
+          {hoteldata?.id === auth?.id && (
             <ThemeChangeButton hotelData={hoteldata} theme={theme} />
           )}
         </div>
@@ -155,17 +156,29 @@ const HotelMenuPage = ({
       </section>
 
       {/* offers  */}
-      <section></section>
+      {offers.length > 0 && (
+        <section className="px-[8%]">
+          <OfferList offers={offers} styles={styles} />
+        </section>
+      )}
 
       {/* popular  */}
-      <section>
-      </section>
+      {topItems.length > 0 && (
+        <section>
+          <PopularItemsList items={topItems} styles={styles} />
+        </section>
+      )}
 
       {/* menu  */}
       <section>
-        <MenuItemsList styles={styles} menu={hoteldata.menus} />
+        <MenuItemsList
+          styles={styles}
+          items={items}
+          categories={categories}
+          selectedCategory={selectedCategory}
+          menu={hoteldata?.menus}
+        />
       </section>
-
     </main>
   );
 };

@@ -110,6 +110,7 @@ const HotelPage = async ({
   const hoteldata = hotelId ? await getHotelData(hotelId) : null;
   const offers = hoteldata?.offers;
 
+
   let filteredOffers: Offer[] = [];
   if (offers) {
     const today = new Date().setHours(0, 0, 0, 0);
