@@ -138,7 +138,10 @@ const QrPayment = () => {
     return 0;
   };
 
-  const handleSubmit = async (e?: React.FormEvent<HTMLFormElement> , user? : User | null) => {
+  const handleSubmit = async (
+    e?: React.FormEvent<HTMLFormElement>,
+    user?: User | null
+  ) => {
     e?.preventDefault();
 
     const u = user || userData;
@@ -203,7 +206,7 @@ const QrPayment = () => {
       const user = await signInWithPhone(phoneNumber, hotelDetails?.hotelId);
       setIsSignedIn(true);
       setIsLoading(false);
-      await handleSubmit(undefined,user);
+      await handleSubmit(undefined, user);
     } catch (error) {
       console.error(error);
       toast.error(error as string);
@@ -231,9 +234,7 @@ const QrPayment = () => {
           const finalAmount =
             Number(billAmount.replace("₹", "")) -
             (Number(billAmount.replace("₹", "")) * discount) / 100;
-          router.push(
-            `upi://pay?pa=${upiId}&pn=${hotelDetails?.hotelName}&am=${finalAmount}&tn=Payment%20to%20${hotelDetails?.hotelName}`
-          );
+            window.location.href = `upi://pay?pa=${upiId}&pn=${hotelDetails?.hotelName}&am=${finalAmount}&tn=Payment%20to%20${hotelDetails?.hotelName}`;
         }
         setIsPaymentSuccess(true);
       } else {
