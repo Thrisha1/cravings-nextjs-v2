@@ -51,7 +51,8 @@ const Currencies = [
   { label: "SR" , value : "SR" },
   { label: "AED", value: "AED" },
   { label: "EUR", value: "€" },
-  { label: "GBP", value: "£" }
+  { label: "GBP", value: "£" },
+  { label : "KWD" , value : "	د.ك" }
 ];
 
 export default function ProfilePage() {
