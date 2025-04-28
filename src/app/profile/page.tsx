@@ -44,15 +44,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 const Currencies = [
   { label: "INR", value: "₹" },
   { label: "USD", value: "$" },
-  { label: "SR" , value : "SR" },
+  { label: "SR", value: "SR" },
   { label: "AED", value: "AED" },
   { label: "EUR", value: "€" },
   { label: "GBP", value: "£" },
-  { label : "KWD" , value : "	د.ك" }
+  { label: "KWD", value: "	د.ك" },
 ];
 
 export default function ProfilePage() {
@@ -83,6 +84,7 @@ export default function ProfilePage() {
   );
   const [isBannerUploading, setBannerUploading] = useState(false);
   const [isBannerChanged, setIsBannerChanged] = useState(false);
+  const [showPricing, setShowPricing] = useState(true);
 
   const isLoading = authLoading;
 
@@ -97,6 +99,7 @@ export default function ProfilePage() {
           (curr) => curr.value === userData.currency
         ) as (typeof Currencies)[0]
       );
+      setShowPricing(userData.currency === "🚫" ? false : true);
     }
   }, [userData]);
 
@@ -375,6 +378,38 @@ export default function ProfilePage() {
       toast.dismiss();
       toast.error("Failed to update description");
       console.error("Error updating description:", error);
+    }
+  };
+
+  const handleShowPricingChange = async (checked: boolean) => {
+    try {
+      toast.loading(`Setting pricing to ${checked ? "show" : "hide"}...`);
+      setShowPricing(checked);
+
+      let currencyValue = "🚫";
+
+      if (checked) {
+        currencyValue = Currencies[0].value;
+      }
+
+      await fetchFromHasura(updatePartnerCurrencyMutation, {
+        userId: userData?.id,
+        currency: currencyValue,
+      });
+      revalidateTag(userData?.id as string);
+      toast.dismiss();
+      toast.success(
+        `Pricing set to ${checked ? "show" : "hide"} successfully!`
+      );
+      setState({ currency: currencyValue });
+    } catch (error) {
+      toast.dismiss();
+      toast.error(`Failed to set pricing to ${checked ? "show" : "hide"}`);
+      setShowPricing(!checked);
+      console.error(
+        `Error setting pricing to ${checked ? "show" : "hide"}`,
+        error
+      );
     }
   };
 
@@ -686,66 +721,83 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-2 pt-4">
-                <label htmlFor="currency" className="text-lg font-semibold">
-                  Currency
-                </label>
+                <div className="text-lg font-semibold">Price Settings</div>
+
+                {/* show pricing  */}
                 <div className="flex gap-2">
-                  {isEditing.currency ? (
-                    <>
-                      <Select
-                        value={currency.label} // Use label as the value for selection
-                        onValueChange={(selectedLabel) => {
-                          const selectedCurrency = Currencies.find(
-                            (curr) => curr.label === selectedLabel
-                          );
-                          if (selectedCurrency) {
-                            setCurrency(selectedCurrency);
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="flex-1">
-                          <SelectValue placeholder="Select currency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Currencies.map((curr) => (
-                            <SelectItem key={curr.label} value={curr.label}>
-                              {curr.value} - {curr.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        onClick={handleSaveCurrency}
-                        disabled={isSaving.currency || !currency}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.currency ? <>Saving...</> : "Save"}
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="flex justify-between items-center w-full">
-                      <span className="text-gray-700">
-                        {currency ? (
-                          <>
-                            {currency.value} - {currency.label}
-                          </>
-                        ) : (
-                          "No currency selected"
-                        )}
-                      </span>
-                      <Button
-                        onClick={() => {
-                          setIsEditing((prev) => ({ ...prev, currency: true }));
-                          setCurrency(currency || Currencies[0]); // Default to first currency if none selected
-                        }}
-                        variant="ghost"
-                        className="hover:bg-orange-100"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
+                  <label htmlFor="show-pricing">Show Pricing : </label>
+                  <Switch
+                    checked={showPricing}
+                    onCheckedChange={handleShowPricingChange}
+                  />
                 </div>
+
+                {/* currency  */}
+                {userData.currency !== "🚫" && (
+                  <div className="flex gap-2 items-center">
+                    <label htmlFor="currency">Currency : </label>
+                    <div className="flex gap-2 flex-1">
+                      {isEditing.currency ? (
+                        <>
+                          <Select
+                            value={currency.label} // Use label as the value for selection
+                            onValueChange={(selectedLabel) => {
+                              const selectedCurrency = Currencies.find(
+                                (curr) => curr.label === selectedLabel
+                              );
+                              if (selectedCurrency) {
+                                setCurrency(selectedCurrency);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Select currency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Currencies.map((curr) => (
+                                <SelectItem key={curr.label} value={curr.label}>
+                                  {curr.value} - {curr.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            onClick={handleSaveCurrency}
+                            disabled={isSaving.currency || !currency}
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                          >
+                            {isSaving.currency ? <>Saving...</> : "Save"}
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="flex justify-between items-center w-full">
+                          <span className="text-gray-700">
+                            {currency ? (
+                              <>
+                                {currency.value} - {currency.label}
+                              </>
+                            ) : (
+                              "No currency selected"
+                            )}
+                          </span>
+                          <Button
+                            onClick={() => {
+                              setIsEditing((prev) => ({
+                                ...prev,
+                                currency: true,
+                              }));
+                              setCurrency(currency || Currencies[0]); 
+                            }}
+                            variant="ghost"
+                            className="hover:bg-orange-100"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

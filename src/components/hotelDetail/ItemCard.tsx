@@ -35,14 +35,17 @@ const ItemCard = ({
               } ${!item.is_available ? "opacity-25" : ""}`}
             >
               <div className="capitalize text-xl font-bold">{item.name}</div>
-              <div
-                style={{
-                  color: !item.is_available ? styles.color : styles.accent,
-                }}
-                className={`font-black text-2xl`}
-              >
-                {currency}{item.price}
-              </div>
+              {currency !== "🚫" && (
+                <div
+                  style={{
+                    color: !item.is_available ? styles.color : styles.accent,
+                  }}
+                  className={`font-black text-2xl`}
+                >
+                  {currency}
+                  {item.price}
+                </div>
+              )}
               <DescriptionWithTextBreak
                 maxLines={2}
                 className="text-sm opacity-50 mt-1"
@@ -70,7 +73,12 @@ const ItemCard = ({
         </div>
       </div>
 
-      <ItemDetailsModal styles={styles} open={isOpen} setOpen={setIsOpen} item={item} />
+      <ItemDetailsModal
+        styles={styles}
+        open={isOpen}
+        setOpen={setIsOpen}
+        item={item}
+      />
     </>
   );
 };
