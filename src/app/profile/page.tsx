@@ -53,7 +53,7 @@ const Currencies = [
   { label: "AED", value: "AED" },
   { label: "EUR", value: "€" },
   { label: "GBP", value: "£" },
-  { label: "KWD", value: "	د.ك" },
+  { label: "KWD", value: "د.ك" },
   { label: "None" , value : " " }
 ];
 
