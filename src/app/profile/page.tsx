@@ -54,6 +54,7 @@ const Currencies = [
   { label: "EUR", value: "€" },
   { label: "GBP", value: "£" },
   { label: "KWD", value: "د.ك" },
+  {label : "BHD" , value : ".د.ب"},
   { label: "None" , value : " " }
 ];
 
