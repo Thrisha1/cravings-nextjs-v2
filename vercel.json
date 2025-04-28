@@ -1,8 +1,0 @@
-{
-    "functions": {
-      "api/**.js": {
-        "regions": ["bom1"]
-      }
-    }
-  }
-  
