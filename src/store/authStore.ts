@@ -74,7 +74,7 @@ interface AuthState {
     phone: string,
     upiId: string
   ) => Promise<void>;
-  signInWithPhone: (phone: string, partnerId?: string) => Promise<void>;
+  signInWithPhone: (phone: string, partnerId?: string) => Promise<User | null>;
   signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
   signInSuperAdminWithEmail: (email: string, password: string) => Promise<void>;
   fetchUser: () => Promise<void>;
@@ -283,9 +283,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       setAuthCookie({ id: user.id, role: "user" ,  });
       set({ userData: { ...user, role: "user" } });
+      return {
+        ...user,
+        role : "user"
+      }
     } catch (error) {
       console.error("Phone sign-in failed:", error);
-      throw error;
+      return null;
     }
   },
 

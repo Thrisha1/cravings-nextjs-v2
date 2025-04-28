@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { FileClock, UtensilsCrossed } from "lucide-react";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore, User } from "@/store/authStore";
 // import PartnerLoginModal from "@/components/PartnerLoginModal";
 import {
   Dialog,
@@ -138,15 +138,17 @@ const QrPayment = () => {
     return 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent<HTMLFormElement> , user? : User | null) => {
+    e?.preventDefault();
 
-    if (!userData) {
+    const u = user || userData;
+
+    if (!u) {
       setIsSignedIn(false);
       return;
     }
 
-    if (userData.role !== "user") {
+    if (u.role !== "user") {
       toast.error("You are not allowed to use this feature");
       return;
     }
@@ -154,7 +156,7 @@ const QrPayment = () => {
     setIsLoading(true);
     try {
       const { followers } = await fetchFromHasura(IS_FOLLOWING, {
-        userId: userData.id,
+        userId: u.id,
         partnerId: hotelDetails?.hotelId,
       });
 
@@ -162,37 +164,13 @@ const QrPayment = () => {
 
       if (!followers || followers.length === 0) {
         await fetchFromHasura(FOLLOW_PARTNER, {
-          userId: userData.id,
+          userId: u.id,
           partnerId: hotelDetails?.hotelId,
-          phone: userData.role === "user" ? userData.phone : "",
+          phone: u.role === "user" ? u.phone : "",
         });
       } else {
         console.log("Already following");
       }
-
-      // Get user visits
-      // const visitsResponse = await fetchFromHasura(GET_USER_VISITS, {
-      //   userId: userData.id,
-      //   partnerId: hotelDetails?.hotelId,
-      // });
-
-      // const visits = [];
-
-      // Check if recent visit (within last 2 hours)
-      // if (visits.length > 0) {
-      //   // const lastVisit = visits[0];
-      //   const now = new Date();
-      //   const lastVisitDate = new Date(lastVisit.createdAt);
-      //   const diffTime = Math.abs(now.getTime() - lastVisitDate.getTime());
-      //   const diffHours = diffTime / (1000 * 60 * 60);
-
-      //   if (diffHours < 2) {
-      //     setIsRecentVisit(true);
-      //     setIsBillAmountSubmitted(true);
-      //     setIsLoading(false);
-      //     return;
-      //   }
-      // }
 
       // Calculate discount
       const calculatedDiscount = 0;
@@ -202,7 +180,7 @@ const QrPayment = () => {
       await fetchFromHasura(CREATE_PAYMENT, {
         partnerId: hotelDetails?.hotelId,
         amount: Number(amount),
-        userId: userData.id,
+        userId: u.id,
         discount: calculatedDiscount,
       });
 
@@ -222,12 +200,13 @@ const QrPayment = () => {
     }
     try {
       setIsLoading(true);
-      await signInWithPhone(phoneNumber, hotelDetails?.hotelId);
+      const user = await signInWithPhone(phoneNumber, hotelDetails?.hotelId);
       setIsSignedIn(true);
+      setIsLoading(false);
+      await handleSubmit(undefined,user);
     } catch (error) {
       console.error(error);
       toast.error(error as string);
-    } finally {
       setIsLoading(false);
     }
   };
