@@ -28,6 +28,7 @@ import {
   updateStoreBannerMutation,
   updatePartnerPlaceIdMutation,
   updatePartnerDescriptionMutation,
+  updatePartnerCurrencyMutation,
 } from "@/api/partners";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import Link from "next/link";
@@ -36,6 +37,18 @@ import { revalidateTag } from "../actions/revalidate";
 import { processImage } from "@/lib/processImage";
 import { Textarea } from "@/components/ui/textarea";
 import Img from "@/components/Img";
+import { Select } from "@radix-ui/react-select";
+import {
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const Currencies = [
+  { label: "INR", value: "₹" },
+  { label: "USD", value: "$" },
+];
 
 export default function ProfilePage() {
   const { userData, loading: authLoading, signOut, setState } = useAuthStore();
@@ -48,15 +61,18 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState({
     upiId: false,
     placeId: false,
-    description : false,
+    description: false,
+    currency: false,
   });
   const [isEditing, setIsEditing] = useState({
     upiId: false,
     placeId: false,
-    description : false,
+    description: false,
+    currency: false,
   });
   const [placeId, setPlaceId] = useState("");
   const [description, setDescription] = useState("");
+  const [currency, setCurrency] = useState(Currencies[0]);
   const [bannerImage, setBannerImage] = useState<string | null>(
     userData?.role === "partner" ? userData.store_banner || null : null
   );
@@ -71,6 +87,11 @@ export default function ProfilePage() {
       setUpiId(userData.upi_id || "");
       setPlaceId(userData.place_id || "");
       setDescription(userData.description || "");
+      setCurrency(
+        Currencies.find(
+          (curr) => curr.value === userData.currency
+        ) as (typeof Currencies)[0]
+      );
     }
   }, [userData]);
 
@@ -278,13 +299,53 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSaveCurrency = async () => {
+    try {
+      if (!userData) return;
+      toast.loading("Updating Currency...");
+
+      if (!currency) {
+        toast.dismiss();
+        toast.error("Please enter a valid Currency");
+        return;
+      }
+
+      setIsSaving((prev) => {
+        return { ...prev, currency: true };
+      });
+      await fetchFromHasura(updatePartnerCurrencyMutation, {
+        userId: userData?.id,
+        currency: currency.value,
+      });
+      revalidateTag(userData?.id as string);
+      setState({ currency: currency.value });
+      toast.dismiss();
+      toast.success("Curreny updated successfully!");
+      setIsSaving((prev) => {
+        return { ...prev, currency: false };
+      });
+      setIsEditing((prev) => {
+        return { ...prev, currency: false };
+      });
+    } catch (error) {
+      setIsSaving((prev) => {
+        return { ...prev, currency: false };
+      });
+      setIsEditing((prev) => {
+        return { ...prev, currency: false };
+      });
+      toast.dismiss();
+      toast.error("Failed to update Currency");
+      console.error("Error updating Currency:", error);
+    }
+  };
+
   const handleSaveDescription = async () => {
     try {
       toast.loading("Updating description...");
       setIsSaving((prev) => {
         return { ...prev, description: true };
-      }
-      );
+      });
       await fetchFromHasura(updatePartnerDescriptionMutation, {
         userId: userData?.id,
         description: description,
@@ -295,26 +356,22 @@ export default function ProfilePage() {
       toast.success("Description updated successfully!");
       setIsSaving((prev) => {
         return { ...prev, description: false };
-      }
-      );
+      });
       setIsEditing((prev) => {
         return { ...prev, description: false };
-      }
-      );
+      });
     } catch (error) {
       setIsSaving((prev) => {
         return { ...prev, description: false };
-      }
-      );
+      });
       setIsEditing((prev) => {
         return { ...prev, description: false };
-      }
-      );
+      });
       toast.dismiss();
       toast.error("Failed to update description");
       console.error("Error updating description:", error);
     }
-  }
+  };
 
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
@@ -497,7 +554,10 @@ export default function ProfilePage() {
                       </span>
                       <Button
                         onClick={() => {
-                          setIsEditing((prev) => ({ ...prev, description: true }));
+                          setIsEditing((prev) => ({
+                            ...prev,
+                            description: true,
+                          }));
                           setDescription(description ? description : "");
                         }}
                         variant="ghost"
@@ -618,6 +678,69 @@ export default function ProfilePage() {
                     Get Place Id
                   </Link>
                 </p>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <label htmlFor="currency" className="text-lg font-semibold">
+                  Currency
+                </label>
+                <div className="flex gap-2">
+                  {isEditing.currency ? (
+                    <>
+                      <Select
+                        value={currency.label} // Use label as the value for selection
+                        onValueChange={(selectedLabel) => {
+                          const selectedCurrency = Currencies.find(
+                            (curr) => curr.label === selectedLabel
+                          );
+                          if (selectedCurrency) {
+                            setCurrency(selectedCurrency);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Currencies.map((curr) => (
+                            <SelectItem key={curr.label} value={curr.label}>
+                              {curr.value} - {curr.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        onClick={handleSaveCurrency}
+                        disabled={isSaving.currency || !currency}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isSaving.currency ? <>Saving...</> : "Save"}
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-gray-700">
+                        {currency ? (
+                          <>
+                            {currency.value} - {currency.label}
+                          </>
+                        ) : (
+                          "No currency selected"
+                        )}
+                      </span>
+                      <Button
+                        onClick={() => {
+                          setIsEditing((prev) => ({ ...prev, currency: true }));
+                          setCurrency(currency || Currencies[0]); // Default to first currency if none selected
+                        }}
+                        variant="ghost"
+                        className="hover:bg-orange-100"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

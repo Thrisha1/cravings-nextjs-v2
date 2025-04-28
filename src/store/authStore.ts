@@ -50,6 +50,7 @@ export interface Partner extends BaseUser {
   delivery_status: boolean;
   place_id?: string;
   theme?: string;
+  currency: string;
 }
 
 export interface SuperAdmin extends BaseUser {
@@ -150,6 +151,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             userData: {
               ...partner,
               password: "",
+              currency: partner.currency,
               role: "partner",
             } as Partner,
           });

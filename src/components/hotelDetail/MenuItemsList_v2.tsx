@@ -12,12 +12,14 @@ const MenuItemsList = ({
   items,
   categories,
   selectedCategory,
+  currency
 }: {
   menu: HotelDataMenus[];
   styles: Styles;
   items: HotelDataMenus[];
   categories: Category[];
   selectedCategory: string;
+  currency: string;
 }) => {
   const [selectedCat, setSelectedCat] = useState(selectedCategory );
   const [menus, setMenus] = useState<HotelDataMenus[]>(items);
@@ -72,7 +74,7 @@ const MenuItemsList = ({
       {/* items  */}
       <div className="px-[8%] grid h-fit gap-3 rounded-3xl overflow-hidden">
         {menus.map((item) => (
-          <ItemCard key={item.id} item={item} styles={styles} />
+          <ItemCard currency={currency} key={item.id} item={item} styles={styles} />
         ))}
       </div>
     </div>

@@ -60,6 +60,7 @@ const HotelMenuPage = ({
       borderStyle: "solid",
     },
   };
+  
 
   const getCategories = () => {
     const uniqueCategoriesMap = new Map<string, Category>();
@@ -138,7 +139,7 @@ const HotelMenuPage = ({
 
       {/* search bar  */}
       <section className="px-[8%]">
-        <SearchMenu styles={styles} menu={hoteldata.menus} />
+        <SearchMenu currency={hoteldata?.currency} styles={styles} menu={hoteldata.menus} />
       </section>
 
       {/* offers  */}
@@ -151,13 +152,14 @@ const HotelMenuPage = ({
       {/* popular  */}
       {topItems.length > 0 && (
         <section>
-          <PopularItemsList items={topItems} styles={styles} />
+          <PopularItemsList currency={hoteldata?.currency} items={topItems} styles={styles} />
         </section>
       )}
 
       {/* menu  */}
       <section>
         <MenuItemsList
+          currency={hoteldata?.currency}
           styles={styles}
           items={items}
           categories={categories}

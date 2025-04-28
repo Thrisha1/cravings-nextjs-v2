@@ -36,6 +36,7 @@ export const partnerIdQuery = `
       phone
       district
       theme
+      currency
       place_id
     }
   }

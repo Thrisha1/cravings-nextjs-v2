@@ -35,6 +35,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     description
     store_banner
     store_name
+    currency
     place_id
     theme
     menus(where: {deletion_status: {_eq: 0}}) {
@@ -159,6 +160,16 @@ export const updatePartnerDescriptionMutation = `
     update_partners_by_pk(pk_columns: { id: $userId }, _set: { description: $description }) {
       id
       description
+    }
+  }
+`;
+
+
+export const updatePartnerCurrencyMutation = `
+  mutation UpdatePartnerCurrency($userId: uuid!, $currency: String!) {
+    update_partners_by_pk(pk_columns: { id: $userId }, _set: { currency: $currency }) {
+      id
+      currency
     }
   }
 `;

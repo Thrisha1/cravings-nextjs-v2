@@ -15,10 +15,12 @@ import ItemCard from "./ItemCard";
 
 const SearchMenu = ({
   menu,
+  currency,
   styles,
 }: {
   menu: HotelDataMenus[];
   styles: Styles;
+  currency: string;
 }) => {
   const [items, setItems] = useState<HotelDataMenus[]>([]);
   const [query, setQuery] = useState<string>("");
@@ -101,10 +103,17 @@ const SearchMenu = ({
         <div className="grid gap-5 overflow-y-scroll scrollbar-hidden">
           {items.length > 0 ? (
             items.map((item) => (
-              <ItemCard key={item.id} item={item} styles={styles} />
+              <ItemCard
+                currency={currency}
+                key={item.id}
+                item={item}
+                styles={styles}
+              />
             ))
           ) : (
-            <div className="py-4 px-[3%] text-center font-medium">No items found</div>
+            <div className="py-4 px-[3%] text-center font-medium">
+              No items found
+            </div>
           )}
         </div>
       </DialogContent>

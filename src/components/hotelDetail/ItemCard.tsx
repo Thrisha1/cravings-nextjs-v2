@@ -10,9 +10,11 @@ const ItemCard = ({
   item,
   styles,
   className,
+  currency,
 }: {
   item: HotelDataMenus;
   styles: Styles;
+  currency: string;
   className?: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,7 +41,7 @@ const ItemCard = ({
                 }}
                 className={`font-black text-2xl`}
               >
-                ₹{item.price}
+                {currency}{item.price}
               </div>
               <DescriptionWithTextBreak
                 maxLines={2}

@@ -9,10 +9,12 @@ import Autoplay from "embla-carousel-autoplay";
 
 const PopularItemsList = ({
   items,
+  currency,
   styles,
 }: {
   items: HotelDataMenus[];
   styles: Styles;
+  currency: string;
 }) => {
   return (
     <div className="flex flex-col gap-6 my-5">
@@ -34,7 +36,7 @@ const PopularItemsList = ({
         <CarouselContent className="pl-[8%] mr-[8%] h-full">
           {items.map((item, index) => (
             <CarouselItem key={`popular-${item.name + index}`}>
-              <ItemCard item={item} styles={styles} className="h-full" />
+              <ItemCard currency={currency} item={item} styles={styles} className="h-full" />
             </CarouselItem>
           ))}
         </CarouselContent>
