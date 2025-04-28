@@ -60,7 +60,6 @@ const HotelMenuPage = ({
       borderStyle: "solid",
     },
   };
-  
 
   const getCategories = () => {
     const uniqueCategoriesMap = new Map<string, Category>();
@@ -117,12 +116,9 @@ const HotelMenuPage = ({
           {/* banner image  */}
           <HotelBanner hoteldata={hoteldata} styles={styles} />
 
-          <HeadingWithAccent
-            className={"font-black text-3xl max-w-[250px]"}
-            accent={styles.accent}
-          >
+          <h1 className={"font-black text-3xl max-w-[250px]"}>
             {hoteldata?.store_name}
-          </HeadingWithAccent>
+          </h1>
 
           <DescriptionWithTextBreak accent={styles.accent}>
             {hoteldata?.description}
@@ -139,7 +135,11 @@ const HotelMenuPage = ({
 
       {/* search bar  */}
       <section className="px-[8%]">
-        <SearchMenu currency={hoteldata?.currency} styles={styles} menu={hoteldata.menus} />
+        <SearchMenu
+          currency={hoteldata?.currency}
+          styles={styles}
+          menu={hoteldata.menus}
+        />
       </section>
 
       {/* offers  */}
@@ -152,7 +152,11 @@ const HotelMenuPage = ({
       {/* popular  */}
       {topItems.length > 0 && (
         <section>
-          <PopularItemsList currency={hoteldata?.currency} items={topItems} styles={styles} />
+          <PopularItemsList
+            currency={hoteldata?.currency}
+            items={topItems}
+            styles={styles}
+          />
         </section>
       )}
 
@@ -167,7 +171,6 @@ const HotelMenuPage = ({
           menu={hoteldata?.menus}
         />
       </section>
-
 
       {/* rating  */}
       <section className="px-[8.5%] mt-10">

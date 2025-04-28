@@ -234,7 +234,7 @@ const QrPayment = () => {
           const finalAmount =
             Number(billAmount.replace("₹", "")) -
             (Number(billAmount.replace("₹", "")) * discount) / 100;
-            window.location.href = `upi://pay?pa=${upiId}&pn=${hotelDetails?.hotelName}&am=${finalAmount}&tn=Payment%20to%20${hotelDetails?.hotelName}`;
+            window.location.href = `upi://pay?pa=${upiId}&am=${finalAmount}`;
         }
         setIsPaymentSuccess(true);
       } else {

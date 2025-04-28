@@ -22,7 +22,7 @@ const PopularItemsList = ({
         className="text-3xl font-black text-center"
         accent={styles.accent}
       >
-        Popular
+        Must Try
       </HeadingWithAccent>
 
       <Carousel
