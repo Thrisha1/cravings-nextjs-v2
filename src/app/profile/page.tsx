@@ -48,6 +48,10 @@ import {
 const Currencies = [
   { label: "INR", value: "₹" },
   { label: "USD", value: "$" },
+  { label: "SR" , value : "SR" },
+  { label: "AED", value: "AED" },
+  { label: "EUR", value: "€" },
+  { label: "GBP", value: "£" }
 ];
 
 export default function ProfilePage() {
