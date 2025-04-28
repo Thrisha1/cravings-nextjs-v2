@@ -290,32 +290,21 @@ export function MenuTab() {
                               </p>
                             )}
                             <div className="flex items-center mt-2">
-                              <label className="mr-2">Mark as Top 3:</label>
+                              <label className="mr-2">Mark as Popular:</label>
                               <Switch
                                 checked={item.is_top}
                                 onCheckedChange={async () => {
                                   try {
-                                    const currentTopItems = menu.filter(
-                                      (i) => i.is_top === true
-                                    );
-
-                                    const topItemsCount =
-                                      currentTopItems.length;
-
+                                   
                                     if (item.is_top) {
                                       await updateItem(item.id as string, {
                                         is_top: false,
                                       });
-                                    } else if (topItemsCount < 3) {
+                                    } else {
                                       await updateItem(item.id as string, {
                                         is_top: true,
                                       });
-                                    } else {
-                                      toast.error(
-                                        "You can only mark up to 3 items as Top 3."
-                                      );
-                                      return;
-                                    }
+                                    } 
                                   } catch (error) {
                                     toast.error("Failed to update item status");
                                     console.error(error);
