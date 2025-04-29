@@ -32,7 +32,7 @@ interface OrderState {
   removeItem: (itemId: string) => void;
   increaseQuantity: (itemId: string) => void;
   decreaseQuantity: (itemId: string) => void;
-  clearCart: () => void;
+  clearOrder: () => void;
   placeOrder: (
     hotelData: HotelData,
     tableNumber?: number,
@@ -271,7 +271,7 @@ const useOrderStore = create(
         }
       },
 
-      clearCart: () => set({ items: [], totalPrice: 0, order: null }),
+      clearOrder: () => set({ items: [], totalPrice: 0, order: null }),
     }),
     {
       name: "order-storage",

@@ -18,6 +18,14 @@ import useOrderStore from "@/store/orderStore";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 import { Loader2, CheckCircle } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 
 const OrderDrawer = ({
   styles,
@@ -30,8 +38,18 @@ const OrderDrawer = ({
   tableNumber?: number;
   qrId?: string;
 }) => {
-  const { order, items, totalPrice, placeOrder, clearCart } = useOrderStore();
+  const {
+    order,
+    items,
+    totalPrice,
+    placeOrder,
+    increaseQuantity,
+    decreaseQuantity,
+    removeItem,
+    clearOrder,
+  } = useOrderStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [isOpen ,setIsOpen] = useState(false);
 
   const handlePlaceOrder = async () => {
     setIsLoading(true);
@@ -40,25 +58,27 @@ const OrderDrawer = ({
       if (result) {
         toast.success("Order placed successfully!");
         const whatsappMsg = `
-*🍽️ Order Details 🍽️*
+        *🍽️ Order Details 🍽️*
 
-*Table:* ${tableNumber || "N/A"}
-*Order ID:* ${result.id.slice(0, 8)}
-*Time:* ${new Date(result.createdAt).toLocaleTimeString()}
+        *Table:* ${tableNumber || "N/A"}
+        *Order ID:* ${result.id.slice(0, 8)}
+        *Time:* ${new Date(result.createdAt).toLocaleTimeString()}
 
-*📋 Order Items:*
-${items
-  .map(
-    (item, index) =>
-      `${index + 1}. ${item.name}
-   ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(2)} = ${
-        hotelData.currency
-      }${(item.price * item.quantity).toFixed(2)}`
-  )
-  .join("\n\n")}
+        *📋 Order Items:*
+        ${items
+          .map(
+            (item, index) =>
+              `${index + 1}. ${item.name}
+          ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
+                2
+              )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(
+                2
+              )}`
+          )
+          .join("\n\n")}
 
-*💰 Total Amount:* ${hotelData.currency}${result.totalPrice.toFixed(2)}
-`;
+        *💰 Total Amount:* ${hotelData.currency}${result.totalPrice.toFixed(2)}
+        `;
         const whatsappUrl = `https://api.whatsapp.com/send?phone=+918590115462&text=${encodeURIComponent(
           whatsappMsg
         )}`;
@@ -75,7 +95,7 @@ ${items
   };
 
   return (
-    <Drawer>
+    <Drawer open={isOpen} onOpenChange={setIsOpen}>
       {/* Bottom bar */}
       <div
         style={{
@@ -147,30 +167,71 @@ ${items
         </DrawerHeader>
 
         <div className="px-4 overflow-y-auto flex-1">
-          <div className="grid grid-cols-12 gap-2 mb-2 font-semibold text-sm text-gray-500">
-            <div className="col-span-6">ITEM</div>
-            <div className="col-span-2 text-right">PRICE</div>
-            <div className="col-span-2 text-center">QTY</div>
-            <div className="col-span-2 text-right">TOTAL</div>
-          </div>
-
-          {(order ? order.items : items).map((item) => (
-            <div
-              key={`order-item-${item.id}`}
-              className="grid grid-cols-12 gap-2 py-3 border-b border-gray-100 items-center"
-            >
-              <div className="col-span-6 font-medium">{item.name}</div>
-              <div className="col-span-2 text-right">
-                {hotelData.currency}
-                {item.price}
-              </div>
-              <div className="col-span-2 text-center">{item.quantity}</div>
-              <div className="col-span-2 text-right">
-                {hotelData.currency}
-                {(item.price * item.quantity).toFixed(2)}
-              </div>
-            </div>
-          ))}
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-[50%] font-semibold text-sm text-gray-500">
+                  ITEM
+                </TableHead>
+                <TableHead className="text-right font-semibold text-sm text-gray-500">
+                  PRICE
+                </TableHead>
+                <TableHead className="text-center font-semibold text-sm text-gray-500">
+                  QTY
+                </TableHead>
+                <TableHead className="text-right font-semibold text-sm text-gray-500">
+                  TOTAL
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(order ? order.items : items).map((item) => (
+                <TableRow
+                  key={`order-item-${item.id}`}
+                  className="hover:bg-transparent border-b border-gray-100"
+                >
+                  <TableCell className="font-medium py-3">
+                    {item.name}
+                  </TableCell>
+                  <TableCell className="text-right py-3">
+                    {hotelData.currency}
+                    {item.price}
+                  </TableCell>
+                  <TableCell className="text-center py-3">
+                    {order ? (
+                      item.quantity
+                    ) : (
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => {
+                            if (item.quantity > 1) {
+                              decreaseQuantity(item.id as string);
+                            } else {
+                              removeItem(item.id as string);
+                            }
+                          }}
+                          className="w-6 h-6 rounded-full flex items-center justify-center border"
+                        >
+                          -
+                        </button>
+                        <span>{item.quantity}</span>
+                        <button
+                          onClick={() => increaseQuantity(item.id as string)}
+                          className="w-6 h-6 rounded-full flex items-center justify-center border"
+                        >
+                          +
+                        </button>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right py-3">
+                    {hotelData.currency}
+                    {(item.price * item.quantity).toFixed(2)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
 
         <DrawerFooter className="border-t">
@@ -202,9 +263,16 @@ ${items
               )}
             </Button>
           ) : (
-            <div className="w-full text-center text-sm text-gray-500">
-              Your order has been placed. Please wait for confirmation.
-            </div>
+            <>
+              <div className="w-full text-center text-sm text-gray-500">
+                Your order has been placed. Please wait for confirmation.
+              </div>
+              <Button onClick={() => {
+                clearOrder();
+                setIsOpen(false);
+                toast.success("You can now place a new order");
+              }}>Place New Order</Button>
+            </>
           )}
         </DrawerFooter>
       </DrawerContent>
