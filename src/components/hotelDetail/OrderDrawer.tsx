@@ -39,6 +39,26 @@ const OrderDrawer = ({
       const result = await placeOrder(hotelData);
       if (result) {
         toast.success("Order placed successfully!");
+        const whtasppMsg = `
+        *Order Details:*
+        *Hotel:* ${hotelData.name}
+        *Table Number:* ${tableNumber || "N/A"}
+        *Order ID:* ${result.id}
+        *Items:*
+        ${items
+          .map(
+            (item) =>
+              `- ${item.name} (Qty: ${item.quantity}) - ${hotelData.currency}${(
+                item.price * item.quantity
+              ).toFixed(2)}`
+          )
+          .join("\n")}
+        *Total Price:* ${hotelData.currency}${result.totalPrice.toFixed(2)}
+        *Created At:* ${new Date(result.createdAt).toLocaleString()}`;
+        const whatsappUrl = `https://api.whatsapp.com/send?phone=${hotelData.phone}&text=${encodeURIComponent(
+          whtasppMsg
+        )}`;
+        window.open(whatsappUrl, "_blank");
       } else {
         toast.error("Failed to place order. Please try again.");
       }

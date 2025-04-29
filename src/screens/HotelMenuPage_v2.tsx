@@ -117,9 +117,10 @@ const HotelMenuPage = ({
           {/* banner image  */}
           <HotelBanner hoteldata={hoteldata} styles={styles} />
 
-          <h1 className={"font-black text-3xl max-w-[250px]"}>
-            {hoteldata?.store_name}
-          </h1>
+          <h1 
+            className={"font-black text-3xl max-w-[250px]"}
+            dangerouslySetInnerHTML={{ __html: hoteldata?.store_name || '' }}
+          />
 
           <DescriptionWithTextBreak accent={styles.accent}>
             {hoteldata?.description}
