@@ -50,6 +50,12 @@ const useOrderStore = create(
       totalPrice: 0,
 
       addItem: (item) => {
+        const user = useAuthStore.getState().userData;
+        if (!user) {
+          console.error("User not authenticated");
+          window.location.href = "/login";
+          return;
+        }
         if (get().order) return; // Prevent adding items if order exists
         set((state) => {
           const existingItem = state.items.find((i) => i.id === item.id);
