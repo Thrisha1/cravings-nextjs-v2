@@ -82,6 +82,7 @@ const OrderDrawer = ({
         const whatsappUrl = `https://api.whatsapp.com/send?phone=+918590115462&text=${encodeURIComponent(
           whatsappMsg
         )}`;
+        clearOrder();
         window.open(whatsappUrl, "_blank");
       } else {
         toast.error("Failed to place order. Please try again.");
@@ -267,11 +268,6 @@ const OrderDrawer = ({
               <div className="w-full text-center text-sm text-gray-500">
                 Your order has been placed. Please wait for confirmation.
               </div>
-              <Button onClick={() => {
-                clearOrder();
-                setIsOpen(false);
-                toast.success("You can now place a new order");
-              }}>Place New Order</Button>
             </>
           )}
         </DrawerFooter>
