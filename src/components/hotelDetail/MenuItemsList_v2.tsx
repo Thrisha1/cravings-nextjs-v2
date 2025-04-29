@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { HotelDataMenus } from "@/app/hotels/[id]/page";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import { Category } from "@/store/categoryStore_hasura";
 import ItemCard from "./ItemCard";
@@ -11,6 +11,7 @@ const MenuItemsList = ({
   styles,
   items,
   categories,
+  hotelData,
   selectedCategory,
   currency
 }: {
@@ -18,6 +19,7 @@ const MenuItemsList = ({
   styles: Styles;
   items: HotelDataMenus[];
   categories: Category[];
+  hotelData : HotelData;
   selectedCategory: string;
   currency: string;
 }) => {
@@ -72,9 +74,9 @@ const MenuItemsList = ({
       </div>
 
       {/* items  */}
-      <div className="px-[8%] grid h-fit gap-3 rounded-3xl overflow-hidden">
+      <div className="px-[8%] grid h-fit gap-3 rounded-3xl ">
         {menus.map((item) => (
-          <ItemCard currency={currency} key={item.id} item={item} styles={styles} />
+          <ItemCard feature_flags={hotelData?.feature_flags} currency={currency} key={item.id} item={item} styles={styles} />
         ))}
       </div>
     </div>

@@ -14,6 +14,7 @@ import OfferList from "@/components/hotelDetail/OfferList";
 import SearchMenu from "@/components/hotelDetail/SearchMenu";
 import HotelBanner from "@/components/hotelDetail/HotelBanner";
 import RateThis from "@/components/RateThis";
+import OrderDrawer from "@/components/hotelDetail/OrderDrawer";
 
 export type MenuItem = {
   description: string;
@@ -153,6 +154,7 @@ const HotelMenuPage = ({
       {topItems.length > 0 && (
         <section>
           <PopularItemsList
+            hotelData={hoteldata}
             currency={hoteldata?.currency}
             items={topItems}
             styles={styles}
@@ -166,11 +168,19 @@ const HotelMenuPage = ({
           currency={hoteldata?.currency}
           styles={styles}
           items={items}
+          hotelData={hoteldata}
           categories={categories}
           selectedCategory={selectedCategory}
           menu={hoteldata?.menus}
         />
       </section>
+
+      {/* order drawer  */}
+      {hoteldata?.feature_flags?.includes("ordering") && (
+        <section>
+          <OrderDrawer styles={styles} hotelData={hoteldata} />
+        </section>
+      )}
 
       {/* rating  */}
       <section className="px-[8.5%] mt-10">

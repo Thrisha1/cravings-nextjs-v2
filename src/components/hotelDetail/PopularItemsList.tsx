@@ -1,5 +1,5 @@
 "use client";
-import { HotelDataMenus } from "@/app/hotels/[id]/page";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
 import React from "react";
 import HeadingWithAccent from "../HeadingWithAccent";
 import { Styles } from "@/screens/HotelMenuPage_v2";
@@ -10,10 +10,12 @@ import Autoplay from "embla-carousel-autoplay";
 const PopularItemsList = ({
   items,
   currency,
+  hotelData,
   styles,
 }: {
   items: HotelDataMenus[];
   styles: Styles;
+  hotelData: HotelData;
   currency: string;
 }) => {
   return (
@@ -33,10 +35,10 @@ const PopularItemsList = ({
           }),
         ]}
       >
-        <CarouselContent className="pl-[8%] mr-[8%] h-full">
+        <CarouselContent className="pl-[8%] mr-[8%] h-full pt-4">
           {items.map((item, index) => (
             <CarouselItem key={`popular-${item.name + index}`}>
-              <ItemCard currency={currency} item={item} styles={styles} className="h-full" />
+              <ItemCard feature_flags={hotelData?.feature_flags} currency={currency} item={item} styles={styles} className="h-full" />
             </CarouselItem>
           ))}
         </CarouselContent>

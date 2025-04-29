@@ -51,6 +51,7 @@ export interface Partner extends BaseUser {
   place_id?: string;
   theme?: string;
   currency: string;
+  feature_flags? : string;
 }
 
 export interface SuperAdmin extends BaseUser {

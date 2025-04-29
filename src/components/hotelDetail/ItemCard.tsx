@@ -5,22 +5,44 @@ import React, { useState } from "react";
 import Img from "../Img";
 import ItemDetailsModal from "./ItemDetailsModal";
 import DescriptionWithTextBreak from "../DescriptionWithTextBreak";
+import useOrderStore from "@/store/orderStore";
 
 const ItemCard = ({
   item,
   styles,
   className,
+  feature_flags,
   currency,
 }: {
   item: HotelDataMenus;
   styles: Styles;
   currency: string;
   className?: string;
+  feature_flags?: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { addItem } = useOrderStore();
+  const hasOrderingFeature = feature_flags?.includes("ordering");
 
   return (
-    <>
+    <div className="h-full relative">
+      {/* add Item to cart  */}
+      {(item.is_available && hasOrderingFeature) && (
+        <button
+          onClick={() => {
+            addItem(item);
+          }}
+          style={{
+            backgroundColor: styles.accent,
+            ...styles.border,
+            color: "white",
+          }}
+          className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl absolute top-0 right-0 translate-x-3 -translate-y-2 rounded-full cursor-pointer z-10 grid place-items-center w-12 aspect-square"
+        >
+          +
+        </button>
+      )}
+
       <div
         onClick={() => setIsOpen(true)}
         style={styles.border}
@@ -79,7 +101,7 @@ const ItemCard = ({
         setOpen={setIsOpen}
         item={item}
       />
-    </>
+    </div>
   );
 };
 
