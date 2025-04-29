@@ -40,35 +40,25 @@ const OrderDrawer = ({
       if (result) {
         toast.success("Order placed successfully!");
         const whatsappMsg = `
-        *Order Details*
-        *Table Number:* ${tableNumber || "N/A"}
-        *Order ID:* ${result.id}
-        *Created At:* ${new Date(result.createdAt).toLocaleString()}
-        
-        *Items Ordered:*
-        \`\`\`
-        ${"Item".padEnd(30)} ${"Qty".padEnd(5)} ${"Price".padEnd(
-          10
-        )} ${"Total".padEnd(10)}
-        ${"-".repeat(55)}
-        ${items
-          .map((item) => {
-            const itemName =
-              item.name.length > 25
-                ? item.name.substring(0, 22) + "..."
-                : item.name;
-            return `${itemName.padEnd(30)} ${item.quantity
-              .toString()
-              .padEnd(5)} ${hotelData.currency}${item.price
-              .toFixed(2)
-              .padEnd(10)} ${hotelData.currency}${(item.price * item.quantity)
-              .toFixed(2)
-              .padEnd(10)}`;
-          })
-          .join("\n")}
-        \`\`\`
-        
-        *Total Price:* ${hotelData.currency}${result.totalPrice.toFixed(2)}`;
+*🍽️ Order Details 🍽️*
+
+*Table:* ${tableNumber || "N/A"}
+*Order ID:* ${result.id.slice(0, 8)}
+*Time:* ${new Date(result.createdAt).toLocaleTimeString()}
+
+*📋 Order Items:*
+${items
+  .map(
+    (item, index) =>
+      `${index + 1}. ${item.name}
+   ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(2)} = ${
+        hotelData.currency
+      }${(item.price * item.quantity).toFixed(2)}`
+  )
+  .join("\n\n")}
+
+*💰 Total Amount:* ${hotelData.currency}${result.totalPrice.toFixed(2)}
+`;
         const whatsappUrl = `https://api.whatsapp.com/send?phone=+918590115462&text=${encodeURIComponent(
           whatsappMsg
         )}`;
