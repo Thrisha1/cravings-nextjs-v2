@@ -53,6 +53,7 @@ const useOrderStore = create(
         const user = useAuthStore.getState().userData;
         if (!user) {
           console.error("User not authenticated");
+          localStorage.setItem("redirectPath", window.location.pathname);
           window.location.href = "/login";
           return;
         }

@@ -19,13 +19,13 @@ export default function Login() {
   const [userPhone, setUserPhone] = useState("");
   const [partnerData, setPartnerData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
 
   const handleUserSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     // Remove +91 if present and validate 10 digits
-    const cleanedPhone = userPhone.replace(/^\+91/, '');
+    const cleanedPhone = userPhone.replace(/^\+91/, "");
     if (cleanedPhone.length !== 10) {
       toast.error("Please enter a valid 10-digit phone number");
       return;
@@ -34,7 +34,13 @@ export default function Login() {
     setIsLoading(true);
     try {
       await signInWithPhone(cleanedPhone);
-      navigate.push("/explore");
+      const redirectPath = localStorage.getItem("redirectPath");
+      if (redirectPath) {
+        localStorage.removeItem("redirectPath");
+        navigate.push(redirectPath);
+      } else {
+        navigate.push("/explore");
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
     } finally {
@@ -69,14 +75,18 @@ export default function Login() {
           <Button
             type="button"
             onClick={() => setMode("user")}
-            className={`flex-1 ${mode === "user" ? "bg-orange-600" : "bg-gray-200"}`}
+            className={`flex-1 ${
+              mode === "user" ? "bg-orange-600" : "bg-gray-200"
+            }`}
           >
             Sign in as User
           </Button>
           <Button
             type="button"
             onClick={() => setMode("partner")}
-            className={`flex-1 ${mode === "partner" ? "bg-orange-600" : "bg-gray-200"}`}
+            className={`flex-1 ${
+              mode === "partner" ? "bg-orange-600" : "bg-gray-200"
+            }`}
           >
             Sign in as Partner
           </Button>
@@ -91,7 +101,9 @@ export default function Login() {
                 type="tel"
                 placeholder="Enter your phone number"
                 value={userPhone}
-                onChange={(e) => setUserPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                onChange={(e) =>
+                  setUserPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+                }
                 required
               />
             </div>
@@ -113,7 +125,9 @@ export default function Login() {
                   type="email"
                   placeholder="Enter your email"
                   value={partnerData.email}
-                  onChange={(e) => setPartnerData({ ...partnerData, email: e.target.value })}
+                  onChange={(e) =>
+                    setPartnerData({ ...partnerData, email: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -124,10 +138,17 @@ export default function Login() {
                   type="password"
                   placeholder="Enter your password"
                   value={partnerData.password}
-                  onChange={(e) => setPartnerData({ ...partnerData, password: e.target.value })}
+                  onChange={(e) =>
+                    setPartnerData({ ...partnerData, password: e.target.value })
+                  }
                   required
                 />
-                <Link href="/login/forgot-password" className="text-right flex flex-1 justify-end w-full  text-sm text-gray-500 hover:text-orange-600">Forgot Password?</Link>
+                <Link
+                  href="/login/forgot-password"
+                  className="text-right flex flex-1 justify-end w-full  text-sm text-gray-500 hover:text-orange-600"
+                >
+                  Forgot Password?
+                </Link>
               </div>
               <Button
                 type="submit"

@@ -30,7 +30,7 @@ const OrderDrawer = ({
   tableNumber?: number;
   qrId?: string;
 }) => {
-  const { order, items, totalPrice, placeOrder , clearCart } = useOrderStore();
+  const { order, items, totalPrice, placeOrder, clearCart } = useOrderStore();
   const [isLoading, setIsLoading] = useState(false);
 
   const handlePlaceOrder = async () => {
@@ -39,24 +39,38 @@ const OrderDrawer = ({
       const result = await placeOrder(hotelData);
       if (result) {
         toast.success("Order placed successfully!");
-        const whtasppMsg = `
-        *Order Details:*
-        *Hotel:* ${hotelData.name}
+        const whatsappMsg = `
+        *Order Details*
         *Table Number:* ${tableNumber || "N/A"}
         *Order ID:* ${result.id}
-        *Items:*
+        *Created At:* ${new Date(result.createdAt).toLocaleString()}
+        
+        *Items Ordered:*
+        \`\`\`
+        ${"Item".padEnd(30)} ${"Qty".padEnd(5)} ${"Price".padEnd(
+          10
+        )} ${"Total".padEnd(10)}
+        ${"-".repeat(55)}
         ${items
-          .map(
-            (item) =>
-              `- ${item.name} (Qty: ${item.quantity}) - ${hotelData.currency}${(
-                item.price * item.quantity
-              ).toFixed(2)}`
-          )
+          .map((item) => {
+            const itemName =
+              item.name.length > 25
+                ? item.name.substring(0, 22) + "..."
+                : item.name;
+            return `${itemName.padEnd(30)} ${item.quantity
+              .toString()
+              .padEnd(5)} ${hotelData.currency}${item.price
+              .toFixed(2)
+              .padEnd(10)} ${hotelData.currency}${(item.price * item.quantity)
+              .toFixed(2)
+              .padEnd(10)}`;
+          })
           .join("\n")}
-        *Total Price:* ${hotelData.currency}${result.totalPrice.toFixed(2)}
-        *Created At:* ${new Date(result.createdAt).toLocaleString()}`;
+        \`\`\`
+        
+        *Total Price:* ${hotelData.currency}${result.totalPrice.toFixed(2)}`;
         const whatsappUrl = `https://api.whatsapp.com/send?phone=+918590115462&text=${encodeURIComponent(
-          whtasppMsg
+          whatsappMsg
         )}`;
         window.open(whatsappUrl, "_blank");
       } else {
