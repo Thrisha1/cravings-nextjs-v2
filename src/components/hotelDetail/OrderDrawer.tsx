@@ -55,7 +55,7 @@ const OrderDrawer = ({
           .join("\n")}
         *Total Price:* ${hotelData.currency}${result.totalPrice.toFixed(2)}
         *Created At:* ${new Date(result.createdAt).toLocaleString()}`;
-        const whatsappUrl = `https://api.whatsapp.com/send?phone=${hotelData.phone}&text=${encodeURIComponent(
+        const whatsappUrl = `https://api.whatsapp.com/send?phone=+91${hotelData.phone}&text=${encodeURIComponent(
           whtasppMsg
         )}`;
         window.open(whatsappUrl, "_blank");
