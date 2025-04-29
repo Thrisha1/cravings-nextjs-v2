@@ -19,6 +19,9 @@ export interface Order {
   status: "pending" | "completed" | "cancelled";
   partnerId: string;
   userId: string;
+  user?: {
+    full_name: string;
+  };
 }
 
 interface OrderState {
@@ -35,6 +38,8 @@ interface OrderState {
     tableNumber?: number,
     qrId?: string
   ) => Promise<Order | null>;
+  fetchOrderOfPartner: (partnerId: string) => Promise<Order[] | null>;
+  fetchOrderItems: (orderId: string) => Promise<OrderItem[] | null>;
 }
 
 const useOrderStore = create(
@@ -187,6 +192,74 @@ const useOrderStore = create(
           return newOrder;
         } catch (error) {
           console.error("Error placing order:", error);
+          return null;
+        }
+      },
+
+      fetchOrderOfPartner: async (partnerId: string) => {
+        try {
+          console.log("Fetching orders for partner:", partnerId);
+          
+          const response = await fetchFromHasura(
+            `query FetchOrder($partnerId: uuid!) {
+                orders(where: { partner_id: { _eq: $partnerId } } , order_by: { created_at: asc }) {
+                    created_at
+                    id
+                    status
+                    total_price
+                    table_number
+                  }
+                  users {
+                    full_name
+                  }
+                }
+              `,
+            { partnerId }
+          );
+
+          if (response.errors) {
+            console.error("Error fetching order:", response.errors);
+            return null;
+          }
+
+          return response.orders;
+        } catch (error) {
+          console.error("Error fetching order:", error);
+          return null;
+        }
+      },
+
+      fetchOrderItems: async (orderId: string) => {
+        try {
+          const response = await fetchFromHasura(
+            `query FetchOrderItems($orderId: uuid!) {
+              order_items(where: {order_id: {_eq: $orderId}}) {
+              quantity
+              id
+              menu {
+                name
+                price
+              }
+            }
+            }`,
+            { orderId }
+          );
+
+          console.log(response);
+          
+
+          if (response.errors) {
+            console.error("Error fetching order items:", response.errors);
+            return null;
+          }
+
+          return response?.order_items.map((item: any) => ({
+            ...item,
+            name: item.menu?.name || "Unknown",
+            price: item.menu?.price || 0,
+          }));
+        } catch (error) {
+          console.error("Error fetching order items:", error);
           return null;
         }
       },
