@@ -20,7 +20,7 @@ import {
 import { AlertDialogCancel } from "@radix-ui/react-alert-dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import Image from "next/image";
+// import Image from "next/image";
 import { deleteFileFromS3, uploadFileToS3 } from "../actions/aws-s3";
 import { deleteUserMutation } from "@/api/auth";
 import {
@@ -204,7 +204,7 @@ export default function ProfilePage() {
         "local"
       );
 
-      let prevImgUrl =
+      const prevImgUrl =
         userData.role === "partner" ? userData?.store_banner : "";
 
       //Has previous uploaded image delete it

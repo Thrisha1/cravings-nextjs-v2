@@ -28,6 +28,7 @@ interface OrderState {
   order: Order | null;
   items: OrderItem[];
   totalPrice: number;
+  open_auth_modal: boolean;
   addItem: (item: HotelDataMenus) => void;
   removeItem: (itemId: string) => void;
   increaseQuantity: (itemId: string) => void;
@@ -48,15 +49,20 @@ const useOrderStore = create(
       order: null,
       items: [],
       totalPrice: 0,
+      open_auth_modal:false,
 
       addItem: (item) => {
         const user = useAuthStore.getState().userData;
         if (!user) {
           console.error("User not authenticated");
-          localStorage.setItem("redirectPath", window.location.pathname);
-          window.location.href = "/login";
+          set({ open_auth_modal : true })
+          // localStorage.setItem("redirectPath", window.location.pathname);
+          // window.location.href = "/login";
           return;
         }
+
+
+
         if (get().order) return; // Prevent adding items if order exists
         set((state) => {
           const existingItem = state.items.find((i) => i.id === item.id);

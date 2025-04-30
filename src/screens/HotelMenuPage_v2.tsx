@@ -1,3 +1,5 @@
+"use client"
+
 import { SearchIcon } from "lucide-react";
 import MenuItemsList from "@/components/hotelDetail/MenuItemsList_v2";
 import { Offer } from "@/store/offerStore_hasura";
@@ -15,6 +17,8 @@ import SearchMenu from "@/components/hotelDetail/SearchMenu";
 import HotelBanner from "@/components/hotelDetail/HotelBanner";
 import RateThis from "@/components/RateThis";
 import OrderDrawer from "@/components/hotelDetail/OrderDrawer";
+import useOrderStore from "@/store/orderStore"
+import { useState } from "react"; // Add this import
 
 export type MenuItem = {
   description: string;
@@ -60,6 +64,14 @@ const HotelMenuPage = ({
       borderWidth: "1px",
       borderStyle: "solid",
     },
+  };
+
+  const { open_auth_modal } = useOrderStore();
+  const [phoneNumber, setPhoneNumber] = useState(""); // State for phone number input
+
+  const handleSubmit = () => {
+    console.log("Submitted phone number:", phoneNumber);
+    // Here you would typically call an API or dispatch an action
   };
 
   const getCategories = () => {
@@ -110,6 +122,65 @@ const HotelMenuPage = ({
       }}
       className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 pb-40 lg:px-[20%] `}
     >
+      {/* Auth Modal */}
+      {open_auth_modal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          style={{ backgroundColor: `${styles.backgroundColor}80` }}
+        >
+          <div 
+            className="w-full max-w-md p-6 rounded-lg shadow-lg"
+            style={{
+              backgroundColor: styles.backgroundColor,
+              color: styles.color,
+              border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
+            }}
+          >
+            <h2 
+              className="text-2xl font-bold mb-4"
+              style={{ color: styles.accent }}
+            >
+              Sign In
+            </h2>
+            <p className="mb-6">Please enter your phone number to continue</p>
+            
+            <div className="mb-6">
+              <label 
+                htmlFor="phone" 
+                className="block mb-2 text-sm font-medium"
+              >
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                className="w-full p-3 rounded-lg"
+                style={{
+                  backgroundColor: styles.backgroundColor,
+                  color: styles.color,
+                  border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
+                }}
+                placeholder="Enter your phone number"
+              />
+            </div>
+            
+            <button
+              onClick={handleSubmit}
+              className="w-full py-3 px-4 rounded-lg font-medium transition-colors"
+              style={{
+                backgroundColor: styles.accent,
+                color: '#fff', // White text for better contrast on accent color
+              }}
+            >
+              Submit
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Rest of your existing code... */}
       {/* top part  */}
       <section className="px-[8%] pt-[20px] flex justify-between items-start">
         {/* hotel details  */}
