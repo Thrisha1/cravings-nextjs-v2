@@ -1,5 +1,6 @@
 export const createOrderMutation = `
                   mutation CreateOrder(
+                    $id: uuid,
                     $totalPrice: float8!,
                     $createdAt: timestamptz!,
                     $tableNumber: Int,
@@ -8,6 +9,7 @@ export const createOrderMutation = `
                     $userId: uuid!
                   ) {
                     insert_orders_one(object: {
+                      id: $id
                       total_price: $totalPrice
                       created_at: $createdAt
                       table_number: $tableNumber

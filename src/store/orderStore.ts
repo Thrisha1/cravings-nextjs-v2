@@ -27,6 +27,7 @@ export interface Order {
 interface OrderState {
   order: Order | null;
   items: OrderItem[];
+  orderId: string | null;
   totalPrice: number;
   open_auth_modal: boolean;
   addItem: (item: HotelDataMenus) => void;
@@ -42,6 +43,7 @@ interface OrderState {
   fetchOrderOfPartner: (partnerId: string) => Promise<Order[] | null>;
   fetchOrderItems: (orderId: string) => Promise<OrderItem[] | null>;
   setOpenAuthModal: (open: boolean) => void;
+  genOrderId: () => string;
 }
 
 const useOrderStore = create(
@@ -50,9 +52,19 @@ const useOrderStore = create(
       order: null,
       items: [],
       totalPrice: 0,
+      orderId: null,
       open_auth_modal:false,
 
       setOpenAuthModal: (open) => set({ open_auth_modal: open }),
+
+      genOrderId: () => {
+        if(get().orderId){
+          return get().orderId!;
+        }
+        const orderId = crypto.randomUUID();
+        set({ orderId });
+        return orderId;
+      },
 
       addItem: (item) => {
         const user = useAuthStore.getState().userData;
@@ -152,6 +164,7 @@ const useOrderStore = create(
 
           const createdAt = new Date().toISOString();
           const orderVariables = {
+            id : state.orderId,
             totalPrice: state.totalPrice,
             createdAt,
             tableNumber: tableNumber || null,
@@ -280,7 +293,7 @@ const useOrderStore = create(
         }
       },
 
-      clearOrder: () => set({ items: [], totalPrice: 0, order: null }),
+      clearOrder: () => set({ items: [], totalPrice: 0, order: null , orderId: null }),
     }),
     {
       name: "order-storage",
