@@ -60,27 +60,25 @@ const OrderDrawer = ({
 
   const getWhatsapLink = () => {
     const whatsappMsg = `
-        *🍽️ Order Details 🍽️*
+*🍽️ Order Details 🍽️*
 
-        *Table:* ${tableNumber || "N/A"}
-        *Order ID:* ${orderId}
-        *Time:* ${new Date().toLocaleTimeString()}
+*Table:* ${tableNumber || "N/A"}
+*Order ID:* ${orderId?.slice(0, 8) || "N/A"}
+*Time:* ${new Date().toLocaleTimeString()}
 
-        *📋 Order Items:*
-        ${items
-          .map(
-            (item, index) =>
-              `${index + 1}. ${item.name}
-          ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
+*📋 Order Items:*
+  ${items
+    .map(
+      (item, index) =>
+`${index + 1}. ${item.name}
+   ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
                 2
-              )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(
-                2
-              )}`
-          )
-          .join("\n\n")}
+      )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(
+      2
+     )}`).join("\n\n")}
 
-        *💰 Totalz Amount:* ${hotelData.currency}${totalPrice}
-        `;
+*💰 Total Amount:* ${hotelData.currency}${totalPrice}
+`;
 
     const whatsappUrl = `https://api.whatsapp.com/send?phone=+918590115462&text=${encodeURIComponent(
       whatsappMsg
