@@ -53,17 +53,23 @@ const OrderDrawer = ({
   } = useOrderStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  
 
   useEffect(() => {
     genOrderId();
   }, []);
 
   const getWhatsapLink = () => {
+
+    const savedAddress = localStorage.getItem("userAddress");
+
     const whatsappMsg = `
 *🍽️ Order Details 🍽️*
 
 *Table:* ${tableNumber || "N/A"}
 *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
+${tableNumber ? `*Table:* ${tableNumber}` : 'Order Type : Delivery'}
+${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
 *Time:* ${new Date().toLocaleTimeString()}
 
 *📋 Order Items:*
