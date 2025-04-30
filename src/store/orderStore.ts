@@ -41,6 +41,7 @@ interface OrderState {
   ) => Promise<Order | null>;
   fetchOrderOfPartner: (partnerId: string) => Promise<Order[] | null>;
   fetchOrderItems: (orderId: string) => Promise<OrderItem[] | null>;
+  setOpenAuthModal: (open: boolean) => void;
 }
 
 const useOrderStore = create(
@@ -50,6 +51,8 @@ const useOrderStore = create(
       items: [],
       totalPrice: 0,
       open_auth_modal:false,
+
+      setOpenAuthModal: (open) => set({ open_auth_modal: open }),
 
       addItem: (item) => {
         const user = useAuthStore.getState().userData;

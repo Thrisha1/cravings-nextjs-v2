@@ -19,6 +19,7 @@ import RateThis from "@/components/RateThis";
 import OrderDrawer from "@/components/hotelDetail/OrderDrawer";
 import useOrderStore from "@/store/orderStore"
 import { useState } from "react"; // Add this import
+import { useAuthStore } from "@/store/authStore";
 
 export type MenuItem = {
   description: string;
@@ -47,6 +48,7 @@ interface HotelMenuPageProps {
     role: string;
   } | null;
   theme: ThemeConfig | null;
+  tableNumber: number;
 }
 
 const HotelMenuPage = ({
@@ -54,6 +56,7 @@ const HotelMenuPage = ({
   hoteldata,
   auth,
   theme,
+  tableNumber,
 }: HotelMenuPageProps) => {
   const styles: Styles = {
     backgroundColor: theme?.colors?.bg || "#F5F5F5",
@@ -67,12 +70,8 @@ const HotelMenuPage = ({
   };
 
   const { open_auth_modal } = useOrderStore();
-  const [phoneNumber, setPhoneNumber] = useState(""); // State for phone number input
-
-  const handleSubmit = () => {
-    console.log("Submitted phone number:", phoneNumber);
-    // Here you would typically call an API or dispatch an action
-  };
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [address, setAddress] = useState("");
 
   const getCategories = () => {
     const uniqueCategoriesMap = new Map<string, Category>();
@@ -124,11 +123,11 @@ const HotelMenuPage = ({
     >
       {/* Auth Modal */}
       {open_auth_modal && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
           style={{ backgroundColor: `${styles.backgroundColor}80` }}
         >
-          <div 
+          <div
             className="w-full max-w-md p-6 rounded-lg shadow-lg"
             style={{
               backgroundColor: styles.backgroundColor,
@@ -136,17 +135,16 @@ const HotelMenuPage = ({
               border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
             }}
           >
-            <h2 
+            <h2
               className="text-2xl font-bold mb-4"
               style={{ color: styles.accent }}
             >
-              Sign In
+              Please enter your details to place order
             </h2>
-            <p className="mb-6">Please enter your phone number to continue</p>
-            
+
             <div className="mb-6">
-              <label 
-                htmlFor="phone" 
+              <label
+                htmlFor="phone"
                 className="block mb-2 text-sm font-medium"
               >
                 Phone Number
@@ -164,14 +162,51 @@ const HotelMenuPage = ({
                 }}
                 placeholder="Enter your phone number"
               />
+
+              {!tableNumber && <div className="my-6">
+                <label
+                  htmlFor="address"
+                  className="block mb-2 text-sm font-medium"
+                >
+                  Delivery Address
+                </label>
+                <textarea
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="w-full p-3 rounded-lg min-h-[100px]"
+                  style={{
+                    backgroundColor: styles.backgroundColor,
+                    color: styles.color,
+                    border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
+                    resize: "vertical", // Allows vertical resizing only
+                  }}
+                  placeholder="Enter your delivery address (House no, Building, Street, Area)"
+                />
+              </div>}
             </div>
-            
+
             <button
-              onClick={handleSubmit}
+              onClick={async () => {
+                if (!phoneNumber) {
+                  alert("Please enter both phone number and address.");
+                  return;
+                }
+                if(!tableNumber && !address) {
+                  alert("Please enter the delivery address.");
+                  return;
+                }
+                localStorage.setItem('userAddress', address);
+                const result = await useAuthStore.getState().signInWithPhone(phoneNumber, hoteldata?.id);
+                if (result) {
+                  console.log("Login successful", result);
+                  useOrderStore.getState().setOpenAuthModal(false);
+                }
+              }}
               className="w-full py-3 px-4 rounded-lg font-medium transition-colors"
               style={{
                 backgroundColor: styles.accent,
-                color: '#fff', // White text for better contrast on accent color
+                color: '#fff',
               }}
             >
               Submit
@@ -188,7 +223,7 @@ const HotelMenuPage = ({
           {/* banner image  */}
           <HotelBanner hoteldata={hoteldata} styles={styles} />
 
-          <h1 
+          <h1
             className={"font-black text-3xl max-w-[250px]"}
             dangerouslySetInnerHTML={{ __html: hoteldata?.store_name || '' }}
           />
@@ -250,7 +285,7 @@ const HotelMenuPage = ({
       {/* order drawer  */}
       {hoteldata?.feature_flags?.includes("ordering") && (
         <section>
-          <OrderDrawer styles={styles} hotelData={hoteldata} />
+          <OrderDrawer styles={styles} hotelData={hoteldata} tableNumber={tableNumber} />
         </section>
       )}
 
