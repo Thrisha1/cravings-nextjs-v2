@@ -34,6 +34,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     delivery_status
     description
     feature_flags
+    phone
     store_banner
     store_name
     currency

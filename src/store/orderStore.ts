@@ -26,6 +26,7 @@ export interface Order {
 
 interface OrderState {
   order: Order | null;
+  userAddress: string | null;
   items: OrderItem[];
   orderId: string | null;
   totalPrice: number;
@@ -44,6 +45,7 @@ interface OrderState {
   fetchOrderItems: (orderId: string) => Promise<OrderItem[] | null>;
   setOpenAuthModal: (open: boolean) => void;
   genOrderId: () => string;
+  setUserAddress: (address: string) => void;
 }
 
 const useOrderStore = create(
@@ -51,9 +53,14 @@ const useOrderStore = create(
     (set, get) => ({
       order: null,
       items: [],
+      userAddress: null,
       totalPrice: 0,
       orderId: null,
       open_auth_modal:false,
+
+      setUserAddress: (address : string) => {
+        set({ userAddress: address });
+      },
 
       setOpenAuthModal: (open) => set({ open_auth_modal: open }),
 
@@ -297,7 +304,7 @@ const useOrderStore = create(
     }),
     {
       name: "order-storage",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );

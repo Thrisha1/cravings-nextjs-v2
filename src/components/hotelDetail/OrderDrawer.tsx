@@ -27,6 +27,8 @@ import {
   TableRow,
 } from "../ui/table";
 import Link from "next/link";
+import { table } from "console";
+import { usePathname } from "next/navigation";
 
 const OrderDrawer = ({
   styles,
@@ -40,6 +42,7 @@ const OrderDrawer = ({
   qrId?: string;
 }) => {
   const {
+    userAddress,
     order,
     items,
     orderId,
@@ -48,27 +51,32 @@ const OrderDrawer = ({
     increaseQuantity,
     decreaseQuantity,
     removeItem,
+    setOpenAuthModal,
     genOrderId,
     clearOrder,
   } = useOrderStore();
+  const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  
+  const [isQrScan, setIsQrScan] = useState(false);
 
   useEffect(() => {
     genOrderId();
+
+    if (pathname.includes("qrScan")) {
+      setIsQrScan(true);
+    }
   }, []);
 
   const getWhatsapLink = () => {
-
-    const savedAddress = localStorage.getItem("userAddress");
+    const savedAddress = userAddress || "N/A";
 
     const whatsappMsg = `
 *🍽️ Order Details 🍽️*
 
 *Table:* ${tableNumber || "N/A"}
 *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
-${tableNumber ? `*Table:* ${tableNumber}` : 'Order Type : Delivery'}
+${tableNumber ? `*Table:* ${tableNumber}` : "Order Type : Delivery"}
 ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
 *Time:* ${new Date().toLocaleTimeString()}
 
@@ -76,17 +84,19 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
   ${items
     .map(
       (item, index) =>
-`${index + 1}. ${item.name}
-   ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
-                2
-      )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(
-      2
-     )}`).join("\n\n")}
+        `${index + 1}. ${item.name}
+   ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(2)} = ${
+          hotelData.currency
+        }${(item.price * item.quantity).toFixed(2)}`
+    )
+    .join("\n\n")}
 
 *💰 Total Amount:* ${hotelData.currency}${totalPrice}
 `;
 
-    const whatsappUrl = `https://api.whatsapp.com/send?phone=+918590115462&text=${encodeURIComponent(
+    const number = hotelData?.phone ?? "8590115462";
+
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=+91${number}&text=${encodeURIComponent(
       whatsappMsg
     )}`;
 
@@ -95,8 +105,9 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
 
   const handlePlaceOrder = async () => {
     setIsLoading(true);
+
     try {
-      const result = await placeOrder(hotelData);
+      const result = await placeOrder(hotelData, tableNumber, qrId);
       if (result) {
         toast.success("Order placed successfully!");
         clearOrder();
@@ -264,23 +275,42 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
           </div>
 
           {!order ? (
-            <Link
-              href={getWhatsapLink()}
-              onClick={handlePlaceOrder}
-              target="_blank"
-              // onClick={handlePlaceOrder}
-              style={{ backgroundColor: styles.accent }}
-              className="flex-1 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Placing Order...
-                </>
+            <>
+              {(!userAddress && !isQrScan) ? (
+                <Button
+                  onClick={handlePlaceOrder}
+                  style={{ backgroundColor: styles.accent }}
+                  className="flex-1 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Placing Order...
+                    </>
+                  ) : (
+                    <>Place Order</>
+                  )}
+                </Button>
               ) : (
-                <>Place Order</>
+                <Link
+                  href={getWhatsapLink()}
+                  onClick={handlePlaceOrder}
+                  target="_blank"
+                  // onClick={handlePlaceOrder}
+                  style={{ backgroundColor: styles.accent }}
+                  className="flex-1 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Placing Order...
+                    </>
+                  ) : (
+                    <>Place Order</>
+                  )}
+                </Link>
               )}
-            </Link>
+            </>
           ) : (
             <>
               <div className="w-full text-center text-sm text-gray-500">

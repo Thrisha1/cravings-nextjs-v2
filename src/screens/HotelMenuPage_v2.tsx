@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { SearchIcon } from "lucide-react";
 import MenuItemsList from "@/components/hotelDetail/MenuItemsList_v2";
@@ -17,9 +17,10 @@ import SearchMenu from "@/components/hotelDetail/SearchMenu";
 import HotelBanner from "@/components/hotelDetail/HotelBanner";
 import RateThis from "@/components/RateThis";
 import OrderDrawer from "@/components/hotelDetail/OrderDrawer";
-import useOrderStore from "@/store/orderStore"
-import { useState } from "react"; // Add this import
+import useOrderStore from "@/store/orderStore";
+import { useEffect, useState } from "react"; // Add this import
 import { useAuthStore } from "@/store/authStore";
+import { usePathname } from "next/navigation";
 
 export type MenuItem = {
   description: string;
@@ -72,6 +73,9 @@ const HotelMenuPage = ({
   const { open_auth_modal } = useOrderStore();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
+  const { setUserAddress } = useOrderStore();
+  const pathname = usePathname();
+
 
   const getCategories = () => {
     const uniqueCategoriesMap = new Map<string, Category>();
@@ -143,10 +147,7 @@ const HotelMenuPage = ({
             </h2>
 
             <div className="mb-6">
-              <label
-                htmlFor="phone"
-                className="block mb-2 text-sm font-medium"
-              >
+              <label htmlFor="phone" className="block mb-2 text-sm font-medium">
                 Phone Number
               </label>
               <input
@@ -163,27 +164,29 @@ const HotelMenuPage = ({
                 placeholder="Enter your phone number"
               />
 
-              {!tableNumber && <div className="my-6">
-                <label
-                  htmlFor="address"
-                  className="block mb-2 text-sm font-medium"
-                >
-                  Delivery Address
-                </label>
-                <textarea
-                  id="address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full p-3 rounded-lg min-h-[100px]"
-                  style={{
-                    backgroundColor: styles.backgroundColor,
-                    color: styles.color,
-                    border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
-                    resize: "vertical", // Allows vertical resizing only
-                  }}
-                  placeholder="Enter your delivery address (House no, Building, Street, Area)"
-                />
-              </div>}
+              {!tableNumber && (
+                <div className="my-6">
+                  <label
+                    htmlFor="address"
+                    className="block mb-2 text-sm font-medium"
+                  >
+                    Delivery Address
+                  </label>
+                  <textarea
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full p-3 rounded-lg min-h-[100px]"
+                    style={{
+                      backgroundColor: styles.backgroundColor,
+                      color: styles.color,
+                      border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
+                      resize: "vertical", // Allows vertical resizing only
+                    }}
+                    placeholder="Enter your delivery address (House no, Building, Street, Area)"
+                  />
+                </div>
+              )}
             </div>
 
             <button
@@ -192,12 +195,14 @@ const HotelMenuPage = ({
                   alert("Please enter both phone number and address.");
                   return;
                 }
-                if(!tableNumber && !address) {
+                if (!tableNumber && !address) {
                   alert("Please enter the delivery address.");
                   return;
                 }
-                localStorage.setItem('userAddress', address);
-                const result = await useAuthStore.getState().signInWithPhone(phoneNumber, hoteldata?.id);
+                setUserAddress(address);
+                const result = await useAuthStore
+                  .getState()
+                  .signInWithPhone(phoneNumber, hoteldata?.id);
                 if (result) {
                   console.log("Login successful", result);
                   useOrderStore.getState().setOpenAuthModal(false);
@@ -206,7 +211,7 @@ const HotelMenuPage = ({
               className="w-full py-3 px-4 rounded-lg font-medium transition-colors"
               style={{
                 backgroundColor: styles.accent,
-                color: '#fff',
+                color: "#fff",
               }}
             >
               Submit
@@ -225,7 +230,7 @@ const HotelMenuPage = ({
 
           <h1
             className={"font-black text-3xl max-w-[250px]"}
-            dangerouslySetInnerHTML={{ __html: hoteldata?.store_name || '' }}
+            dangerouslySetInnerHTML={{ __html: hoteldata?.store_name || "" }}
           />
 
           <DescriptionWithTextBreak accent={styles.accent}>
@@ -285,7 +290,12 @@ const HotelMenuPage = ({
       {/* order drawer  */}
       {hoteldata?.feature_flags?.includes("ordering") && (
         <section>
-          <OrderDrawer styles={styles} hotelData={hoteldata} tableNumber={tableNumber} />
+          <OrderDrawer
+            styles={styles}
+            qrId={pathname.includes("qrScan") ? pathname.split("/")[2] : ""}
+            hotelData={hoteldata}
+            tableNumber={tableNumber}
+          />
         </section>
       )}
 
