@@ -84,7 +84,7 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
   ${items
     .map(
       (item, index) =>
-        `${index + 1}. ${item.name}
+        `${index + 1}. ${item.name} (${item.category.name})
    ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(2)} = ${
           hotelData.currency
         }${(item.price * item.quantity).toFixed(2)}`
