@@ -31,7 +31,9 @@ import {
   ChevronsDown,
   MoveVertical,
   X,
+  Trash,
   Search,
+  Trash2,
 } from "lucide-react";
 import { DialogClose } from "@radix-ui/react-dialog";
 
@@ -49,7 +51,7 @@ export function CategoryManagementModal({
   const [localCategories, setLocalCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const { updateCategoriesAsBatch } = useMenuStore();
+  const { updateCategoriesAsBatch , deleteCategoryAndItems } = useMenuStore();
 
   useEffect(() => {
     if (open) {
@@ -127,7 +129,8 @@ export function CategoryManagementModal({
           </div>
           <DialogTitle>Manage Categories</DialogTitle>
           <DialogDescription>
-            Reorder categories by dragging or using the controls. Use actions arrows to move category to top or bottom.
+            Reorder categories by dragging or using the controls. Use actions
+            arrows to move category to top or bottom.
           </DialogDescription>
         </DialogHeader>
 
@@ -170,6 +173,9 @@ export function CategoryManagementModal({
                       Actions
                     </TableHead>
                     <TableHead className="w-[40px]">Move</TableHead>
+                    <TableHead className="w-[40px] text-center">
+                      Delete
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <Droppable droppableId="categories">
@@ -258,6 +264,43 @@ export function CategoryManagementModal({
                                   >
                                     <MoveVertical className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
                                   </div>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-red-600 hover:text-red-800"
+                                    onClick={async () => {
+                                      if (
+                                        confirm(
+                                          `Are you sure you want to permanently delete "${category.name}" and all its items?`
+                                        )
+                                      ) {
+                                        try {
+                                          await deleteCategoryAndItems(
+                                            category.id
+                                          );
+                                          // Remove from local state immediately
+                                          setLocalCategories((prev) =>
+                                            prev.filter(
+                                              (cat) => cat.id !== category.id
+                                            )
+                                          );
+                                          toast.success(
+                                            `Deleted "${category.name}" successfully`
+                                          );
+                                        } catch (error) {
+                                          toast.error(
+                                            `Failed to delete "${category.name}"`
+                                          );
+                                          console.error("Delete error:", error);
+                                        }
+                                      }
+                                    }}
+                                    title="Delete category"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 </TableCell>
                               </TableRow>
                             )}

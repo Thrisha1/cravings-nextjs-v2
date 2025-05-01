@@ -109,3 +109,27 @@ export const deleteMenu = `
         }
     }
 `;
+
+
+export const delCategoryAndItems = `
+  mutation DeleteCategoryAndItems($categoryId: uuid!, $partnerId: uuid!) {
+    update_menu(
+      where: {
+        category_id: {_eq: $categoryId}, 
+        partner_id: {_eq: $partnerId},
+        deletion_status: {_neq: 1}
+      },
+      _set: { deletion_status: 1 }
+    ) {
+      affected_rows
+    }
+    
+    update_category_by_pk(
+      pk_columns: { id: $categoryId },
+      _set: { deletion_status: 1 }
+    ) {
+      id
+      deletion_status
+    }
+  }
+`;

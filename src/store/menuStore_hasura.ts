@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import {
   addMenu,
+  delCategoryAndItems,
   deleteMenu,
   getCategoryImages,
   getMenu,
@@ -81,6 +82,7 @@ interface MenuState {
   groupItems: () => void;
   updatedCategories: (categories: Category[]) => void;
   updateCategoriesAsBatch: (categories: Category[]) => Promise<Category[]>;
+  deleteCategoryAndItems: (categoryId: string) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -418,4 +420,44 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       throw error;
     }
   },
+
+  deleteCategoryAndItems: async (categoryId : string) => {
+    try {
+      toast.loading("Deleting category and its items...");
+      const userData = useAuthStore.getState().userData as AuthUser;
+      
+      if (!userData) throw new Error("User data not found");
+  
+      // Execute the deletion
+      await fetchFromHasura(delCategoryAndItems, {
+        categoryId,
+        partnerId: userData.id,
+      });
+  
+      // Update local state
+      const items = get().items.filter(item => item.category.id !== categoryId);
+      set({ items });
+      
+      // Also update categories in category store
+      const { categories, fetchCategories } = useCategoryStore.getState();
+      const updatedCategories = categories.filter(cat => cat.id !== categoryId);
+      useCategoryStore.setState({ categories: updatedCategories });
+      
+      // Re-fetch to ensure consistency
+      await fetchCategories(userData.id);
+      
+      // Re-group items
+      get().groupItems();
+      revalidateTag(userData.id);
+      
+      toast.dismiss();
+      toast.success("Category and its items deleted successfully");
+    } catch (error) {
+      console.error("Error deleting category and items:", error);
+      toast.dismiss();
+      toast.error("Failed to delete category and items");
+      throw error;
+    }
+  }
+  
 }));
