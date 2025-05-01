@@ -94,6 +94,9 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
 *💰 Total Amount:* ${hotelData.currency}${totalPrice}
 `;
 
+    console.log('hotelData', hotelData);
+    
+
     const number = hotelData?.phone ?? "8590115462";
 
     const whatsappUrl = `https://api.whatsapp.com/send?phone=+91${number}&text=${encodeURIComponent(
