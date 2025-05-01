@@ -276,23 +276,7 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
 
           {!order ? (
             <>
-              {(!userAddress && !isQrScan) ? (
-                <Button
-                  onClick={handlePlaceOrder}
-                  style={{ backgroundColor: styles.accent }}
-                  className="flex-1 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Placing Order...
-                    </>
-                  ) : (
-                    <>Place Order</>
-                  )}
-                </Button>
-              ) : (
-                <Link
+               <Link
                   href={getWhatsapLink()}
                   onClick={handlePlaceOrder}
                   target="_blank"
@@ -309,7 +293,7 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
                     <>Place Order</>
                   )}
                 </Link>
-              )}
+              
             </>
           ) : (
             <>
