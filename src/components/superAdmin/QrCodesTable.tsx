@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { UPDATE_QR_CODE, DELETE_QR_CODE, INSERT_QR_CODE } from "@/api/qrcodes";
+import { UPDATE_QR_CODE, DELETE_QR_CODE, INSERT_QR_CODE, BULK_INSERT_QR_CODES } from "@/api/qrcodes";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
@@ -47,6 +48,37 @@ export function QrCodesTable({
     table_number: '',
     no_of_scans: 0,
   });
+  const [isBulkGenerateOpen, setIsBulkGenerateOpen] = useState(false);
+  const [numberOfQrs, setNumberOfQrs] = useState<number>(1);
+  const [isBulkLoading, setIsBulkLoading] = useState(false);
+
+  const handleBulkGenerate = async () => {
+    setIsBulkLoading(true);
+    try {
+      const objects = Array.from({ length: numberOfQrs }, (_, index) => ({
+        qr_number: index + 1,
+        table_number: String(index + 1),
+        partner_id: partnerId,
+        no_of_scans: 0,
+      }));
+
+      const response = await fetchFromHasura(BULK_INSERT_QR_CODES, {
+        objects,
+      });
+
+      if (response?.insert_qr_codes?.returning) {
+        setQrCodes((prev) => [...prev, ...response.insert_qr_codes.returning]);
+        toast.success(`${numberOfQrs} QR codes generated successfully`);
+        setIsBulkGenerateOpen(false);
+        setNumberOfQrs(1);
+      }
+    } catch (error) {
+      toast.error("Failed to generate QR codes");
+      console.error(error);
+    } finally {
+      setIsBulkLoading(false);
+    }
+  };
 
   const handleEdit = (qr: QrCode) => {    
     setEditingId(qr.id);
@@ -136,9 +168,26 @@ export function QrCodesTable({
     }
   };
 
+  const handleCopyAllLinks = () => {
+    const links = qrCodes
+      .map(qr => `https://cravings.live/qrScan/${qr.id}`)
+      .join('\n');
+    
+    navigator.clipboard.writeText(links)
+      .then(() => {
+        toast.success("All QR links copied to clipboard");
+      })
+      .catch((error) => {
+        console.error('Failed to copy links:', error);
+        toast.error("Failed to copy links to clipboard");
+      });
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end space-x-2">
+        <Button onClick={() => setIsBulkGenerateOpen(true)}>Bulk QR Generate</Button>
+        <Button onClick={handleCopyAllLinks}>Copy All Links</Button>
         <Button onClick={() => setIsCreateDialogOpen(true)}>Create New QR Code</Button>
       </div>
 
@@ -275,6 +324,40 @@ export function QrCodesTable({
               disabled={isLoading || !newQr.qr_number || !newQr.table_number}
             >
               {isLoading ? "Creating..." : "Create QR Code"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Add this dialog component before the closing div */}
+      <Dialog open={isBulkGenerateOpen} onOpenChange={setIsBulkGenerateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate Multiple QR Codes</DialogTitle>
+            <DialogDescription>
+              Enter the number of QR codes you want to generate. The QR number and table number will start from 1.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="numberOfQrs" className="text-right">
+                Number of QRs
+              </Label>
+              <Input
+                id="numberOfQrs"
+                type="number"
+                value={numberOfQrs}
+                onChange={(e) => setNumberOfQrs(Math.max(1, parseInt(e.target.value) || 1))}
+                className="col-span-3"
+                min="1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkGenerateOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBulkGenerate} disabled={isBulkLoading}>
+              {isBulkLoading ? "Generating..." : "Generate"}
             </Button>
           </DialogFooter>
         </DialogContent>

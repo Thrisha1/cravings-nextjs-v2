@@ -29,6 +29,19 @@ export const INSERT_QR_CODE = `
   }
 `;
 
+export const BULK_INSERT_QR_CODES = `
+  mutation InsertMultipleQRCodes($objects: [qr_codes_insert_input!]!) {
+    insert_qr_codes(objects: $objects) {
+      returning {
+        id
+        qr_number
+        table_number
+        partner_id
+        no_of_scans
+      }
+    }
+  }`;
+
 export const UPDATE_QR_CODE = `
   mutation UpdateQrCode($id: uuid!, $changes: qr_codes_set_input!) {
     update_qr_codes_by_pk(pk_columns: {id: $id}, _set: $changes) {
