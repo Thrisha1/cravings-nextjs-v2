@@ -715,7 +715,7 @@ export default function ProfilePage() {
                   <Link
                     className="underline text-orange-600"
                     target="_blank"
-                    href={"https://makeweb.com.au/google-places-id-finder/"}
+                    href={"https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"}
                   >
                     Get Place Id
                   </Link>
