@@ -70,12 +70,17 @@ const HotelMenuPage = ({
     },
   };
 
-  const { open_auth_modal } = useOrderStore();
+  const { open_auth_modal, setHotelId } = useOrderStore();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
   const { setUserAddress } = useOrderStore();
   const pathname = usePathname();
 
+  useEffect(() => {
+    if (hoteldata) {
+      setHotelId(hoteldata.id);
+    }
+  }, []);
 
   const getCategories = () => {
     const uniqueCategoriesMap = new Map<string, Category>();
