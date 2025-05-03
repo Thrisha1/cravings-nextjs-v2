@@ -53,7 +53,8 @@ const MenuItemsList = ({
           paddingRight: "8%",
           scrollPaddingRight: "8%",
         }}
-        className="flex gap-x-2 overflow-x-scroll scrollbar-hidden "
+        // className="flex gap-x-2 overflow-x-scroll scrollbar-hidden "
+        className="flex gap-2 flex-wrap"
       >
         {categories.map((category, index) => (
           <button
@@ -65,7 +66,8 @@ const MenuItemsList = ({
               backgroundColor:
                 selectedCat === category.name ? styles.accent : "white",
             }}
-            className="font-semibold capitalize text-nowrap rounded-full px-5 py-[10px] snap-start flex-shrink-0"
+            // className="font-semibold capitalize text-nowrap rounded-full px-5 py-[10px] snap-start flex-shrink-0"
+            className="font-semibold capitalize text-xs text-nowrap rounded-full px-5 py-[10px] snap-start flex-shrink-0"
             key={category.id + index + category.name}
           >
             {category.name}
