@@ -16,10 +16,12 @@ import ItemCard from "./ItemCard";
 const SearchMenu = ({
   menu,
   currency,
+  feature_flags,
   styles,
 }: {
   menu: HotelDataMenus[];
   styles: Styles;
+  feature_flags: string;
   currency: string;
 }) => {
   const [items, setItems] = useState<HotelDataMenus[]>([]);
@@ -74,7 +76,7 @@ const SearchMenu = ({
         <SearchIcon />
         <span>Search</span>
       </DialogTrigger>
-      <DialogContent className="w-full h-full flex flex-col">
+      <DialogContent className="w-full h-full flex flex-col z-[50]">
         {/* header  */}
         <div className="flex gap-3 justify-between items-center px-[3%] py-4">
           <DialogTitle className="hidden">Search Menu</DialogTitle>
@@ -100,10 +102,11 @@ const SearchMenu = ({
         </div>
 
         {/* menu list  */}
-        <div className="grid gap-5 overflow-y-scroll scrollbar-hidden">
+        <div className="grid gap-5 overflow-y-scroll scrollbar-hidden pt-10 px-5">
           {items.length > 0 ? (
             items.map((item) => (
               <ItemCard
+                feature_flags={feature_flags}
                 currency={currency}
                 key={item.id}
                 item={item}

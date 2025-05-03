@@ -312,6 +312,7 @@ const HotelMenuPage = ({
       {/* search bar  */}
       <section className="px-[8%]">
         <SearchMenu
+          feature_flags={hoteldata?.feature_flags || ""}
           currency={hoteldata?.currency}
           styles={styles}
           menu={hoteldata.menus}

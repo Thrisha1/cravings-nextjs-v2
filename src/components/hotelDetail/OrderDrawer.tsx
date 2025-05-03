@@ -128,7 +128,7 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
         style={{
           ...styles.border,
         }}
-        className="fixed bottom-0 z-[40] bg-white text-black w-full px-[8%] py-6 rounded-t-[35px] bottom-bar-shadow flex items-center justify-between"
+        className="fixed bottom-0 z-[51] bg-white text-black w-full px-[8%] py-6 rounded-t-[35px] bottom-bar-shadow flex items-center justify-between"
       >
         {order ? (
           <div className="flex items-center gap-4 w-full justify-between">
@@ -176,7 +176,7 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
         )}
       </div>
 
-      <DrawerContent className="max-h-[80vh]">
+      <DrawerContent className="max-h-[80vh] z-[150]">
         <DrawerHeader>
           <DrawerTitle>
             <HeadingWithAccent
