@@ -32,6 +32,7 @@ export const partnerIdQuery = `
       location
       status
       upi_id
+      feature_flags
       description
       phone
       district

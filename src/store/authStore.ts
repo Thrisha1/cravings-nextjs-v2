@@ -51,7 +51,7 @@ export interface Partner extends BaseUser {
   place_id?: string;
   theme?: string;
   currency: string;
-  feature_flags? : string;
+  feature_flags?: string;
 }
 
 export interface SuperAdmin extends BaseUser {
@@ -60,6 +60,7 @@ export interface SuperAdmin extends BaseUser {
 }
 
 export type AuthUser = User | Partner | SuperAdmin;
+
 
 interface AuthState {
   userData: AuthUser | null;
@@ -283,12 +284,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
 
-      setAuthCookie({ id: user.id, role: "user" ,  });
+      setAuthCookie({ id: user.id, role: "user" });
       set({ userData: { ...user, role: "user" } });
       return {
         ...user,
-        role : "user"
-      }
+        role: "user",
+      };
     } catch (error) {
       console.error("Phone sign-in failed:", error);
       return null;

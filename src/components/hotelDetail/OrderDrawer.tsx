@@ -82,7 +82,7 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
 
 *📋 Order Items:*
   ${items
-    .map(
+    ?.map(
       (item, index) =>
         `${index + 1}. ${item.name} (${item.category.name})
    ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(2)} = ${
@@ -160,7 +160,7 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
               </div>
               <div className="flex gap-2 items-center text-sm text-black/70">
                 <div>Items :</div>
-                <div>{items.length}</div>
+                <div>{items?.length}</div>
               </div>
             </div>
 
@@ -212,7 +212,7 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(order ? order.items : items).map((item) => (
+              {((order?.items ?? []) || items || []).map((item) => (
                 <TableRow
                   key={`order-item-${item.id}`}
                   className="hover:bg-transparent border-b border-gray-100"
@@ -269,30 +269,29 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
               style={{ color: styles.accent }}
             >
               {hotelData.currency}
-              {(order ? order.totalPrice : totalPrice).toFixed(2)}
+              {((order?.totalPrice ?? totalPrice) ?? 0).toFixed(2)}
             </span>
           </div>
 
           {!order ? (
             <>
-               <Link
-                  href={getWhatsapLink()}
-                  onClick={handlePlaceOrder}
-                  target="_blank"
-                  // onClick={handlePlaceOrder}
-                  style={{ backgroundColor: styles.accent }}
-                  className="flex-1 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Placing Order...
-                    </>
-                  ) : (
-                    <>Place Order</>
-                  )}
-                </Link>
-              
+              <Link
+                href={getWhatsapLink()}
+                onClick={handlePlaceOrder}
+                target="_blank"
+                // onClick={handlePlaceOrder}
+                style={{ backgroundColor: styles.accent }}
+                className="flex-1 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Placing Order...
+                  </>
+                ) : (
+                  <>Place Order</>
+                )}
+              </Link>
             </>
           ) : (
             <>

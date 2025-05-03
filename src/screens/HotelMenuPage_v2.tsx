@@ -52,6 +52,61 @@ interface HotelMenuPageProps {
   tableNumber: number;
 }
 
+export type FeatureFlags = {
+  ordering: {
+    access: boolean;
+    enabled: boolean;
+  };
+  delivery: {
+    access: boolean;
+    enabled: boolean;
+  };
+};
+
+export const getFeatures = (perm: string) => {
+  // Initialize default permissions
+  const permissions: FeatureFlags = {
+    ordering: {
+      access: false,
+      enabled: false,
+    },
+    delivery: {
+      access: false,
+      enabled: false,
+    },
+  };
+
+  const parts = perm.split(",");
+
+  for (const part of parts) {
+    const [key, value] = part.split("-");
+
+    if (key === "ordering") {
+      permissions.ordering.access = true;
+      permissions.ordering.enabled = value === "true";
+    } else if (key === "delivery") {
+      permissions.delivery.access = true;
+      permissions.delivery.enabled = value === "true";
+    }
+  }
+  
+  return permissions;
+};
+
+export const revertFeatureToString = (features: FeatureFlags): string => {
+  const parts: string[] = [];
+  
+  if (features.ordering.access) {
+    parts.push(`ordering-${features.ordering.enabled}`);
+  }
+  
+  if (features.delivery.access) {
+    parts.push(`delivery-${features.delivery.enabled}`);
+  }
+  
+  return parts.join(',');
+};
+
 const HotelMenuPage = ({
   offers,
   hoteldata,
@@ -74,6 +129,7 @@ const HotelMenuPage = ({
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
   const { setUserAddress } = useOrderStore();
+
   const pathname = usePathname();
 
   useEffect(() => {
@@ -293,7 +349,8 @@ const HotelMenuPage = ({
       </section>
 
       {/* order drawer  */}
-      {hoteldata?.feature_flags?.includes("ordering") && (
+      {((pathname.includes("qrScan") && getFeatures(hoteldata?.feature_flags || "")?.ordering.enabled) || 
+        (!pathname.includes("qrScan") && getFeatures(hoteldata?.feature_flags || "")?.delivery.enabled)) && (
         <section>
           <OrderDrawer
             styles={styles}

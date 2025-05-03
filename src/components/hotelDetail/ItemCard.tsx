@@ -1,6 +1,6 @@
 "use client";
 import { HotelDataMenus } from "@/app/hotels/[id]/page";
-import { Styles } from "@/screens/HotelMenuPage_v2";
+import { getFeatures, Styles } from "@/screens/HotelMenuPage_v2";
 import React, { useState } from "react";
 import Img from "../Img";
 import ItemDetailsModal from "./ItemDetailsModal";
@@ -22,7 +22,7 @@ const ItemCard = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { addItem } = useOrderStore();
-  const hasOrderingFeature = feature_flags?.includes("ordering");
+  const hasOrderingFeature = getFeatures(feature_flags || "")?.ordering.enabled;
 
   return (
     <div className="h-full relative">

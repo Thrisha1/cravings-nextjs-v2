@@ -29,6 +29,7 @@ import {
   updatePartnerPlaceIdMutation,
   updatePartnerDescriptionMutation,
   updatePartnerCurrencyMutation,
+  updatePartnerFeatureFlagsMutation,
 } from "@/api/partners";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import Link from "next/link";
@@ -45,6 +46,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  FeatureFlags,
+  getFeatures,
+  revertFeatureToString,
+} from "@/screens/HotelMenuPage_v2";
 
 const Currencies = [
   { label: "INR", value: "₹" },
@@ -54,8 +60,8 @@ const Currencies = [
   { label: "EUR", value: "€" },
   { label: "GBP", value: "£" },
   { label: "KWD", value: "د.ك" },
-  {label : "BHD" , value : ".د.ب"},
-  { label: "None" , value : " " }
+  { label: "BHD", value: ".د.ب" },
+  { label: "None", value: " " },
 ];
 
 export default function ProfilePage() {
@@ -87,6 +93,7 @@ export default function ProfilePage() {
   const [isBannerUploading, setBannerUploading] = useState(false);
   const [isBannerChanged, setIsBannerChanged] = useState(false);
   const [showPricing, setShowPricing] = useState(true);
+  const [features, setFeatures] = useState<FeatureFlags | null>(null);
 
   const isLoading = authLoading;
 
@@ -102,6 +109,11 @@ export default function ProfilePage() {
         ) as (typeof Currencies)[0]
       );
       setShowPricing(userData.currency === "🚫" ? false : true);
+      setFeatures(
+        userData?.role === "partner"
+          ? getFeatures(userData.feature_flags || "")
+          : null
+      );
     }
   }, [userData]);
 
@@ -415,6 +427,24 @@ export default function ProfilePage() {
     }
   };
 
+  const handleFeatureEnabledChange = async (updates: FeatureFlags) => {
+    const stringedFeature = revertFeatureToString(updates);
+
+    try {
+      toast.loading("Updating feature flags...");
+      await fetchFromHasura(updatePartnerFeatureFlagsMutation, {
+        userId: userData?.id,
+        feature_flags: stringedFeature,
+      });
+      revalidateTag(userData?.id as string);
+      toast.dismiss();
+      toast.success("Feature flags updated successfully!");
+    } catch (error) {
+      toast.dismiss();
+      toast.error("Failed to update feature flags");
+    }
+  };
+
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
   }
@@ -715,7 +745,9 @@ export default function ProfilePage() {
                   <Link
                     className="underline text-orange-600"
                     target="_blank"
-                    href={"https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"}
+                    href={
+                      "https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
+                    }
                   >
                     Get Place Id
                   </Link>
@@ -788,7 +820,7 @@ export default function ProfilePage() {
                                 ...prev,
                                 currency: true,
                               }));
-                              setCurrency(currency || Currencies[0]); 
+                              setCurrency(currency || Currencies[0]);
                             }}
                             variant="ghost"
                             className="hover:bg-orange-100"
@@ -799,6 +831,68 @@ export default function ProfilePage() {
                       )}
                     </div>
                   </div>
+                )}
+              </div>
+
+              <div className="space-y-2 pt-4">
+                {features && (
+                  <>
+                    <div className="text-lg font-semibold">
+                      Feature Settings
+                    </div>
+
+                    {features.ordering.access && (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">Ordering</div>
+                          <div className="text-sm text-gray-500">
+                            {features.ordering.enabled ? "Enabled" : "Disabled"}
+                          </div>
+                        </div>
+                        <Switch
+                          checked={features.ordering.enabled}
+                          onCheckedChange={(enabled) => {
+                            const updates = {
+                              ...features,
+                              ordering: {
+                                ...features.ordering,
+                                enabled: enabled,
+                              },
+                            };
+
+                            setFeatures(updates);
+                            handleFeatureEnabledChange(updates);
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {features.delivery.access && (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">Delivery</div>
+                          <div className="text-sm text-gray-500">
+                            {features.delivery.enabled ? "Enabled" : "Disabled"}
+                          </div>
+                        </div>
+                        <Switch
+                          checked={features.delivery.enabled}
+                          onCheckedChange={(enabled) => {
+                            const updates = {
+                              ...features,
+                              delivery: {
+                                ...features.delivery,
+                                enabled: enabled,
+                              },
+                            };
+
+                            setFeatures(updates);
+                            handleFeatureEnabledChange(updates);
+                          }}
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </CardContent>

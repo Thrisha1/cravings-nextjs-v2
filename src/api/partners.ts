@@ -176,6 +176,16 @@ export const updatePartnerCurrencyMutation = `
   }
 `;
 
+
+export const updatePartnerFeatureFlagsMutation = `
+  mutation UpdatePartnerFeatureFlags($userId: uuid!, $feature_flags: String!) {
+    update_partners_by_pk(pk_columns: { id: $userId }, _set: { feature_flags: $feature_flags }) {
+      id
+      feature_flags
+    }
+  }
+`;
+
 /*...........types...........*/
 
 export interface Partner {
