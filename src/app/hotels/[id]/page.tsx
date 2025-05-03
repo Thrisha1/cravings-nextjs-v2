@@ -76,19 +76,15 @@ export interface HotelData extends Partner {
 
 const HotelPage = async ({
   searchParams,
-  params,
-  hId,
-  tableNumber,
+  params
 }: {
   searchParams: Promise<{ query: string; qrScan: boolean }>;
   params: Promise<{ id: string }>;
-  hId: string;
-  tableNumber: number;
 }) => {
   const { query: search, qrScan } = await searchParams;
   const { id } = await params;
   const auth = await getAuthCookie();
-  const hotelId = Array.isArray(id) ? hId : id;
+  const hotelId = id;
 
   const getHotelData = unstable_cache(
     async (id: string) => {
@@ -150,7 +146,7 @@ const HotelPage = async ({
         hoteldata={hoteldata as HotelData}
         auth={auth || null}
         theme={theme}
-        tableNumber={tableNumber}
+        tableNumber={0}
       />
     </>
   );

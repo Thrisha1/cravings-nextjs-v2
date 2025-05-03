@@ -38,7 +38,7 @@ const OrderDrawer = ({
 }: {
   styles: Styles;
   hotelData: HotelData;
-  tableNumber?: number;
+  tableNumber?: number ;
   qrId?: string;
 }) => {
   const {

@@ -49,7 +49,7 @@ interface HotelMenuPageProps {
     role: string;
   } | null;
   theme: ThemeConfig | null;
-  tableNumber: number;
+  tableNumber: number ;
 }
 
 export type FeatureFlags = {
