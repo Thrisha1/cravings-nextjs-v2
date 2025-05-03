@@ -1,10 +1,8 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useState, useEffect } from "react";
-// import { getMenuItemImage } from "@/store/menuStore";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Loader2, Check, AlertCircle, Upload } from "lucide-react";
+import { Loader2, Check, AlertCircle, Upload, ClipboardPaste } from "lucide-react";
 import AIImageGenerateModal from "@/components/AIImageGenerateModal";
-// import ImageUploadModal from "../ImageUploadModal";
 import { useMenuStore } from "@/store/menuStore_hasura";
 import { DialogTitle } from "@radix-ui/react-dialog";
 import Img from "../Img";
@@ -27,26 +25,21 @@ export function ImageGridModal({
   onSelectImage,
 }: ImageGridModalProps) {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [isAIImageModalOpen, setAIImageModalOpen] = useState(false);
+  const [pasteStatus, setPasteStatus] = useState<"idle" | "loading" | "error">("idle");
   const { fetchCategorieImages } = useMenuStore();
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const fetchImages = async () => {
-
-    
     if (isOpen && itemName && category) {
       setError(null);
       try {
-
         const menus = await fetchCategorieImages(category);
         const urls = menus.map((menu) => menu.image_url);
         setImageUrls(urls);
-        setLoadingStates(
-          urls.reduce((acc, url) => ({ ...acc, [url]: true }), {})
-        );
+        setLoadingStates(urls.reduce((acc, url) => ({ ...acc, [url]: true }), {}));
       } catch (error) {
         console.error("Error fetching images:", error);
         setError("Failed to fetch images. Please try again.");
@@ -59,29 +52,74 @@ export function ImageGridModal({
     setLoadingStates((prev) => ({ ...prev, [url]: true }));
   };
 
-  const handleImageUpload = (e: any) => {
-    const file = e.target.files[0];
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
-    const blobUrl = URL.createObjectURL(file);    
+    const blobUrl = URL.createObjectURL(file);
     addNewImage(blobUrl);
+  };
 
-    return () => URL.revokeObjectURL(blobUrl);
+  const handlePaste = async (e: ClipboardEvent) => {
+    if (!isOpen) return;
+    
+    setPasteStatus("loading");
+    try {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === "file" && item.type.startsWith("image/")) {
+          const blob = item.getAsFile();
+          if (blob) {
+            const blobUrl = URL.createObjectURL(blob);
+            addNewImage(blobUrl);
+            setPasteStatus("idle");
+            return;
+          }
+        }
+      }
+      setPasteStatus("error");
+      setTimeout(() => setPasteStatus("idle"), 2000);
+    } catch (error) {
+      console.error("Paste error:", error);
+      setPasteStatus("error");
+      setTimeout(() => setPasteStatus("idle"), 2000);
+    }
   };
 
   const handleAiImageUpload = (url: string) => {
     addNewImage(url);
     setAIImageModalOpen(false);
-  }
+  };
 
   useEffect(() => {
     fetchImages();
   }, [isOpen, itemName, category]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const dialogElement = dialogRef.current;
+    if (!dialogElement) return;
+
+    // Add paste event listener when modal is open
+    dialogElement.addEventListener("paste", handlePaste as unknown as EventListener);
+    
+    return () => {
+      // Clean up event listener when modal closes or unmounts
+      dialogElement.removeEventListener("paste", handlePaste as unknown as EventListener);
+    };
+  }, [isOpen]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90%] sm:max-w-4xl rounded-xl">
-        <DialogTitle className="text-lg font-bold">Select Image</DialogTitle>
+      <DialogContent 
+        className="max-w-[90%] sm:max-w-4xl rounded-xl"
+        ref={dialogRef}
+      >
+        <DialogTitle className="text-lg font-bold">Select Images</DialogTitle>
         {error ? (
           <div className="flex flex-col items-center justify-center p-8 bg-red-50 rounded-lg">
             <AlertCircle className="w-12 h-12 text-red-500 mb-2" />
@@ -89,12 +127,13 @@ export function ImageGridModal({
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto p-1">
+            {/* Upload Button */}
             <label
               htmlFor="image-upload"
               className="aspect-square cursor-pointer group bg-gray-100 rounded-md relative"
             >
               <div className="z-10 absolute grid place-items-center top-1/2 left-1/2 text-center -translate-x-1/2 -translate-y-1/2 text-xl font-bold">
-                <Upload className="w-8 h-8 " />
+                <Upload className="w-8 h-8" />
                 Upload
               </div>
               <input
@@ -107,15 +146,63 @@ export function ImageGridModal({
               />
             </label>
 
+            {/* AI Generate Button */}
             <div
               className="aspect-square cursor-pointer group bg-gray-100 rounded-md relative"
               onClick={() => setAIImageModalOpen(true)}
             >
-              <div className="z-10 absolute top-1/2 left-1/2 text-center -translate-x-1/2 -translate-y-1/2 text-xl font-bold">
+              <div className="z-10 absolute grid place-items-center top-1/2 left-1/2 text-center -translate-x-1/2 -translate-y-1/2 text-xl font-bold">
                 AI Generate
               </div>
             </div>
 
+            {/* Paste Button */}
+            <div
+              className="aspect-square cursor-pointer group bg-gray-100 rounded-md relative"
+              onClick={() => {
+                navigator.clipboard.read().then((clipboardItems) => {
+                  setPasteStatus("loading");
+                  let foundImage = false;
+                  
+                  for (const clipboardItem of clipboardItems) {
+                    for (const type of clipboardItem.types) {
+                      if (type.startsWith("image/")) {
+                        clipboardItem.getType(type).then((blob) => {
+                          const blobUrl = URL.createObjectURL(blob);
+                          addNewImage(blobUrl);
+                          setPasteStatus("idle");
+                          foundImage = true;
+                        });
+                        return;
+                      }
+                    }
+                  }
+                  
+                  if (!foundImage) {
+                    setPasteStatus("error");
+                    setTimeout(() => setPasteStatus("idle"), 2000);
+                  }
+                }).catch(() => {
+                  setPasteStatus("error");
+                  setTimeout(() => setPasteStatus("idle"), 2000);
+                });
+              }}
+            >
+              <div className="z-10 absolute grid place-items-center top-1/2 left-1/2 text-center -translate-x-1/2 -translate-y-1/2 text-xl font-bold">
+                {pasteStatus === "loading" ? (
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                ) : pasteStatus === "error" ? (
+                  <AlertCircle className="w-8 h-8 text-red-500" />
+                ) : (
+                  <>
+                    <ClipboardPaste className="w-8 h-8" />
+                    Paste
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Image Grid */}
             {imageUrls.map((url, index) => (
               <div
                 key={url + index}
@@ -165,14 +252,6 @@ export function ImageGridModal({
         isOpen={isAIImageModalOpen}
         onOpenChange={setAIImageModalOpen}
       />
-
-      {/* <ImageUploadModal
-        isOpen={isImageUploadModalOpen}
-        onOpenChange={setImageUploadModalOpen}
-        addNewImage={addNewImage}
-        category={category}
-        itemName={itemName}
-      /> */}
     </Dialog>
   );
 }
