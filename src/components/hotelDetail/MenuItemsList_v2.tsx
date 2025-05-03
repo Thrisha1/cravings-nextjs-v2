@@ -54,7 +54,7 @@ const MenuItemsList = ({
           scrollPaddingRight: "8%",
         }}
         // className="flex gap-x-2 overflow-x-scroll scrollbar-hidden "
-        className="flex gap-2 flex-wrap"
+        className="flex gap-2 flex-wrap justify-center"
       >
         {categories.map((category, index) => (
           <button
