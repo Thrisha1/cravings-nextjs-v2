@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 // import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import LocationAccess from "./LocationAccess";
+import { getFeatures } from "@/screens/HotelMenuPage_v2";
 // import SyncUserOfferCoupons from "./SyncUserOfferCoupons";
 
 export function Navbar() {
@@ -20,6 +21,10 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [userLocation, setUserLocation] = useState("");
   // const [isTooltipOpen, setIsTooltipOpen] = useState(true);
+
+  const features = getFeatures(
+    userData?.role === "partner" ? (userData?.feature_flags as string) : ""
+  );
 
   // Add array of paths where navbar should be hidden
   const hiddenPaths = [
@@ -48,7 +53,7 @@ export function Navbar() {
   const NavLinks = () => (
     <>
       {[
-         {
+        {
           href: `/offers`,
           label: "Offers",
         },
@@ -56,9 +61,13 @@ export function Navbar() {
           href: "/explore",
           label: "Explore",
         },
-       
         ...(userData?.role === "partner"
-          ? [{ href: "/admin", label: "Admin" }]
+          ? [
+              { href: "/admin", label: "Admin" },
+              ...(features?.ordering.access || features?.delivery.access
+                ? [{ href: "/admin/orders", label: "Orders" }]
+                : []),
+            ]
           : []),
         ...(userData?.role === "superadmin"
           ? [{ href: "/superadmin", label: "Super Admin" }]
@@ -136,12 +145,14 @@ export function Navbar() {
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <div
-                onClick={()=>{
+                onClick={() => {
                   router.back();
                 }}
                 className="flex items-center space-x-2"
               >
-                {pathname === "/offers" || pathname === "/explore" || pathname === "/" ? (
+                {pathname === "/offers" ||
+                pathname === "/explore" ||
+                pathname === "/" ? (
                   <>
                     <UtensilsCrossed className="h-6 w-6 text-orange-600" />
 

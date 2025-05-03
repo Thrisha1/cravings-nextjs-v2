@@ -3,13 +3,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MenuTab } from "@/components/admin/MenuTab";
 import { OffersTab } from "@/components/admin/OffersTab";
-import { Partner, useAuthStore } from "@/store/authStore";
-import OrdersTab from "@/components/admin/OrdersTab";
-import { getFeatures } from "./HotelMenuPage_v2";
+import { Partner } from "@/store/authStore";
 
 export default function Admin({ userData }: { userData: Partner }) {
-
-  const permissions = getFeatures(userData?.feature_flags || "");
 
   // Main dashboard for active partners
   return (
@@ -22,19 +18,11 @@ export default function Admin({ userData }: { userData: Partner }) {
         <Tabs defaultValue="menu" className="w-full">
           <TabsList className="grid w-full grid-flow-col auto-cols-fr mb-8">
             <TabsTrigger value="menu">Menu</TabsTrigger>
-            {permissions?.ordering.enabled && (
-              <TabsTrigger value="orders">Orders</TabsTrigger>
-            )}
             <TabsTrigger value="offers">Offers</TabsTrigger>
           </TabsList>
           <TabsContent value="menu">
             <MenuTab />
           </TabsContent>
-          {permissions?.ordering.enabled && (
-            <TabsContent value="orders">
-              <OrdersTab />
-            </TabsContent>
-          )}
           <TabsContent value="offers">
             <OffersTab />
           </TabsContent>
