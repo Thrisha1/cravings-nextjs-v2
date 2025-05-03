@@ -49,7 +49,7 @@ interface HotelMenuPageProps {
     role: string;
   } | null;
   theme: ThemeConfig | null;
-  tableNumber: number ;
+  tableNumber: number;
 }
 
 export type FeatureFlags = {
@@ -76,35 +76,37 @@ export const getFeatures = (perm: string) => {
     },
   };
 
-  const parts = perm.split(",");
+  if (perm) {
+    const parts = perm.split(",");
 
-  for (const part of parts) {
-    const [key, value] = part.split("-");
+    for (const part of parts) {
+      const [key, value] = part.split("-");
 
-    if (key === "ordering") {
-      permissions.ordering.access = true;
-      permissions.ordering.enabled = value === "true";
-    } else if (key === "delivery") {
-      permissions.delivery.access = true;
-      permissions.delivery.enabled = value === "true";
+      if (key === "ordering") {
+        permissions.ordering.access = true;
+        permissions.ordering.enabled = value === "true";
+      } else if (key === "delivery") {
+        permissions.delivery.access = true;
+        permissions.delivery.enabled = value === "true";
+      }
     }
   }
-  
+
   return permissions;
 };
 
 export const revertFeatureToString = (features: FeatureFlags): string => {
   const parts: string[] = [];
-  
+
   if (features.ordering.access) {
     parts.push(`ordering-${features.ordering.enabled}`);
   }
-  
+
   if (features.delivery.access) {
     parts.push(`delivery-${features.delivery.enabled}`);
   }
-  
-  return parts.join(',');
+
+  return parts.join(",");
 };
 
 const HotelMenuPage = ({
@@ -349,8 +351,10 @@ const HotelMenuPage = ({
       </section>
 
       {/* order drawer  */}
-      {((pathname.includes("qrScan") && getFeatures(hoteldata?.feature_flags || "")?.ordering.enabled) || 
-        (!pathname.includes("qrScan") && getFeatures(hoteldata?.feature_flags || "")?.delivery.enabled)) && (
+      {((pathname.includes("qrScan") &&
+        getFeatures(hoteldata?.feature_flags || "")?.ordering.enabled) ||
+        (!pathname.includes("qrScan") &&
+          getFeatures(hoteldata?.feature_flags || "")?.delivery.enabled)) && (
         <section>
           <OrderDrawer
             styles={styles}
