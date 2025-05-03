@@ -80,8 +80,8 @@ const HotelPage = async ({
   hId,
   tableNumber,
 }: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
-  params: Promise<{ [key: string]: string | undefined }>;
+  searchParams: Promise<{ query: string; qrScan: boolean }>;
+  params: Promise<{ id: string }>;
   hId: string;
   tableNumber: number;
 }) => {
