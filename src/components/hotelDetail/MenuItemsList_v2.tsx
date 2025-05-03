@@ -58,7 +58,13 @@ const MenuItemsList = ({
       >
         {categories.map((category, index) => (
           <button
-            onClick={() => setSelectedCat(category.name)}
+            onClick={() => {
+              setSelectedCat(category.name);
+              window.scrollTo({
+                top : document.getElementById("menu-items")?.offsetTop,
+                behavior : "smooth"
+              })
+            }}
             style={{
               ...styles.border,
               color:
@@ -76,7 +82,7 @@ const MenuItemsList = ({
       </div>
 
       {/* items  */}
-      <div className="px-[8%] grid h-fit gap-3 rounded-3xl ">
+      <div id="menu-items" className="px-[8%] grid h-fit gap-3 rounded-3xl ">
         {menus.map((item) => (
           <ItemCard feature_flags={hotelData?.feature_flags} currency={currency} key={item.id} item={item} styles={styles} />
         ))}
