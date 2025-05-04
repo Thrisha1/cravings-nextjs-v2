@@ -65,10 +65,6 @@ const OrderDrawer = ({
     }
   }, []);
 
-  useEffect(() => {
-    console.log("items", items);
-  }, [items]);
-
   const getWhatsapLink = () => {
     const savedAddress = userAddress || "N/A";
 
