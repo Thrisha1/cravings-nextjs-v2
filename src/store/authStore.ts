@@ -45,6 +45,7 @@ export interface Partner extends BaseUser {
   status: string;
   upi_id: string;
   description: string | null;
+  whatsapp_number: string;
   phone: string;
   district: string;
   delivery_status: boolean;

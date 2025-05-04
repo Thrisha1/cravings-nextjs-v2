@@ -1,9 +1,12 @@
 "use client";
 
-import { Partner, UpdatePartnerStatusResponse } from "@/api/partners";
+import {
+  Partner,
+  updatePartnerMutation,
+  UpdatePartnerStatusResponse,
+} from "@/api/partners";
 import { usePartnerStore } from "@/store/usePartnerStore";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { updatePartnerStatusMutation } from "@/api/partners";
 import { Button } from "@/components/ui/button";
 import { Phone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,9 +16,11 @@ export default function PartnerCard({ partner }: { partner: Partner }) {
   const removePartner = usePartnerStore((state) => state.removePartner);
 
   const updateStatus = async (status: "active" | "rejected") => {
-    (await fetchFromHasura(updatePartnerStatusMutation, {
+    (await fetchFromHasura(updatePartnerMutation, {
       id: partner.id,
-      status,
+      updates: {
+        status: status,
+      },
     })) as UpdatePartnerStatusResponse;
     removePartner(partner.id);
 

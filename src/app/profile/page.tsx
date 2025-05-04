@@ -23,14 +23,7 @@ import { toast } from "sonner";
 // import Image from "next/image";
 import { deleteFileFromS3, uploadFileToS3 } from "../actions/aws-s3";
 import { deleteUserMutation } from "@/api/auth";
-import {
-  updateUpiIdMutation,
-  updateStoreBannerMutation,
-  updatePartnerPlaceIdMutation,
-  updatePartnerDescriptionMutation,
-  updatePartnerCurrencyMutation,
-  updatePartnerFeatureFlagsMutation,
-} from "@/api/partners";
+import { updatePartnerMutation } from "@/api/partners";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import Link from "next/link";
 import { useClaimedOffersStore } from "@/store/claimedOfferStore_hasura";
@@ -77,15 +70,18 @@ export default function ProfilePage() {
     placeId: false,
     description: false,
     currency: false,
+    whatsappNumber: false,
   });
   const [isEditing, setIsEditing] = useState({
     upiId: false,
     placeId: false,
     description: false,
+    whatsappNumber: false,
     currency: false,
   });
   const [placeId, setPlaceId] = useState("");
   const [description, setDescription] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [currency, setCurrency] = useState(Currencies[0]);
   const [bannerImage, setBannerImage] = useState<string | null>(
     userData?.role === "partner" ? userData.store_banner || null : null
@@ -114,6 +110,7 @@ export default function ProfilePage() {
           ? getFeatures(userData.feature_flags || "")
           : null
       );
+      setWhatsappNumber(userData.whatsapp_number || userData.phone || "");
     }
   }, [userData]);
 
@@ -168,9 +165,9 @@ export default function ProfilePage() {
       return { ...prev, upiId: true };
     });
     try {
-      await fetchFromHasura(updateUpiIdMutation, {
+      await fetchFromHasura(updatePartnerMutation, {
         id: userData?.id,
-        upi_id: upiId,
+        updates: upiId,
       });
       revalidateTag(userData?.id as string);
       setState({ upi_id: upiId });
@@ -261,9 +258,11 @@ export default function ProfilePage() {
       // // console.log("Image uploaded to S3:", imgUrl);
 
       // Update user data
-      await fetchFromHasura(updateStoreBannerMutation, {
+      await fetchFromHasura(updatePartnerMutation, {
         userId: userData?.id,
-        storeBanner: imgUrl,
+        updates: {
+          storeBanner: imgUrl,
+        },
       });
       toast.dismiss();
       toast.success("Banner updated successfully!");
@@ -294,9 +293,11 @@ export default function ProfilePage() {
       setIsSaving((prev) => {
         return { ...prev, placeId: true };
       });
-      await fetchFromHasura(updatePartnerPlaceIdMutation, {
+      await fetchFromHasura(updatePartnerMutation, {
         userId: userData?.id,
-        placeId: placeId,
+        updates: {
+          place_id: placeId,
+        },
       });
       revalidateTag(userData?.id as string);
       setState({ place_id: placeId });
@@ -335,9 +336,11 @@ export default function ProfilePage() {
       setIsSaving((prev) => {
         return { ...prev, currency: true };
       });
-      await fetchFromHasura(updatePartnerCurrencyMutation, {
-        userId: userData?.id,
-        currency: currency.value,
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          currency: currency.value,
+        },
       });
       revalidateTag(userData?.id as string);
       setState({ currency: currency.value });
@@ -368,9 +371,11 @@ export default function ProfilePage() {
       setIsSaving((prev) => {
         return { ...prev, description: true };
       });
-      await fetchFromHasura(updatePartnerDescriptionMutation, {
-        userId: userData?.id,
-        description: description,
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          description,
+        },
       });
       revalidateTag(userData?.id as string);
       setState({ description: description });
@@ -406,9 +411,11 @@ export default function ProfilePage() {
         currencyValue = Currencies[0].value;
       }
 
-      await fetchFromHasura(updatePartnerCurrencyMutation, {
-        userId: userData?.id,
-        currency: currencyValue,
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          currency: currencyValue,
+        },
       });
       revalidateTag(userData?.id as string);
       toast.dismiss();
@@ -432,9 +439,11 @@ export default function ProfilePage() {
 
     try {
       toast.loading("Updating feature flags...");
-      await fetchFromHasura(updatePartnerFeatureFlagsMutation, {
-        userId: userData?.id,
-        feature_flags: stringedFeature,
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          feature_flags: stringedFeature,
+        },
       });
       revalidateTag(userData?.id as string);
       toast.dismiss();
@@ -442,6 +451,48 @@ export default function ProfilePage() {
     } catch (error) {
       toast.dismiss();
       toast.error("Failed to update feature flags");
+    }
+  };
+
+  const handleSaveWhatsappNumber = async () => {
+    try {
+ 
+      if (!whatsappNumber || whatsappNumber.length !== 10 ) {
+        toast.error("Please enter a valid Whatsapp Number");
+        return;
+      }
+
+      toast.loading("Updating Whatsapp Number..." , {
+        id : "whatsapp-num",
+      });
+
+      setIsSaving((prev) => {
+        return { ...prev, whatsappNumber: true };
+      });
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          whatsapp_number: whatsappNumber,
+        },
+      });
+      revalidateTag(userData?.id as string);
+      setState({ whatsapp_number: whatsappNumber });
+      toast.dismiss("whatsapp-num");
+      toast.success("Whatsapp Number updated successfully!");
+      setIsSaving((prev) => {
+        return { ...prev, whatsappNumber: false };
+      });
+      setIsEditing((prev) => {
+        return { ...prev, whatsappNumber: false };
+      });
+    } catch (error) {
+      toast.dismiss("whatsapp-num");
+      console.error("Error updating Whatsapp Number:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update Whatsapp Number"
+      );
     }
   };
 
@@ -751,6 +802,60 @@ export default function ProfilePage() {
                   >
                     Get Place Id
                   </Link>
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <label htmlFor="whatsNum" className="text-lg font-semibold">
+                  Whatsapp Number
+                </label>
+                <div className="flex gap-2">
+                  {isEditing.whatsappNumber ? (
+                    <>
+                      <Input
+                        id="whatsNum"
+                        type="text"
+                        placeholder="Enter your Whatsapp Number"
+                        minLength={10}
+                        maxLength={10}
+                        value={whatsappNumber}
+                        onChange={(e) => setWhatsappNumber(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleSaveWhatsappNumber}
+                        disabled={isSaving.whatsappNumber || !whatsappNumber}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-gray-700">
+                        {whatsappNumber
+                          ? whatsappNumber
+                          : "No Whatsapp Number set"}
+                      </span>
+                      <Button
+                        onClick={() => {
+                          setIsEditing((prev) => ({
+                            ...prev,
+                            whatsappNumber: true,
+                          }));
+                          setWhatsappNumber(whatsappNumber ? whatsappNumber : "");
+                        }}
+                        variant="ghost"
+                        className="hover:bg-orange-100"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500">
+                  This Whatsapp Number will be used for receiving messages from
+                  customers
                 </p>
               </div>
 

@@ -35,6 +35,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     description
     feature_flags
     phone
+    whatsapp_number
     store_banner
     store_name
     currency
@@ -100,91 +101,30 @@ export const getAllPartnerUpiIdsQuery = `
 
 /*...........mutation...........*/
 
-export const updatePartnerStatusMutation = `
-  mutation UpdatePartnerStatus($id: uuid!, $status: String!) {
-    update_partners_by_pk(pk_columns: { id: $id }, _set: { status: $status }) {
+export const updatePartnerMutation = `
+  mutation UpdatePartner(
+    $id: uuid!
+    $updates: partners_set_input!
+  ) {
+    update_partners_by_pk(
+      pk_columns: { id: $id }
+      _set: $updates
+    ) {
       id
       status
-    }
-  }
-`;
-
-export const updatePartnerDeliveryStatusMutation = `
-  mutation UpdatePartnerDeliveryStatus($id: uuid!, $delivery_status: String!) {
-    update_partners_by_pk(pk_columns: { id: $id }, _set: { delivery_status: $delivery_status }) {
-      id
       delivery_status
-    }
-  }
-`;
-
-export const updateUpiIdMutation = `
-  mutation UpdateUpiId($id: uuid!, $upi_id: String!) {
-    update_partners_by_pk(pk_columns: { id: $id }, _set: { upi_id: $upi_id }) {
-      id
       upi_id
-    }
-  }
-`;
-
-export const updateStoreBannerMutation = `
-  mutation UpdateStoreBanner($userId: uuid!, $storeBanner: String!) {
-    update_partners_by_pk(pk_columns: { id: $userId }, _set: { store_banner: $storeBanner }) {
-      id
       store_banner
-    }
-  }
-`;
-
-export const updatePartnerPlaceIdMutation = `
-  mutation UpdatePartnerPlaceId($userId: uuid!, $placeId: String!) {
-    update_partners_by_pk(pk_columns: { id: $userId }, _set: { place_id: $placeId }) {
-      id
       place_id
-    }
-}
-`;
-
-
-
-export const updatePartnerThemeMutation = `
-  mutation UpdatePartnerTheme($userId: uuid!, $theme: json!) {
-    update_partners_by_pk(pk_columns: { id: $userId }, _set: { theme: $theme }) {
-      id
       theme
-    }
-}
-`;
-
-
-export const updatePartnerDescriptionMutation = `
-  mutation UpdatePartnerDescription($userId: uuid!, $description: String!) {
-    update_partners_by_pk(pk_columns: { id: $userId }, _set: { description: $description }) {
-      id
       description
-    }
-  }
-`;
-
-
-export const updatePartnerCurrencyMutation = `
-  mutation UpdatePartnerCurrency($userId: uuid!, $currency: String!) {
-    update_partners_by_pk(pk_columns: { id: $userId }, _set: { currency: $currency }) {
-      id
       currency
-    }
-  }
-`;
-
-
-export const updatePartnerFeatureFlagsMutation = `
-  mutation UpdatePartnerFeatureFlags($userId: uuid!, $feature_flags: String!) {
-    update_partners_by_pk(pk_columns: { id: $userId }, _set: { feature_flags: $feature_flags }) {
-      id
       feature_flags
+      whatsapp_number
     }
   }
 `;
+
 
 /*...........types...........*/
 

@@ -20,7 +20,7 @@ export async function middleware(request: NextRequest) {
       redirect: '/login'
     },
     partner: {
-      allowed: ['/admin', '/partner', '/profile'],
+      allowed: ['/admin', '/partner', '/profile' , '/admin/orders'],
       redirect: '/login'
     },
     superadmin: {

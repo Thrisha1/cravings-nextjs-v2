@@ -29,6 +29,7 @@ export const partnerIdQuery = `
       password
       store_name
       store_banner
+      whatsapp_number
       location
       status
       upi_id
@@ -56,6 +57,7 @@ export const partnerLoginQuery = `
       store_name
       feature_flags
       location
+      whatsapp_number
       status
       upi_id
       description
@@ -117,6 +119,7 @@ export const partnerMutation = `
     name
     email
     password
+    whatsapp_number
     store_name
     location
     status

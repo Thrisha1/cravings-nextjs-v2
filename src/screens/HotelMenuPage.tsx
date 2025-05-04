@@ -51,7 +51,9 @@ import ThemeChangeButton, {
   ThemeConfig,
 } from "@/components/hotelDetail/ThemeChangeButton";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { updatePartnerThemeMutation } from "@/api/partners";
+import {
+  updatePartnerMutation,
+} from "@/api/partners";
 import Img from "@/components/Img";
 import { Styles } from "./HotelMenuPage_v2";
 
@@ -228,9 +230,11 @@ const HotelMenuPage = ({
   const handleSaveTheme = async (theme: ThemeConfig) => {
     try {
       toast.loading("Saving theme...");
-      await fetchFromHasura(updatePartnerThemeMutation, {
-        userId: hoteldata.id,
-        theme: JSON.stringify(theme),
+      await fetchFromHasura(updatePartnerMutation, {
+        id: hoteldata.id,
+        updates: {
+          theme: JSON.stringify(theme),
+        },
       });
       toast.dismiss();
       toast.success("Theme saved successfully");
@@ -293,10 +297,7 @@ const HotelMenuPage = ({
         <>
           {/* theme change button  */}
           {auth?.id === hoteldata.id && (
-            <ThemeChangeButton
-              hotelData={hoteldata}
-              theme={theme}
-            />
+            <ThemeChangeButton hotelData={hoteldata} theme={theme} />
           )}
 
           <Dialog open={showAuthModal}>
@@ -427,9 +428,7 @@ const HotelMenuPage = ({
               </div> */}
 
               {hoteldata?.description && (
-                <p className="text-sm opacity-60">
-                  {hoteldata?.description}
-                </p>
+                <p className="text-sm opacity-60">{hoteldata?.description}</p>
               )}
 
               {/* ratings  */}

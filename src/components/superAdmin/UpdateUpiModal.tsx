@@ -10,8 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { fetchFromHasura } from "@/lib/hasuraClient";
-import { updateUpiIdMutation } from "@/api/partners";
 import { Hotel } from "./UpdateHotelUpiId";
 
 export function UpdateUpiModal({ 
@@ -30,10 +28,6 @@ export function UpdateUpiModal({
 
     setIsUpdating(true);
     try {
-      const response = await fetchFromHasura(updateUpiIdMutation, {
-        id: hotel.id,
-        upi_id: newUpiId,
-      });
 
       const updatedHotel = {
         ...hotel,

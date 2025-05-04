@@ -15,7 +15,9 @@ import ColorPickerModal from "./ColorPickerModal";
 import MenuStyleModal from "./MenuStyleModal";
 import { toast } from "sonner";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { updatePartnerThemeMutation } from "@/api/partners";
+import {
+  updatePartnerMutation,
+} from "@/api/partners";
 import { revalidateTag } from "@/app/actions/revalidate";
 
 export interface ThemeConfig {
@@ -37,13 +39,14 @@ const ThemeChangeButton = ({
   const [colorModalOpen, setColorModalOpen] = useState(false);
   const [menuStyleModalOpen, setMenuStyleModalOpen] = useState(false);
 
-
   const onSave = async (theme: ThemeConfig) => {
     try {
       toast.loading("Saving theme...");
-      await fetchFromHasura(updatePartnerThemeMutation, {
-        userId: hotelData.id,
-        theme: JSON.stringify(theme),
+      await fetchFromHasura(updatePartnerMutation, {
+        id: hotelData.id,
+        updates: {
+          theme: JSON.stringify(theme),
+        },
       });
       toast.dismiss();
       toast.success("Theme saved successfully");
@@ -55,26 +58,23 @@ const ThemeChangeButton = ({
     }
   };
 
-
   return (
     <div>
       {/* Main theme button */}
       <Dialog>
         <DialogTrigger asChild>
-          <button
-            aria-label="Change theme"
-          >
+          <button aria-label="Change theme">
             <Palette className="h-8 w-8" strokeWidth={1.8} />
           </button>
         </DialogTrigger>
-        
+
         <DialogContent className="w-[95%] max-w-[425px] rounded-xl px-2 sm:px-6">
           <DialogHeader>
             <DialogTitle>Theme Customization</DialogTitle>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
-            <Button 
+            <Button
               variant="outline"
               className="flex items-center justify-start gap-3 h-14"
               onClick={() => setColorModalOpen(true)}
@@ -87,7 +87,7 @@ const ThemeChangeButton = ({
                 </p>
               </div>
             </Button>
-            
+
             {/* <Button
               variant="outline"
               className="flex items-center justify-start gap-3 h-14"
@@ -110,24 +110,28 @@ const ThemeChangeButton = ({
         theme={theme}
         open={colorModalOpen}
         onOpenChange={setColorModalOpen}
-        onSave={(colors) => onSave({
-          colors,
-          menuItemStyle: "default" // Default value
-        })}
+        onSave={(colors) =>
+          onSave({
+            colors,
+            menuItemStyle: "default", // Default value
+          })
+        }
       />
 
       {/* Menu Style Modal */}
       <MenuStyleModal
         open={menuStyleModalOpen}
         onOpenChange={setMenuStyleModalOpen}
-        onSave={(style) => onSave({
-          colors: {
-            text: "#000000",
-            bg: "#ffffff",
-            accent: "#000000"
-          },
-          menuItemStyle: style
-        })}
+        onSave={(style) =>
+          onSave({
+            colors: {
+              text: "#000000",
+              bg: "#ffffff",
+              accent: "#000000",
+            },
+            menuItemStyle: style,
+          })
+        }
       />
     </div>
   );
