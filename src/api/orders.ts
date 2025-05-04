@@ -6,7 +6,9 @@ export const createOrderMutation = `
                     $tableNumber: Int,
                     $qrId: uuid,
                     $partnerId: uuid!,
-                    $userId: uuid!
+                    $userId: uuid!,
+                    $type: String!,
+                    $delivery_address: String,
                   ) {
                     insert_orders_one(object: {
                       id: $id
@@ -17,6 +19,8 @@ export const createOrderMutation = `
                       partner_id: $partnerId
                       user_id: $userId
                       status: "pending"
+                      type: $type
+                      delivery_address: $delivery_address
                     }) {
                       id
                       total_price

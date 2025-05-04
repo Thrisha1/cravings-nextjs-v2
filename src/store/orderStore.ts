@@ -23,6 +23,8 @@ export interface Order {
   user?: {
     phone?: string;
   };
+  type?: "table_order" | "delivery";
+  deliveryAddress?: string | null;
 }
 
 interface HotelOrderState {
@@ -294,6 +296,8 @@ const useOrderStore = create(
             return null;
           }
 
+          const type = tableNumber ? "table_order" : "delivery";
+
           const createdAt = new Date().toISOString();
           const orderResponse = await fetchFromHasura(
             createOrderMutation,
@@ -305,6 +309,8 @@ const useOrderStore = create(
               qrId: qrId || null,
               partnerId: hotelData.id,
               userId: userData.id,
+              type,
+              delivery_address: tableNumber ? null : get().userAddress,
             }
           );
 
@@ -381,6 +387,8 @@ const useOrderStore = create(
                 created_at
                 table_number
                 qr_id
+                type
+                delivery_address
                 status
                 partner_id
                 user_id
@@ -417,6 +425,8 @@ const useOrderStore = create(
             tableNumber: order.table_number,
             qrId: order.qr_id,
             status: order.status,
+            type: order.type,
+            deliveryAddress: order.delivery_address,
             partnerId: order.partner_id,
             userId: order.user_id,
             user: order.user,

@@ -131,12 +131,19 @@ const OrdersTab = () => {
 
                 <div className="mt-2 flex justify-between">
                   <div>
-                    <p className="text-sm">
-                      Table: {order.tableNumber || "N/A"}
-                    </p>
+                    {order.type === "table_order" && (
+                      <p className="text-sm">
+                        Table: {order.tableNumber || "N/A"}
+                      </p>
+                    )}
                     <p className="text-sm">
                       Customer:+91{order.user?.phone || "Unknown"}
                     </p>
+                    {order.type === "delivery" && (
+                      <p className="text-sm mt-3">
+                        Delivery Address: {order.deliveryAddress || "Unknown"}
+                      </p>
+                    )}
                   </div>
                   <p className="font-medium">
                     Total: {(userData as HotelData)?.currency}
