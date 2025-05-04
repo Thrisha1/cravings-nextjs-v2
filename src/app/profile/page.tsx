@@ -261,7 +261,7 @@ export default function ProfilePage() {
       await fetchFromHasura(updatePartnerMutation, {
         userId: userData?.id,
         updates: {
-          storeBanner: imgUrl,
+          store_banner: imgUrl,
         },
       });
       toast.dismiss();
