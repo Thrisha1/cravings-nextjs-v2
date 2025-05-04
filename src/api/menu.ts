@@ -13,6 +13,7 @@ export const getMenu = `
             image_url
             image_source
             partner_id
+            priority
             price
             description
             is_top

@@ -31,6 +31,7 @@ export interface MenuItem {
   description: string;
   is_top: boolean;
   is_available: boolean;
+  priority: number;
 }
 
 interface CategoryImages {
@@ -83,6 +84,7 @@ interface MenuState {
   updatedCategories: (categories: Category[]) => void;
   updateCategoriesAsBatch: (categories: Category[]) => Promise<Category[]>;
   deleteCategoryAndItems: (categoryId: string) => Promise<void>;
+  updateItemsAsBatch: (items: { id: string; priority: number }[]) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -135,7 +137,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       if (!userData) throw new Error("User data not found");
 
-      const category = await addCategory(item.category.name);
+      const category = await addCategory(item.category.name.trim().toLowerCase());
       const category_id = category?.id;
 
       if (!category_id) throw new Error("Category ID not found");
@@ -458,6 +460,85 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       toast.error("Failed to delete category and items");
       throw error;
     }
-  }
+  },
+  updateItemsAsBatch: async (items : {
+    id : string;
+    priority : number;
+  }[]) => {
+    try {
+      toast.loading("Updating item priorities...");
+      const user = useAuthStore.getState().userData as Partner;
+      
+      if (!user) throw new Error("User data not found");
+  
+      // Create the batch mutation
+      const mutation = `
+        mutation UpdateItemsPriorityBatch {
+          ${items
+            .map(
+              (item, index) => `
+            update_${index}: update_menu_by_pk(
+              pk_columns: { id: "${item.id}" }
+              _set: {
+                priority: ${item.priority}
+              }
+            ) {
+              id
+              priority
+            }
+          `
+            )
+            .join("\n")}
+        }
+      `;
+  
+      // Execute in chunks to avoid hitting Hasura limits
+      const CHUNK_SIZE = 20;
+      for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+        const chunk = items.slice(i, i + CHUNK_SIZE);
+        const chunkMutation = `
+          mutation UpdateItemsPriorityBatch {
+            ${chunk
+              .map(
+                (item, index) => `
+              update_${index}: update_menu_by_pk(
+                pk_columns: { id: "${item.id}" }
+                _set: {
+                  priority: ${item.priority}
+                }
+              ) {
+                id
+                priority
+              }
+            `
+              )
+              .join("\n")}
+          }
+        `;
+  
+        await fetchFromHasura(chunkMutation, {});
+      }
+  
+      // Update local state
+      const updatedItems = get().items.map((currentItem) => {
+        const updatedItem = items.find((item) => item.id === currentItem.id);
+        return updatedItem
+          ? { ...currentItem, priority: updatedItem.priority }
+          : currentItem;
+      });
+  
+      set({ items: updatedItems });
+      get().groupItems();
+      revalidateTag(user?.id);
+  
+      toast.dismiss();
+      toast.success("Item priorities updated successfully");
+    } catch (error) {
+      console.error("Batch update error:", error);
+      toast.dismiss();
+      toast.error("Failed to update item priorities");
+      throw error;
+    }
+  },
   
 }));

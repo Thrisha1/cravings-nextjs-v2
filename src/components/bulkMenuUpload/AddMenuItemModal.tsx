@@ -76,13 +76,13 @@ export function AddMenuItemModal({
             <div className="space-y-2">
               {newItem.image ? (
                 <div
-                  className="relative h-[200px] w-full cursor-pointer"
+                  className="relative h-[200px] w-[200px] cursor-pointer"
                   onClick={() => setIsImageModalOpen(true)}
                 >
                   <Img
                     src={newItem.image}
                     alt="Selected item"
-                    className="object-cover rounded-lg"
+                    className="object-cover rounded-lg w-full h-full"
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
                     <p className="text-white">Click to change image</p>

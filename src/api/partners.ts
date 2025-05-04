@@ -47,6 +47,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
         id
         priority
       }
+      priority
       description
       id
       image_url

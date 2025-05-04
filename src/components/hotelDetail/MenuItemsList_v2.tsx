@@ -83,7 +83,7 @@ const MenuItemsList = ({
 
       {/* items  */}
       <div id="menu-items" className="px-[8%] grid h-fit gap-3 rounded-3xl ">
-        {menus.map((item) => (
+        {menus.sort((a,b) => a.priority - b.priority).map((item) => (
           <ItemCard feature_flags={hotelData?.feature_flags} currency={currency} key={item.id} item={item} styles={styles} />
         ))}
       </div>
