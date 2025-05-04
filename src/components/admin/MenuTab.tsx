@@ -226,7 +226,7 @@ export function MenuTab() {
   };
 
   return (
-    <div className="p-4">
+    <div className="">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Menu Items</h2>
         <div className="flex gap-2">
@@ -248,14 +248,14 @@ export function MenuTab() {
       <div className="flex justify-end gap-2 mb-4">
         {isEditingPriority ? (
           <>
-            <Button onClick={saveItemOrder} className="flex gap-2">
+            <Button onClick={saveItemOrder} className="flex gap-2 text-xs sm:text-sm">
               <Save className="h-4 w-4" />
               <span>Save Order</span>
             </Button>
             <Button
               variant="outline"
               onClick={cancelEditing}
-              className="flex gap-2"
+              className="flex gap-2 text-xs sm:text-sm"
             >
               <X className="h-4 w-4" />
               <span>Cancel</span>
@@ -266,7 +266,7 @@ export function MenuTab() {
             <Button
               onClick={() => setIsEditingPriority(true)}
               variant="outline"
-              className="flex gap-2"
+              className="flex gap-2 text-xs sm:text-sm"
             >
               <Pen className="h-4 w-4" />
               <span>Edit Item Order</span>
@@ -274,7 +274,7 @@ export function MenuTab() {
             <Button
               onClick={() => setIsCategoryEditing(true)}
               variant="outline"
-              className="flex gap-2"
+              className="flex gap-2 text-xs sm:text-sm"
             >
               <Pen className="h-4 w-4" />
               <span>Category Update</span>
