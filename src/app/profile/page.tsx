@@ -259,7 +259,7 @@ export default function ProfilePage() {
 
       // Update user data
       await fetchFromHasura(updatePartnerMutation, {
-        userId: userData?.id,
+        id: userData?.id,
         updates: {
           store_banner: imgUrl,
         },
