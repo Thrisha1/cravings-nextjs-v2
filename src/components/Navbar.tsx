@@ -232,7 +232,7 @@ export function Navbar() {
                       <span className="sr-only">Open menu</span>
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-[80%] sm:w-[385px]">
+                  <SheetContent side="right" className="w-[80%] sm:w-[385px] z-[52]">
                     <div className="flex flex-col space-y-4 mt-4">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-2">

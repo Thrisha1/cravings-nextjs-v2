@@ -1,5 +1,6 @@
 import AssignQrPartners from "@/components/superAdmin/AssignQrPartners";
 import ExploreOfferManage from "@/components/superAdmin/ExploreOfferManage";
+import FeatureFlagManagement from "@/components/superAdmin/FeatureFlagManagement";
 import OfferUploadSuperAdmin from "@/components/superAdmin/OfferUploadSuperAdmin";
 // import BulkUpload from "@/components/superAdmin/BulkUpload";
 // import OfferDetails from "@/components/superAdmin/OfferDetails";
@@ -49,6 +50,11 @@ const page = async (props: { searchParams: SearchParams }) => {
       component: <ExploreOfferManage />,
       id: "explore-offer-manage",
     },
+    {
+      name: "Feature Flag Management",
+      component: <FeatureFlagManagement />,
+      id: "feature-flag-management",  
+    }
   ];
 
   if (page) {
