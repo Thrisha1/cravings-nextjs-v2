@@ -68,6 +68,11 @@ const OrderDrawer = ({
     }
   }, []);
 
+  useEffect(() => {
+    console.log("items", items);
+    
+  }, [items]);
+
   const getWhatsapLink = () => {
     const savedAddress = userAddress || "N/A";
 
@@ -150,8 +155,8 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
           </div>
         ) : (
           <>
-            <div>
-              <div className="flex gap-2 items-center font-black text-xl">
+            <div className="z-[51]">
+              <div className="flex gap-2 items-center font-black text-xl ">
                 <div>PRICE : </div>
                 <div style={{ color: styles.accent }}>
                   {hotelData.currency}
@@ -168,7 +173,7 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
               style={{
                 color: styles.accent,
               }}
-              className="font-black"
+              className="font-black relative"
             >
               View Order
             </DrawerTrigger>
@@ -176,7 +181,7 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
         )}
       </div>
 
-      <DrawerContent className="max-h-[80vh] z-[150]">
+      <DrawerContent className="max-h-[80vh] z-[52]">
         <DrawerHeader>
           <DrawerTitle>
             <HeadingWithAccent
@@ -212,7 +217,7 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {((order?.items ?? []) || items || []).map((item) => (
+              {(items || []).map((item) => (
                 <TableRow
                   key={`order-item-${item.id}`}
                   className="hover:bg-transparent border-b border-gray-100"
