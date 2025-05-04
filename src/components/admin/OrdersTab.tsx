@@ -16,13 +16,21 @@ const OrdersTab = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [showOnlyPending, setShowOnlyPending] = useState<boolean>(false);
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest");
 
   useEffect(() => {
     const storedFilter = localStorage.getItem("ordersFilter");
+    const orderFilter = localStorage.getItem("ordersSortOrder");
     if (storedFilter === "pending") {
       setShowOnlyPending(true);
     } else {
       setShowOnlyPending(false);
+    }
+
+    if (orderFilter === "newest") {
+      setSortOrder("newest");
+    } else {
+      setSortOrder("oldest");
     }
   }, []);
 
@@ -76,9 +84,23 @@ const OrdersTab = () => {
     localStorage.setItem("ordersFilter", newValue ? "pending" : "all");
   };
 
+  const toggleSortOrder = () => {
+    setSortOrder(sortOrder === "newest" ? "oldest" : "newest");
+    localStorage.setItem(
+      "ordersSortOrder",
+      sortOrder === "newest" ? "oldest" : "newest"
+    );
+  };
+
   const filteredOrders = showOnlyPending
     ? orders.filter((order) => order.status === "pending")
     : orders;
+
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+  });
 
   useEffect(() => {
     loadOrders();
@@ -88,9 +110,14 @@ const OrdersTab = () => {
     <div className="py-10 px-[8%]">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Orders Management</h2>
-        <Button size="sm" onClick={togglePendingFilter}>
-          {showOnlyPending ? "Show All Orders" : "Show Only Pending"}
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={togglePendingFilter}>
+            {showOnlyPending ? "Show All Orders" : "Show Only Pending"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={toggleSortOrder}>
+            {sortOrder === "newest" ? "Show Oldest First" : "Show Newest First"}
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -99,10 +126,10 @@ const OrdersTab = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredOrders.length === 0 ? (
+          {sortedOrders.length === 0 ? (
             <p className="text-gray-500">No orders found</p>
           ) : (
-            filteredOrders.map((order) => (
+            sortedOrders.map((order) => (
               <div key={order.id} className="border rounded-lg p-4">
                 <div className="flex justify-between items-center">
                   <div>
