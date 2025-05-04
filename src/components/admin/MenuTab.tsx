@@ -204,9 +204,6 @@ export function MenuTab() {
     try {
       const allItems = Object.values(tempItems).flat().filter((items) => items.category.name === currenctCat);
 
-      console.log("allItems", allItems);
-      
-
       const updates = allItems.map((item) => ({
         id: item.id as string,
         priority: item.priority,

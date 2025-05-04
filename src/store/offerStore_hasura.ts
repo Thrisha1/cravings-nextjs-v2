@@ -86,7 +86,7 @@ export const useOfferStore = create<OfferState>((set, get) => {
         set({ offers: offers.offers });
         return offers.offers;
       } catch (error) {
-        console.log(error);
+        console.error(error);
         return get().offers;
       }
     },
