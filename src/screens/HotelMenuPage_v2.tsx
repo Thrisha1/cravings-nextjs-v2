@@ -127,7 +127,7 @@ const HotelMenuPage = ({
     },
   };
 
-  const { open_auth_modal, setHotelId } = useOrderStore();
+  const { open_auth_modal, setHotelId , genOrderId } = useOrderStore();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
   const { setUserAddress } = useOrderStore();
@@ -137,6 +137,7 @@ const HotelMenuPage = ({
   useEffect(() => {
     if (hoteldata) {
       setHotelId(hoteldata.id);
+      genOrderId();
     }
   }, []);
 

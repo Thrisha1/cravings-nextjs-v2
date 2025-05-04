@@ -380,7 +380,7 @@ const useOrderStore = create(
           
           const response = await fetchFromHasura(
             `query FetchOrder($partnerId: uuid!) {
-                orders(where: { partner_id: { _eq: $partnerId } } , order_by: { created_at: asc }) {
+                orders(where: { partner_id: { _eq: $partnerId } } , order_by: { created_at: desc }) {
                     created_at
                     id
                     status
@@ -400,6 +400,8 @@ const useOrderStore = create(
             return null;
           }
 
+          console.log("Fetched orders:", response.orders);
+          
           return response.orders;
         } catch (error) {
           console.error("Error fetching order:", error);

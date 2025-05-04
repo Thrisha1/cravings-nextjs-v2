@@ -223,7 +223,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const newPartner = response.insert_partners_one;
-      setAuthCookie({ id: newPartner.id, role: "partner" });
+      setAuthCookie({ id: newPartner.id, role: "partner" , feature_flags: newPartner.feature_flags || "" });
       set({ userData: { ...newPartner, role: "partner" }, loading: false });
     } catch (error) {
       console.error("Partner registration failed:", error);
@@ -241,7 +241,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const partner = response?.partners?.[0];
       if (!partner) throw new Error("Invalid credentials");
 
-      await setAuthCookie({ id: partner.id, role: "partner" });
+      await setAuthCookie({ id: partner.id, role: "partner" , feature_flags: partner.feature_flags || ""});
       set({ userData: { ...partner, role: "partner" } });
     } catch (error) {
       console.error("Login failed:", error);
@@ -284,7 +284,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
 
-      setAuthCookie({ id: user.id, role: "user" });
+      setAuthCookie({ id: user.id, role: "user" , feature_flags: ""});
       set({ userData: { ...user, role: "user" } });
       return {
         ...user,
@@ -308,7 +308,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const superAdmin = response.super_admin[0];
-      setAuthCookie({ id: superAdmin.id, role: "superadmin" });
+      setAuthCookie({ id: superAdmin.id, role: "superadmin" , feature_flags: "" });
       set({ userData: { ...superAdmin, role: "superadmin" } });
     } catch (error) {
       console.error("Super admin login failed:", error);

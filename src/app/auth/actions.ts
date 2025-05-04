@@ -5,10 +5,10 @@ import { encryptText, decryptText } from '@/lib/encrtption';
 
 export const getAuthCookie = async () => {
   const cookie = (await cookies()).get('auth_token')?.value;
-  return cookie ? decryptText(cookie) as { id: string; role: string } : null;
+  return cookie ? decryptText(cookie) as { id: string; role: string , feature_flags: string } : null;
 };
 
-export const setAuthCookie = async (data: { id: string; role: string }) => {
+export const setAuthCookie = async (data: { id: string; role: string , feature_flags : string }) => {
   const encrypted = encryptText(data);
   (await cookies()).set('auth_token', encrypted, {
     httpOnly: true,

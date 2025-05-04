@@ -54,6 +54,7 @@ export const partnerLoginQuery = `
       email
       password
       store_name
+      feature_flags
       location
       status
       upi_id

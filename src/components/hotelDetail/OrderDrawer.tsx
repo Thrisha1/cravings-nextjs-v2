@@ -38,7 +38,7 @@ const OrderDrawer = ({
 }: {
   styles: Styles;
   hotelData: HotelData;
-  tableNumber?: number ;
+  tableNumber?: number;
   qrId?: string;
 }) => {
   const {
@@ -52,7 +52,6 @@ const OrderDrawer = ({
     decreaseQuantity,
     removeItem,
     setOpenAuthModal,
-    genOrderId,
     clearOrder,
   } = useOrderStore();
   const pathname = usePathname();
@@ -61,8 +60,6 @@ const OrderDrawer = ({
   const [isQrScan, setIsQrScan] = useState(false);
 
   useEffect(() => {
-    genOrderId();
-
     if (pathname.includes("qrScan")) {
       setIsQrScan(true);
     }
@@ -70,7 +67,6 @@ const OrderDrawer = ({
 
   useEffect(() => {
     console.log("items", items);
-    
   }, [items]);
 
   const getWhatsapLink = () => {
@@ -126,6 +122,15 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
     }
   };
 
+  const handleViewOrder = () => {
+    if (!isQrScan && !userAddress) {
+      setOpenAuthModal(true);
+      return;
+    }
+
+    setIsOpen(true);
+  };
+
   return (
     <Drawer open={isOpen} onOpenChange={setIsOpen}>
       {/* Bottom bar */}
@@ -144,14 +149,15 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
               />
               <span className="font-medium">Order #{order.id.slice(0, 8)}</span>
             </div>
-            <DrawerTrigger
+            <div
+              onClick={handleViewOrder}
               style={{
                 color: styles.accent,
               }}
               className="font-black"
             >
               View Order
-            </DrawerTrigger>
+            </div>
           </div>
         ) : (
           <>
@@ -169,14 +175,15 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
               </div>
             </div>
 
-            <DrawerTrigger
+            <div
+              onClick={handleViewOrder}
               style={{
                 color: styles.accent,
               }}
               className="font-black relative"
             >
               View Order
-            </DrawerTrigger>
+            </div>
           </>
         )}
       </div>
@@ -274,7 +281,7 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
               style={{ color: styles.accent }}
             >
               {hotelData.currency}
-              {((order?.totalPrice ?? totalPrice) ?? 0).toFixed(2)}
+              {(order?.totalPrice ?? totalPrice ?? 0).toFixed(2)}
             </span>
           </div>
 
