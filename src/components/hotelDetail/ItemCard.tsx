@@ -1,11 +1,11 @@
 "use client";
 import { HotelDataMenus } from "@/app/hotels/[id]/page";
 import { getFeatures, Styles } from "@/screens/HotelMenuPage_v2";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Img from "../Img";
 import ItemDetailsModal from "./ItemDetailsModal";
 import DescriptionWithTextBreak from "../DescriptionWithTextBreak";
-import useOrderStore from "@/store/orderStore";
+import useOrderStore, { OrderItem } from "@/store/orderStore";
 
 const ItemCard = ({
   item,
@@ -21,13 +21,23 @@ const ItemCard = ({
   feature_flags?: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { addItem } = useOrderStore();
+  const { addItem, items, decreaseQuantity , removeItem } = useOrderStore();
   const hasOrderingFeature = getFeatures(feature_flags || "")?.ordering.enabled;
+  const [itemQuantity, setItemQuantity] = useState<number | 0>(0);
+
+  useEffect(() => {
+    const itemInCart = items?.find((i: OrderItem) => i.id === item.id);
+    if (itemInCart) {
+      setItemQuantity(itemInCart.quantity);
+    } else {
+      setItemQuantity(0);
+    }
+  },[items]);
 
   return (
     <div className="h-full relative">
       {/* add Item to cart  */}
-      {(item.is_available && hasOrderingFeature) && (
+      {/* {(item.is_available && hasOrderingFeature) && (
         <button
           onClick={() => {
             addItem(item);
@@ -41,16 +51,15 @@ const ItemCard = ({
         >
           +
         </button>
-      )}
+      )} */}
 
       <div
-        onClick={() => setIsOpen(true)}
         style={styles.border}
         key={item.id}
-        className={`py-8 rounded-[35px] px-6 flex-1 relative bg-white text-black ${className}`}
+        className={`pt-8 pb-5 rounded-[35px] px-6 flex-1 relative bg-white text-black ${className}`}
       >
         <div className="flex flex-col gap-y-2 justify-between items-start w-full">
-          <div className={`flex justify-between w-full`}>
+          <div onClick={()=>setIsOpen(true)} className={`flex justify-between w-full`}>
             <div
               className={`flex flex-col justify-center ${
                 item.image_url ? "w-1/2" : ""
@@ -92,6 +101,46 @@ const ItemCard = ({
               </div>
             )}
           </div>
+
+          {/* add Item to cart  */}
+          {item.is_available && hasOrderingFeature && (
+            <div className="flex gap-2 items-center justify-end w-full mt-2">
+              <button
+                onClick={() => {
+                  addItem(item);
+                }}
+                style={{
+                  backgroundColor: styles.accent,
+                  ...styles.border,
+                  color: "white",
+                }}
+                className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
+              >
+                +
+              </button>
+
+              <div className="bg-[#e2e2e2] rounded aspect-square h-8 grid place-items-center font-bold text-black/70">{itemQuantity}</div>
+
+              <button
+                onClick={() => {
+                  if(itemQuantity > 1) {
+                    decreaseQuantity(item.id as string);
+                  }
+                  else {
+                    removeItem(item.id as string);
+                  }
+                }}
+                style={{
+                  backgroundColor: styles.accent,
+                  ...styles.border,
+                  color: "white",
+                }}
+                className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
+              >
+                -
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
