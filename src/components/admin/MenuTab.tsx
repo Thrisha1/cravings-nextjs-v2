@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAdminOfferStore } from "@/store/useAdminOfferStore";
-import { useAuthStore } from "@/store/authStore";
+import { Partner, useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { AddMenuItemModal } from "../bulkMenuUpload/AddMenuItemModal";
 import { EditMenuItemModal } from "./EditMenuItemModal";
@@ -419,7 +419,7 @@ export function MenuTab() {
                                       </CardHeader>
                                       <CardContent className="relative">
                                         <p className="text-2xl font-bold">
-                                          ₹{item.price.toFixed(2)}
+                                          {(userData as Partner)?.currency || "₹"}{item.price.toFixed(2)}
                                         </p>
                                         {item.description && (
                                           <p className="text-gray-600 mt-2">
