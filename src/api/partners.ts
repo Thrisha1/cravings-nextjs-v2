@@ -32,6 +32,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     district
     location
     delivery_status
+    id
     description
     feature_flags
     phone

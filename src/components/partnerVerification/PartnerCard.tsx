@@ -24,9 +24,7 @@ export default function PartnerCard({ partner }: { partner: Partner }) {
     })) as UpdatePartnerStatusResponse;
     removePartner(partner.id);
 
-    if (status === "active") {
-      revalidateTag("partners");
-    }
+    revalidateTag(partner.id)
   };
 
   return (
