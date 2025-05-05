@@ -30,6 +30,7 @@ export const partnerIdQuery = `
       store_name
       store_banner
       whatsapp_number
+      footnote
       location
       status
       upi_id

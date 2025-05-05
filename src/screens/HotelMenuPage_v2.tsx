@@ -127,7 +127,7 @@ const HotelMenuPage = ({
     },
   };
 
-  const { open_auth_modal, setHotelId , genOrderId } = useOrderStore();
+  const { open_auth_modal, setHotelId, genOrderId } = useOrderStore();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
   const { setUserAddress } = useOrderStore();
@@ -187,7 +187,7 @@ const HotelMenuPage = ({
         backgroundColor: styles.backgroundColor,
         color: styles.color,
       }}
-      className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 pb-40 lg:px-[20%] `}
+      className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 lg:px-[20%] `}
     >
       {/* Auth Modal */}
       {open_auth_modal && (
@@ -371,6 +371,18 @@ const HotelMenuPage = ({
       <section className="px-[8.5%] mt-10">
         <RateThis styles={styles} hotel={hoteldata} type="hotel" />
       </section>
+
+      {/* footnote  */}
+      {hoteldata?.footnote && (
+        <section style={{
+          borderTop : `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
+          backgroundColor: `${styles.color}1D`,
+        }} className="px-[8.5%] pt-10 pb-36 mt-10">
+          <div style={{
+            color : `${styles.color}9D`
+          }} className="text-center text-sm">{hoteldata?.footnote}</div>
+        </section>
+      )}
     </main>
   );
 };

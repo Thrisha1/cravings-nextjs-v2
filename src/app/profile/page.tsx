@@ -71,6 +71,7 @@ export default function ProfilePage() {
     description: false,
     currency: false,
     whatsappNumber: false,
+    footNote : false,
   });
   const [isEditing, setIsEditing] = useState({
     upiId: false,
@@ -78,6 +79,7 @@ export default function ProfilePage() {
     description: false,
     whatsappNumber: false,
     currency: false,
+    footNote: false,
   });
   const [placeId, setPlaceId] = useState("");
   const [description, setDescription] = useState("");
@@ -90,6 +92,7 @@ export default function ProfilePage() {
   const [isBannerChanged, setIsBannerChanged] = useState(false);
   const [showPricing, setShowPricing] = useState(true);
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
+  const [footNote , setFootNote] = useState<string>("");
 
   const isLoading = authLoading;
 
@@ -111,6 +114,7 @@ export default function ProfilePage() {
           : null
       );
       setWhatsappNumber(userData.whatsapp_number || userData.phone || "");
+      setFootNote(userData.footnote || "");
     }
   }, [userData]);
 
@@ -496,6 +500,49 @@ export default function ProfilePage() {
     }
   };
 
+
+  const handleSaveFootNote = async () => {
+    try {
+ 
+      if (!footNote || footNote.length <= 10 ) {
+        toast.error("Footnote should be more than 10 characters");
+        return;
+      }
+
+      toast.loading("Updating Footnote..." , {
+        id : "foot-note",
+      });
+
+      setIsSaving((prev) => {
+        return { ...prev, footNote: true };
+      });
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          footnote: footNote,
+        },
+      });
+      revalidateTag(userData?.id as string);
+      setState({ footnote: footNote });
+      toast.dismiss("foot-note");
+      toast.success("Footnote updated successfully!");
+      setIsSaving((prev) => {
+        return { ...prev, footNote: false };
+      });
+      setIsEditing((prev) => {
+        return { ...prev, footNote: false };
+      });
+    } catch (error) {
+      toast.dismiss("foot-note");
+      console.error("Error updating Footnote:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update footNote"
+      );
+    }
+  };
+
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
   }
@@ -856,6 +903,57 @@ export default function ProfilePage() {
                 <p className="text-sm text-gray-500">
                   This Whatsapp Number will be used for receiving messages from
                   customers
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <label htmlFor="footNote" className="text-lg font-semibold">
+                  Footnote
+                </label>
+                <div className="flex gap-2">
+                  {isEditing.footNote ? (
+                    <>
+                      <Input
+                        id="footNote"
+                        type="text"
+                        placeholder="Enter your Footnote"
+                        value={footNote}
+                        onChange={(e) => setFootNote(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleSaveFootNote}
+                        disabled={isSaving.footNote || !footNote}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isSaving.footNote ? <>Saving...</> : "Save"}
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-gray-700">
+                        {footNote
+                          ? footNote
+                          : "No Footnote set"}
+                      </span>
+                      <Button
+                        onClick={() => {
+                          setIsEditing((prev) => ({
+                            ...prev,
+                            footNote: true,
+                          }));
+                          setFootNote(footNote ? footNote : "");
+                        }}
+                        variant="ghost"
+                        className="hover:bg-orange-100"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500">
+                  This Footnote will be used for your restaurant profile
                 </p>
               </div>
 

@@ -53,6 +53,7 @@ export interface Partner extends BaseUser {
   theme?: string;
   currency: string;
   feature_flags?: string;
+  footnote?: string;
 }
 
 export interface SuperAdmin extends BaseUser {
