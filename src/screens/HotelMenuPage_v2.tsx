@@ -189,6 +189,7 @@ const HotelMenuPage = ({
       style={{
         backgroundColor: styles.backgroundColor,
         color: styles.color,
+        fontFamily: theme?.fontFamily || "Poppins, sans-serif",
       }}
       className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 lg:px-[20%] `}
     >
