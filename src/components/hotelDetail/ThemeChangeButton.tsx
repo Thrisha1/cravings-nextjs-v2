@@ -27,6 +27,7 @@ export interface ThemeConfig {
     accent: string;
   };
   menuItemStyle: string;
+  infoAlignment? : string;
 }
 
 const ThemeChangeButton = ({

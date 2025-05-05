@@ -284,26 +284,38 @@ const HotelMenuPage = ({
         </div>
       )}
 
-      {/* Rest of your existing code... */}
       {/* top part  */}
-      <section className="px-[8%] pt-[20px] flex justify-between items-start">
+      <section className="px-[8%] pt-[20px]">
         {/* hotel details  */}
-        <div className="grid gap-3">
+        <div
+          style={{
+            alignItems: theme?.infoAlignment || "start",
+          }}
+          className="flex flex-col gap-3"
+        >
           {/* banner image  */}
           <HotelBanner hoteldata={hoteldata} styles={styles} />
 
           <h1
+            style={{
+              textAlign: theme?.infoAlignment === "center" ? "center" : "left",
+            }}
             className={"font-black text-3xl max-w-[250px]"}
             dangerouslySetInnerHTML={{ __html: hoteldata?.store_name || "" }}
           />
 
-          <DescriptionWithTextBreak accent={styles.accent}>
+          <DescriptionWithTextBreak
+            style={{
+              textAlign: theme?.infoAlignment === "center" ? "center" : "left",
+            }}
+            accent={styles.accent}
+          >
             {hoteldata?.description}
           </DescriptionWithTextBreak>
         </div>
 
         {/* right top button  */}
-        <div>
+        <div className="absolute right-[8%] top-[20px] flex gap-3">
           {hoteldata?.id === auth?.id && (
             <ThemeChangeButton hotelData={hoteldata} theme={theme} />
           )}
@@ -374,13 +386,21 @@ const HotelMenuPage = ({
 
       {/* footnote  */}
       {hoteldata?.footnote && (
-        <section style={{
-          borderTop : `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
-          backgroundColor: `${styles.color}1D`,
-        }} className="px-[8.5%] pt-10 pb-36 mt-10">
-          <div style={{
-            color : `${styles.color}9D`
-          }} className="text-center text-sm">{hoteldata?.footnote}</div>
+        <section
+          style={{
+            borderTop: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
+            backgroundColor: `${styles.color}1D`,
+          }}
+          className="px-[8.5%] pt-10 pb-36 mt-10"
+        >
+          <div
+            style={{
+              color: `${styles.color}9D`,
+            }}
+            className="text-center text-sm"
+          >
+            {hoteldata?.footnote}
+          </div>
         </section>
       )}
     </main>

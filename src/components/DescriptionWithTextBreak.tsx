@@ -8,6 +8,7 @@ const DescriptionWithTextBreak = ({
   maxWidth = 300,
   maxLines = 3,
   maxChars = 100,
+  style = {},
 }: {
   children: React.ReactNode;
   accent?: string;
@@ -15,6 +16,7 @@ const DescriptionWithTextBreak = ({
   maxWidth?: number;
   maxLines?: number;
   maxChars?: number;
+  style?: React.CSSProperties;
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -39,8 +41,11 @@ const DescriptionWithTextBreak = ({
   } as React.CSSProperties;
 
   return (
-    <div className={className}>
-      <p  style={lineClampStyle}>
+    <div  className={className}>
+      <p  style={{
+        ...lineClampStyle,
+        ...style,
+      }}>
         <span className="opacity-70">{displayText}</span>
         {needsTruncation && (
           <button
