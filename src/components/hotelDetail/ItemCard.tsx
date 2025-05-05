@@ -105,23 +105,8 @@ const ItemCard = ({
           {/* add Item to cart  */}
           {item.is_available && hasOrderingFeature && (
             <div className="flex gap-2 items-center justify-end w-full mt-2">
-              <button
-                onClick={() => {
-                  addItem(item);
-                }}
-                style={{
-                  backgroundColor: styles.accent,
-                  ...styles.border,
-                  color: "white",
-                }}
-                className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
-              >
-                +
-              </button>
-
-              <div className="bg-[#e2e2e2] rounded aspect-square h-8 grid place-items-center font-bold text-black/70">{itemQuantity}</div>
-
-              <button
+             
+             <button
                 onClick={() => {
                   if(itemQuantity > 1) {
                     decreaseQuantity(item.id as string);
@@ -138,6 +123,22 @@ const ItemCard = ({
                 className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
               >
                 -
+              </button>
+
+              <div className="bg-[#e2e2e2] rounded aspect-square h-8 grid place-items-center font-bold text-black/70">{itemQuantity}</div>
+
+              <button
+                onClick={() => {
+                  addItem(item);
+                }}
+                style={{
+                  backgroundColor: styles.accent,
+                  ...styles.border,
+                  color: "white",
+                }}
+                className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
+              >
+                +
               </button>
             </div>
           )}

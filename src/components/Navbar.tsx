@@ -71,7 +71,7 @@ export function Navbar() {
         ...(userData?.role === "partner"
           ? [
               { href: "/admin", label: "Admin" },
-              ...(features?.ordering.access || features?.delivery.access
+              ...((features?.ordering.access || features?.delivery.access ) && (userData?.status === "active")
                 ? [{ href: "/admin/orders", label: "Orders" }]
                 : []),
             ]
