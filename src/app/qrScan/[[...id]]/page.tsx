@@ -3,6 +3,7 @@ import { GET_QR_TABLE } from "@/api/qrcodes";
 import { getAuthCookie } from "@/app/auth/actions";
 import { HotelData } from "@/app/hotels/[id]/page";
 import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
+import { getSocialLinks } from "@/lib/getSocialLinks";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import HotelMenuPage from "@/screens/HotelMenuPage_v2";
 import QrPayment from "@/screens/QrPayment";
@@ -81,8 +82,11 @@ const page = async ({
         : hoteldata?.theme || {}
     ) as ThemeConfig;
 
+    const socialLinks = getSocialLinks(hoteldata as HotelData);
+
     return (
       <HotelMenuPage
+        socialLinks={socialLinks}
         auth={auth}
         hoteldata={hoteldata as HotelData}
         offers={filteredOffers}

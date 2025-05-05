@@ -9,6 +9,7 @@ import { Partner } from "@/store/authStore";
 import { getAuthCookie } from "@/app/auth/actions";
 import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
 import { Metadata } from "next";
+import { getSocialLinks } from "@/lib/getSocialLinks";
 // import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
 
 export async function generateMetadata({
@@ -74,9 +75,15 @@ export interface HotelData extends Partner {
   menus: HotelDataMenus[];
 }
 
+export interface SocialLinks {
+  instagram: string;
+  whatsapp?: string;
+  googleReview?: string;
+}
+
 const HotelPage = async ({
   searchParams,
-  params
+  params,
 }: {
   searchParams: Promise<{ query: string; qrScan: boolean }>;
   params: Promise<{ id: string }>;
@@ -108,7 +115,6 @@ const HotelPage = async ({
   const hoteldata = hotelId ? await getHotelData(hotelId) : null;
   const offers = hoteldata?.offers;
 
-
   let filteredOffers: Offer[] = [];
   if (offers) {
     const today = new Date().setHours(0, 0, 0, 0);
@@ -139,9 +145,13 @@ const HotelPage = async ({
       : hoteldata?.theme || {}
   ) as ThemeConfig;
 
+
+  const socialLinks = getSocialLinks(hoteldata as HotelData);
+
   return (
     <>
       <HotelMenuPage
+        socialLinks={socialLinks}
         offers={filteredOffers}
         hoteldata={hoteldata as HotelData}
         auth={auth || null}

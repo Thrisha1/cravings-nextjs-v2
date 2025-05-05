@@ -33,6 +33,7 @@ export const partnerIdQuery = `
       footnote
       location
       status
+      social_links
       upi_id
       feature_flags
       description

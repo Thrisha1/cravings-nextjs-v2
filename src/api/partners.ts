@@ -38,6 +38,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     phone
     whatsapp_number
     store_banner
+    social_links
     footnote
     status
     store_name

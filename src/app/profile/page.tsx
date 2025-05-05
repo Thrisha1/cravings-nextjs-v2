@@ -44,6 +44,8 @@ import {
   getFeatures,
   revertFeatureToString,
 } from "@/screens/HotelMenuPage_v2";
+import { HotelData, SocialLinks } from "../hotels/[id]/page";
+import { getSocialLinks } from "@/lib/getSocialLinks";
 
 const Currencies = [
   { label: "INR", value: "₹" },
@@ -71,7 +73,8 @@ export default function ProfilePage() {
     description: false,
     currency: false,
     whatsappNumber: false,
-    footNote : false,
+    footNote: false,
+    instaLink: false,
   });
   const [isEditing, setIsEditing] = useState({
     upiId: false,
@@ -80,6 +83,7 @@ export default function ProfilePage() {
     whatsappNumber: false,
     currency: false,
     footNote: false,
+    instaLink: false,
   });
   const [placeId, setPlaceId] = useState("");
   const [description, setDescription] = useState("");
@@ -92,7 +96,8 @@ export default function ProfilePage() {
   const [isBannerChanged, setIsBannerChanged] = useState(false);
   const [showPricing, setShowPricing] = useState(true);
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
-  const [footNote , setFootNote] = useState<string>("");
+  const [footNote, setFootNote] = useState<string>("");
+  const [instaLink, setInstaLink] = useState<string>("");
 
   const isLoading = authLoading;
 
@@ -115,6 +120,8 @@ export default function ProfilePage() {
       );
       setWhatsappNumber(userData.whatsapp_number || userData.phone || "");
       setFootNote(userData.footnote || "");
+      const socialLinks = getSocialLinks(userData as HotelData);
+      setInstaLink(socialLinks.instagram || "");
     }
   }, [userData]);
 
@@ -460,14 +467,13 @@ export default function ProfilePage() {
 
   const handleSaveWhatsappNumber = async () => {
     try {
- 
-      if (!whatsappNumber || whatsappNumber.length !== 10 ) {
+      if (!whatsappNumber || whatsappNumber.length !== 10) {
         toast.error("Please enter a valid Whatsapp Number");
         return;
       }
 
-      toast.loading("Updating Whatsapp Number..." , {
-        id : "whatsapp-num",
+      toast.loading("Updating Whatsapp Number...", {
+        id: "whatsapp-num",
       });
 
       setIsSaving((prev) => {
@@ -500,17 +506,15 @@ export default function ProfilePage() {
     }
   };
 
-
   const handleSaveFootNote = async () => {
     try {
- 
-      if (!footNote || footNote.length <= 10 ) {
+      if (!footNote || footNote.length <= 10) {
         toast.error("Footnote should be more than 10 characters");
         return;
       }
 
-      toast.loading("Updating Footnote..." , {
-        id : "foot-note",
+      toast.loading("Updating Footnote...", {
+        id: "foot-note",
       });
 
       setIsSaving((prev) => {
@@ -536,12 +540,57 @@ export default function ProfilePage() {
       toast.dismiss("foot-note");
       console.error("Error updating Footnote:", error);
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to update footNote"
+        error instanceof Error ? error.message : "Failed to update footNote"
       );
     }
   };
+
+  const handleSaveInstaLink = async () => {
+    try {
+      if (!instaLink || instaLink.match(/^(https?:\/\/)?(www\.)?instagram\.com\/[a-zA-Z0-9._]+\/?$/) === null) {
+        toast.error("Please enter a valid Instagram Link");
+        return;
+      }
+
+      toast.loading("Updating Instagram Link...", {
+        id: "insta-link",
+      });
+
+      setIsSaving((prev) => {
+        return { ...prev, instaLink: true };
+      });
+
+      const socialLinks = getSocialLinks(userData as HotelData);
+      const instaLinkData = {
+        ...socialLinks,
+        instagram: instaLink,
+      };
+
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          social_links: JSON.stringify(instaLinkData),
+        },
+      });
+      revalidateTag(userData?.id as string);
+      setState({ social_links: JSON.stringify(instaLinkData) });
+      toast.dismiss("insta-link");
+      toast.success("Instagram Link updated successfully!");
+      setIsSaving((prev) => {
+        return { ...prev, instaLink: false };
+      });
+      setIsEditing((prev) => {
+        return { ...prev, instaLink: false };
+      });
+    } catch (error) {
+      toast.dismiss("insta-link");
+      console.error("Error updating Instagram Link:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update Instargram Link"
+      );
+    }
+  };
+
 
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
@@ -890,7 +939,9 @@ export default function ProfilePage() {
                             ...prev,
                             whatsappNumber: true,
                           }));
-                          setWhatsappNumber(whatsappNumber ? whatsappNumber : "");
+                          setWhatsappNumber(
+                            whatsappNumber ? whatsappNumber : ""
+                          );
                         }}
                         variant="ghost"
                         className="hover:bg-orange-100"
@@ -903,6 +954,59 @@ export default function ProfilePage() {
                 <p className="text-sm text-gray-500">
                   This Whatsapp Number will be used for receiving messages from
                   customers
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <label htmlFor="instaLink" className="text-lg font-semibold">
+                  Instagram Link
+                </label>
+                <div className="flex gap-2">
+                  {isEditing.instaLink ? (
+                    <>
+                      <Input
+                        id="instaLink"
+                        type="text"
+                        placeholder="Enter your Instagram Link"
+                        value={instaLink}
+                        onChange={(e) => setInstaLink(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleSaveInstaLink}
+                        disabled={isSaving.instaLink || !instaLink}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isSaving.instaLink ? <>Saving...</> : "Save"}
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-gray-700 text-xs text-wrap">
+                        {instaLink
+                          ? instaLink
+                          : "No Instagram Link set"}
+                      </span>
+                      <Button
+                        onClick={() => {
+                          setIsEditing((prev) => ({
+                            ...prev,
+                            instaLink: true,
+                          }));
+                          setInstaLink(
+                            instaLink ? instaLink : ""
+                          );
+                        }}
+                        variant="ghost"
+                        className="hover:bg-orange-100"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500">
+                  This Instagram Link will be used for your restaurant profile
                 </p>
               </div>
 
@@ -932,9 +1036,7 @@ export default function ProfilePage() {
                   ) : (
                     <div className="flex justify-between items-center w-full">
                       <span className="text-gray-700">
-                        {footNote
-                          ? footNote
-                          : "No Footnote set"}
+                        {footNote ? footNote : "No Footnote set"}
                       </span>
                       <Button
                         onClick={() => {

@@ -60,12 +60,14 @@ const ThemeChangeButton = ({
   };
 
   return (
-    <div>
+    <>
       {/* Main theme button */}
       <Dialog>
         <DialogTrigger asChild>
           <button aria-label="Change theme">
-            <Palette className="h-8 w-8" strokeWidth={1.8} />
+            <Palette style={{
+              color : theme?.colors?.text || "#000000",
+            }} className="h-8 w-8 " strokeWidth={1.8} />
           </button>
         </DialogTrigger>
 
@@ -134,7 +136,7 @@ const ThemeChangeButton = ({
           })
         }
       />
-    </div>
+    </>
   );
 };
 
