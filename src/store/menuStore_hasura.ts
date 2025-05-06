@@ -45,7 +45,7 @@ interface CategoryImages {
   name: string;
 }
 
-interface GroupedItems {
+export interface GroupedItems {
   [key: string]: MenuItem[];
 }
 

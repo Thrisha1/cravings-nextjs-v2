@@ -44,6 +44,7 @@ const OrdersTab = () => {
         setOrders(partnerOrders);
       }
     } catch (error) {
+      console.error(error);
       toast.error("Failed to load orders");
     } finally {
       setLoading(false);
@@ -74,6 +75,7 @@ const OrdersTab = () => {
       );
       toast.success(`Order marked as ${newStatus}`);
     } catch (error) {
+      console.error(error);
       toast.error(`Failed to update order status`);
     }
   };

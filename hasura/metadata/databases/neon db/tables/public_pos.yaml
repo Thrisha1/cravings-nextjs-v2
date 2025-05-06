@@ -1,15 +1,15 @@
 table:
-  name: qr_codes
+  name: pos
   schema: public
 object_relationships:
-  - name: partner
+  - name: order_item
     using:
-      foreign_key_constraint_on: partner_id
+      foreign_key_constraint_on: order_id
 array_relationships:
-  - name: orders
+  - name: pos_items
     using:
       foreign_key_constraint_on:
-        column: qr_id
+        column: pos_id
         table:
-          name: orders
+          name: pos_items
           schema: public
