@@ -32,11 +32,13 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     district
     location
     delivery_status
+    id
     description
     feature_flags
     phone
     whatsapp_number
     store_banner
+    social_links
     footnote
     status
     store_name

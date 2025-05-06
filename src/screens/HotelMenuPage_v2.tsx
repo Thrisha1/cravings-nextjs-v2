@@ -3,7 +3,7 @@
 import { SearchIcon } from "lucide-react";
 import MenuItemsList from "@/components/hotelDetail/MenuItemsList_v2";
 import { Offer } from "@/store/offerStore_hasura";
-import { HotelData } from "@/app/hotels/[id]/page";
+import { HotelData, SocialLinks } from "@/app/hotels/[id]/page";
 import ThemeChangeButton, {
   ThemeConfig,
 } from "@/components/hotelDetail/ThemeChangeButton";
@@ -21,6 +21,7 @@ import useOrderStore from "@/store/orderStore";
 import { useEffect, useState } from "react"; // Add this import
 import { useAuthStore } from "@/store/authStore";
 import { usePathname } from "next/navigation";
+import SocialLinkList from "@/components/SocialLinkList";
 
 export type MenuItem = {
   description: string;
@@ -50,6 +51,7 @@ interface HotelMenuPageProps {
   } | null;
   theme: ThemeConfig | null;
   tableNumber: number;
+  socialLinks: SocialLinks;
 }
 
 export type FeatureFlags = {
@@ -115,6 +117,7 @@ const HotelMenuPage = ({
   auth,
   theme,
   tableNumber,
+  socialLinks,
 }: HotelMenuPageProps) => {
   const styles: Styles = {
     backgroundColor: theme?.colors?.bg || "#F5F5F5",
@@ -186,6 +189,7 @@ const HotelMenuPage = ({
       style={{
         backgroundColor: styles.backgroundColor,
         color: styles.color,
+        fontFamily: theme?.fontFamily || "Poppins, sans-serif",
       }}
       className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 lg:px-[20%] `}
     >
@@ -315,10 +319,11 @@ const HotelMenuPage = ({
         </div>
 
         {/* right top button  */}
-        <div className="absolute right-[8%] top-[20px] flex gap-3">
+        <div className="absolute right-[8%] top-[20px] flex flex-col items-center gap-3">
           {hoteldata?.id === auth?.id && (
             <ThemeChangeButton hotelData={hoteldata} theme={theme} />
           )}
+          <SocialLinkList styles={styles} socialLinks={socialLinks} />
         </div>
       </section>
 

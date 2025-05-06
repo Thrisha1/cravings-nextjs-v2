@@ -4,21 +4,18 @@ import { getAuthCookie } from "../auth/actions";
 import { unstable_cache } from "next/cache";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { getPartnerAndOffersQuery } from "@/api/partners";
-import { HotelData } from "../hotels/[id]/page";
+
 import { Partner } from "@/store/authStore";
 
 const page = async () => {
   const userId = (await getAuthCookie())?.id;
+
   const getParnterData = unstable_cache(
-    async (id: string) => {
+    async () => {
       try {
-        const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
-          id,
+        return fetchFromHasura(getPartnerAndOffersQuery, {
+          id: userId,
         });
-        return {
-          id,
-          ...partnerData.partners[0],
-        } as Partner;
       } catch (error) {
         console.error("Error fetching partner data:", error);
         return null;
@@ -28,7 +25,8 @@ const page = async () => {
     { tags: [userId as string, "partner-data"] }
   );
 
-  const userData = await getParnterData(userId as string);
+  const userDataResponse = await getParnterData();
+  const userData = userDataResponse?.partners[0];
 
   if (userData?.status !== "active") {
     return (
@@ -45,9 +43,9 @@ const page = async () => {
         </div>
       </div>
     );
+  } else {
+    return <Admin userData={userData as Partner} />;
   }
-
-  return <Admin userData={userData as Partner} />;
 };
 
 export default page;
