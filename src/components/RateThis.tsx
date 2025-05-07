@@ -12,6 +12,13 @@ interface RateThisProps {
   styles: Styles;
 }
 
+const hotelsWhoWant5Star = [
+  {
+    id: "17c053ec-4f5d-4af0-b5a8-7955ecd8f027",
+    store_name: "ZAHAR AL MANDI"
+  }
+];
+
 const RateThis = ({ type, hotel, styles }: RateThisProps) => {
   const { id } = useParams();
   const itemId = id || "";
@@ -19,6 +26,9 @@ const RateThis = ({ type, hotel, styles }: RateThisProps) => {
   const [hoveredRating, setHoveredRating] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [hasRated, setHasRated] = useState(false);
+
+  // Check if current hotel is in the special list
+  const isSpecialHotel = hotelsWhoWant5Star.some(h => h.id === hotel.id);
 
   useEffect(() => {
     const savedRating = localStorage.getItem(`${type}_${itemId}_rating`);
@@ -35,7 +45,10 @@ const RateThis = ({ type, hotel, styles }: RateThisProps) => {
     localStorage.setItem(`${type}_${itemId}_rating`, star.toString());
     setHasRated(true);
 
-    if (star >= 4) {
+    // Determine if we should redirect based on hotel type
+    const shouldRedirect = isSpecialHotel ? star === 5 : star >= 4;
+
+    if (shouldRedirect) {
       setIsLoading(true);
       setTimeout(() => {
         window.open(
@@ -62,6 +75,11 @@ const RateThis = ({ type, hotel, styles }: RateThisProps) => {
         </HeadingWithAccent>
         <p className="text-sm text-gray-500 text-center sm:text-base">
           {hasRated ? "Thanks for your rating!" : "Tell others what you think"}
+          {isSpecialHotel && (
+            <span className="block mt-1 text-xs">
+              (Only 5-star ratings will redirect to Google Reviews)
+            </span>
+          )}
         </p>
       </div>
 
@@ -97,9 +115,11 @@ const RateThis = ({ type, hotel, styles }: RateThisProps) => {
         </div>
       )}
 
-      {hasRated && rating >= 4 && !isLoading && (
+      {hasRated && (
         <p className="text-sm text-gray-500 text-center">
-          Thank you for your positive rating!
+          {rating >= (isSpecialHotel ? 5 : 4)
+            ? "Thank you for your positive rating!"
+            : "Thanks for your feedback!"}
         </p>
       )}
     </div>
