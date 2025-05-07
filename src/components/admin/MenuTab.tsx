@@ -419,7 +419,7 @@ export function MenuTab() {
                                       </CardHeader>
                                       <CardContent className="relative">
                                         <p className="text-2xl font-bold">
-                                          {(userData as Partner)?.currency || "₹"}{item.price.toFixed(2)}
+                                          {(userData as Partner)?.currency || "₹"}{item.price.toFixed(3)}
                                         </p>
                                         {item.description && (
                                           <p className="text-gray-600 mt-2">

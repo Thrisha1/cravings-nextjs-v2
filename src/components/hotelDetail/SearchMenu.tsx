@@ -1,5 +1,5 @@
 "use client";
-import { HotelDataMenus } from "@/app/hotels/[id]/page";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
 import React, { useEffect, useState } from "react";
 import {
   Dialog,
@@ -14,6 +14,7 @@ import Fuse from "fuse.js";
 import ItemCard from "./ItemCard";
 
 const SearchMenu = ({
+  hotelData,
   menu,
   currency,
   feature_flags,
@@ -23,6 +24,7 @@ const SearchMenu = ({
   styles: Styles;
   feature_flags: string;
   currency: string;
+  hotelData: HotelData;
 }) => {
   const [items, setItems] = useState<HotelDataMenus[]>([]);
   const [query, setQuery] = useState<string>("");
@@ -106,6 +108,7 @@ const SearchMenu = ({
           {items.length > 0 ? (
             items.map((item) => (
               <ItemCard
+                hotelData={hotelData}
                 feature_flags={feature_flags}
                 currency={currency}
                 key={item.id}
