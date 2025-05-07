@@ -1,7 +1,7 @@
 "use client";
 import { useAuthStore } from "@/store/authStore";
 import useOrderStore, { Order, OrderItem } from "@/store/orderStore";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -9,26 +9,43 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import { Partner } from "@/api/partners";
 import { HotelData } from "@/app/hotels/[id]/page";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { subscribeToHasura } from "@/lib/hasuraSubscription";
+import { subscriptionQuery } from "@/api/orders";
+import { formatDate } from "@/lib/formatDate";
+import { Howl } from "howler";
 
 const OrdersTab = () => {
   const { userData } = useAuthStore();
-  const { fetchOrderOfPartner } = useOrderStore();
-
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showOnlyPending, setShowOnlyPending] = useState<boolean>(false);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest");
   const [activeTab, setActiveTab] = useState<"table" | "delivery">("table");
+  const [newOrders, setNewOrders] = useState({ table: false, delivery: false });
+  const prevPendingOrdersCount = useRef({ table: 0, delivery: 0 });
+  const soundRef = useRef<Howl | null>(null);
+
+  useEffect(() => {
+    soundRef.current = new Howl({
+      src: ["/audio/tone.wav"],
+      volume: 1,
+      preload: true,
+    });
+
+    return () => {
+      soundRef.current?.unload();
+    };
+  }, []);
 
   useEffect(() => {
     const storedFilter = localStorage.getItem("ordersFilter");
     const orderFilter = localStorage.getItem("ordersSortOrder");
     const storedTab = localStorage.getItem("ordersActiveTab");
-    
+
     if (storedTab === "delivery") {
       setActiveTab("delivery");
     }
-    
+
     if (storedFilter === "pending") {
       setShowOnlyPending(true);
     } else {
@@ -41,23 +58,6 @@ const OrdersTab = () => {
       setSortOrder("oldest");
     }
   }, []);
-
-  const loadOrders = async () => {
-    if (!userData?.id) return;
-
-    setLoading(true);
-    try {
-      const partnerOrders = await fetchOrderOfPartner(userData.id);
-      if (partnerOrders) {
-        setOrders(partnerOrders);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to load orders");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const updateOrderStatus = async (
     orderId: string,
@@ -105,12 +105,15 @@ const OrdersTab = () => {
   const handleTabChange = (value: string) => {
     if (value === "table" || value === "delivery") {
       setActiveTab(value);
+      setNewOrders((prev) => ({ ...prev, [value]: false }));
       localStorage.setItem("ordersActiveTab", value);
     }
   };
 
-  const filteredByTypeOrders = orders.filter((order) => 
-    activeTab === "table" ? order.type === "table_order" : order.type === "delivery"
+  const filteredByTypeOrders = orders.filter((order) =>
+    activeTab === "table"
+      ? order.type === "table_order"
+      : order.type === "delivery"
   );
 
   const filteredOrders = showOnlyPending
@@ -124,8 +127,126 @@ const OrdersTab = () => {
   });
 
   useEffect(() => {
-    loadOrders();
+    if (!userData?.id) return;
+
+    console.log("Initializing subscription...");
+
+    const unsubscribe = subscribeToHasura({
+      query: subscriptionQuery,
+      variables: { partner_id: userData.id },
+      onNext: (data) => {
+        console.log("New order data received:", data);
+        const allOrders = data.data?.orders.map((order: any) => ({
+          id: order.id,
+          totalPrice: order.total_price,
+          createdAt: order.created_at,
+          tableNumber: order.table_number,
+          qrId: order.qr_id,
+          status: order.status,
+          type: order.type,
+          deliveryAddress: order.delivery_address,
+          partnerId: order.partner_id,
+          userId: order.user_id,
+          user: order.user,
+          items: order.order_items.map((item: any) => ({
+            id: item.id,
+            quantity: item.quantity,
+            name: item.menu?.name || "Unknown",
+            price: item.menu?.price || 0,
+            category: item.menu?.category,
+          })),
+        }));
+
+        if (allOrders) {
+          // Filter only pending orders for comparison
+          const currentPendingTableOrders = allOrders.filter(
+            (order: Order) =>
+              order.type === "table_order" && order.status === "pending"
+          );
+          const currentPendingDeliveryOrders = allOrders.filter(
+            (order: Order) =>
+              order.type === "delivery" && order.status === "pending"
+          );
+
+          // Check if we have new pending orders
+          const hasNewPendingTableOrders =
+            currentPendingTableOrders.length >
+            prevPendingOrdersCount.current.table;
+          const hasNewPendingDeliveryOrders =
+            currentPendingDeliveryOrders.length >
+            prevPendingOrdersCount.current.delivery;
+
+          // Play sound and show notification for new pending orders
+          if (
+            (hasNewPendingTableOrders || hasNewPendingDeliveryOrders) &&
+            soundRef.current
+          ) {
+            soundRef.current.play();
+
+            if (
+              "Notification" in window &&
+              Notification.permission === "granted"
+            ) {
+              const newTableCount =
+                currentPendingTableOrders.length -
+                prevPendingOrdersCount.current.table;
+              const newDeliveryCount =
+                currentPendingDeliveryOrders.length -
+                prevPendingOrdersCount.current.delivery;
+
+              let notificationMessage = "";
+              if (newTableCount > 0 && newDeliveryCount > 0) {
+                notificationMessage = `You have ${newTableCount} new table orders and ${newDeliveryCount} new deliveries`;
+              } else if (newTableCount > 0) {
+                notificationMessage = `You have ${newTableCount} new table orders`;
+              } else if (newDeliveryCount > 0) {
+                notificationMessage = `You have ${newDeliveryCount} new deliveries`;
+              }
+
+              if (notificationMessage) {
+                new Notification("New Pending Orders", {
+                  body: notificationMessage,
+                  icon: "/icon-64x64.png",
+                });
+              }
+            }
+          }
+
+          // Update order counts and indicators
+          if (hasNewPendingTableOrders) {
+            setNewOrders((prev) => ({ ...prev, table: true }));
+          }
+          if (hasNewPendingDeliveryOrders) {
+            setNewOrders((prev) => ({ ...prev, delivery: true }));
+          }
+
+          prevPendingOrdersCount.current = {
+            table: currentPendingTableOrders.length,
+            delivery: currentPendingDeliveryOrders.length,
+          };
+
+          setOrders(allOrders);
+        }
+        setLoading(false);
+      },
+      onError: (error) => {
+        console.error("Subscription error:", error);
+      },
+    });
+
+    return () => {
+      console.log("Cleaning up subscription...");
+      unsubscribe();
+    };
   }, [userData?.id]);
+
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission !== "denied") {
+      Notification.requestPermission().then((permission) => {
+        console.log("Notification permission:", permission);
+      });
+    }
+  }, []);
 
   return (
     <div className="py-10 px-[8%]">
@@ -142,9 +263,25 @@ const OrdersTab = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="table">Table Orders</TabsTrigger>
-          <TabsTrigger value="delivery">Deliveries</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 mb-6 relative">
+          <TabsTrigger value="table" className="relative">
+            Table Orders
+            {newOrders.table && (
+              <span className="absolute -top-1 -right-1 h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="delivery" className="relative">
+            Deliveries
+            {newOrders.delivery && (
+              <span className="absolute -top-1 -right-1 h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         {loading ? (
@@ -156,18 +293,29 @@ const OrdersTab = () => {
             <div className="space-y-4">
               {sortedOrders.length === 0 ? (
                 <p className="text-gray-500">
-                  No {activeTab === "table" ? "table orders" : "deliveries"} found
+                  No {activeTab === "table" ? "table orders" : "deliveries"}{" "}
+                  found
                 </p>
               ) : (
                 sortedOrders.map((order) => (
-                  <div key={order.id} className="border rounded-lg p-4">
+                  <div
+                    key={order.id}
+                    className="border rounded-lg p-4 relative"
+                  >
+                    {order.status === "pending" && (
+                      <span className="absolute -top-1 -left-1 h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                      </span>
+                    )}
+
                     <div className="flex justify-between items-center">
                       <div>
                         <h3 className="font-medium">
                           Order #{order.id.slice(0, 8)}
                         </h3>
                         <p className="text-sm text-gray-500">
-                          {new Date(order.createdAt).toLocaleString()}
+                          {formatDate(order.createdAt)}
                         </p>
                       </div>
 
@@ -198,13 +346,14 @@ const OrdersTab = () => {
                         </p>
                         {order.type === "delivery" && (
                           <p className="text-sm mt-3">
-                            Delivery Address: {order.deliveryAddress || "Unknown"}
+                            Delivery Address:{" "}
+                            {order.deliveryAddress || "Unknown"}
                           </p>
                         )}
                       </div>
                       <p className="font-medium">
                         Total: {(userData as HotelData)?.currency}
-                        {order.totalPrice.toFixed(2)}
+                        {order?.totalPrice?.toFixed(2)}
                       </p>
                     </div>
 
@@ -235,7 +384,9 @@ const OrdersTab = () => {
                             </div>
                           ))
                         ) : (
-                          <p className="text-gray-500 text-sm">No items found</p>
+                          <p className="text-gray-500 text-sm">
+                            No items found
+                          </p>
                         )}
                       </div>
 
@@ -243,14 +394,18 @@ const OrdersTab = () => {
                         <div className="mt-4 flex gap-2">
                           <Button
                             size="sm"
-                            onClick={() => updateOrderStatus(order.id, "completed")}
+                            onClick={() =>
+                              updateOrderStatus(order.id, "completed")
+                            }
                           >
                             Mark Completed
                           </Button>
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => updateOrderStatus(order.id, "cancelled")}
+                            onClick={() =>
+                              updateOrderStatus(order.id, "cancelled")
+                            }
                           >
                             Cancel Order
                           </Button>

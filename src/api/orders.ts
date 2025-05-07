@@ -36,3 +36,44 @@ export const createOrderItemsMutation = `
                     }
                   }
 `;
+
+
+// subscription 
+
+
+export const subscriptionQuery = `
+subscription GetPartnerOrders($partner_id: uuid!) {
+  orders(
+    where: { partner_id: { _eq: $partner_id } }
+    order_by: { created_at: desc }
+  ) {
+    id
+    total_price
+    created_at
+    table_number
+    qr_id
+    type
+    delivery_address
+    status
+    partner_id
+    user_id
+    user {
+      full_name
+      phone
+      email
+    }
+    order_items {
+      id
+      quantity
+      menu {
+        id
+        name
+        price
+        category {
+          name
+        }
+      }
+    }
+  }
+}
+`;

@@ -1,132 +1,110 @@
 "use client";
-import { getCommonOffersWithDistance } from "@/api/common_offers";
-import { CommonOffer } from "@/components/superAdmin/OfferUploadSuperAdmin";
-import { fetchFromHasura } from "@/lib/hasuraClient";
-import React, { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useAuthStore } from '@/store/authStore';
+import React, { useEffect, useState } from 'react';
+import { getAuthCookie } from '../auth/actions';
+import { subscribeToHasura } from '@/lib/hasuraSubscription';
+import { OrderItem } from '@/store/orderStore';
+
+const subscriptionQuery = `
+subscription GetPartnerOrders($partner_id: uuid!) {
+  orders(
+    where: { partner_id: { _eq: $partner_id } }
+    order_by: { created_at: desc }
+  ) {
+    id
+    total_price
+    created_at
+    table_number
+    qr_id
+    type
+    delivery_address
+    status
+    partner_id
+    user_id
+    user {
+      full_name
+      phone
+      email
+    }
+    order_items {
+      id
+      quantity
+      menu {
+        id
+        name
+        price
+        category {
+          name
+        }
+      }
+    }
+  }
+}
+`;
 
 const Page = () => {
-  const [offers, setOffers] = useState<CommonOffer[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchOffers = async () => {
-    try {
-      const response = await fetchFromHasura(getCommonOffersWithDistance , {
-        userLat: 0,
-        userLon: 0,
-        limit: 10,
-        offset: 0,
-      });
-
-      console.log(response);
-      
-
-      if (response.common_offers) {
-        setOffers(response.common_offers);
-      }
-    } catch (error) {
-      console.error("Error fetching offers:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [id, setId] = useState<string | null>(null);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [connectionStatus, setConnectionStatus] = useState<string>('Disconnected');
 
   useEffect(() => {
-    fetchOffers();
+    if (!id) return;
+
+    console.log('Initializing subscription...');
+    setConnectionStatus('Connecting...');
+
+    const unsubscribe = subscribeToHasura({
+      query: subscriptionQuery,
+      variables: { partner_id: id },
+      onNext: (data) => {
+        console.log('New order data received:', data);
+        if (data.data?.orders) {
+          setOrders(prev => {
+            const newOrders = data.data?.orders || [];
+            const orderMap = new Map(prev.map(order => [order.id, order]));
+            newOrders.forEach((order : OrderItem) => orderMap.set(order.id, order));
+            return Array.from(orderMap.values());
+          });
+        }
+      },
+      onError: (error) => {
+        console.error('Subscription error:', error);
+        setConnectionStatus(`Error: ${error.message}`);
+      },
+      onComplete: () => {
+        console.log('Subscription completed');
+        setConnectionStatus('Completed');
+      },
+    });
+
+    return () => {
+      console.log('Cleaning up subscription...');
+      unsubscribe();
+    };
+  }, [id]);
+
+  useEffect(() => {
+    const getUserId = async () => {
+      const userId = (await getAuthCookie())?.id;
+      setId(userId || "");
+      console.log('User ID:', userId);
+    }
+
+    getUserId();
   }, []);
 
-  const convertUrl = async (url: string, id: string) => {
-    toast.loading("Converting URL...", {
-      id: id,
-    });
-    try {
-      const response = await fetch(
-        process.env.NEXT_PUBLIC_SERVER_URL + "/api/convert-coordinate",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ url, id }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!data.updateResponse) {
-        throw new Error("No coordinates found in response");
-      }
-
-      toast.dismiss(id);
-      toast.success("Coordinates updated successfully");
-      console.log("Updated Coordinates:", data.updateResponse);
-      // Optionally: Refresh the data
-      fetchOffers();
-    } catch (error) {
-      toast.dismiss(id);
-      console.error("Error converting/updating coordinates:", error);
-      toast.error("Error converting or updating coordinates");
-    }
-  };
-
-  if (loading) {
-    return <div>Loading offers...</div>;
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Common Offers</h1>
-      {/* <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-200">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="py-2 px-4 border-b">Id</th>
-              <th className="py-2 px-4 border-b">Partner</th>
-              <th className="py-2 px-4 border-b">Item</th>
-              <th className="py-2 px-4 border-b">Price</th>
-              <th className="py-2 px-4 border-b">Image</th>
-              <th className="py-2 px-4 border-b">District</th>
-              <th className="py-2 px-4 border-b">Location</th>
-              <th className="py-2 px-4 border-b">Coordinates</th>
-              <th className="py-2 px-4 border-b">Created At</th>
-            </tr>
-          </thead>
-          <tbody>
-            {offers.map((offer) => (
-              <tr
-                onClick={async () => {
-                  // await convertUrl(offer.location as string, offer.id);
-                }}
-                key={offer.id}
-                className="hover:bg-gray-50"
-              >
-                <td className="py-2 px-4 border-b">{offer.id}</td>
-
-                <td className="py-2 px-4 border-b">{offer.partner_name}</td>
-                <td className="py-2 px-4 border-b">{offer.item_name}</td>
-                <td className="py-2 px-4 border-b">{offer.price}</td>
-                <td className="py-2 px-4 border-b">
-                  {offer.image_url && (
-                    <img
-                      src={offer.image_url}
-                      alt={offer.item_name}
-                      className="h-10 w-10 object-cover rounded"
-                    />
-                  )}
-                </td>
-                <td className="py-2 px-4 border-b">{offer.district}</td>
-                <td className="py-2 px-4 border-b text-xs">{offer.location}</td>
-                <td className="py-2 px-4 border-b text-xs">
-                  {offer?.coordinates?.type}
-                </td>
-                <td className="py-2 px-4 border-b">
-                  {new Date(offer?.created_at as string).toLocaleString()}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div> */}
+    <div>
+      <h1>Orders</h1>
+      <p>Connection status: {connectionStatus}</p>
+      <p>Total orders: {orders.length}</p>
+      <ul>
+        {orders.map((order, index) => (
+          <li key={index}>
+            Order : {order.id} - {order.total_price} - {order.created_at} - {order.table_number} - {order.qr_id} - {order.type} - {order.delivery_address} - {order.status}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };

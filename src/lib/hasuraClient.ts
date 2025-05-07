@@ -1,6 +1,6 @@
 import { GraphQLClient } from "graphql-request";
 
-const client = new GraphQLClient(
+export const client = new GraphQLClient(
   "https://curious-ferret-93.hasura.app/v1/graphql" as string,
   {
     headers: {
