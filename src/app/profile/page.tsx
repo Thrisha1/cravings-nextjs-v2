@@ -518,10 +518,6 @@ export default function ProfilePage() {
 
   const handleSaveFootNote = async () => {
     try {
-      if (!footNote || footNote.length <= 10) {
-        toast.error("Footnote should be more than 10 characters");
-        return;
-      }
 
       toast.loading("Updating Footnote...", {
         id: "foot-note",
@@ -1087,7 +1083,7 @@ export default function ProfilePage() {
                       />
                       <Button
                         onClick={handleSaveFootNote}
-                        disabled={isSaving.footNote || !footNote}
+                        disabled={isSaving.footNote}
                         className="bg-orange-600 hover:bg-orange-700 text-white"
                       >
                         {isSaving.footNote ? <>Saving...</> : "Save"}

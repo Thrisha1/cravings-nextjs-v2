@@ -385,7 +385,7 @@ const HotelMenuPage = ({
       )}
 
       {/* rating  */}
-      <section className="px-[8.5%] mt-10">
+      <section className={`px-[8.5%] mt-10 ${hoteldata?.footnote ? "" : "mb-40"}`}>
         <RateThis styles={styles} hotel={hoteldata} type="hotel" />
       </section>
 
