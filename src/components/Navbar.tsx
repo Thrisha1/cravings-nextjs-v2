@@ -74,9 +74,9 @@ export function Navbar() {
               ...((features?.ordering.access || features?.delivery.access ) && (userData?.status === "active")
                 ? [{ href: "/admin/orders", label: "Orders" }]
                 : []),
-              ...((features?.ordering.access || features?.delivery.access ) && (userData?.status === "active")
-                ? [{ href: "/admin/pos", label: "POS" }]
-                : []),
+              // ...((features?.ordering.access || features?.delivery.access ) && (userData?.status === "active")
+              //   ? [{ href: "/admin/pos", label: "POS" }]
+              //   : []),
             ]
           : []),
         ...(userData?.role === "superadmin"

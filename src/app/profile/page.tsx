@@ -608,7 +608,7 @@ export default function ProfilePage() {
     e.preventDefault();
 
     try {
-      if (!gst.gst_no || gst.gst_percentage <= 0) {
+      if (gst.gst_percentage <= 0) {
         toast.error("Please enter a valid GST");
         return;
       }
@@ -852,7 +852,7 @@ export default function ProfilePage() {
                 </p>
               </div>
 
-              <div className="space-y-2 pt-4">
+              {/* <div className="space-y-2 pt-4">
                 <label htmlFor="upiId" className="text-lg font-semibold">
                   UPI ID
                 </label>
@@ -874,7 +874,6 @@ export default function ProfilePage() {
                       >
                         {isSaving.upiId ? (
                           <>
-                            {/* <span className="animate-spin mr-2">⏳</span>/ */}
                             Saving...
                           </>
                         ) : (
@@ -903,7 +902,7 @@ export default function ProfilePage() {
                 <p className="text-sm text-gray-500">
                   This UPI ID will be used for receiving payments from customers
                 </p>
-              </div>
+              </div> */}
 
               <div className="space-y-2 pt-4">
                 <label htmlFor="placeId" className="text-lg font-semibold">
@@ -1309,7 +1308,7 @@ export default function ProfilePage() {
 
                       <Button
 
-                        disabled={isSaving.gst || !gst.gst_no}
+                        disabled={isSaving.gst}
                         className="bg-orange-600 hover:bg-orange-700 text-white"
                       >
                         {isSaving.gst ? <>Saving...</> : "Save"}
