@@ -45,6 +45,8 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     currency
     place_id
     theme
+    gst_no
+    gst_percentage
     menus(where: {deletion_status: {_eq: 0}}) {
       category {
         name

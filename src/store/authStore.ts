@@ -55,6 +55,8 @@ export interface Partner extends BaseUser {
   feature_flags?: string;
   footnote?: string;
   social_links?: string;
+  gst_no?: string;
+  gst_percentage?: number;
 }
 
 export interface SuperAdmin extends BaseUser {

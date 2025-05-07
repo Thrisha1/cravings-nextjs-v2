@@ -75,6 +75,7 @@ export default function ProfilePage() {
     whatsappNumber: false,
     footNote: false,
     instaLink: false,
+    gst: false,
   });
   const [isEditing, setIsEditing] = useState({
     upiId: false,
@@ -84,8 +85,13 @@ export default function ProfilePage() {
     currency: false,
     footNote: false,
     instaLink: false,
+    gst: false,
   });
   const [placeId, setPlaceId] = useState("");
+  const [gst, setGst] = useState({
+    gst_no: "",
+    gst_percentage: 0,
+  });
   const [description, setDescription] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [currency, setCurrency] = useState(Currencies[0]);
@@ -122,6 +128,10 @@ export default function ProfilePage() {
       setFootNote(userData.footnote || "");
       const socialLinks = getSocialLinks(userData as HotelData);
       setInstaLink(socialLinks.instagram || "");
+      setGst({
+        gst_no: userData.gst_no || "",
+        gst_percentage: userData.gst_percentage || 0,
+      });
     }
   }, [userData]);
 
@@ -547,7 +557,12 @@ export default function ProfilePage() {
 
   const handleSaveInstaLink = async () => {
     try {
-      if (!instaLink || instaLink.match(/^(https?:\/\/)?(www\.)?instagram\.com\/[a-zA-Z0-9._]+\/?$/) === null) {
+      if (
+        !instaLink ||
+        instaLink.match(
+          /^(https?:\/\/)?(www\.)?instagram\.com\/[a-zA-Z0-9._]+\/?$/
+        ) === null
+      ) {
         toast.error("Please enter a valid Instagram Link");
         return;
       }
@@ -586,11 +601,60 @@ export default function ProfilePage() {
       toast.dismiss("insta-link");
       console.error("Error updating Instagram Link:", error);
       toast.error(
-        error instanceof Error ? error.message : "Failed to update Instargram Link"
+        error instanceof Error
+          ? error.message
+          : "Failed to update Instargram Link"
       );
     }
   };
 
+  const handleSaveGst = async (e : React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      if (!gst.gst_no || gst.gst_percentage <= 0) {
+        toast.error("Please enter a valid GST");
+        return;
+      }
+
+      toast.loading("Updating GST...", {
+        id: "gst",
+      });
+
+      setIsSaving((prev) => {
+        return { ...prev, gst: true };
+      });
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          gst_no: gst.gst_no,
+          gst_percentage: gst.gst_percentage,
+        },
+      });
+      revalidateTag(userData?.id as string);
+      setState({ gst_no: gst.gst_no, gst_percentage: gst.gst_percentage });
+      toast.dismiss("gst");
+      toast.success("GST updated successfully!");
+      setIsSaving((prev) => {
+        return { ...prev, gst: false };
+      });
+      setIsEditing((prev) => {
+        return { ...prev, gst: false };
+      });
+    } catch (error) {
+      toast.dismiss("gst");
+      console.error("Error updating GST:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update GST"
+      );
+      setIsSaving((prev) => {
+        return { ...prev, gst: false };
+      });
+      setIsEditing((prev) => {
+        return { ...prev, gst: false };
+      });
+    }
+  };
 
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
@@ -983,9 +1047,7 @@ export default function ProfilePage() {
                   ) : (
                     <div className="flex justify-between items-center w-full">
                       <span className="text-gray-700 text-xs text-wrap">
-                        {instaLink
-                          ? instaLink
-                          : "No Instagram Link set"}
+                        {instaLink ? instaLink : "No Instagram Link set"}
                       </span>
                       <Button
                         onClick={() => {
@@ -993,9 +1055,7 @@ export default function ProfilePage() {
                             ...prev,
                             instaLink: true,
                           }));
-                          setInstaLink(
-                            instaLink ? instaLink : ""
-                          );
+                          setInstaLink(instaLink ? instaLink : "");
                         }}
                         variant="ghost"
                         className="hover:bg-orange-100"
@@ -1199,6 +1259,94 @@ export default function ProfilePage() {
                     )}
                   </>
                 )}
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <h1 className="text-lg font-semibold">Gst Settings</h1>
+                <div className="flex gap-2">
+                  {isEditing.gst ? (
+                    <form onSubmit={handleSaveGst} className="space-y-2">
+                      <div>
+                        <label
+                          htmlFor="gst_no"
+                          className=" font-semibold"
+                        >
+                          Gst No.
+                        </label>
+                        <Input
+                          id="gst_no"
+                          type="text"
+                          placeholder="Enter your Gst number"
+                          pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
+                          value={gst.gst_no}
+                          onChange={(e) =>
+                            setGst((prev) => {
+                              return { ...prev, gst_no: e.target.value };
+                            })
+                          }
+                          className="flex-1"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor="gst_percentage"
+                          className=" font-semibold"
+                        >
+                          Gst Percentage
+                        </label>
+                        <Input
+                          id="gst_percentage"
+                          type="number"
+                          placeholder="Enter your Gst percentage"
+                          value={gst.gst_percentage}
+                          onChange={(e) =>
+                            setGst((prev) => {
+                              return {
+                                ...prev,
+                                gst_percentage: Number(e.target.value),
+                              };
+                            })
+                          }
+                          className="flex-1"
+                        />
+                      </div>
+
+                      <Button
+
+                        disabled={isSaving.gst || !gst.gst_no}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isSaving.gst ? <>Saving...</> : "Save"}
+                      </Button>
+                    </form>
+                  ) : (
+                    <div className="flex justify-between items-center w-full">
+                      <div className="flex flex-col gap-2">
+                        <div className="text-gray-700">
+                          {gst.gst_no ? `GST no: ${gst.gst_no}` : "No Gst no. set"}
+                        </div>
+                        <div className="text-gray-700">
+                        {gst.gst_percentage ? `GST percentage: ${gst.gst_percentage}%` : "No Gst percentage set"}
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setIsEditing((prev) => ({
+                            ...prev,
+                            gst: true,
+                          }));
+                        }}
+                        variant="ghost"
+                        className="hover:bg-orange-100"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500">
+                  This Gst will be used for your restaurant profile and billing
+                </p>
               </div>
             </CardContent>
           </Card>

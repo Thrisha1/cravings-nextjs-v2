@@ -42,6 +42,8 @@ export const partnerIdQuery = `
       theme
       currency
       place_id
+      gst_no
+      gst_percentage
     }
   }
 `;

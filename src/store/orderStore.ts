@@ -5,6 +5,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { useAuthStore } from "./authStore";
 import { createOrderItemsMutation, createOrderMutation } from "@/api/orders";
 import { toast } from "sonner";
+import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
 
 export interface OrderItem extends HotelDataMenus {
   quantity: number;
@@ -303,7 +304,7 @@ const useOrderStore = create(
             createOrderMutation,
             {
               id: currentOrder.orderId,
-              totalPrice: currentOrder.totalPrice,
+              totalPrice: hotelData?.gst_percentage ? (currentOrder.totalPrice + getGstAmount(currentOrder.totalPrice, hotelData.gst_percentage)) : currentOrder.totalPrice,
               createdAt,
               tableNumber: tableNumber || null,
               qrId: qrId || null,

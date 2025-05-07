@@ -30,6 +30,11 @@ import Link from "next/link";
 import { table } from "console";
 import { usePathname } from "next/navigation";
 
+export const getGstAmount = (price: number, gstPercentage: number) => {
+  const gstAmount = (price * gstPercentage) / 100;
+  return gstAmount;
+};
+
 const OrderDrawer = ({
   styles,
   hotelData,
@@ -88,9 +93,31 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
     )
     .join("\n\n")}
 
-*💰 Total Amount:* ${hotelData.currency}${totalPrice}
+${
+  hotelData?.gst_percentage
+    ? `*GST (${hotelData.gst_percentage}%):* ${
+        hotelData.currency
+      }${getGstAmount(totalPrice as number, hotelData.gst_percentage).toFixed(
+        2
+      )}`
+    : ""
+}
+${
+  hotelData?.gst_percentage
+    ? `*Subtotal:* ${hotelData.currency}${totalPrice}`
+    : ""
+}
+${
+  hotelData?.gst_percentage
+    ? `*Total Price:* ${hotelData.currency}${(
+        (totalPrice as number) +
+        getGstAmount(totalPrice as number, hotelData.gst_percentage)
+      ).toFixed(2)}`
+    : `*Total Price:* ${hotelData.currency}${totalPrice}`
+}
 `;
-    const number = hotelData?.whatsapp_number || hotelData?.phone || "8590115462";
+    const number =
+      hotelData?.whatsapp_number || hotelData?.phone || "8590115462";
 
     const whatsappUrl = `https://api.whatsapp.com/send?phone=+91${number}&text=${encodeURIComponent(
       whatsappMsg
@@ -270,16 +297,49 @@ ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
         </div>
 
         <DrawerFooter className="border-t">
-          <div className="flex justify-between items-center mb-4">
-            <span className="font-bold">Grand Total:</span>
-            <span
-              className="font-bold text-lg"
-              style={{ color: styles.accent }}
-            >
-              {hotelData.currency}
-              {(order?.totalPrice ?? totalPrice ?? 0).toFixed(2)}
-            </span>
-          </div>
+          {hotelData?.gst_percentage ? (
+            <>
+              <div className="flex justify-between items-center mb-4 text-sm">
+                <span className="font-bold">Total:</span>
+                <span
+                  className="font-bold"
+                  style={{ color: styles.accent }}
+                >
+                  {hotelData.currency}
+                  {(order?.totalPrice ?? totalPrice ?? 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center mb-4">
+                <span className="font-bold">{`Grand Total (+ GST (${hotelData.gst_percentage}%)):`}</span>
+                <span
+                  className="font-bold text-lg"
+                  style={{ color: styles.accent }}
+                >
+                  {hotelData.currency}
+                  {(
+                    getGstAmount(
+                      order?.totalPrice ?? totalPrice ?? 0,
+                      hotelData.gst_percentage
+                    ) +
+                    (order?.totalPrice ?? totalPrice ?? 0)
+                  ).toFixed(2)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-4">
+                <span className="font-bold">Grand Total:</span>
+                <span
+                  className="font-bold text-lg"
+                  style={{ color: styles.accent }}
+                >
+                  {hotelData.currency}
+                  {(order?.totalPrice ?? totalPrice ?? 0).toFixed(2)}
+                </span>
+              </div>
+            </>
+          )}
 
           {!order ? (
             <>
