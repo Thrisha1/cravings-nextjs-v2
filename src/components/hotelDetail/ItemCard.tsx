@@ -1,5 +1,5 @@
 "use client";
-import { HotelDataMenus } from "@/app/hotels/[id]/page";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
 import { getFeatures, Styles } from "@/screens/HotelMenuPage_v2";
 import React, { useEffect, useState } from "react";
 import Img from "../Img";
@@ -13,12 +13,14 @@ const ItemCard = ({
   className,
   feature_flags,
   currency,
+  hotelData
 }: {
   item: HotelDataMenus;
   styles: Styles;
   currency: string;
   className?: string;
   feature_flags?: string;
+  hotelData?: HotelData;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { addItem, items, decreaseQuantity , removeItem } = useOrderStore();
@@ -65,7 +67,7 @@ const ItemCard = ({
                 item.image_url ? "w-1/2" : ""
               } ${!item.is_available ? "opacity-25" : ""}`}
             >
-              <div className="capitalize text-xl font-bold">{item.name}</div>
+              <div className="capitalize text-xl font-bold">{item.name}</div> 
               {currency !== "🚫" && (
                 <div
                   style={{
@@ -74,7 +76,7 @@ const ItemCard = ({
                   className={`font-black text-2xl`}
                 >
                   {currency}
-                  {item.price}
+                  {hotelData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09" ? item.price.toFixed(3) : item.price}
                 </div>
               )}
               <DescriptionWithTextBreak

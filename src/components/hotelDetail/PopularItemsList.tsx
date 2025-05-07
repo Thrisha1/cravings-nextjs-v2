@@ -38,7 +38,7 @@ const PopularItemsList = ({
         <CarouselContent className="pl-[8%] mr-[8%] h-full pt-4">
           {items.map((item, index) => (
             <CarouselItem key={`popular-${item.name + index}`}>
-              <ItemCard feature_flags={hotelData?.feature_flags} currency={currency} item={item} styles={styles} className="h-full" />
+              <ItemCard hotelData={hotelData} feature_flags={hotelData?.feature_flags} currency={currency} item={item} styles={styles} className="h-full" />
             </CarouselItem>
           ))}
         </CarouselContent>
