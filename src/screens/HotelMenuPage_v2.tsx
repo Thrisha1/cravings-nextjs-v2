@@ -22,6 +22,11 @@ import { useEffect, useState } from "react"; // Add this import
 import { useAuthStore } from "@/store/authStore";
 import { usePathname } from "next/navigation";
 import SocialLinkList from "@/components/SocialLinkList";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 export type MenuItem = {
   description: string;
@@ -194,36 +199,34 @@ const HotelMenuPage = ({
       className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 lg:px-[20%] `}
     >
       {/* Auth Modal */}
-      {open_auth_modal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-          style={{ backgroundColor: `${styles.backgroundColor}80` }}
+      <Dialog
+        open={open_auth_modal}
+        onOpenChange={useOrderStore.getState().setOpenAuthModal}
+      >
+        <DialogContent
+          className="rounded-lg"
+          style={{
+            backgroundColor: styles.backgroundColor,
+            color: styles.color,
+            border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
+          }}
         >
-          <div
-            className="w-full max-w-md p-6 rounded-lg shadow-lg"
-            style={{
-              backgroundColor: styles.backgroundColor,
-              color: styles.color,
-              border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
-            }}
-          >
-            <h2
-              className="text-2xl font-bold mb-4"
-              style={{ color: styles.accent }}
-            >
+          <DialogHeader>
+            <DialogTitle className="text-2xl" style={{ color: styles.accent }}>
               Please enter your details to place order
-            </h2>
+            </DialogTitle>
+          </DialogHeader>
 
-            <div className="mb-6">
-              <label htmlFor="phone" className="block mb-2 text-sm font-medium">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="phone" className="mb-2">
                 Phone Number
-              </label>
-              <input
+              </Label>
+              <Input
                 type="tel"
                 id="phone"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full p-3 rounded-lg"
                 style={{
                   backgroundColor: styles.backgroundColor,
                   color: styles.color,
@@ -231,33 +234,29 @@ const HotelMenuPage = ({
                 }}
                 placeholder="Enter your phone number"
               />
-
-              {!tableNumber && (
-                <div className="my-6">
-                  <label
-                    htmlFor="address"
-                    className="block mb-2 text-sm font-medium"
-                  >
-                    Delivery Address
-                  </label>
-                  <textarea
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full p-3 rounded-lg min-h-[100px]"
-                    style={{
-                      backgroundColor: styles.backgroundColor,
-                      color: styles.color,
-                      border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
-                      resize: "vertical", // Allows vertical resizing only
-                    }}
-                    placeholder="Enter your delivery address (House no, Building, Street, Area)"
-                  />
-                </div>
-              )}
             </div>
 
-            <button
+            {!tableNumber && (
+              <div>
+                <Label htmlFor="address" className="mb-2">
+                  Delivery Address
+                </Label>
+                <Textarea
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="min-h-[100px]"
+                  style={{
+                    backgroundColor: styles.backgroundColor,
+                    color: styles.color,
+                    border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
+                  }}
+                  placeholder="Enter your delivery address (House no, Building, Street, Area)"
+                />
+              </div>
+            )}
+
+            <Button
               onClick={async () => {
                 if (!phoneNumber) {
                   alert("Please enter both phone number and address.");
@@ -276,17 +275,17 @@ const HotelMenuPage = ({
                   useOrderStore.getState().setOpenAuthModal(false);
                 }
               }}
-              className="w-full py-3 px-4 rounded-lg font-medium transition-colors"
+              className="w-full"
               style={{
                 backgroundColor: styles.accent,
                 color: "#fff",
               }}
             >
               Submit
-            </button>
+            </Button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* top part  */}
       <section className="px-[8%] pt-[20px]">
