@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { Partner } from "@/api/partners";
 import { HotelData } from "@/app/hotels/[id]/page";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 const OrdersTab = () => {
   const { userData } = useAuthStore();
@@ -17,10 +18,17 @@ const OrdersTab = () => {
   const [loading, setLoading] = useState(false);
   const [showOnlyPending, setShowOnlyPending] = useState<boolean>(false);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest");
+  const [activeTab, setActiveTab] = useState<"table" | "delivery">("table");
 
   useEffect(() => {
     const storedFilter = localStorage.getItem("ordersFilter");
     const orderFilter = localStorage.getItem("ordersSortOrder");
+    const storedTab = localStorage.getItem("ordersActiveTab");
+    
+    if (storedTab === "delivery") {
+      setActiveTab("delivery");
+    }
+    
     if (storedFilter === "pending") {
       setShowOnlyPending(true);
     } else {
@@ -94,9 +102,20 @@ const OrdersTab = () => {
     );
   };
 
+  const handleTabChange = (value: string) => {
+    if (value === "table" || value === "delivery") {
+      setActiveTab(value);
+      localStorage.setItem("ordersActiveTab", value);
+    }
+  };
+
+  const filteredByTypeOrders = orders.filter((order) => 
+    activeTab === "table" ? order.type === "table_order" : order.type === "delivery"
+  );
+
   const filteredOrders = showOnlyPending
-    ? orders.filter((order) => order.status === "pending")
-    : orders;
+    ? filteredByTypeOrders.filter((order) => order.status === "pending")
+    : filteredByTypeOrders;
 
   const sortedOrders = [...filteredOrders].sort((a, b) => {
     const dateA = new Date(a.createdAt).getTime();
@@ -110,7 +129,7 @@ const OrdersTab = () => {
 
   return (
     <div className="py-10 px-[8%]">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Orders Management</h2>
         <div className="flex gap-2">
           <Button size="sm" onClick={togglePendingFilter}>
@@ -122,118 +141,129 @@ const OrdersTab = () => {
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="animate-spin h-8 w-8" />
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {sortedOrders.length === 0 ? (
-            <p className="text-gray-500">No orders found</p>
-          ) : (
-            sortedOrders.map((order) => (
-              <div key={order.id} className="border rounded-lg p-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-medium">
-                      Order #{order.id.slice(0, 8)}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {new Date(order.createdAt).toLocaleString()}
-                    </p>
-                  </div>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="table">Table Orders</TabsTrigger>
+          <TabsTrigger value="delivery">Deliveries</TabsTrigger>
+        </TabsList>
 
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        order.status === "completed"
-                          ? "bg-green-100 text-green-800"
-                          : order.status === "cancelled"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {order.status}
-                    </span>
-                  </div>
-                </div>
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <Loader2 className="animate-spin h-8 w-8" />
+          </div>
+        ) : (
+          <TabsContent value={activeTab}>
+            <div className="space-y-4">
+              {sortedOrders.length === 0 ? (
+                <p className="text-gray-500">
+                  No {activeTab === "table" ? "table orders" : "deliveries"} found
+                </p>
+              ) : (
+                sortedOrders.map((order) => (
+                  <div key={order.id} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-medium">
+                          Order #{order.id.slice(0, 8)}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {new Date(order.createdAt).toLocaleString()}
+                        </p>
+                      </div>
 
-                <div className="mt-2 flex justify-between">
-                  <div>
-                    {order.type === "table_order" && (
-                      <p className="text-sm">
-                        Table: {order.tableNumber || "N/A"}
-                      </p>
-                    )}
-                    <p className="text-sm">
-                      Customer:+91{order.user?.phone || "Unknown"}
-                    </p>
-                    {order.type === "delivery" && (
-                      <p className="text-sm mt-3">
-                        Delivery Address: {order.deliveryAddress || "Unknown"}
-                      </p>
-                    )}
-                  </div>
-                  <p className="font-medium">
-                    Total: {(userData as HotelData)?.currency}
-                    {order.totalPrice.toFixed(2)}
-                  </p>
-                </div>
-
-                <div className="mt-4 border-t pt-4">
-                  <h4 className="font-medium mb-2">Order Items</h4>
-                  <div className="space-y-2">
-                    {order.items?.length ? (
-                      order.items.map((item: OrderItem) => (
-                        <div
-                          key={item.id}
-                          className="flex justify-between text-sm"
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-1 rounded text-xs ${
+                            order.status === "completed"
+                              ? "bg-green-100 text-green-800"
+                              : order.status === "cancelled"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
                         >
-                          <div>
-                            <span className="font-medium">{item.name}</span>
-                            <span className="text-gray-500 ml-2">
-                              x{item.quantity}
-                            </span>
-                            {item.category && (
-                              <span className="text-gray-400 text-xs ml-2 capitalize">
-                                ({item.category.name.trim()})
-                              </span>
-                            )}
-                          </div>
-                          <span>
-                            {(userData as HotelData)?.currency}
-                            {(item.price * item.quantity).toFixed(2)}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-gray-500 text-sm">No items found</p>
-                    )}
-                  </div>
-
-                  {order.status === "pending" && (
-                    <div className="mt-4 flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => updateOrderStatus(order.id, "completed")}
-                      >
-                        Mark Completed
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => updateOrderStatus(order.id, "cancelled")}
-                      >
-                        Cancel Order
-                      </Button>
+                          {order.status}
+                        </span>
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+
+                    <div className="mt-2 flex justify-between">
+                      <div>
+                        {order.type === "table_order" && (
+                          <p className="text-sm">
+                            Table: {order.tableNumber || "N/A"}
+                          </p>
+                        )}
+                        <p className="text-sm">
+                          Customer: +91{order.user?.phone || "Unknown"}
+                        </p>
+                        {order.type === "delivery" && (
+                          <p className="text-sm mt-3">
+                            Delivery Address: {order.deliveryAddress || "Unknown"}
+                          </p>
+                        )}
+                      </div>
+                      <p className="font-medium">
+                        Total: {(userData as HotelData)?.currency}
+                        {order.totalPrice.toFixed(2)}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 border-t pt-4">
+                      <h4 className="font-medium mb-2">Order Items</h4>
+                      <div className="space-y-2">
+                        {order.items?.length ? (
+                          order.items.map((item: OrderItem) => (
+                            <div
+                              key={item.id}
+                              className="flex justify-between text-sm"
+                            >
+                              <div>
+                                <span className="font-medium">{item.name}</span>
+                                <span className="text-gray-500 ml-2">
+                                  x{item.quantity}
+                                </span>
+                                {item.category && (
+                                  <span className="text-gray-400 text-xs ml-2 capitalize">
+                                    ({item.category.name.trim()})
+                                  </span>
+                                )}
+                              </div>
+                              <span>
+                                {(userData as HotelData)?.currency}
+                                {(item.price * item.quantity).toFixed(2)}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-gray-500 text-sm">No items found</p>
+                        )}
+                      </div>
+
+                      {order.status === "pending" && (
+                        <div className="mt-4 flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => updateOrderStatus(order.id, "completed")}
+                          >
+                            Mark Completed
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => updateOrderStatus(order.id, "cancelled")}
+                          >
+                            Cancel Order
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 };
