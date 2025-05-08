@@ -117,6 +117,10 @@ export const revertFeatureToString = (features: FeatureFlags): string => {
     parts.push(`delivery-${features.delivery.enabled}`);
   }
 
+  if (features.multiwhatsapp.access) {
+    parts.push(`multiwhatsapp-${features.multiwhatsapp.enabled}`);
+  }
+
   return parts.join(",");
 };
 

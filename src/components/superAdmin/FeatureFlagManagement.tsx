@@ -30,6 +30,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { revalidateTag } from "@/app/actions/revalidate";
+import { toast } from "sonner";
 
 interface PartnerWithFeatureFlags extends Partner {
   featureFlag: FeatureFlags;
@@ -49,6 +50,8 @@ const FeatureFlagManagement = () => {
       "Enables ordering feature in QR Scan page. When enabled, customers can place orders by scanning the QR code.",
     delivery:
       "Enables ordering feature in Hotel Details page. When enabled, customers can place delivery orders from the hotel details page.",
+    multiwhatsapp:
+      "Enables multiple WhatsApp numbers for a partner. When enabled, partners can add and manage multiple WhatsApp numbers for customer communication.",
   };
 
   const getAllPartners = async () => {
@@ -119,7 +122,6 @@ const FeatureFlagManagement = () => {
 
           // Update in backend
           updatePartnerFeatureFlags(partnerId, updatedFeatureFlag);
-
           return {
             ...partner,
             featureFlag: updatedFeatureFlag,
@@ -140,6 +142,7 @@ const FeatureFlagManagement = () => {
         `mutation UpdatePartnerFeatureFlags($partnerId: uuid!, $featureFlags: String!) {
           update_partners_by_pk(pk_columns: {id: $partnerId}, _set: {feature_flags: $featureFlags}) {
             id
+            feature_flags
           }
         }`,
         {
@@ -189,6 +192,8 @@ const FeatureFlagManagement = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Partner Name</TableHead>
+              
+              {/* Ordering Columns */}
               <TableHead className="text-center">
                 <div className="flex items-center justify-center gap-2">
                   Ordering Access
@@ -218,6 +223,8 @@ const FeatureFlagManagement = () => {
                 </div>
               </TableHead>
               <TableHead className="text-center">Ordering Enabled</TableHead>
+              
+              {/* Delivery Columns */}
               <TableHead className="text-center">
                 <div className="flex items-center justify-center gap-2">
                   Delivery Access
@@ -247,6 +254,37 @@ const FeatureFlagManagement = () => {
                 </div>
               </TableHead>
               <TableHead className="text-center">Delivery Enabled</TableHead>
+              
+              {/* MultiWhatsapp Columns */}
+              <TableHead className="text-center">
+                <div className="flex items-center justify-center gap-2">
+                  MultiWhatsapp Access
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4"
+                        onClick={() => openFeatureDescription("multiwhatsapp")}
+                      >
+                        ℹ️
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>MultiWhatsapp Feature</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {featureDescriptions.multiwhatsapp}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogAction>Close</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </TableHead>
+              <TableHead className="text-center">MultiWhatsapp Enabled</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -309,6 +347,37 @@ const FeatureFlagManagement = () => {
                       updateFeatureFlag(
                         partner.id,
                         "delivery",
+                        "enabled",
+                        checked as boolean
+                      )
+                    }
+                  />
+                </TableCell>
+
+                {/* MultiWhatsapp Access */}
+                <TableCell className="text-center">
+                  <Checkbox
+                    checked={partner.featureFlag.multiwhatsapp?.access ?? false}
+                    onCheckedChange={(checked) =>
+                      updateFeatureFlag(
+                        partner.id,
+                        "multiwhatsapp",
+                        "access",
+                        checked as boolean
+                      )
+                    }
+                  />
+                </TableCell>
+
+                {/* MultiWhatsapp Enabled */}
+                <TableCell className="text-center">
+                  <Checkbox
+                    checked={partner.featureFlag.multiwhatsapp?.enabled ?? false}
+                    disabled={!partner.featureFlag.multiwhatsapp?.access}
+                    onCheckedChange={(checked) =>
+                      updateFeatureFlag(
+                        partner.id,
+                        "multiwhatsapp",
                         "enabled",
                         checked as boolean
                       )

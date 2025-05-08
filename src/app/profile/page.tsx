@@ -105,7 +105,7 @@ export default function ProfilePage() {
   const [isBannerChanged, setIsBannerChanged] = useState(false);
   const [showPricing, setShowPricing] = useState(true);
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
-  const [userFeatures , setUserFeatures] = useState<FeatureFlags | null>(null);
+  const [userFeatures, setUserFeatures] = useState<FeatureFlags | null>(null);
   const [footNote, setFootNote] = useState<string>("");
   const [instaLink, setInstaLink] = useState<string>("");
 
@@ -154,7 +154,6 @@ export default function ProfilePage() {
 
       setUserFeatures(feature);
       console.log(feature);
-      
     }
   }, [userData]);
 
@@ -1048,14 +1047,10 @@ export default function ProfilePage() {
               <div className="space-y-2 pt-4">
                 <label htmlFor="whatsNum" className="text-lg font-semibold">
                   Whatsapp Number
-                  {userFeatures?.multiwhatsapp
-                    .access
-                    ? "s"
-                    : ""}
+                  {userFeatures?.multiwhatsapp.enabled ? "s" : ""}
                 </label>
 
-                {userFeatures?.multiwhatsapp
-                  .access ? (
+                {userFeatures?.multiwhatsapp.enabled ? (
                   // Multi-whatsapp UI
                   <div className="space-y-4">
                     {whatsappNumbers.map((item, index) => (
@@ -1383,6 +1378,7 @@ export default function ProfilePage() {
                             };
 
                             setFeatures(updates);
+                            setUserFeatures(updates);
                             handleFeatureEnabledChange(updates);
                           }}
                         />
@@ -1409,6 +1405,34 @@ export default function ProfilePage() {
                             };
 
                             setFeatures(updates);
+                            setUserFeatures(updates);
+                            handleFeatureEnabledChange(updates);
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {features.multiwhatsapp.access && (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">Multiple Whatsapp Numbers</div>
+                          <div className="text-sm text-gray-500">
+                            {features.multiwhatsapp.enabled ? "Enabled" : "Disabled"}
+                          </div>
+                        </div>
+                        <Switch
+                          checked={features.multiwhatsapp.enabled}
+                          onCheckedChange={(enabled) => {
+                            const updates = {
+                              ...features,
+                              multiwhatsapp: {
+                                ...features.multiwhatsapp,
+                                enabled: enabled,
+                              },
+                            };
+
+                            setFeatures(updates);
+                            setUserFeatures(updates);
                             handleFeatureEnabledChange(updates);
                           }}
                         />
