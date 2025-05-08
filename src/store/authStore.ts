@@ -45,7 +45,10 @@ export interface Partner extends BaseUser {
   status: string;
   upi_id: string;
   description: string | null;
-  whatsapp_number: string;
+  whatsapp_numbers: {
+    number : string;
+    area : string;
+  }[];
   phone: string;
   district: string;
   delivery_status: boolean;
@@ -153,12 +156,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else if (role === "partner") {
         const response = await fetchFromHasura(partnerIdQuery, { id });
         const partner = response?.partners_by_pk;
+
         if (partner) {
           set({
             userData: {
               ...partner,
               password: "",
               currency: partner.currency,
+              whatsapp_numbers : partner.whatsapp_numbers,
               role: "partner",
             } as Partner,
           });

@@ -1,6 +1,6 @@
 "use client";
 import { HotelData } from "@/app/hotels/[id]/page";
-import { Styles } from "@/screens/HotelMenuPage_v2";
+import { FeatureFlags, getFeatures, Styles } from "@/screens/HotelMenuPage_v2";
 import HeadingWithAccent from "@/components/HeadingWithAccent";
 import React, { useEffect, useState } from "react";
 import {
@@ -27,7 +27,7 @@ import {
   TableRow,
 } from "../ui/table";
 import Link from "next/link";
-import { table } from "console";
+import { log, table } from "console";
 import { usePathname } from "next/navigation";
 
 export const getGstAmount = (price: number, gstPercentage: number) => {
@@ -63,6 +63,17 @@ const OrderDrawer = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isQrScan, setIsQrScan] = useState(false);
+  const [featrues, setFeatures] = useState<FeatureFlags | null>(null);
+
+  useEffect(() => {
+    if (hotelData) {
+      console.log("User Data:", hotelData?.role, hotelData?.feature_flags);
+
+      const feature = getFeatures(hotelData?.feature_flags as string);
+
+      setFeatures(feature);
+    }
+  }, [hotelData]);
 
   useEffect(() => {
     if (pathname.includes("qrScan")) {
@@ -73,51 +84,62 @@ const OrderDrawer = ({
   const getWhatsapLink = () => {
     const savedAddress = userAddress || "N/A";
 
+    const selectedWhatsAppNumber = localStorage?.getItem(
+      `hotel-${hotelData.id}-whatsapp-area`
+    );
+
+    console.log(selectedWhatsAppNumber);
+
     const whatsappMsg = `
-*🍽️ Order Details 🍽️*
-
-*Table:* ${tableNumber || "N/A"}
-*Order ID:* ${orderId?.slice(0, 8) || "N/A"}
-${tableNumber ? `*Table:* ${tableNumber}` : "Order Type : Delivery"}
-${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
-*Time:* ${new Date().toLocaleTimeString()}
-
-*📋 Order Items:*
-  ${items
-    ?.map(
-      (item, index) =>
-        `${index + 1}. ${item.name} (${item.category.name})
-   ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(2)} = ${
+  *🍽️ Order Details 🍽️*
+  
+  *Table:* ${tableNumber || "N/A"}
+  *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
+  ${tableNumber ? `*Table:* ${tableNumber}` : "Order Type : Delivery"}
+  ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
+  *Time:* ${new Date().toLocaleTimeString()}
+  
+  *📋 Order Items:*
+    ${items
+      ?.map(
+        (item, index) =>
+          `${index + 1}. ${item.name} (${item.category.name})
+     ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
+            2
+          )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(2)}`
+      )
+      .join("\n\n")}
+  
+  ${
+    hotelData?.gst_percentage
+      ? `*GST (${hotelData.gst_percentage}%):* ${
           hotelData.currency
-        }${(item.price * item.quantity).toFixed(2)}`
-    )
-    .join("\n\n")}
+        }${getGstAmount(totalPrice as number, hotelData.gst_percentage).toFixed(
+          2
+        )}`
+      : ""
+  }
+  ${
+    hotelData?.gst_percentage
+      ? `*Subtotal:* ${hotelData.currency}${totalPrice}`
+      : ""
+  }
+  ${
+    hotelData?.gst_percentage
+      ? `*Total Price:* ${hotelData.currency}${(
+          (totalPrice as number) +
+          getGstAmount(totalPrice as number, hotelData.gst_percentage)
+        ).toFixed(2)}`
+      : `*Total Price:* ${hotelData.currency}${totalPrice}`
+  }
+  `;
 
-${
-  hotelData?.gst_percentage
-    ? `*GST (${hotelData.gst_percentage}%):* ${
-        hotelData.currency
-      }${getGstAmount(totalPrice as number, hotelData.gst_percentage).toFixed(
-        2
-      )}`
-    : ""
-}
-${
-  hotelData?.gst_percentage
-    ? `*Subtotal:* ${hotelData.currency}${totalPrice}`
-    : ""
-}
-${
-  hotelData?.gst_percentage
-    ? `*Total Price:* ${hotelData.currency}${(
-        (totalPrice as number) +
-        getGstAmount(totalPrice as number, hotelData.gst_percentage)
-      ).toFixed(2)}`
-    : `*Total Price:* ${hotelData.currency}${totalPrice}`
-}
-`;
+    // Use the selected WhatsApp number if available, otherwise fall back to default
     const number =
-      hotelData?.whatsapp_number || hotelData?.phone || "8590115462";
+      selectedWhatsAppNumber ||
+      hotelData?.whatsapp_numbers[0]?.number ||
+      hotelData?.phone ||
+      "8590115462";
 
     const whatsappUrl = `https://api.whatsapp.com/send?phone=+91${number}&text=${encodeURIComponent(
       whatsappMsg
@@ -125,7 +147,6 @@ ${
 
     return whatsappUrl;
   };
-
   const handlePlaceOrder = async () => {
     setIsLoading(true);
 
@@ -146,7 +167,14 @@ ${
   };
 
   const handleViewOrder = () => {
-    if (!isQrScan && !userAddress) {
+    const hotelArea = localStorage.getItem(
+      `hotel-${hotelData.id}-whatsapp-area`
+    );
+
+    const needsAddress = !isQrScan && !userAddress;
+    const needsWhatsAppArea = featrues?.multiwhatsapp.enabled && !hotelArea;
+
+    if (needsAddress || needsWhatsAppArea) {
       setOpenAuthModal(true);
       return;
     }
@@ -301,10 +329,7 @@ ${
             <>
               <div className="flex justify-between items-center mb-4 text-sm">
                 <span className="font-bold">Total:</span>
-                <span
-                  className="font-bold"
-                  style={{ color: styles.accent }}
-                >
+                <span className="font-bold" style={{ color: styles.accent }}>
                   {hotelData.currency}
                   {(order?.totalPrice ?? totalPrice ?? 0).toFixed(2)}
                 </span>
@@ -320,8 +345,7 @@ ${
                     getGstAmount(
                       order?.totalPrice ?? totalPrice ?? 0,
                       hotelData.gst_percentage
-                    ) +
-                    (order?.totalPrice ?? totalPrice ?? 0)
+                    ) + (order?.totalPrice ?? totalPrice ?? 0)
                   ).toFixed(2)}
                 </span>
               </div>
@@ -341,33 +365,39 @@ ${
             </>
           )}
 
-          {!order ? (
-            <>
-              <Link
-                href={getWhatsapLink()}
-                onClick={handlePlaceOrder}
-                target="_blank"
-                // onClick={handlePlaceOrder}
-                style={{ backgroundColor: styles.accent }}
-                className="flex-1 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
-              >
-                {isLoading ? (
+          <>
+            {items && items.length > 0 && (
+              <>
+                {!order ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Placing Order...
+                    <Link
+                      href={getWhatsapLink()}
+                      onClick={handlePlaceOrder}
+                      target="_blank"
+                      // onClick={handlePlaceOrder}
+                      style={{ backgroundColor: styles.accent }}
+                      className="flex-1 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Placing Order...
+                        </>
+                      ) : (
+                        <>Place Order</>
+                      )}
+                    </Link>
                   </>
                 ) : (
-                  <>Place Order</>
+                  <>
+                    <div className="w-full text-center text-sm text-gray-500">
+                      Your order has been placed. Please wait for confirmation.
+                    </div>
+                  </>
                 )}
-              </Link>
-            </>
-          ) : (
-            <>
-              <div className="w-full text-center text-sm text-gray-500">
-                Your order has been placed. Please wait for confirmation.
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>

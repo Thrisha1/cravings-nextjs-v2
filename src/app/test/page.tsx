@@ -1,112 +1,61 @@
-"use client";
-import { useAuthStore } from '@/store/authStore';
-import React, { useEffect, useState } from 'react';
-import { getAuthCookie } from '../auth/actions';
-import { subscribeToHasura } from '@/lib/hasuraSubscription';
-import { OrderItem } from '@/store/orderStore';
+import { fetchFromHasura } from '@/lib/hasuraClient'
+import React from 'react'
 
-const subscriptionQuery = `
-subscription GetPartnerOrders($partner_id: uuid!) {
-  orders(
-    where: { partner_id: { _eq: $partner_id } }
-    order_by: { created_at: desc }
-  ) {
-    id
-    total_price
-    created_at
-    table_number
-    qr_id
-    type
-    delivery_address
-    status
-    partner_id
-    user_id
-    user {
-      full_name
-      phone
-      email
-    }
-    order_items {
-      id
-      quantity
-      menu {
-        id
-        name
-        price
-        category {
-          name
-        }
-      }
-    }
-  }
+interface WhatsappNumber {
+  number: string,
+  area: string
 }
-`;
 
-const Page = () => {
-  const [id, setId] = useState<string | null>(null);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [connectionStatus, setConnectionStatus] = useState<string>('Disconnected');
+const page = async () => {
+  // Fetch partners with whatsapp numbers
+  const response = await fetchFromHasura(
+     `query GetPartnersWithWhatsapp {
+      partners(where: {whatsapp_number: {_is_null: false}}) {
+        id
+        whatsapp_number
+        whatsapp_numbers
+      }
+    }`
+  );
 
-  useEffect(() => {
-    if (!id) return;
-
-    console.log('Initializing subscription...');
-    setConnectionStatus('Connecting...');
-
-    const unsubscribe = subscribeToHasura({
-      query: subscriptionQuery,
-      variables: { partner_id: id },
-      onNext: (data) => {
-        console.log('New order data received:', data);
-        if (data.data?.orders) {
-          setOrders(prev => {
-            const newOrders = data.data?.orders || [];
-            const orderMap = new Map(prev.map(order => [order.id, order]));
-            newOrders.forEach((order : OrderItem) => orderMap.set(order.id, order));
-            return Array.from(orderMap.values());
-          });
-        }
-      },
-      onError: (error) => {
-        console.error('Subscription error:', error);
-        setConnectionStatus(`Error: ${error.message}`);
-      },
-      onComplete: () => {
-        console.log('Subscription completed');
-        setConnectionStatus('Completed');
-      },
-    });
-
-    return () => {
-      console.log('Cleaning up subscription...');
-      unsubscribe();
-    };
-  }, [id]);
-
-  useEffect(() => {
-    const getUserId = async () => {
-      const userId = (await getAuthCookie())?.id;
-      setId(userId || "");
-      console.log('User ID:', userId);
+  // Process each partner to update their whatsapp_numbers
+  const partnersWithUpdatedNumbers = response.partners.map(partner => {
+    // If whatsapp_number exists but whatsapp_numbers is empty/null
+    if (partner.whatsapp_number && (!partner.whatsapp_numbers || partner.whatsapp_numbers.length === 0)) {
+      return {
+        ...partner,
+        whatsapp_numbers: [{ number: partner.whatsapp_number, area: "default" }]
+      };
     }
+    return partner;
+  });
 
-    getUserId();
-  }, []);
+  console.log('Updated partners data:', partnersWithUpdatedNumbers);
+
+  // Update each partner in Hasura
+  // await Promise.all(partnersWithUpdatedNumbers.map(async (partner) => {
+  //   await fetchFromHasura(
+  //     `mutation UpdatePartner($id: uuid!, $whatsapp_numbers: jsonb!) {
+  //       update_partners_by_pk(
+  //         pk_columns: {id: $id},
+  //         _set: {whatsapp_numbers: $whatsapp_numbers}
+  //       ) {
+  //         id
+  //       }
+  //     }`,
+  //   {
+  //       id: partner.id,
+  //       whatsapp_numbers: partner.whatsapp_numbers
+  //     }
+  //   );
+  // }));
 
   return (
     <div>
-      <h1>Orders</h1>
-      <p>Connection status: {connectionStatus}</p>
-      <p>Total orders: {orders.length}</p>
-      <ul>
-        {orders.map((order, index) => (
-          <li key={index}>
-            Order : {order.id} - {order.total_price} - {order.created_at} - {order.table_number} - {order.qr_id} - {order.type} - {order.delivery_address} - {order.status}
-          </li>
-        ))}
-      </ul>
+      <h1>Partners Page</h1>
+      <p>Processed {partnersWithUpdatedNumbers.length} partners</p>
     </div>
-  );
-};
+  )
+}
 
-export default Page;
+export default page

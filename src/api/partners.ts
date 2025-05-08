@@ -36,7 +36,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     description
     feature_flags
     phone
-    whatsapp_number
+    whatsapp_numbers
     store_banner
     social_links
     footnote
@@ -127,7 +127,7 @@ export const updatePartnerMutation = `
       description
       currency
       feature_flags
-      whatsapp_number
+      whatsapp_numbers
     }
   }
 `;

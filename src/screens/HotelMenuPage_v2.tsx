@@ -1,14 +1,12 @@
 "use client";
 
-import { SearchIcon } from "lucide-react";
 import MenuItemsList from "@/components/hotelDetail/MenuItemsList_v2";
 import { Offer } from "@/store/offerStore_hasura";
 import { HotelData, SocialLinks } from "@/app/hotels/[id]/page";
 import ThemeChangeButton, {
   ThemeConfig,
 } from "@/components/hotelDetail/ThemeChangeButton";
-import Img from "@/components/Img";
-import HeadingWithAccent from "@/components/HeadingWithAccent";
+
 import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
 import { Category } from "@/store/categoryStore_hasura";
 import PopularItemsList from "@/components/hotelDetail/PopularItemsList";
@@ -18,15 +16,10 @@ import HotelBanner from "@/components/hotelDetail/HotelBanner";
 import RateThis from "@/components/RateThis";
 import OrderDrawer from "@/components/hotelDetail/OrderDrawer";
 import useOrderStore from "@/store/orderStore";
-import { useEffect, useState } from "react"; // Add this import
-import { useAuthStore } from "@/store/authStore";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import SocialLinkList from "@/components/SocialLinkList";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import AuthModal from "@/components/hotelDetail/AuthModal";
 
 export type MenuItem = {
   description: string;
@@ -68,6 +61,10 @@ export type FeatureFlags = {
     access: boolean;
     enabled: boolean;
   };
+  multiwhatsapp: {
+    access: boolean;
+    enabled: boolean;
+  };
 };
 
 export const getFeatures = (perm: string) => {
@@ -78,6 +75,10 @@ export const getFeatures = (perm: string) => {
       enabled: false,
     },
     delivery: {
+      access: false,
+      enabled: false,
+    },
+    multiwhatsapp: {
       access: false,
       enabled: false,
     },
@@ -95,6 +96,9 @@ export const getFeatures = (perm: string) => {
       } else if (key === "delivery") {
         permissions.delivery.access = true;
         permissions.delivery.enabled = value === "true";
+      } else if (key === "multiwhatsapp") {
+        permissions.multiwhatsapp.access = true;
+        permissions.multiwhatsapp.enabled = value === "true";
       }
     }
   }
@@ -135,10 +139,7 @@ const HotelMenuPage = ({
     },
   };
 
-  const { open_auth_modal, setHotelId, genOrderId } = useOrderStore();
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [address, setAddress] = useState("");
-  const { setUserAddress } = useOrderStore();
+  const { setHotelId, genOrderId } = useOrderStore();
 
   const pathname = usePathname();
 
@@ -199,93 +200,7 @@ const HotelMenuPage = ({
       className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 lg:px-[20%] `}
     >
       {/* Auth Modal */}
-      <Dialog
-        open={open_auth_modal}
-        onOpenChange={useOrderStore.getState().setOpenAuthModal}
-      >
-        <DialogContent
-          className="rounded-lg"
-          style={{
-            backgroundColor: styles.backgroundColor,
-            color: styles.color,
-            border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="text-2xl" style={{ color: styles.accent }}>
-              Please enter your details to place order
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="phone" className="mb-2">
-                Phone Number
-              </Label>
-              <Input
-                type="tel"
-                id="phone"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                style={{
-                  backgroundColor: styles.backgroundColor,
-                  color: styles.color,
-                  border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
-                }}
-                placeholder="Enter your phone number"
-              />
-            </div>
-
-            {!tableNumber && (
-              <div>
-                <Label htmlFor="address" className="mb-2">
-                  Delivery Address
-                </Label>
-                <Textarea
-                  id="address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="min-h-[100px]"
-                  style={{
-                    backgroundColor: styles.backgroundColor,
-                    color: styles.color,
-                    border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
-                  }}
-                  placeholder="Enter your delivery address (House no, Building, Street, Area)"
-                />
-              </div>
-            )}
-
-            <Button
-              onClick={async () => {
-                if (!phoneNumber) {
-                  alert("Please enter both phone number and address.");
-                  return;
-                }
-                if (!tableNumber && !address) {
-                  alert("Please enter the delivery address.");
-                  return;
-                }
-                setUserAddress(address);
-                const result = await useAuthStore
-                  .getState()
-                  .signInWithPhone(phoneNumber, hoteldata?.id);
-                if (result) {
-                  console.log("Login successful", result);
-                  useOrderStore.getState().setOpenAuthModal(false);
-                }
-              }}
-              className="w-full"
-              style={{
-                backgroundColor: styles.accent,
-                color: "#fff",
-              }}
-            >
-              Submit
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AuthModal hoteldata={hoteldata} styles={styles} tableNumber={tableNumber} />
 
       {/* top part  */}
       <section className="px-[8%] pt-[20px]">
@@ -385,7 +300,9 @@ const HotelMenuPage = ({
       )}
 
       {/* rating  */}
-      <section className={`px-[8.5%] mt-10 ${hoteldata?.footnote ? "" : "mb-40"}`}>
+      <section
+        className={`px-[8.5%] mt-10 ${hoteldata?.footnote ? "" : "mb-40"}`}
+      >
         <RateThis styles={styles} hotel={hoteldata} type="hotel" />
       </section>
 

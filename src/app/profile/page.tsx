@@ -1,8 +1,8 @@
 "use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UtensilsCrossed, Tag, LogOutIcon, Pencil } from "lucide-react";
-import { useAuthStore } from "@/store/authStore";
+import { UtensilsCrossed, Tag, LogOutIcon, Pencil, Trash2 } from "lucide-react";
+import { Partner, useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -55,7 +55,7 @@ const Currencies = [
   { label: "EUR", value: "€" },
   { label: "GBP", value: "£" },
   { label: "KWD", value: "د.ك" },
-  { label: "BHD", value: ".د.ب" },
+  { label: "BHD", value: "د.ب" },
   { label: "None", value: " " },
 ];
 
@@ -94,6 +94,9 @@ export default function ProfilePage() {
   });
   const [description, setDescription] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [whatsappNumbers, setWhatsappNumbers] = useState<
+    { number: string; area: string }[]
+  >([]);
   const [currency, setCurrency] = useState(Currencies[0]);
   const [bannerImage, setBannerImage] = useState<string | null>(
     userData?.role === "partner" ? userData.store_banner || null : null
@@ -102,6 +105,7 @@ export default function ProfilePage() {
   const [isBannerChanged, setIsBannerChanged] = useState(false);
   const [showPricing, setShowPricing] = useState(true);
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
+  const [userFeatures , setUserFeatures] = useState<FeatureFlags | null>(null);
   const [footNote, setFootNote] = useState<string>("");
   const [instaLink, setInstaLink] = useState<string>("");
 
@@ -124,7 +128,14 @@ export default function ProfilePage() {
           ? getFeatures(userData.feature_flags || "")
           : null
       );
-      setWhatsappNumber(userData.whatsapp_number || userData.phone || "");
+      setWhatsappNumber(
+        userData.whatsapp_numbers[0]?.number || userData.phone || ""
+      );
+      setWhatsappNumbers(
+        userData.whatsapp_numbers?.length > 0
+          ? userData.whatsapp_numbers
+          : [{ number: userData.phone || "", area: "default" }]
+      );
       setFootNote(userData.footnote || "");
       const socialLinks = getSocialLinks(userData as HotelData);
       setInstaLink(socialLinks.instagram || "");
@@ -132,6 +143,18 @@ export default function ProfilePage() {
         gst_no: userData.gst_no || "",
         gst_percentage: userData.gst_percentage || 0,
       });
+    }
+  }, [userData]);
+
+  useEffect(() => {
+    if (userData?.role === "partner") {
+      console.log("User Data:", userData?.role, userData?.feature_flags);
+
+      const feature = getFeatures(userData?.feature_flags as string);
+
+      setUserFeatures(feature);
+      console.log(feature);
+      
     }
   }, [userData]);
 
@@ -492,11 +515,23 @@ export default function ProfilePage() {
       await fetchFromHasura(updatePartnerMutation, {
         id: userData?.id,
         updates: {
-          whatsapp_number: whatsappNumber,
+          whatsapp_numbers: [
+            {
+              number: whatsappNumber,
+              area: "default",
+            },
+          ],
         },
       });
       revalidateTag(userData?.id as string);
-      setState({ whatsapp_number: whatsappNumber });
+      setState({
+        whatsapp_numbers: [
+          {
+            number: whatsappNumber,
+            area: "default",
+          },
+        ],
+      });
       toast.dismiss("whatsapp-num");
       toast.success("Whatsapp Number updated successfully!");
       setIsSaving((prev) => {
@@ -516,9 +551,59 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSaveWhatsappNumbers = async () => {
+    try {
+      // Validate all numbers
+      for (const item of whatsappNumbers) {
+        if (!item.number || item.number.length !== 10) {
+          toast.error(
+            `Please enter a valid Whatsapp Number for ${
+              item.area || "unnamed area"
+            }`
+          );
+          return;
+        }
+        if (!item.area) {
+          toast.error("Please specify an area for each number");
+          return;
+        }
+      }
+
+      toast.loading("Updating Whatsapp Numbers...", {
+        id: "whatsapp-nums",
+      });
+
+      setIsSaving((prev) => ({ ...prev, whatsappNumber: true }));
+
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          whatsapp_numbers: whatsappNumbers,
+        },
+      });
+
+      revalidateTag(userData?.id as string);
+      setState({
+        whatsapp_numbers: whatsappNumbers,
+      });
+
+      toast.dismiss("whatsapp-nums");
+      toast.success("Whatsapp Numbers updated successfully!");
+      setIsSaving((prev) => ({ ...prev, whatsappNumber: false }));
+    } catch (error) {
+      toast.dismiss("whatsapp-nums");
+      console.error("Error updating Whatsapp Numbers:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update Whatsapp Numbers"
+      );
+      setIsSaving((prev) => ({ ...prev, whatsappNumber: false }));
+    }
+  };
+
   const handleSaveFootNote = async () => {
     try {
-
       toast.loading("Updating Footnote...", {
         id: "foot-note",
       });
@@ -604,7 +689,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveGst = async (e : React.FormEvent) => {
+  const handleSaveGst = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
@@ -963,56 +1048,133 @@ export default function ProfilePage() {
               <div className="space-y-2 pt-4">
                 <label htmlFor="whatsNum" className="text-lg font-semibold">
                   Whatsapp Number
+                  {userFeatures?.multiwhatsapp
+                    .access
+                    ? "s"
+                    : ""}
                 </label>
-                <div className="flex gap-2">
-                  {isEditing.whatsappNumber ? (
-                    <>
-                      <Input
-                        id="whatsNum"
-                        type="text"
-                        placeholder="Enter your Whatsapp Number"
-                        minLength={10}
-                        maxLength={10}
-                        value={whatsappNumber}
-                        onChange={(e) => setWhatsappNumber(e.target.value)}
-                        className="flex-1"
-                      />
+
+                {userFeatures?.multiwhatsapp
+                  .access ? (
+                  // Multi-whatsapp UI
+                  <div className="space-y-4">
+                    {whatsappNumbers.map((item, index) => (
+                      <div key={index} className="flex gap-2 items-center">
+                        <div className="flex-1 grid grid-cols-2 gap-2">
+                          <Input
+                            placeholder="Area (e.g. North, South)"
+                            value={item.area}
+                            onChange={(e) => {
+                              const newNumbers = [...whatsappNumbers];
+                              newNumbers[index].area = e.target.value;
+                              setWhatsappNumbers(newNumbers);
+                            }}
+                          />
+                          <Input
+                            type="text"
+                            placeholder="Whatsapp Number"
+                            minLength={10}
+                            maxLength={10}
+                            value={item.number}
+                            onChange={(e) => {
+                              const newNumbers = [...whatsappNumbers];
+                              newNumbers[index].number = e.target.value;
+                              setWhatsappNumbers(newNumbers);
+                            }}
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            const newNumbers = [...whatsappNumbers];
+                            newNumbers.splice(index, 1);
+                            setWhatsappNumbers(newNumbers);
+                          }}
+                          className="text-red-500 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+
+                    <div className="flex gap-2">
                       <Button
-                        onClick={handleSaveWhatsappNumber}
-                        disabled={isSaving.whatsappNumber || !whatsappNumber}
+                        onClick={() =>
+                          setWhatsappNumbers([
+                            ...whatsappNumbers,
+                            { number: "", area: "" },
+                          ])
+                        }
+                        variant="outline"
+                      >
+                        Add Another Number
+                      </Button>
+                      <Button
+                        onClick={handleSaveWhatsappNumbers}
+                        disabled={
+                          isSaving.whatsappNumber || !whatsappNumbers.length
+                        }
                         className="bg-orange-600 hover:bg-orange-700 text-white"
                       >
                         {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
                       </Button>
-                    </>
-                  ) : (
-                    <div className="flex justify-between items-center w-full">
-                      <span className="text-gray-700">
-                        {whatsappNumber
-                          ? whatsappNumber
-                          : "No Whatsapp Number set"}
-                      </span>
-                      <Button
-                        onClick={() => {
-                          setIsEditing((prev) => ({
-                            ...prev,
-                            whatsappNumber: true,
-                          }));
-                          setWhatsappNumber(
-                            whatsappNumber ? whatsappNumber : ""
-                          );
-                        }}
-                        variant="ghost"
-                        className="hover:bg-orange-100"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  // Single whatsapp number UI (original code)
+                  <div className="flex gap-2">
+                    {isEditing.whatsappNumber ? (
+                      <>
+                        <Input
+                          id="whatsNum"
+                          type="text"
+                          placeholder="Enter your Whatsapp Number"
+                          minLength={10}
+                          maxLength={10}
+                          value={whatsappNumber}
+                          onChange={(e) => setWhatsappNumber(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          onClick={handleSaveWhatsappNumber}
+                          disabled={isSaving.whatsappNumber || !whatsappNumber}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
+                        </Button>
+                      </>
+                    ) : (
+                      <div className="flex justify-between items-center w-full">
+                        <span className="text-gray-700">
+                          {whatsappNumber
+                            ? whatsappNumber
+                            : "No Whatsapp Number set"}
+                        </span>
+                        <Button
+                          onClick={() => {
+                            setIsEditing((prev) => ({
+                              ...prev,
+                              whatsappNumber: true,
+                            }));
+                            setWhatsappNumber(
+                              whatsappNumber ? whatsappNumber : ""
+                            );
+                          }}
+                          variant="ghost"
+                          className="hover:bg-orange-100"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <p className="text-sm text-gray-500">
-                  This Whatsapp Number will be used for receiving messages from
-                  customers
+                  {getFeatures(userData.feature_flags as string).multiwhatsapp
+                    .access
+                    ? "These Whatsapp Numbers will be used for receiving messages from customers in different areas"
+                    : "This Whatsapp Number will be used for receiving messages from customers"}
                 </p>
               </div>
 
@@ -1262,10 +1424,7 @@ export default function ProfilePage() {
                   {isEditing.gst ? (
                     <form onSubmit={handleSaveGst} className="space-y-2">
                       <div>
-                        <label
-                          htmlFor="gst_no"
-                          className=" font-semibold"
-                        >
+                        <label htmlFor="gst_no" className=" font-semibold">
                           Gst No.
                         </label>
                         <Input
@@ -1307,7 +1466,6 @@ export default function ProfilePage() {
                       </div>
 
                       <Button
-
                         disabled={isSaving.gst}
                         className="bg-orange-600 hover:bg-orange-700 text-white"
                       >
@@ -1318,10 +1476,14 @@ export default function ProfilePage() {
                     <div className="flex justify-between items-center w-full">
                       <div className="flex flex-col gap-2">
                         <div className="text-gray-700">
-                          {gst.gst_no ? `GST no: ${gst.gst_no}` : "No Gst no. set"}
+                          {gst.gst_no
+                            ? `GST no: ${gst.gst_no}`
+                            : "No Gst no. set"}
                         </div>
                         <div className="text-gray-700">
-                        {gst.gst_percentage ? `GST percentage: ${gst.gst_percentage}%` : "No Gst percentage set"}
+                          {gst.gst_percentage
+                            ? `GST percentage: ${gst.gst_percentage}%`
+                            : "No Gst percentage set"}
                         </div>
                       </div>
                       <Button
