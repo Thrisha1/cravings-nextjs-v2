@@ -1,8 +1,16 @@
 import { create } from "zustand";
 import { MenuItem } from "./menuStore_hasura";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { createPOSOrder, createPOSItems, getPastBills, deleteBillMutation } from "@/api/pos";
-import { useAuthStore } from "./authStore";
+import {
+  createPOSOrder,
+  createPOSItems,
+  getPastBills,
+  deleteBillMutation,
+} from "@/api/pos";
+import { Partner, useAuthStore } from "./authStore";
+import useOrderStore, { Order } from "./orderStore";
+import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
+import { createOrderItemsMutation, createOrderMutation, getOrdersOfPartnerQuery } from "@/api/orders";
 
 interface CartItem extends MenuItem {
   quantity: number;
@@ -15,7 +23,7 @@ interface POSItem {
   menu: {
     name: string;
     price: number;
-  }
+  };
 }
 
 interface POSBill {
@@ -24,29 +32,84 @@ interface POSBill {
   phone: number | null;
   created_at: Date;
   pos_show_id: string;
-  pos_items: POSItem[];  // Updated field name
+  pos_items: POSItem[]; // Updated field name
 }
 
 interface POSState {
   loading: boolean;
   cartItems: CartItem[];
   totalAmount: number;
+  userPhone : string | null;
+  setUserPhone: (phone: string | null) => void;
+  tableNumbers : number[];
+  tableNumber: number;
+  setTableNumber: (tableNumber: number) => void;
   addToCart: (item: MenuItem) => void;
   removeFromCart: (itemId: string) => void;
   increaseQuantity: (itemId: string) => void;
   decreaseQuantity: (itemId: string) => void;
   clearCart: () => void;
-  checkout: (phone?: number) => Promise<void>;
-  pastBills: POSBill[];
+  checkout: () => Promise<void>;
+  pastBills: Order[];
   loadingBills: boolean;
   fetchPastBills: () => Promise<void>;
   deleteBill: (billId: string) => Promise<void>;
+  order: Order | null;
+  setOrder: (order: Order | null) => void;
+  getPartnerTables: () => Promise<void>;
+  postCheckoutModalOpen: boolean;
+  editOrderModalOpen: boolean;
+  setPostCheckoutModalOpen: (open: boolean) => void;
+  setEditOrderModalOpen: (open: boolean) => void;
 }
 
 export const usePOSStore = create<POSState>((set, get) => ({
   loading: false,
   cartItems: [],
   totalAmount: 0,
+  order: null,
+  userPhone: null,
+  tableNumber: 0,
+  tableNumbers: [],
+  postCheckoutModalOpen: false,
+  editOrderModalOpen: false,
+
+  setPostCheckoutModalOpen: (open) => set({ postCheckoutModalOpen: open }),
+  setEditOrderModalOpen: (open) => set({ editOrderModalOpen: open }),
+
+  getPartnerTables: async () => {
+    try {
+      const response = await fetchFromHasura(`
+        query MyQuery($partner_id: uuid!) {
+          qr_codes(where: {partner_id: {_eq: $partner_id}}, order_by: {table_number: asc}) {
+            table_number
+          }
+      }
+    `, {
+        partner_id: useAuthStore.getState().userData?.id,
+      });
+
+      const tableNumbers = response.qr_codes.map((table: { table_number: number }) => table.table_number);
+
+      set({ tableNumbers });
+
+    } catch (error) {
+      console.error("Error fetching partner tables:", error);
+      throw error;
+    }
+  },
+
+  setTableNumber: (tableNumber: number) => {
+    set({ tableNumber });
+  },
+
+  setUserPhone: (phone: string | null) => {
+    set({ userPhone: phone });
+  },
+
+  setOrder: (order: Order | null) => {
+    set({ order });
+  },
 
   addToCart: (item: MenuItem) => {
     const { cartItems } = get();
@@ -71,18 +134,18 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
     set((state) => ({
       cartItems: state.cartItems.filter((item) => item.id !== itemId),
-      totalAmount: state.totalAmount - (item.price * item.quantity),
+      totalAmount: state.totalAmount - item.price * item.quantity,
     }));
   },
 
   increaseQuantity: (itemId: string) => {
     set((state) => ({
       cartItems: state.cartItems.map((item) =>
-        item.id === itemId
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
+        item.id === itemId ? { ...item, quantity: item.quantity + 1 } : item
       ),
-      totalAmount: state.totalAmount + (state.cartItems.find((item) => item.id === itemId)?.price || 0),
+      totalAmount:
+        state.totalAmount +
+        (state.cartItems.find((item) => item.id === itemId)?.price || 0),
     }));
   },
 
@@ -99,9 +162,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
     set((state) => ({
       cartItems: state.cartItems.map((item) =>
-        item.id === itemId
-          ? { ...item, quantity: item.quantity - 1 }
-          : item
+        item.id === itemId ? { ...item, quantity: item.quantity - 1 } : item
       ),
       totalAmount: state.totalAmount - item.price,
     }));
@@ -111,53 +172,71 @@ export const usePOSStore = create<POSState>((set, get) => ({
     set({ cartItems: [], totalAmount: 0 });
   },
 
-  checkout: async (phone?: number) => {
+  checkout: async () => {
     try {
       set({ loading: true });
       const { cartItems, totalAmount } = get();
+      const userId = useAuthStore.getState().userData?.id;
+      const hotelData = useAuthStore.getState().userData as Partner;
 
-      // Generate a 5 character POS ID combining numbers and uppercase letters
-      const generatePosId = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let result = '';
-        for (let i = 0; i < 5; i++) {
-          result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
+      if (!userId) {
+        throw new Error("User ID is not available");
+      }
+
+      const orderId = crypto.randomUUID();
+
+      const newOrder = {
+        id: orderId,
+        totalPrice: hotelData?.gst_percentage
+          ? totalAmount + getGstAmount(totalAmount, hotelData.gst_percentage)
+          : totalAmount,
+        createdAt: new Date().toISOString(),
+        tableNumber: get().tableNumber,
+        status: "completed" as "completed",
+        partnerId: userId,
+        type: "table_order" as "table_order",
+        phone: get().userPhone,
       };
 
-      const pos_id = generatePosId();
+      const orderResponse = await fetchFromHasura(
+        createOrderMutation,
+        newOrder
+      );
+      
 
-      // Create POS order
-      const orderResponse = await fetchFromHasura(createPOSOrder, {
-        total_amt: Math.round(totalAmount),
-        phone: phone || null,
-        pos_id: pos_id
+
+      if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
+        throw new Error(
+          orderResponse.errors?.[0]?.message || "Failed to create order"
+        );
+      }
+
+      const itemsResponse = await fetchFromHasura(createOrderItemsMutation, {
+        orderItems: cartItems.map((item) => ({
+          order_id: orderId,
+          menu_id: item.id,
+          quantity: item.quantity,
+        })),
       });
 
-      const posId = orderResponse.insert_pos_one.id;
+      if (itemsResponse.errors) {
+        throw new Error(
+          itemsResponse.errors?.[0]?.message || "Failed to add order items"
+        );
+      }
+      
 
-      // Create POS items
-      const posItems = cartItems.map(item => ({
-        menu_id: item.id,
-        pos_id: posId,
-        quantity: item.quantity
-      }));
-
-      await fetchFromHasura(createPOSItems, {
-        items: posItems
-      });
-
-      // Clear cart after successful checkout
       get().clearCart();
-
-      set({ loading: false }); // Reset loading after successful checkout
-
+      set({ loading: false , order : {
+        ...newOrder,
+        items: cartItems,
+      } });
+      set({ postCheckoutModalOpen: true });
     } catch (error) {
-      console.error('Error during checkout:', error);
+      console.error("Error during checkout:", error);
       throw error;
     }
-  },  // <-- Added missing comma here
+  },
 
   pastBills: [],
   loadingBills: false,
@@ -165,13 +244,13 @@ export const usePOSStore = create<POSState>((set, get) => ({
   fetchPastBills: async () => {
     try {
       set({ loadingBills: true });
-      const response = await fetchFromHasura(getPastBills, {
-        user_id: useAuthStore.getState().userData?.id
+      const response = await fetchFromHasura(getOrdersOfPartnerQuery, {
+        partner_id: useAuthStore.getState().userData?.id,
       });
-      console.log(response.pos); // Log the fetched data to the console for inspection
-      set({ pastBills: response.pos, loadingBills: false });
+      console.log(response); // Log the fetched data to the console for inspection
+      set({ pastBills: response.orders, loadingBills: false });
     } catch (error) {
-      console.error('Error fetching past bills:', error);
+      console.error("Error fetching past bills:", error);
       set({ loadingBills: false });
       throw error;
     }
@@ -179,16 +258,15 @@ export const usePOSStore = create<POSState>((set, get) => ({
   deleteBill: async (billId: string) => {
     try {
       await fetchFromHasura(deleteBillMutation, {
-        id: billId
+        id: billId,
       });
-      
+
       // Update local state after successful deletion
       const currentBills = get().pastBills;
-      set({ pastBills: currentBills.filter(bill => bill.id !== billId) });
-      
+      set({ pastBills: currentBills.filter((bill) => bill.id !== billId) });
     } catch (error) {
-      console.error('Error deleting bill:', error);
+      console.error("Error deleting bill:", error);
       throw error;
     }
-  }
+  },
 }));

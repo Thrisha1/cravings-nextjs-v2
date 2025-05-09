@@ -3,9 +3,10 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { useAuthStore } from "./authStore";
-import { createOrderItemsMutation, createOrderMutation } from "@/api/orders";
+import { createOrderItemsMutation, createOrderMutation, subscriptionQuery } from "@/api/orders";
 import { toast } from "sonner";
 import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
+import { subscribeToHasura } from "@/lib/hasuraSubscription";
 
 export interface OrderItem extends HotelDataMenus {
   quantity: number;
@@ -20,11 +21,12 @@ export interface Order {
   qrId?: string | null;
   status: "pending" | "completed" | "cancelled";
   partnerId: string;
-  userId: string;
+  phone?: string | null;
+  userId?: string;
   user?: {
     phone?: string;
   };
-  type?: "table_order" | "delivery";
+  type?: "table_order" | "delivery" | "pos";
   deliveryAddress?: string | null;
 }
 
@@ -44,7 +46,7 @@ interface OrderState {
   items: OrderItem[] | null;
   orderId: string | null;
   totalPrice: number | null;
-  
+
   setHotelId: (id: string) => void;
   addItem: (item: HotelDataMenus) => void;
   removeItem: (itemId: string) => void;
@@ -61,6 +63,10 @@ interface OrderState {
   setOpenAuthModal: (open: boolean) => void;
   genOrderId: () => string;
   setUserAddress: (address: string) => void;
+  subscribeOrders: (
+    callback?: (orders: Order[]) => void
+  ) => () => void;
+  partnerOrders: Order[];
 }
 
 const useOrderStore = create(
@@ -73,7 +79,51 @@ const useOrderStore = create(
       order: null,
       items: [],
       orderId: null,
+      partnerOrders: [],
       totalPrice: 0,
+
+      subscribeOrders: (callback) => {
+
+        const partnerId = useAuthStore.getState().userData?.id;
+
+        const unsubscribe = subscribeToHasura({
+          query: subscriptionQuery,
+          variables: { partner_id: partnerId },
+          onNext: (data) => {
+            const allOrders = data.data?.orders.map((order: any) => ({
+              id: order.id,
+              totalPrice: order.total_price,
+              createdAt: order.created_at,
+              tableNumber: order.table_number,
+              qrId: order.qr_id,
+              status: order.status,
+              type: order.type,
+              phone: order.phone,
+              deliveryAddress: order.delivery_address,
+              partnerId: order.partner_id,
+              userId: order.user_id,
+              user: order.user,
+              items: order.order_items.map((item: any) => ({
+                id: item.id,
+                quantity: item.quantity,
+                name: item.menu?.name || "Unknown",
+                price: item.menu?.price || 0,
+                category: item.menu?.category,
+              })),
+            }));
+
+            if (allOrders) {
+              set({ partnerOrders: allOrders });
+              if (callback) callback(allOrders);
+            }
+          },
+          onError: (error) => {
+            console.error("Subscription error:", error);
+          },
+        });
+
+        return unsubscribe;
+      },
 
       setHotelId: (id: string) => {
         set((state) => {
@@ -86,13 +136,13 @@ const useOrderStore = create(
               orderId: null,
             };
           }
-          return { 
-            hotelId: id, 
+          return {
+            hotelId: id,
             hotelOrders,
             order: hotelOrders[id].order,
             items: hotelOrders[id].items,
             orderId: hotelOrders[id].orderId,
-            totalPrice: hotelOrders[id].totalPrice
+            totalPrice: hotelOrders[id].totalPrice,
           };
         });
       },
@@ -102,12 +152,14 @@ const useOrderStore = create(
         if (!state.hotelId) {
           return { items: [], totalPrice: 0, order: null, orderId: null };
         }
-        return state.hotelOrders[state.hotelId] || { 
-          items: [], 
-          totalPrice: 0, 
-          order: null, 
-          orderId: null 
-        };
+        return (
+          state.hotelOrders[state.hotelId] || {
+            items: [],
+            totalPrice: 0,
+            order: null,
+            orderId: null,
+          }
+        );
       },
 
       setUserAddress: (address: string) => {
@@ -119,15 +171,15 @@ const useOrderStore = create(
       genOrderId: () => {
         const state = get();
         const orderId = crypto.randomUUID();
-        
+
         if (state.hotelId) {
           set((state) => {
             const hotelOrders = { ...state.hotelOrders };
             hotelOrders[state.hotelId!] = {
-              ...(hotelOrders[state.hotelId!] || { 
-                items: [], 
-                totalPrice: 0, 
-                order: null 
+              ...(hotelOrders[state.hotelId!] || {
+                items: [],
+                totalPrice: 0,
+                order: null,
               }),
               orderId,
             };
@@ -176,11 +228,11 @@ const useOrderStore = create(
             };
           }
 
-          return { 
+          return {
             hotelOrders,
             items: hotelOrders[state.hotelId!].items,
             orderId: hotelOrders[state.hotelId!].orderId,
-            totalPrice: hotelOrders[state.hotelId!].totalPrice
+            totalPrice: hotelOrders[state.hotelId!].totalPrice,
           };
         });
       },
@@ -194,20 +246,24 @@ const useOrderStore = create(
           const hotelOrder = hotelOrders[state.hotelId!];
           if (!hotelOrder) return state;
 
-          const itemToRemove = hotelOrder.items.find((item) => item.id === itemId);
+          const itemToRemove = hotelOrder.items.find(
+            (item) => item.id === itemId
+          );
           if (!itemToRemove) return state;
 
           hotelOrders[state.hotelId!] = {
             ...hotelOrder,
             items: hotelOrder.items.filter((item) => item.id !== itemId),
-            totalPrice: hotelOrder.totalPrice - itemToRemove.price * itemToRemove.quantity,
+            totalPrice:
+              hotelOrder.totalPrice -
+              itemToRemove.price * itemToRemove.quantity,
           };
 
-          return { 
+          return {
             hotelOrders,
             items: hotelOrders[state.hotelId!].items,
             orderId: hotelOrders[state.hotelId!].orderId,
-            totalPrice: hotelOrders[state.hotelId!].totalPrice
+            totalPrice: hotelOrders[state.hotelId!].totalPrice,
           };
         });
       },
@@ -234,11 +290,11 @@ const useOrderStore = create(
             totalPrice: hotelOrder.totalPrice + item.price,
           };
 
-          return { 
+          return {
             hotelOrders,
             items: hotelOrders[state.hotelId!].items,
             orderId: hotelOrders[state.hotelId!].orderId,
-            totalPrice: hotelOrders[state.hotelId!].totalPrice
+            totalPrice: hotelOrders[state.hotelId!].totalPrice,
           };
         });
       },
@@ -265,11 +321,11 @@ const useOrderStore = create(
             totalPrice: hotelOrder.totalPrice - item.price,
           };
 
-          return { 
+          return {
             hotelOrders,
             items: hotelOrders[state.hotelId!].items,
             orderId: hotelOrders[state.hotelId!].orderId,
-            totalPrice: hotelOrders[state.hotelId!].totalPrice
+            totalPrice: hotelOrders[state.hotelId!].totalPrice,
           };
         });
       },
@@ -300,23 +356,25 @@ const useOrderStore = create(
           const type = tableNumber ? "table_order" : "delivery";
 
           const createdAt = new Date().toISOString();
-          const orderResponse = await fetchFromHasura(
-            createOrderMutation,
-            {
-              id: currentOrder.orderId,
-              totalPrice: hotelData?.gst_percentage ? (currentOrder.totalPrice + getGstAmount(currentOrder.totalPrice, hotelData.gst_percentage)) : currentOrder.totalPrice,
-              createdAt,
-              tableNumber: tableNumber || null,
-              qrId: qrId || null,
-              partnerId: hotelData.id,
-              userId: userData.id,
-              type,
-              delivery_address: tableNumber ? null : get().userAddress,
-            }
-          );
+          const orderResponse = await fetchFromHasura(createOrderMutation, {
+            id: currentOrder.orderId,
+            totalPrice: hotelData?.gst_percentage
+              ? currentOrder.totalPrice +
+                getGstAmount(currentOrder.totalPrice, hotelData.gst_percentage)
+              : currentOrder.totalPrice,
+            createdAt,
+            tableNumber: tableNumber || null,
+            qrId: qrId || null,
+            partnerId: hotelData.id,
+            userId: userData.id,
+            type,
+            delivery_address: tableNumber ? null : get().userAddress,
+          });
 
           if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
-            throw new Error(orderResponse.errors?.[0]?.message || "Failed to create order");
+            throw new Error(
+              orderResponse.errors?.[0]?.message || "Failed to create order"
+            );
           }
 
           const orderId = orderResponse.insert_orders_one.id;
@@ -327,12 +385,14 @@ const useOrderStore = create(
                 order_id: orderId,
                 menu_id: item.id,
                 quantity: item.quantity,
-              }))
+              })),
             }
           );
 
           if (itemsResponse.errors) {
-            throw new Error(itemsResponse.errors?.[0]?.message || "Failed to add order items");
+            throw new Error(
+              itemsResponse.errors?.[0]?.message || "Failed to add order items"
+            );
           }
 
           const newOrder: Order = {
@@ -347,7 +407,7 @@ const useOrderStore = create(
             userId: userData.id,
             user: {
               phone: userData?.role === "user" ? userData.phone : "N/A",
-            }
+            },
           };
 
           set((state) => {
@@ -358,19 +418,21 @@ const useOrderStore = create(
               order: newOrder,
               orderId: null,
             };
-            return { 
+            return {
               hotelOrders,
               order: newOrder,
               items: [],
               orderId: null,
-              totalPrice: 0
+              totalPrice: 0,
             };
           });
 
           toast.success("Order placed successfully!");
           return newOrder;
         } catch (error) {
-          toast.error(error instanceof Error ? error.message : "Failed to place order");
+          toast.error(
+            error instanceof Error ? error.message : "Failed to place order"
+          );
           return null;
         }
       },
@@ -416,7 +478,9 @@ const useOrderStore = create(
           );
 
           if (response.errors) {
-            throw new Error(response.errors[0]?.message || "Failed to fetch orders");
+            throw new Error(
+              response.errors[0]?.message || "Failed to fetch orders"
+            );
           }
 
           return response.orders.map((order: any) => ({
@@ -434,10 +498,10 @@ const useOrderStore = create(
             items: order.order_items.map((item: any) => ({
               id: item.id,
               quantity: item.quantity,
-              name: item.menu?.name || 'Unknown',
+              name: item.menu?.name || "Unknown",
               price: item.menu?.price || 0,
-              category: item.menu?.category
-            }))
+              category: item.menu?.category,
+            })),
           }));
         } catch (error) {
           console.error("Error fetching orders:", error);
@@ -460,12 +524,12 @@ const useOrderStore = create(
               orderId: null,
             };
           }
-          return { 
+          return {
             hotelOrders,
             items: [],
             orderId: null,
             totalPrice: 0,
-            order: null
+            order: null,
           };
         });
       },

@@ -44,18 +44,18 @@ const PastBillsPage = () => {
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-8">Past Bills</h1>
       <div className="grid gap-6">
-        {pastBills.map((bill) => (
+        {pastBills?.map((bill) => (
           <Card key={bill.id}>
             <CardContent className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <p className="text-sm text-gray-500">Bill ID: {bill.pos_show_id}</p>
+                  <p className="text-sm text-gray-500">Bill ID: {bill.id}</p>
                   {bill.phone && (
                     <p className="text-sm text-gray-500">Phone: {bill.phone}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-4">
-                  <p className="text-xl font-bold">{(bill.total_amt)}</p>
+                  <p className="text-xl font-bold">{(bill.totalPrice)}</p>
                   <Button
                     variant="destructive"
                     size="icon"
@@ -68,16 +68,16 @@ const PastBillsPage = () => {
               </div>
               
               <div className="divide-y">
-                {bill.pos_items.map((item) => (
+                {bill?.items?.map((item) => (
                   <div key={item.id} className="py-2 flex justify-between items-center">
                     <div>
-                      <p className="font-medium">{item.menu.name}</p>
+                      <p className="font-medium">{item.name}</p>
                       <p className="text-sm text-gray-500">
-                        {(item.menu.price)} x {item.quantity}
+                        {(item.price)} x {item.quantity}
                       </p>
                     </div>
                     <p className="font-medium">
-                      {((item.menu.price))}
+                      {((item.price) * item.quantity)}
                     </p>
                   </div>
                 ))}

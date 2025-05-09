@@ -1,21 +1,27 @@
 "use client";
-import { useAuthStore } from "@/store/authStore";
+import { Partner, useAuthStore } from "@/store/authStore";
 import useOrderStore, { Order, OrderItem } from "@/store/orderStore";
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Printer, Edit } from "lucide-react";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { Partner } from "@/api/partners";
 import { HotelData } from "@/app/hotels/[id]/page";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { subscribeToHasura } from "@/lib/hasuraSubscription";
-import { subscriptionQuery } from "@/api/orders";
 import { formatDate } from "@/lib/formatDate";
 import { Howl } from "howler";
+import { useRouter } from "next/navigation";
+import { useReactToPrint } from "react-to-print";
+import BillTemplate from "./pos/BillTemplate";
+import KOTTemplate from "./pos/KOTTemplate";
+import { EditOrderModal } from "./pos/EditOrderModal";
+import { usePOSStore } from "@/store/posStore";
 
 const OrdersTab = () => {
+  const router = useRouter();
   const { userData } = useAuthStore();
+  const prevOrdersRef = useRef<Order[]>([]);
+  const { subscribeOrders, partnerOrders } = useOrderStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [showOnlyPending, setShowOnlyPending] = useState<boolean>(false);
@@ -24,6 +30,22 @@ const OrdersTab = () => {
   const [newOrders, setNewOrders] = useState({ table: false, delivery: false });
   const prevPendingOrdersCount = useRef({ table: 0, delivery: 0 });
   const soundRef = useRef<Howl | null>(null);
+  const billRef = useRef<HTMLDivElement>(null);
+  const kotRef = useRef<HTMLDivElement>(null);
+  const {
+    order,
+    setOrder,
+    editOrderModalOpen: isOpen,
+    setEditOrderModalOpen,
+  } = usePOSStore();
+
+  const handlePrintBill = useReactToPrint({
+    contentRef: billRef,
+  });
+
+  const handlePrintKOT = useReactToPrint({
+    contentRef: kotRef,
+  });
 
   useEffect(() => {
     soundRef.current = new Howl({
@@ -36,6 +58,13 @@ const OrdersTab = () => {
       soundRef.current?.unload();
     };
   }, []);
+
+  useEffect(() => {
+    if (partnerOrders) {
+      setOrders(partnerOrders);
+      setLoading(false);
+    }
+  }, [partnerOrders]);
 
   useEffect(() => {
     const storedFilter = localStorage.getItem("ordersFilter");
@@ -129,116 +158,44 @@ const OrdersTab = () => {
   useEffect(() => {
     if (!userData?.id) return;
 
-    console.log("Initializing subscription...");
+    const unsubscribe = subscribeOrders((allOrders) => {
+      const prevOrders = prevOrdersRef.current;
 
-    const unsubscribe = subscribeToHasura({
-      query: subscriptionQuery,
-      variables: { partner_id: userData.id },
-      onNext: (data) => {
-        console.log("New order data received:", data);
-        const allOrders = data.data?.orders.map((order: any) => ({
-          id: order.id,
-          totalPrice: order.total_price,
-          createdAt: order.created_at,
-          tableNumber: order.table_number,
-          qrId: order.qr_id,
-          status: order.status,
-          type: order.type,
-          deliveryAddress: order.delivery_address,
-          partnerId: order.partner_id,
-          userId: order.user_id,
-          user: order.user,
-          items: order.order_items.map((item: any) => ({
-            id: item.id,
-            quantity: item.quantity,
-            name: item.menu?.name || "Unknown",
-            price: item.menu?.price || 0,
-            category: item.menu?.category,
-          })),
-        }));
+      const newPendingOrders = allOrders.filter(
+        (order) =>
+          order.status === "pending" &&
+          ((activeTab === "table" && order.type === "table_order") ||
+            (activeTab === "delivery" && order.type === "delivery")) &&
+          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      );
 
-        if (allOrders) {
-          // Filter only pending orders for comparison
-          const currentPendingTableOrders = allOrders.filter(
-            (order: Order) =>
-              order.type === "table_order" && order.status === "pending"
-          );
-          const currentPendingDeliveryOrders = allOrders.filter(
-            (order: Order) =>
-              order.type === "delivery" && order.status === "pending"
-          );
+      if (newPendingOrders.length > 0) {
+        soundRef.current?.play();
 
-          // Check if we have new pending orders
-          const hasNewPendingTableOrders =
-            currentPendingTableOrders.length >
-            prevPendingOrdersCount.current.table;
-          const hasNewPendingDeliveryOrders =
-            currentPendingDeliveryOrders.length >
-            prevPendingOrdersCount.current.delivery;
-
-          // Play sound and show notification for new pending orders
-          if (
-            (hasNewPendingTableOrders || hasNewPendingDeliveryOrders) &&
-            soundRef.current
-          ) {
-            soundRef.current.play();
-
-            if (
-              "Notification" in window &&
-              Notification.permission === "granted"
-            ) {
-              const newTableCount =
-                currentPendingTableOrders.length -
-                prevPendingOrdersCount.current.table;
-              const newDeliveryCount =
-                currentPendingDeliveryOrders.length -
-                prevPendingOrdersCount.current.delivery;
-
-              let notificationMessage = "";
-              if (newTableCount > 0 && newDeliveryCount > 0) {
-                notificationMessage = `You have ${newTableCount} new table orders and ${newDeliveryCount} new deliveries`;
-              } else if (newTableCount > 0) {
-                notificationMessage = `You have ${newTableCount} new table orders`;
-              } else if (newDeliveryCount > 0) {
-                notificationMessage = `You have ${newDeliveryCount} new deliveries`;
+        if (Notification.permission === "granted") {
+          newPendingOrders.forEach((order) => {
+            new Notification(
+              `New ${activeTab === "table" ? "Table Order" : "Delivery"}`,
+              {
+                body: `Order #${order.id.slice(0, 8)} received`,
               }
-
-              if (notificationMessage) {
-                new Notification("New Pending Orders", {
-                  body: notificationMessage,
-                  icon: "/icon-64x64.png",
-                });
-              }
-            }
-          }
-
-          // Update order counts and indicators
-          if (hasNewPendingTableOrders) {
-            setNewOrders((prev) => ({ ...prev, table: true }));
-          }
-          if (hasNewPendingDeliveryOrders) {
-            setNewOrders((prev) => ({ ...prev, delivery: true }));
-          }
-
-          prevPendingOrdersCount.current = {
-            table: currentPendingTableOrders.length,
-            delivery: currentPendingDeliveryOrders.length,
-          };
-
-          setOrders(allOrders);
+            );
+          });
         }
-        setLoading(false);
-      },
-      onError: (error) => {
-        console.error("Subscription error:", error);
-      },
+
+        setNewOrders((prev) => ({
+          ...prev,
+          [activeTab]: true,
+        }));
+      }
+
+      prevOrdersRef.current = allOrders;
     });
 
     return () => {
-      console.log("Cleaning up subscription...");
-      unsubscribe();
+      // unsubscribe();
     };
-  }, [userData?.id]);
+  }, [userData?.id, activeTab]);
 
   useEffect(() => {
     if ("Notification" in window && Notification.permission !== "denied") {
@@ -248,11 +205,23 @@ const OrdersTab = () => {
     }
   }, []);
 
+  const handleCreateNewOrder = () => {
+    router.push("/admin/pos");
+  };
+
+  const calculateGst = (amount: number) => {
+    const gstPercentage = (userData as HotelData)?.gst_percentage || 0;
+    return (amount * gstPercentage) / 100;
+  };
+
   return (
     <div className="py-10 px-[8%]">
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Orders Management</h2>
+        <h2 className="text-2xl font-bold mb-5 sm:mb-0">Orders Management</h2>
         <div className="flex gap-2">
+          <Button size="sm" onClick={handleCreateNewOrder}>
+            Create New Order
+          </Button>
           <Button size="sm" onClick={togglePendingFilter}>
             {showOnlyPending ? "Show All Orders" : "Show Only Pending"}
           </Button>
@@ -297,128 +266,182 @@ const OrdersTab = () => {
                   found
                 </p>
               ) : (
-                sortedOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="border rounded-lg p-4 relative"
-                  >
-                    {order.status === "pending" && (
-                      <span className="absolute -top-1 -left-1 h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                      </span>
-                    )}
+                sortedOrders.map((order) => {
+                  const gstAmount = calculateGst(order.totalPrice);
+                  const grandTotal = order.totalPrice + gstAmount;
 
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-medium">
-                          Order #{order.id.slice(0, 8)}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {formatDate(order.createdAt)}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`px-2 py-1 rounded text-xs ${
-                            order.status === "completed"
-                              ? "bg-green-100 text-green-800"
-                              : order.status === "cancelled"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          {order.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 flex justify-between">
-                      <div>
-                        {order.type === "table_order" && (
-                          <p className="text-sm">
-                            Table: {order.tableNumber || "N/A"}
-                          </p>
-                        )}
-                        <p className="text-sm">
-                          Customer: +91{order.user?.phone || "Unknown"}
-                        </p>
-                        {order.type === "delivery" && (
-                          <p className="text-sm mt-3">
-                            Delivery Address:{" "}
-                            {order.deliveryAddress || "Unknown"}
-                          </p>
-                        )}
-                      </div>
-                      <p className="font-medium">
-                        Total: {(userData as HotelData)?.currency}
-                        {order?.totalPrice?.toFixed(2)}
-                      </p>
-                    </div>
-
-                    <div className="mt-4 border-t pt-4">
-                      <h4 className="font-medium mb-2">Order Items</h4>
-                      <div className="space-y-2">
-                        {order.items?.length ? (
-                          order.items.map((item: OrderItem) => (
-                            <div
-                              key={item.id}
-                              className="flex justify-between text-sm"
-                            >
-                              <div>
-                                <span className="font-medium">{item.name}</span>
-                                <span className="text-gray-500 ml-2">
-                                  x{item.quantity}
-                                </span>
-                                {item.category && (
-                                  <span className="text-gray-400 text-xs ml-2 capitalize">
-                                    ({item.category.name.trim()})
-                                  </span>
-                                )}
-                              </div>
-                              <span>
-                                {(userData as HotelData)?.currency}
-                                {(item.price * item.quantity).toFixed(2)}
-                              </span>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-gray-500 text-sm">
-                            No items found
-                          </p>
-                        )}
-                      </div>
-
+                  return (
+                    <div
+                      key={order.id}
+                      className="border rounded-lg p-4 relative"
+                    >
                       {order.status === "pending" && (
-                        <div className="mt-4 flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              updateOrderStatus(order.id, "completed")
-                            }
-                          >
-                            Mark Completed
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() =>
-                              updateOrderStatus(order.id, "cancelled")
-                            }
-                          >
-                            Cancel Order
-                          </Button>
-                        </div>
+                        <span className="absolute -top-1 -left-1 h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        </span>
                       )}
+
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-medium">
+                            Order #{order.id.slice(0, 8)}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {formatDate(order.createdAt)}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-1 rounded text-xs ${
+                              order.status === "completed"
+                                ? "bg-green-100 text-green-800"
+                                : order.status === "cancelled"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-yellow-100 text-yellow-800"
+                            }`}
+                          >
+                            {order.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 flex justify-between">
+                        <div>
+                          {order.type === "table_order" && (
+                            <p className="text-sm">
+                              Table: {order.tableNumber || "N/A"}
+                            </p>
+                          )}
+                          <p className="text-sm">
+                            Customer:{" "}
+                            {order.user?.phone || order.phone
+                              ? `+91${order.user?.phone || order.phone}`
+                              : "Unknown"}
+                          </p>
+                          {order.type === "delivery" && (
+                            <p className="text-sm mt-3">
+                              Delivery Address:{" "}
+                              {order.deliveryAddress || "Unknown"}
+                            </p>
+                          )}
+                        </div>
+                        <p className="font-medium">
+                          Total: {(userData as HotelData)?.currency}
+                          {order?.totalPrice?.toFixed(2)}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 border-t pt-4">
+                        <h4 className="font-medium mb-2">Order Items</h4>
+                        <div className="space-y-2">
+                          {order.items?.length ? (
+                            order.items.map((item: OrderItem) => (
+                              <div
+                                key={item.id}
+                                className="flex justify-between text-sm"
+                              >
+                                <div>
+                                  <span className="font-medium">
+                                    {item.name}
+                                  </span>
+                                  <span className="text-gray-500 ml-2">
+                                    x{item.quantity}
+                                  </span>
+                                  {item.category && (
+                                    <span className="text-gray-400 text-xs ml-2 capitalize">
+                                      ({item.category.name.trim()})
+                                    </span>
+                                  )}
+                                </div>
+                                <span>
+                                  {(userData as HotelData)?.currency}
+                                  {(item.price * item.quantity).toFixed(2)}
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-gray-500 text-sm">
+                              No items found
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="mt-4 flex gap-2 flex-wrap">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handlePrintKOT}
+                          >
+                            <Printer className="h-4 w-4 mr-2" />
+                            Print KOT
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handlePrintBill}
+                          >
+                            <Printer className="h-4 w-4 mr-2" />
+                            Print Bill
+                          </Button>
+
+                          {order.status === "pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setOrder(order);
+                                  setEditOrderModalOpen(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit Order
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  updateOrderStatus(order.id, "completed")
+                                }
+                              >
+                                Mark Completed
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() =>
+                                  updateOrderStatus(order.id, "cancelled")
+                                }
+                              >
+                                Cancel Order
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Hidden elements for printing */}
+                      <div className="hidden">
+                        {/* KOT Template */}
+                        <KOTTemplate ref={kotRef} order={order} />
+
+                        {/* Bill Template */}
+                        <BillTemplate
+                          ref={billRef}
+                          order={order}
+                          userData={userData as Partner}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </TabsContent>
         )}
       </Tabs>
+
+      <EditOrderModal />
     </div>
   );
 };

@@ -1,3 +1,25 @@
+
+//query
+
+export const getOrdersOfPartnerQuery = `
+  query GetOrdersOfPartner($partner_id: uuid!) {
+    orders(
+      where: { partner_id: { _eq: $partner_id } }
+      order_by: { created_at: desc }
+    ) {
+      id
+      total_price
+      created_at
+      table_number
+      type
+      delivery_address
+      status
+      partner_id
+}
+}`;
+
+
+//mutation
 export const createOrderMutation = `
                   mutation CreateOrder(
                     $id: uuid,
@@ -6,9 +28,11 @@ export const createOrderMutation = `
                     $tableNumber: Int,
                     $qrId: uuid,
                     $partnerId: uuid!,
-                    $userId: uuid!,
+                    $userId: uuid,
                     $type: String!,
                     $delivery_address: String,
+                    $phone: String
+                    $status: String
                   ) {
                     insert_orders_one(object: {
                       id: $id
@@ -18,8 +42,9 @@ export const createOrderMutation = `
                       qr_id: $qrId
                       partner_id: $partnerId
                       user_id: $userId
-                      status: "pending"
+                      status: $status
                       type: $type
+                      phone: $phone
                       delivery_address: $delivery_address
                     }) {
                       id
@@ -37,6 +62,65 @@ export const createOrderItemsMutation = `
                   }
 `;
 
+
+export const updateOrderMutation = `
+  mutation UpdateOrder(
+    $id: uuid!,
+    $totalPrice: float8,
+    $phone: String
+  ) {
+    update_orders_by_pk(
+      pk_columns: { id: $id }
+      _set: {
+        total_price: $totalPrice
+        phone: $phone
+      }
+    ) {
+      id
+      total_price
+    }
+  }
+`;
+
+export const updateOrderItemsMutation = `
+  mutation UpdateOrderItems($orderId: uuid!, $items: [order_items_insert_input!]!) {
+    delete_order_items(where: { order_id: { _eq: $orderId } }) {
+      affected_rows
+    }
+
+    insert_order_items(objects: $items) {
+      affected_rows
+    }
+  }
+`;
+
+export const getOrderByIdQuery = `
+  query GetOrderById($orderId: uuid!) {
+    orders_by_pk(id: $orderId) {
+      id
+      total_price
+      created_at
+      table_number
+      type
+      delivery_address
+      status
+      phone
+      partner_id
+      order_items {
+        id
+        quantity
+        menu {
+          id
+          name
+          price
+          category {
+            name
+          }
+        }
+      }
+    }
+  }
+`;
 
 // subscription 
 
@@ -56,6 +140,7 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     delivery_address
     status
     partner_id
+    phone
     user_id
     user {
       full_name

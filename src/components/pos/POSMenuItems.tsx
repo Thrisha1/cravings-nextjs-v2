@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Minus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useAuthStore } from "@/store/authStore";
+import { Partner, useAuthStore } from "@/store/authStore";
 
 export const POSMenuItems = () => {
   const { items, groupedItems } = useMenuStore();
@@ -117,7 +117,7 @@ export const POSMenuItems = () => {
                     <div className="flex justify-between items-center">
                       <div>
                         <h3 className="font-medium">{item.name}</h3>
-                        <p className="text-lg font-bold mt-2">${item.price}</p>
+                        <p className="text-lg font-bold mt-2">{(userData as Partner)?.currency}{item.price}</p>
                       </div>
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         {cartItem ? (
@@ -125,6 +125,7 @@ export const POSMenuItems = () => {
                             <Button
                               size="icon"
                               variant="outline"
+                              className="bg-gray-200"
                               onClick={() => {
                                 if (cartItem.quantity > 1) {
                                   decreaseQuantity(item.id!);
@@ -139,6 +140,7 @@ export const POSMenuItems = () => {
                             <Button
                               size="icon"
                               onClick={() => addToCart(item)}
+                              className="bg-black"
                             >
                               <Plus className="h-4 w-4" />
                             </Button>
@@ -147,6 +149,7 @@ export const POSMenuItems = () => {
                           <Button
                             size="icon"
                             onClick={() => addToCart(item)}
+                            className="bg-black"
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
