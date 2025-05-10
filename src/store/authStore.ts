@@ -18,6 +18,8 @@ import {
   removeAuthCookie,
 } from "@/app/auth/actions";
 import { sendRegistrationWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
+import { FeatureFlags } from "@/screens/HotelMenuPage_v2";
+import { getFeatures } from "@/lib/getFeatures";
 
 // Interfaces remain the same
 interface BaseUser {
@@ -72,6 +74,7 @@ export type AuthUser = User | Partner | SuperAdmin;
 
 interface AuthState {
   userData: AuthUser | null;
+  features: FeatureFlags | null;
   loading: boolean;
   error: string | null;
   signOut: () => void;
@@ -118,6 +121,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   userData: null,
   loading: true,
   error: null,
+  features : null,
 
   isLoggedIn: () => {
     return !!getAuthCookie();
@@ -166,6 +170,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               whatsapp_numbers : partner.whatsapp_numbers,
               role: "partner",
             } as Partner,
+            features : getFeatures(partner.feature_flags)
           });
         }
       } else if (role === "superadmin") {
@@ -234,7 +239,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       const newPartner = response.insert_partners_one;
       setAuthCookie({ id: newPartner.id, role: "partner" , feature_flags: newPartner.feature_flags || "" , status : "inactive" });
-      set({ userData: { ...newPartner, role: "partner" }, loading: false });
+      set({ userData: { ...newPartner, role: "partner" }, loading: false , features : getFeatures(newPartner?.feature_flags as string) });
     } catch (error) {
       console.error("Partner registration failed:", error);
       throw error;
@@ -252,7 +257,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!partner) throw new Error("Invalid credentials");
 
       await setAuthCookie({ id: partner.id, role: "partner" , feature_flags: partner.feature_flags || "" , status: partner.status || "inactive" });
-      set({ userData: { ...partner, role: "partner" } });
+      set({ userData: { ...partner, role: "partner" } , features : getFeatures(partner?.feature_flags as string) });
     } catch (error) {
       console.error("Login failed:", error);
       throw error;

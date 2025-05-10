@@ -41,11 +41,12 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   FeatureFlags,
-  getFeatures,
   revertFeatureToString,
 } from "@/screens/HotelMenuPage_v2";
 import { HotelData, SocialLinks } from "../hotels/[id]/page";
 import { getSocialLinks } from "@/lib/getSocialLinks";
+import { getFeatures } from "@/lib/getFeatures";
+import { updateAuthCookie } from "../auth/actions";
 
 const Currencies = [
   { label: "INR", value: "₹" },
@@ -489,6 +490,7 @@ export default function ProfilePage() {
         },
       });
       revalidateTag(userData?.id as string);
+      updateAuthCookie({ feature_flags : stringedFeature});
       toast.dismiss();
       toast.success("Feature flags updated successfully!");
     } catch (error) {
@@ -1415,9 +1417,13 @@ export default function ProfilePage() {
                     {features.multiwhatsapp.access && (
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
-                          <div className="font-medium">Multiple Whatsapp Numbers</div>
+                          <div className="font-medium">
+                            Multiple Whatsapp Numbers
+                          </div>
                           <div className="text-sm text-gray-500">
-                            {features.multiwhatsapp.enabled ? "Enabled" : "Disabled"}
+                            {features.multiwhatsapp.enabled
+                              ? "Enabled"
+                              : "Disabled"}
                           </div>
                         </div>
                         <Switch
@@ -1427,6 +1433,37 @@ export default function ProfilePage() {
                               ...features,
                               multiwhatsapp: {
                                 ...features.multiwhatsapp,
+                                enabled: enabled,
+                              },
+                            };
+
+                            setFeatures(updates);
+                            setUserFeatures(updates);
+                            handleFeatureEnabledChange(updates);
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {features.pos.access && (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">
+                            POS
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {features.pos.enabled
+                              ? "Enabled"
+                              : "Disabled"}
+                          </div>
+                        </div>
+                        <Switch
+                          checked={features.pos.enabled}
+                          onCheckedChange={(enabled) => {
+                            const updates = {
+                              ...features,
+                              pos: {
+                                ...features.pos,
                                 enabled: enabled,
                               },
                             };

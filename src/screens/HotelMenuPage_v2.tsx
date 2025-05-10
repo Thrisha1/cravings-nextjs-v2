@@ -20,6 +20,7 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import SocialLinkList from "@/components/SocialLinkList";
 import AuthModal from "@/components/hotelDetail/AuthModal";
+import { getFeatures } from "@/lib/getFeatures";
 
 export type MenuItem = {
   description: string;
@@ -65,46 +66,12 @@ export type FeatureFlags = {
     access: boolean;
     enabled: boolean;
   };
-};
-
-export const getFeatures = (perm: string) => {
-  // Initialize default permissions
-  const permissions: FeatureFlags = {
-    ordering: {
-      access: false,
-      enabled: false,
-    },
-    delivery: {
-      access: false,
-      enabled: false,
-    },
-    multiwhatsapp: {
-      access: false,
-      enabled: false,
-    },
+  pos: {
+    access: boolean;
+    enabled: boolean;
   };
-
-  if (perm) {
-    const parts = perm.split(",");
-
-    for (const part of parts) {
-      const [key, value] = part.split("-");
-
-      if (key === "ordering") {
-        permissions.ordering.access = true;
-        permissions.ordering.enabled = value === "true";
-      } else if (key === "delivery") {
-        permissions.delivery.access = true;
-        permissions.delivery.enabled = value === "true";
-      } else if (key === "multiwhatsapp") {
-        permissions.multiwhatsapp.access = true;
-        permissions.multiwhatsapp.enabled = value === "true";
-      }
-    }
-  }
-
-  return permissions;
 };
+
 
 export const revertFeatureToString = (features: FeatureFlags): string => {
   const parts: string[] = [];
@@ -119,6 +86,10 @@ export const revertFeatureToString = (features: FeatureFlags): string => {
 
   if (features.multiwhatsapp.access) {
     parts.push(`multiwhatsapp-${features.multiwhatsapp.enabled}`);
+  }
+
+  if(features.pos.access){
+    parts.push(`pos-${features.pos.enabled}`);
   }
 
   return parts.join(",");

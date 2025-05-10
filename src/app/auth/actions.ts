@@ -22,3 +22,19 @@ export const setAuthCookie = async (data: { id: string; role: string , feature_f
 export const removeAuthCookie = async () => {
   (await cookies()).delete('auth_token');
 };
+
+export const updateAuthCookie = async (updates: Partial<{ id: string; role: string, feature_flags: string, status: string }>) => {
+  const currentCookie = await getAuthCookie();
+  
+  if (!currentCookie) {
+    throw new Error('No auth cookie found to update');
+  }
+
+  const updatedData = {
+    ...currentCookie,
+    ...updates
+  };
+
+  await setAuthCookie(updatedData);
+  return updatedData;
+};

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Drawer,
   DrawerClose,
@@ -48,7 +48,7 @@ export const POSCart = () => {
     order
   } = usePOSStore();
   const { userData } = useAuthStore();
-
+  const { getPartnerTables } = usePOSStore();
   const [isOpen, setIsOpen] = useState(false);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
@@ -62,6 +62,13 @@ export const POSCart = () => {
   const gstPercentage = (userData as Partner)?.gst_percentage || 0;
   const gstAmount = getGstAmount(totalAmount, gstPercentage);
   const grandTotal = totalAmount + gstAmount;
+
+  useEffect(() => {
+    if (userData?.id) {
+      getPartnerTables();
+    }
+  }, [userData]);
+
 
   const handleCheckoutFlow = async () => {
     setIsTableModalOpen(true);

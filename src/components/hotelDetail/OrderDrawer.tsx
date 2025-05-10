@@ -1,6 +1,6 @@
 "use client";
 import { HotelData } from "@/app/hotels/[id]/page";
-import { FeatureFlags, getFeatures, Styles } from "@/screens/HotelMenuPage_v2";
+import { FeatureFlags, Styles } from "@/screens/HotelMenuPage_v2";
 import HeadingWithAccent from "@/components/HeadingWithAccent";
 import React, { useEffect, useState } from "react";
 import {
@@ -29,6 +29,7 @@ import {
 import Link from "next/link";
 import { log, table } from "console";
 import { usePathname } from "next/navigation";
+import { getFeatures } from "@/lib/getFeatures";
 
 export const getGstAmount = (price: number, gstPercentage: number) => {
   const gstAmount = (price * gstPercentage) / 100;

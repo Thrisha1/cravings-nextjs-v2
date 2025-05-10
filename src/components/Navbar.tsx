@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 // import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import LocationAccess from "./LocationAccess";
-import { FeatureFlags, getFeatures } from "@/screens/HotelMenuPage_v2";
+import { FeatureFlags } from "@/screens/HotelMenuPage_v2";
+import { getFeatures } from "@/lib/getFeatures";
 // import SyncUserOfferCoupons from "./SyncUserOfferCoupons";
 
 export function Navbar() {

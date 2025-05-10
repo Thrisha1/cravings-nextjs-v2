@@ -1,11 +1,12 @@
 "use client";
 import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
-import { getFeatures, Styles } from "@/screens/HotelMenuPage_v2";
+import { Styles } from "@/screens/HotelMenuPage_v2";
 import React, { useEffect, useState } from "react";
 import Img from "../Img";
 import ItemDetailsModal from "./ItemDetailsModal";
 import DescriptionWithTextBreak from "../DescriptionWithTextBreak";
 import useOrderStore, { OrderItem } from "@/store/orderStore";
+import { getFeatures } from "@/lib/getFeatures";
 
 const ItemCard = ({
   item,

@@ -1,34 +1,26 @@
-"use client";
-import React, { useEffect } from "react";
+import React from "react";
 import { POSMenuItems } from "@/components/pos/POSMenuItems";
 import { POSCart } from "@/components/pos/POSCart";
-import { useMenuStore } from "@/store/menuStore_hasura";
-import { useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { RiBillLine } from "react-icons/ri";
-import { usePOSStore } from "@/store/posStore";
 import { PostCheckoutModal } from "@/components/admin/pos/PostCheckoutModal";
 import { EditOrderModal } from "@/components/admin/pos/EditOrderModal";
 import OfferLoadinPage from "@/components/OfferLoadinPage";
+import { getAuthCookie } from "@/app/auth/actions";
+import { redirect } from "next/navigation";
+import { getFeatures } from "@/lib/getFeatures";
 
-const Page = () => {
-  const { fetchMenu } = useMenuStore();
-  const { userData } = useAuthStore();
-  const { getPartnerTables } = usePOSStore();
+const Page = async () => {
+  const cookies = await getAuthCookie();
 
-  useEffect(() => {
-    if (userData?.id) {
-      getPartnerTables();
-    }
-  }, [userData]);
+  console.log(cookies);
+  
 
-  useEffect(() => {
-    if (userData?.id) {
-      fetchMenu();
-    }
-  }, [fetchMenu, userData]);
+  if (!getFeatures(cookies?.feature_flags || "")?.pos?.enabled) {
+    redirect("/admin");
+  }
 
-  if (!userData) {
+  if (!cookies?.id) {
     return <OfferLoadinPage message="Loading Pos..." />;
   }
 
@@ -47,7 +39,7 @@ const Page = () => {
       <POSMenuItems />
       <POSCart />
       <PostCheckoutModal />
-      <EditOrderModal  />
+      <EditOrderModal />
     </div>
   );
 };

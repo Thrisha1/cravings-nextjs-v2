@@ -19,7 +19,7 @@ import { usePOSStore } from "@/store/posStore";
 
 const OrdersTab = () => {
   const router = useRouter();
-  const { userData } = useAuthStore();
+  const { userData, features } = useAuthStore();
   const prevOrdersRef = useRef<Order[]>([]);
   const { subscribeOrders, partnerOrders } = useOrderStore();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -219,9 +219,11 @@ const OrdersTab = () => {
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
         <h2 className="text-2xl font-bold mb-5 sm:mb-0">Orders Management</h2>
         <div className="flex gap-2">
-          <Button size="sm" onClick={handleCreateNewOrder}>
-            Create New Order
-          </Button>
+          {features?.pos.enabled && (
+            <Button size="sm" onClick={handleCreateNewOrder}>
+              Create New Order
+            </Button>
+          )}
           <Button size="sm" onClick={togglePendingFilter}>
             {showOnlyPending ? "Show All Orders" : "Show Only Pending"}
           </Button>

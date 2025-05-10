@@ -9,17 +9,25 @@ import { Input } from "@/components/ui/input";
 import { Partner, useAuthStore } from "@/store/authStore";
 
 export const POSMenuItems = () => {
-  const { items, groupedItems } = useMenuStore();
-  const { addToCart, cartItems, decreaseQuantity, removeFromCart } = usePOSStore();
+  const { items, groupedItems, fetchMenu } = useMenuStore();
+  const { addToCart, cartItems, decreaseQuantity, removeFromCart } =
+    usePOSStore();
   const { userData } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [filteredGroupedItems, setFilteredGroupedItems] = useState<GroupedItems>({});
+  const [filteredGroupedItems, setFilteredGroupedItems] =
+    useState<GroupedItems>({});
+
+  useEffect(() => {
+    if (userData?.id) {
+      fetchMenu();
+    }
+  }, [userData]);
 
   // Set first category as default when groupedItems is loaded
   useEffect(() => {
     if (!userData?.id) return;
-    
+
     if (groupedItems && Object.keys(groupedItems).length > 0) {
       const firstCategory = Object.keys(groupedItems)[0];
       setSelectedCategory(firstCategory);
@@ -102,14 +110,19 @@ export const POSMenuItems = () => {
 
       {/* Items */}
       {Object.entries(filteredGroupedItems).map(([category, items]) => (
-        <div key={category} className={!searchQuery && !selectedCategory ? 'hidden' : ''}>
+        <div
+          key={category}
+          className={!searchQuery && !selectedCategory ? "hidden" : ""}
+        >
           <h2 className="text-2xl font-bold mb-4">{category}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.map((item) => {
-              const cartItem = cartItems.find((cartItem) => cartItem.id === item.id);
+              const cartItem = cartItems.find(
+                (cartItem) => cartItem.id === item.id
+              );
               return (
-                <Card 
-                  key={item.id} 
+                <Card
+                  key={item.id}
                   className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
                   onClick={() => addToCart(item)}
                 >
@@ -117,9 +130,15 @@ export const POSMenuItems = () => {
                     <div className="flex justify-between items-center">
                       <div>
                         <h3 className="font-medium">{item.name}</h3>
-                        <p className="text-lg font-bold mt-2">{(userData as Partner)?.currency}{item.price}</p>
+                        <p className="text-lg font-bold mt-2">
+                          {(userData as Partner)?.currency}
+                          {item.price}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="flex items-center gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {cartItem ? (
                           <>
                             <Button
@@ -136,7 +155,9 @@ export const POSMenuItems = () => {
                             >
                               <Minus className="h-4 w-4" />
                             </Button>
-                            <span className="w-8 text-center">{cartItem.quantity}</span>
+                            <span className="w-8 text-center">
+                              {cartItem.quantity}
+                            </span>
                             <Button
                               size="icon"
                               onClick={() => addToCart(item)}
