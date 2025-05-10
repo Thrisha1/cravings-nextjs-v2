@@ -76,7 +76,7 @@ const ItemCard = ({
                   }}
                   className={`font-black text-2xl`}
                 >
-                  {currency}
+                  {currency}{" "}
                   {hotelData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09" ? item.price.toFixed(3) : item.price}
                 </div>
               )}
