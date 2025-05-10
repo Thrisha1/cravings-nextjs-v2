@@ -3,7 +3,7 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { useAuthStore } from "./authStore";
-import { createOrderItemsMutation, createOrderMutation, subscriptionQuery } from "@/api/orders";
+import { createOrderItemsMutation, createOrderMutation, subscriptionQuery, userSubscriptionQuery } from "@/api/orders";
 import { toast } from "sonner";
 import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
 import { subscribeToHasura } from "@/lib/hasuraSubscription";
@@ -67,6 +67,10 @@ interface OrderState {
     callback?: (orders: Order[]) => void
   ) => () => void;
   partnerOrders: Order[];
+  userOrders: Order[];
+  subscribeUserOrders: (
+    callback?: (orders: Order[]) => void
+  ) => () => void;
 }
 
 const useOrderStore = create(
@@ -81,6 +85,51 @@ const useOrderStore = create(
       orderId: null,
       partnerOrders: [],
       totalPrice: 0,
+      userOrders: [],
+
+
+      subscribeUserOrders: (callback) => {
+
+        const userId = useAuthStore.getState().userData?.id;
+
+        const unsubscribe = subscribeToHasura({
+          query: userSubscriptionQuery,
+          variables: { user_id: userId },
+          onNext: (data) => {
+            const allOrders = data.data?.orders.map((order: any) => ({
+              id: order.id,
+              totalPrice: order.total_price,
+              createdAt: order.created_at,
+              tableNumber: order.table_number,
+              qrId: order.qr_id,
+              status: order.status,
+              type: order.type,
+              phone: order.phone,
+              deliveryAddress: order.delivery_address,
+              partnerId: order.partner_id,
+              userId: order.user_id,
+              user: order.user,
+              items: order.order_items.map((item: any) => ({
+                id: item.id,
+                quantity: item.quantity,
+                name: item.menu?.name || "Unknown",
+                price: item.menu?.price || 0,
+                category: item.menu?.category,
+              })),
+            }));
+
+            if (allOrders) {
+              set({ userOrders: allOrders });
+              if (callback) callback(allOrders);
+            }
+          },
+          onError: (error) => {
+            console.error("Subscription error:", error);
+          },
+        });
+
+        return unsubscribe;
+      },
 
       subscribeOrders: (callback) => {
 
@@ -368,6 +417,7 @@ const useOrderStore = create(
             partnerId: hotelData.id,
             userId: userData.id,
             type,
+            status : "pending",
             delivery_address: tableNumber ? null : get().userAddress,
           });
 

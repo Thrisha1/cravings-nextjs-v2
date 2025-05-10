@@ -82,6 +82,22 @@ export const updateOrderMutation = `
   }
 `;
 
+export const cancelOrderMutation = `
+  mutation CancelOrder(
+    $orderId: uuid!
+  ) {
+    update_orders_by_pk(
+      pk_columns: { id: $orderId }
+      _set: {
+        status: "cancelled"
+      }
+    ) {
+      id
+      status
+    }
+  }
+`;
+
 export const updateOrderItemsMutation = `
   mutation UpdateOrderItems($orderId: uuid!, $items: [order_items_insert_input!]!) {
     delete_order_items(where: { order_id: { _eq: $orderId } }) {
@@ -129,6 +145,47 @@ export const subscriptionQuery = `
 subscription GetPartnerOrders($partner_id: uuid!) {
   orders(
     where: { partner_id: { _eq: $partner_id } }
+    order_by: { created_at: desc }
+  ) {
+    id
+    total_price
+    created_at
+    table_number
+    qr_id
+    type
+    delivery_address
+    status
+    partner_id
+    phone
+    user_id
+    user {
+      full_name
+      phone
+      email
+    }
+    order_items {
+      id
+      quantity
+      menu {
+        id
+        name
+        price
+        category {
+          name
+        }
+      }
+    }
+  }
+}
+`;
+
+
+
+
+export const userSubscriptionQuery = `
+subscription GetUserOrders($user_id: uuid!) {
+  orders(
+    where: { user_id: { _eq: $user_id } }
     order_by: { created_at: desc }
   ) {
     id

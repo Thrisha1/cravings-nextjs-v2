@@ -72,7 +72,8 @@ export function Navbar() {
         ...(userData?.role === "partner"
           ? [
               { href: "/admin", label: "Admin" },
-              ...((features?.ordering.access || features?.delivery.access ) && (userData?.status === "active")
+              ...((features?.ordering.access || features?.delivery.access) &&
+              userData?.status === "active"
                 ? [{ href: "/admin/orders", label: "Orders" }]
                 : []),
               // ...((features?.ordering.access || features?.delivery.access ) && (userData?.status === "active")
@@ -82,6 +83,9 @@ export function Navbar() {
           : []),
         ...(userData?.role === "superadmin"
           ? [{ href: "/superadmin", label: "Super Admin" }]
+          : []),
+        ...(userData?.role === "user"
+          ? [{ href: "/my-orders", label: "My Orders" }]
           : []),
       ].map((link) => (
         <Link

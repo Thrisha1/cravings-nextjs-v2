@@ -11,30 +11,39 @@ import { Button } from "@/components/ui/button";
 import { usePOSStore } from "@/store/posStore";
 import { Loader2, Plus, Minus, X } from "lucide-react";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { getOrderByIdQuery, updateOrderMutation, updateOrderItemsMutation } from "@/api/orders";
+import {
+  getOrderByIdQuery,
+  updateOrderMutation,
+  updateOrderItemsMutation,
+} from "@/api/orders";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Partner, useAuthStore } from "@/store/authStore";
 
-
-
 export const EditOrderModal = () => {
-  const { order, setOrder, editOrderModalOpen : isOpen, setEditOrderModalOpen } = usePOSStore();
-  const { fetchMenu, items : menuItems } = useMenuStore();
+  const {
+    order,
+    setOrder,
+    editOrderModalOpen: isOpen,
+    setEditOrderModalOpen,
+  } = usePOSStore();
+  const { fetchMenu, items: menuItems } = useMenuStore();
   const { userData } = useAuthStore();
-  
+
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
-  const [items, setItems] = useState<Array<{
-    id?: string;
-    menu_id: string;
-    quantity: number;
-    menu: {
-      name: string;
-      price: number;
-    };
-  }>>([]);
+  const [items, setItems] = useState<
+    Array<{
+      id?: string;
+      menu_id: string;
+      quantity: number;
+      menu: {
+        name: string;
+        price: number;
+      };
+    }>
+  >([]);
   const [totalPrice, setTotalPrice] = useState(0);
   const [tableNumber, setTableNumber] = useState<number | null>(null);
   const [phone, setPhone] = useState<string | null>(null);
@@ -52,7 +61,7 @@ export const EditOrderModal = () => {
     setPhone(null);
     setNewItemId("");
     setSearchQuery("");
-  }
+  };
 
   useEffect(() => {
     if (isOpen && order?.id) {
@@ -62,7 +71,7 @@ export const EditOrderModal = () => {
 
   useEffect(() => {
     if (isOpen) {
-      fetchMenu();
+      fetchMenu(order?.partnerId);
     }
   }, [isOpen]);
 
@@ -75,15 +84,17 @@ export const EditOrderModal = () => {
 
       const orderData = response.orders_by_pk;
       if (orderData) {
-        setItems(orderData.order_items.map((item : any) => ({
-          id: item.id,
-          menu_id: item.menu.id,
-          quantity: item.quantity,
-          menu: {
-            name: item.menu.name,
-            price: item.menu.price
-          }
-        })));
+        setItems(
+          orderData.order_items.map((item: any) => ({
+            id: item.id,
+            menu_id: item.menu.id,
+            quantity: item.quantity,
+            menu: {
+              name: item.menu.name,
+              price: item.menu.price,
+            },
+          }))
+        );
         setTotalPrice(orderData.total_price);
         setTableNumber(orderData.table_number);
         setPhone(orderData.phone);
@@ -96,21 +107,26 @@ export const EditOrderModal = () => {
     }
   };
 
-  const calculateTotal = (items: Array<{
-    id?: string;
-    menu_id: string;
-    quantity: number;
-    menu: {
-      name: string;
-      price: number;
-    };
-  }>) => {
-    return items.reduce((sum, item) => sum + (item.menu.price * item.quantity), 0);
+  const calculateTotal = (
+    items: Array<{
+      id?: string;
+      menu_id: string;
+      quantity: number;
+      menu: {
+        name: string;
+        price: number;
+      };
+    }>
+  ) => {
+    return items.reduce(
+      (sum, item) => sum + item.menu.price * item.quantity,
+      0
+    );
   };
 
   const handleQuantityChange = (index: number, newQuantity: number) => {
     if (newQuantity < 1) return;
-    
+
     const updatedItems = [...items];
     updatedItems[index].quantity = newQuantity;
     setItems(updatedItems);
@@ -126,56 +142,62 @@ export const EditOrderModal = () => {
 
   const handleAddItem = () => {
     if (!newItemId) return;
-    
-    const menuItem = menuItems.find(item => item.id === newItemId);
+
+    const menuItem = menuItems.find((item) => item.id === newItemId);
     if (!menuItem) return;
 
-    const existingItemIndex = items.findIndex(item => item.menu_id === newItemId);
-    
+    const existingItemIndex = items.findIndex(
+      (item) => item.menu_id === newItemId
+    );
+
     if (existingItemIndex >= 0) {
-      handleQuantityChange(existingItemIndex, items[existingItemIndex].quantity + 1);
+      handleQuantityChange(
+        existingItemIndex,
+        items[existingItemIndex].quantity + 1
+      );
     } else {
       const newItem = {
         menu_id: newItemId,
         quantity: 1,
         menu: {
           name: menuItem.name,
-          price: menuItem.price
-        }
+          price: menuItem.price,
+        },
       };
       const updatedItems = [...items, newItem];
       setItems(updatedItems);
       setTotalPrice(calculateTotal(updatedItems));
     }
-    
+
     setNewItemId("");
   };
 
   const handleUpdateOrder = async () => {
     try {
       setUpdating(true);
-      
+
       // Calculate total with GST if applicable
       const subtotal = calculateTotal(items);
-      const finalTotal = gstPercentage > 0 
-        ? subtotal + (subtotal * gstPercentage / 100)
-        : subtotal;
+      const finalTotal =
+        gstPercentage > 0
+          ? subtotal + (subtotal * gstPercentage) / 100
+          : subtotal;
 
       // Update order
       await fetchFromHasura(updateOrderMutation, {
         id: order?.id,
         totalPrice: finalTotal,
-        phone: phone || ""
+        phone: phone || "",
       });
 
       // Update order items
       await fetchFromHasura(updateOrderItemsMutation, {
         orderId: order?.id,
-        items: items.map(item => ({
+        items: items.map((item) => ({
           order_id: order?.id,
           menu_id: item.menu_id,
-          quantity: item.quantity
-        }))
+          quantity: item.quantity,
+        })),
       });
 
       // Update local state
@@ -185,23 +207,23 @@ export const EditOrderModal = () => {
           totalPrice: finalTotal,
           tableNumber: tableNumber || 0,
           phone: phone || "",
-          items: items.map(item => ({
+          items: items.map((item) => ({
             id: item.menu_id,
             name: item.menu.name,
             price: item.menu.price,
             quantity: item.quantity,
             category: {
-              name: '',
-              id: '',
-              priority: 0
+              name: "",
+              id: "",
+              priority: 0,
             },
-            image_url: '',
-            description: '',
+            image_url: "",
+            description: "",
             is_top: false,
             is_available: true,
             created_at: new Date().toISOString(),
-            priority: 0
-          }))
+            priority: 0,
+          })),
         });
       }
 
@@ -215,7 +237,7 @@ export const EditOrderModal = () => {
     }
   };
 
-  const filteredMenuItems = menuItems.filter(item =>
+  const filteredMenuItems = menuItems.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -237,33 +259,43 @@ export const EditOrderModal = () => {
           <div className="space-y-6 max-h-[500px] overflow-y-auto">
             {/* Order Details */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium">Table Number</label>
-                <Input
-                  type="number"
-                  value={tableNumber || ""}
-                  onChange={(e) => setTableNumber(Number(e.target.value) || null)}
-                  placeholder="Table number"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="block text-sm font-medium">Phone</label>
-                <Input
-                  type="tel"
-                  value={phone || ""}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Customer phone"
-                />
-              </div>
-              
+              {userData?.role !== "user" && (
+                <>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium">
+                      Table Number
+                    </label>
+                    <Input
+                      type="number"
+                      value={tableNumber || ""}
+                      onChange={(e) =>
+                        setTableNumber(Number(e.target.value) || null)
+                      }
+                      placeholder="Table number"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium">Phone</label>
+                    <Input
+                      type="tel"
+                      value={phone || ""}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Customer phone"
+                    />
+                  </div>
+                </>
+              )}
+
               <div className="space-y-2">
                 <label className="block text-sm font-medium">Total</label>
                 <div className="flex items-center h-10 px-3 py-2 rounded-md border bg-background text-sm">
-                  {currency}{totalPrice.toFixed(2)}
+                  {currency}
+                  {totalPrice.toFixed(2)}
                   {gstPercentage > 0 && (
                     <span className="text-xs text-muted-foreground ml-2">
-                      (incl. {gstPercentage}% GST: {currency}{(totalPrice * gstPercentage / 100).toFixed(2)})
+                      (incl. {gstPercentage}% GST: {currency}
+                      {((totalPrice * gstPercentage) / 100).toFixed(2)})
                     </span>
                   )}
                 </div>
@@ -281,35 +313,45 @@ export const EditOrderModal = () => {
                 ) : (
                   <div className="divide-y">
                     {items.map((item, index) => (
-                      <div key={index} className="p-3 flex justify-between items-center">
+                      <div
+                        key={index}
+                        className="p-3 flex justify-between items-center"
+                      >
                         <div className="flex-1">
                           <div className="font-medium">{item.menu.name}</div>
                           <div className="text-sm text-muted-foreground">
-                            {currency}{item.menu.price.toFixed(2)} each
+                            {currency}
+                            {item.menu.price.toFixed(2)} each
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => handleQuantityChange(index, item.quantity - 1)}
+                            onClick={() =>
+                              handleQuantityChange(index, item.quantity - 1)
+                            }
                           >
                             <Minus className="h-4 w-4" />
                           </Button>
-                          
-                          <span className="w-8 text-center">{item.quantity}</span>
-                          
+
+                          <span className="w-8 text-center">
+                            {item.quantity}
+                          </span>
+
                           <Button
                             variant="outline"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => handleQuantityChange(index, item.quantity + 1)}
+                            onClick={() =>
+                              handleQuantityChange(index, item.quantity + 1)
+                            }
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
-                          
+
                           <Button
                             variant="ghost"
                             size="icon"
@@ -335,7 +377,7 @@ export const EditOrderModal = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
-                
+
                 {searchQuery && (
                   <div className="border rounded-lg max-h-60 overflow-y-auto">
                     {filteredMenuItems.length === 0 ? (
@@ -344,9 +386,9 @@ export const EditOrderModal = () => {
                       </div>
                     ) : (
                       <div className="divide-y">
-                        {filteredMenuItems.map(item => (
-                          <div 
-                            key={item.id} 
+                        {filteredMenuItems.map((item) => (
+                          <div
+                            key={item.id}
                             className="p-3 flex justify-between items-center hover:bg-accent cursor-pointer"
                             onClick={() => {
                               setNewItemId(item.id!);
@@ -356,7 +398,8 @@ export const EditOrderModal = () => {
                             <div>
                               <div className="font-medium">{item.name}</div>
                               <div className="text-sm text-muted-foreground">
-                                {currency}{item.price.toFixed(2)}
+                                {currency}
+                                {item.price.toFixed(2)}
                               </div>
                             </div>
                             <Plus className="h-4 w-4" />
@@ -370,15 +413,13 @@ export const EditOrderModal = () => {
                 {newItemId && (
                   <div className="flex gap-2">
                     <div className="flex-1 border rounded-lg p-3">
-                      {
-                        menuItems.find(item => item.id === newItemId)?.name
-                      } - {currency}{
-                        menuItems.find(item => item.id === newItemId)?.price.toFixed(2)
-                      }
+                      {menuItems.find((item) => item.id === newItemId)?.name} -{" "}
+                      {currency}
+                      {menuItems
+                        .find((item) => item.id === newItemId)
+                        ?.price.toFixed(2)}
                     </div>
-                    <Button onClick={handleAddItem}>
-                      Add to Order
-                    </Button>
+                    <Button onClick={handleAddItem}>Add to Order</Button>
                   </div>
                 )}
               </div>
@@ -395,7 +436,9 @@ export const EditOrderModal = () => {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Updating...
                   </>
-                ) : "Update Order"}
+                ) : (
+                  "Update Order"
+                )}
               </Button>
             </div>
           </div>
