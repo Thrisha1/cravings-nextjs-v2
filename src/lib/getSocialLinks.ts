@@ -4,6 +4,7 @@ const safeParseJson = (input: any) => {
   try {
     return typeof input === "string" ? JSON.parse(input) : input || {};
   } catch (e) {
+    console.error("Error parsing social links:", e);
     return {};
   }
 };
@@ -15,7 +16,7 @@ export const getSocialLinks = (hoteldata: HotelData): SocialLinks => {
   return {
     instagram: instaLink || "",
     whatsapp: `https://wa.me/+91${
-      hoteldata?.whatsapp_numbers[0]?.number || hoteldata?.phone
+      hoteldata?.whatsapp_numbers ? hoteldata.whatsapp_numbers[0]?.number : hoteldata?.phone
     }`,
     googleReview: `https://search.google.com/local/writereview?placeid=${hoteldata?.place_id}`,
   };
