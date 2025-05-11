@@ -156,6 +156,8 @@ const OrdersTab = () => {
       const dateB = new Date(b.createdAt).getTime();
       return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
     });
+
+    setSortedOrders(sortedOrders);
   }, [orders, activeTab, showOnlyPending, sortOrder]);
 
   useEffect(() => {
