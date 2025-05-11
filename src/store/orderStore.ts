@@ -3,7 +3,12 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { useAuthStore } from "./authStore";
-import { createOrderItemsMutation, createOrderMutation, subscriptionQuery, userSubscriptionQuery } from "@/api/orders";
+import {
+  createOrderItemsMutation,
+  createOrderMutation,
+  subscriptionQuery,
+  userSubscriptionQuery,
+} from "@/api/orders";
 import { toast } from "sonner";
 import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
 import { subscribeToHasura } from "@/lib/hasuraSubscription";
@@ -63,14 +68,10 @@ interface OrderState {
   setOpenAuthModal: (open: boolean) => void;
   genOrderId: () => string;
   setUserAddress: (address: string) => void;
-  subscribeOrders: (
-    callback?: (orders: Order[]) => void
-  ) => () => void;
+  subscribeOrders: (callback?: (orders: Order[]) => void) => () => void;
   partnerOrders: Order[];
   userOrders: Order[];
-  subscribeUserOrders: (
-    callback?: (orders: Order[]) => void
-  ) => () => void;
+  subscribeUserOrders: (callback?: (orders: Order[]) => void) => () => void;
 }
 
 const useOrderStore = create(
@@ -87,9 +88,7 @@ const useOrderStore = create(
       totalPrice: 0,
       userOrders: [],
 
-
       subscribeUserOrders: (callback) => {
-
         const userId = useAuthStore.getState().userData?.id;
 
         const unsubscribe = subscribeToHasura({
@@ -132,7 +131,6 @@ const useOrderStore = create(
       },
 
       subscribeOrders: (callback) => {
-
         const partnerId = useAuthStore.getState().userData?.id;
 
         const unsubscribe = subscribeToHasura({
@@ -417,7 +415,7 @@ const useOrderStore = create(
             partnerId: hotelData.id,
             userId: userData.id,
             type,
-            status : "pending",
+            status: "pending",
             delivery_address: tableNumber ? null : get().userAddress,
           });
 
@@ -564,6 +562,8 @@ const useOrderStore = create(
         const state = get();
         if (!state.hotelId) return;
 
+        const newOrderId = crypto.randomUUID();
+
         set((state) => {
           const hotelOrders = { ...state.hotelOrders };
           if (state.hotelId) {
@@ -571,13 +571,14 @@ const useOrderStore = create(
               items: [],
               totalPrice: 0,
               order: null,
-              orderId: null,
+              orderId: newOrderId,
             };
           }
+
           return {
             hotelOrders,
             items: [],
-            orderId: null,
+            orderId: newOrderId,
             totalPrice: 0,
             order: null,
           };
