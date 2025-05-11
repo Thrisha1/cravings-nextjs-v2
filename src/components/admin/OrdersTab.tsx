@@ -28,6 +28,7 @@ const OrdersTab = () => {
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest");
   const [activeTab, setActiveTab] = useState<"table" | "delivery">("table");
   const [newOrders, setNewOrders] = useState({ table: false, delivery: false });
+  const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
   const prevPendingOrdersCount = useRef({ table: 0, delivery: 0 });
   const soundRef = useRef<Howl | null>(null);
   const billRef = useRef<HTMLDivElement>(null);
@@ -139,21 +140,23 @@ const OrdersTab = () => {
     }
   };
 
-  const filteredByTypeOrders = orders.filter((order) =>
-    activeTab === "table"
-      ? order.type === "table_order"
-      : order.type === "delivery"
-  );
+  useEffect(() => {
+    const filteredByTypeOrders = orders.filter((order) =>
+      activeTab === "table"
+        ? order.type === "table_order"
+        : order.type === "delivery"
+    );
 
-  const filteredOrders = showOnlyPending
-    ? filteredByTypeOrders.filter((order) => order.status === "pending")
-    : filteredByTypeOrders;
+    const filteredOrders = showOnlyPending
+      ? filteredByTypeOrders.filter((order) => order.status === "pending")
+      : filteredByTypeOrders;
 
-  const sortedOrders = [...filteredOrders].sort((a, b) => {
-    const dateA = new Date(a.createdAt).getTime();
-    const dateB = new Date(b.createdAt).getTime();
-    return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
-  });
+    const sortedOrders = [...filteredOrders].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+    });
+  }, [orders, activeTab, showOnlyPending, sortOrder]);
 
   useEffect(() => {
     if (!userData?.id) return;
