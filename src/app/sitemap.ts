@@ -56,26 +56,13 @@ export default async function sitemap({
       changeFrequency: "weekly" as const,
       priority: 0.8,
     },
-    // You might also want to include these common variations
-    {
-      url: `${BASE_URL}/hotels/offers`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/hotels/explore`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
-    },
+
   ];
 
   // Generate partner URLs in the format /hotels/partner.store_name/partner.id
   const partnerPages = data.partners.map((partner: Partner) => {
     // Clean the store_name for URL (remove special chars, spaces, etc.)
     const cleanStoreName = partner.store_name
-      .toLowerCase()
       .replace(/[^\w\s-]/g, '') // Remove special characters
       .replace(/\s+/g, '-')     // Replace spaces with hyphens
       .replace(/-+/g, '-')      // Replace multiple hyphens with single

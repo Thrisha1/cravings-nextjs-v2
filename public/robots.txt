@@ -4,4 +4,4 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /superadmin/
 
-Sitemap: https://www.cravings.live/sitemap.xml
+Sitemap: https://www.cravings.live/sitemap/0.xml
