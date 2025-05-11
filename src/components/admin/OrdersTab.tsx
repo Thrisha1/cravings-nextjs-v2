@@ -6,7 +6,7 @@ import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { Loader2, Printer, Edit } from "lucide-react";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { HotelData } from "@/app/hotels/[id]/page";
+import { HotelData } from "@/app/hotels/[...id]/page";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { formatDate } from "@/lib/formatDate";
 import { Howl } from "howler";

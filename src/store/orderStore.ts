@@ -1,4 +1,4 @@
-import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";

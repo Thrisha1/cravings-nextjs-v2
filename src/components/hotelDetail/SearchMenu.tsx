@@ -1,5 +1,5 @@
 "use client";
-import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import React, { useEffect, useState } from "react";
 import {
   Dialog,

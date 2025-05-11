@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import { Category } from "@/store/categoryStore_hasura";
 import ItemCard from "./ItemCard";

@@ -1,4 +1,4 @@
-import { SocialLinks } from "@/app/hotels/[id]/page";
+import { SocialLinks } from "@/app/hotels/[...id]/page";
 import { ChatBubbleIcon, InstagramLogoIcon } from "@radix-ui/react-icons";
 import { FaGoogle, FaInstagram, FaWhatsapp } from "react-icons/fa";
 import React from "react";

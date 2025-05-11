@@ -1,5 +1,5 @@
 "use client";
-import { HotelData } from "@/app/hotels/[id]/page";
+import { HotelData } from "@/app/hotels/[...id]/page";
 import { FeatureFlags, Styles } from "@/screens/HotelMenuPage_v2";
 import HeadingWithAccent from "@/components/HeadingWithAccent";
 import React, { useEffect, useState } from "react";

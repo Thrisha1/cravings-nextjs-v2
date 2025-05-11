@@ -7,7 +7,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../ui/dialog";
-import { HotelDataMenus } from "@/app/hotels/[id]/page";
+import { HotelDataMenus } from "@/app/hotels/[...id]/page";
 import HeadingWithAccent from "../HeadingWithAccent";
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import { X } from "lucide-react";

@@ -6,7 +6,7 @@ import { Styles } from "@/screens/HotelMenuPage_v2";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
-import { HotelData } from "@/app/hotels/[id]/page";
+import { HotelData } from "@/app/hotels/[...id]/page";
 import { Button } from "../ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { getFeatures } from "@/lib/getFeatures";

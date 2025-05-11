@@ -15,9 +15,11 @@ import { getSocialLinks } from "@/lib/getSocialLinks";
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string[] }>;
 }): Promise<Metadata> {
-  const { id: hotelId } = await params;
+  const { id: hotelIds } = await params;
+
+  const hotelId = isUUID(hotelIds?.[0] || "") ? hotelIds?.[0] : hotelIds?.[1];
 
   const getHotelData = unstable_cache(
     async (id: string) => {
@@ -70,6 +72,9 @@ export interface HotelDataMenus extends Omit<MenuItem, "category"> {
   };
 }
 
+const isUUID = (str: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 export interface HotelData extends Partner {
   offers: Offer[];
   menus: HotelDataMenus[];
@@ -86,23 +91,20 @@ const HotelPage = async ({
   params,
 }: {
   searchParams: Promise<{ query: string; qrScan: boolean }>;
-  params: Promise<{ id: string }>;
+  params: Promise<{ [key: string]: string | undefined }>;
 }) => {
   const { query: search, qrScan } = await searchParams;
   const { id } = await params;
   const auth = await getAuthCookie();
-  const hotelId = id;
+
+  const hotelId = isUUID(id?.[0] || "") ? id?.[0] : id?.[1];
 
   const getHotelData = unstable_cache(
     async (id: string) => {
       try {
-        const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
+        return fetchFromHasura(getPartnerAndOffersQuery, {
           id,
         });
-        return {
-          id,
-          ...partnerData.partners[0],
-        } as HotelData;
       } catch (error) {
         console.error("Error fetching hotel data:", error);
         return null;
@@ -112,7 +114,9 @@ const HotelPage = async ({
     { tags: [hotelId as string, "hotel-data"] }
   );
 
-  const hoteldata = hotelId ? await getHotelData(hotelId) : null;
+  const hoteldata = hotelId
+    ? ((await getHotelData(hotelId))?.partners[0] as HotelData)
+    : null;
   const offers = hoteldata?.offers;
 
   let filteredOffers: Offer[] = [];
@@ -144,7 +148,6 @@ const HotelPage = async ({
       ? JSON.parse(hoteldata?.theme)
       : hoteldata?.theme || {}
   ) as ThemeConfig;
-
 
   const socialLinks = getSocialLinks(hoteldata as HotelData);
 

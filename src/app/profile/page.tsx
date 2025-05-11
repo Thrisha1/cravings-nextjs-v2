@@ -43,7 +43,7 @@ import {
   FeatureFlags,
   revertFeatureToString,
 } from "@/screens/HotelMenuPage_v2";
-import { HotelData, SocialLinks } from "../hotels/[id]/page";
+import { HotelData, SocialLinks } from "../hotels/[...id]/page";
 import { getSocialLinks } from "@/lib/getSocialLinks";
 import { getFeatures } from "@/lib/getFeatures";
 import { updateAuthCookie } from "../auth/actions";

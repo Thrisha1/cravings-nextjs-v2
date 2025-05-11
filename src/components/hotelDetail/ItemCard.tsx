@@ -1,5 +1,5 @@
 "use client";
-import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import React, { useEffect, useState } from "react";
 import Img from "../Img";

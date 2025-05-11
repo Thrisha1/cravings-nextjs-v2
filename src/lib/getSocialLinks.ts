@@ -1,4 +1,4 @@
-import { HotelData, SocialLinks } from "@/app/hotels/[id]/page";
+import { HotelData, SocialLinks } from "@/app/hotels/[...id]/page";
 
 const safeParseJson = (input: any) => {
   try {

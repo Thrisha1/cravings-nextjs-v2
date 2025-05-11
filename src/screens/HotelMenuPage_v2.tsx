@@ -2,7 +2,7 @@
 
 import MenuItemsList from "@/components/hotelDetail/MenuItemsList_v2";
 import { Offer } from "@/store/offerStore_hasura";
-import { HotelData, SocialLinks } from "@/app/hotels/[id]/page";
+import { HotelData, SocialLinks } from "@/app/hotels/[...id]/page";
 import ThemeChangeButton, {
   ThemeConfig,
 } from "@/components/hotelDetail/ThemeChangeButton";

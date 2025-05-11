@@ -1,7 +1,7 @@
 import { getPartnerAndOffersQuery } from "@/api/partners";
 import { GET_QR_TABLE } from "@/api/qrcodes";
 import { getAuthCookie } from "@/app/auth/actions";
-import { HotelData } from "@/app/hotels/[id]/page";
+import { HotelData } from "@/app/hotels/[...id]/page";
 import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
 import { getSocialLinks } from "@/lib/getSocialLinks";
 import { fetchFromHasura } from "@/lib/hasuraClient";
@@ -11,6 +11,7 @@ import { Offer } from "@/store/offerStore_hasura";
 import { unstable_cache } from "next/cache";
 import React from "react";
 
+const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
 const page = async ({
   params,
@@ -19,10 +20,12 @@ const page = async ({
   params: Promise<{ [key: string]: string | undefined }>;
   searchParams: Promise<{ query: string; qrScan: string }>;
 }) => {
-  const { id } = await params;
+  const { id : qrId } = await params;
+
+  const id = isUUID(qrId?.[0] || "") ? qrId?.[0] : qrId?.[1];
 
   const { qr_codes } = await fetchFromHasura(GET_QR_TABLE, {
-    id: id?.[0],
+    id: id,
   });
 
   const tableNumber = qr_codes[0].table_number;

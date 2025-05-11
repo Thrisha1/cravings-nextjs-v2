@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Accordion, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { AccordionContent } from "@radix-ui/react-accordion";
 import Image from "next/image";
-import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import Img from "../Img";
 
 const MenuItemsList = ({

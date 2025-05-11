@@ -41,7 +41,7 @@ import MenuItemsList from "@/components/hotelDetail/MenuItemsList";
 import { Offer } from "@/store/offerStore_hasura";
 import { UpiData } from "@/types/upiData";
 import { useAuthStore } from "@/store/authStore";
-import { HotelData } from "@/app/hotels/[id]/page";
+import { HotelData } from "@/app/hotels/[...id]/page";
 import {
   Carousel,
   CarouselContent,

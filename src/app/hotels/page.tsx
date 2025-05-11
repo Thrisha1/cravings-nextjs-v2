@@ -57,7 +57,7 @@ export default async function HotelsPage() {
                 </Link>
                 
                 <Link 
-                  href={`/hotels/${partner.id}`}
+                  href={`/hotels/${partner.store_name.replaceAll(" ","-")}/${partner.id}`}
                   className="w-[75%] bg-orange-500 hover:bg-orange-600 text-white text-xs md:text-sm font-medium py-1.5 px-2 rounded transition-colors duration-200 text-center"
                 >
                   View Menu
