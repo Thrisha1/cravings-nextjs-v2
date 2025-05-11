@@ -13,6 +13,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Special case: Redirect partners from root to /admin
+  if (pathname === '/') {
+    if (authToken) {
+      try {
+        const decrypted = decryptText(authToken) as { id: string; role: string };
+        if (decrypted?.role === 'partner') {
+          return NextResponse.redirect(new URL('/admin', request.url));
+        }
+      } catch (error) {
+        console.error('Error decrypting token:', error);
+        // Continue with normal flow if there's an error
+      }
+    }
+    return NextResponse.next();
+  }
+
   // Route access rules by role
   const roleAccessRules = {
     user: {
@@ -20,7 +36,7 @@ export async function middleware(request: NextRequest) {
       redirect: '/login'
     },
     partner: {
-      allowed: ['/admin', '/partner', '/profile' , '/admin/orders'],
+      allowed: ['/admin', '/partner', '/profile', '/admin/orders'],
       redirect: '/login'
     },
     superadmin: {
