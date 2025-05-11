@@ -39,34 +39,34 @@ export default async function sitemap({
     {
       url: `${BASE_URL}/hotels`,
       lastModified: new Date(),
-      changeFrequency: "daily" as const,
+      changeFrequency: "weekly" as const,
       priority: 0.9,
     },
     // Offers page
     {
       url: `${BASE_URL}/offers`,
       lastModified: new Date(),
-      changeFrequency: "daily" as const,
+      changeFrequency: "weekly" as const,
       priority: 0.8,
     },
     // Explore page
     {
       url: `${BASE_URL}/explore`,
       lastModified: new Date(),
-      changeFrequency: "daily" as const,
+      changeFrequency: "weekly" as const,
       priority: 0.8,
     },
     // You might also want to include these common variations
     {
       url: `${BASE_URL}/hotels/offers`,
       lastModified: new Date(),
-      changeFrequency: "daily" as const,
+      changeFrequency: "weekly" as const,
       priority: 0.7,
     },
     {
       url: `${BASE_URL}/hotels/explore`,
       lastModified: new Date(),
-      changeFrequency: "daily" as const,
+      changeFrequency: "weekly" as const,
       priority: 0.7,
     },
   ];
@@ -85,7 +85,7 @@ export default async function sitemap({
       url: `${BASE_URL}/hotels/${cleanStoreName}/${partner.id}`,
       lastModified: new Date(), // Or use partner.updated_at if available
       changeFrequency: "weekly" as const,
-      priority: 0.7,
+      priority: 0.9,
     };
   });
 
