@@ -92,6 +92,7 @@ export default function ProfilePage() {
   const [gst, setGst] = useState({
     gst_no: "",
     gst_percentage: 0,
+    enabled: false,
   });
   const [description, setDescription] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
@@ -143,6 +144,7 @@ export default function ProfilePage() {
       setGst({
         gst_no: userData.gst_no || "",
         gst_percentage: userData.gst_percentage || 0,
+        enabled: (userData.gst_percentage || 0) > 0 ? true : false,
       });
     }
   }, [userData]);
@@ -490,7 +492,7 @@ export default function ProfilePage() {
         },
       });
       revalidateTag(userData?.id as string);
-      updateAuthCookie({ feature_flags : stringedFeature});
+      updateAuthCookie({ feature_flags: stringedFeature });
       toast.dismiss();
       toast.success("Feature flags updated successfully!");
     } catch (error) {
@@ -690,11 +692,13 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveGst = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveGst = async (e?: React.FormEvent | null, isDisabled?: boolean) => {
+    e?.preventDefault();
+
+    const gstPercent = !isDisabled ? gst.gst_percentage : 0;
 
     try {
-      if (gst.gst_percentage <= 0) {
+      if (gstPercent < 0) {
         toast.error("Please enter a valid GST");
         return;
       }
@@ -710,11 +714,11 @@ export default function ProfilePage() {
         id: userData?.id,
         updates: {
           gst_no: gst.gst_no,
-          gst_percentage: gst.gst_percentage,
+          gst_percentage: gstPercent,
         },
       });
       revalidateTag(userData?.id as string);
-      setState({ gst_no: gst.gst_no, gst_percentage: gst.gst_percentage });
+      setState({ gst_no: gst.gst_no, gst_percentage: gstPercent });
       toast.dismiss("gst");
       toast.success("GST updated successfully!");
       setIsSaving((prev) => {
@@ -1448,13 +1452,9 @@ export default function ProfilePage() {
                     {features.pos.access && (
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
-                          <div className="font-medium">
-                            POS
-                          </div>
+                          <div className="font-medium">POS</div>
                           <div className="text-sm text-gray-500">
-                            {features.pos.enabled
-                              ? "Enabled"
-                              : "Disabled"}
+                            {features.pos.enabled ? "Enabled" : "Disabled"}
                           </div>
                         </div>
                         <Switch
@@ -1480,12 +1480,32 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-2 pt-4">
-                <h1 className="text-lg font-semibold">Gst Settings</h1>
+                <div className="flex justify-between items-center">
+                  <h1 className="text-lg font-semibold">Gst Settings</h1>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600">Enable GST</span>
+                    <Switch
+                      checked={gst.enabled}
+                      onCheckedChange={(checked) => {
+                        setGst((prev) => ({
+                          ...prev,
+                          enabled: checked,
+                          gst_percentage: checked ? prev.gst_percentage : 0,
+                        }));
+                        if (!checked) {
+                          handleSaveGst(null, true);
+                        }
+                      }}
+                      className="data-[state=checked]:bg-black"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex gap-2">
                   {isEditing.gst ? (
-                    <form onSubmit={handleSaveGst} className="space-y-2">
+                    <form onSubmit={handleSaveGst} className="space-y-2 w-full">
                       <div>
-                        <label htmlFor="gst_no" className=" font-semibold">
+                        <label htmlFor="gst_no" className="font-semibold">
                           Gst No.
                         </label>
                         <Input
@@ -1500,12 +1520,13 @@ export default function ProfilePage() {
                             })
                           }
                           className="flex-1"
+                          disabled={!gst.enabled}
                         />
                       </div>
                       <div>
                         <label
                           htmlFor="gst_percentage"
-                          className=" font-semibold"
+                          className="font-semibold"
                         >
                           Gst Percentage
                         </label>
@@ -1523,6 +1544,7 @@ export default function ProfilePage() {
                             })
                           }
                           className="flex-1"
+                          disabled={!gst.enabled}
                         />
                       </div>
 
@@ -1536,16 +1558,24 @@ export default function ProfilePage() {
                   ) : (
                     <div className="flex justify-between items-center w-full">
                       <div className="flex flex-col gap-2">
-                        <div className="text-gray-700">
-                          {gst.gst_no
-                            ? `GST no: ${gst.gst_no}`
-                            : "No Gst no. set"}
-                        </div>
-                        <div className="text-gray-700">
-                          {gst.gst_percentage
-                            ? `GST percentage: ${gst.gst_percentage}%`
-                            : "No Gst percentage set"}
-                        </div>
+                        {gst.enabled ? (
+                          <>
+                            <div className="text-gray-700">
+                              {gst.gst_no
+                                ? `GST no: ${gst.gst_no}`
+                                : "No Gst no. set"}
+                            </div>
+                            <div className="text-gray-700">
+                              {gst.gst_percentage
+                                ? `GST percentage: ${gst.gst_percentage}%`
+                                : "No Gst percentage set"}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-gray-700">
+                            GST is currently disabled
+                          </div>
+                        )}
                       </div>
                       <Button
                         onClick={() => {
@@ -1556,6 +1586,7 @@ export default function ProfilePage() {
                         }}
                         variant="ghost"
                         className="hover:bg-orange-100"
+                        disabled={!gst.enabled}
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -1563,7 +1594,9 @@ export default function ProfilePage() {
                   )}
                 </div>
                 <p className="text-sm text-gray-500">
-                  This Gst will be used for your restaurant profile and billing
+                  {gst.enabled
+                    ? "This Gst will be used for your restaurant profile and billing"
+                    : "GST is currently disabled for your restaurant"}
                 </p>
               </div>
             </CardContent>

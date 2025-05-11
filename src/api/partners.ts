@@ -127,6 +127,8 @@ export const updatePartnerMutation = `
       description
       currency
       feature_flags
+      gst_no
+      gst_percentage
       whatsapp_numbers
     }
   }
