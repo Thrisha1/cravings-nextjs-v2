@@ -338,7 +338,7 @@ export default function ProfilePage() {
         return { ...prev, placeId: true };
       });
       await fetchFromHasura(updatePartnerMutation, {
-        userId: userData?.id,
+        id: userData?.id,
         updates: {
           place_id: placeId,
         },
