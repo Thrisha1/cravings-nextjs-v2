@@ -243,11 +243,11 @@ export const EditOrderModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-w-4xl h-[100vh] flex flex-col md:max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>Edit Order #{order?.id}</DialogTitle>
+          <DialogTitle>Edit Order #{order?.id?.split("-")[0]}</DialogTitle>
           <DialogDescription>
-            {tableNumber ? `Table ${tableNumber}` : "No table assigned"}
+            {tableNumber ? `Table ${tableNumber}` : ""}
           </DialogDescription>
         </DialogHeader>
 
@@ -299,6 +299,63 @@ export const EditOrderModal = () => {
                     </span>
                   )}
                 </div>
+              </div>
+            </div>
+
+            {/* Add New Item */}
+            <div>
+              <h3 className="font-medium mb-2">Add New Item</h3>
+              <div className="space-y-3">
+                <Input
+                  placeholder="Search menu items..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+
+                {searchQuery && (
+                  <div className="border rounded-lg max-h-60 overflow-y-auto">
+                    {filteredMenuItems.length === 0 ? (
+                      <div className="p-3 text-center text-muted-foreground">
+                        No items found
+                      </div>
+                    ) : (
+                      <div className="divide-y">
+                        {filteredMenuItems.map((item) => (
+                          <div
+                            key={item.id}
+                            className="p-3 flex justify-between items-center hover:bg-accent cursor-pointer"
+                            onClick={() => {
+                              setNewItemId(item.id!);
+                              setSearchQuery("");
+                            }}
+                          >
+                            <div>
+                              <div className="font-medium">{item.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {currency}
+                                {item.price.toFixed(2)}
+                              </div>
+                            </div>
+                            <Plus className="h-4 w-4" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {newItemId && (
+                  <div className="flex gap-2">
+                    <div className="flex-1 border rounded-lg p-3">
+                      {menuItems.find((item) => item.id === newItemId)?.name} -{" "}
+                      {currency}
+                      {menuItems
+                        .find((item) => item.id === newItemId)
+                        ?.price.toFixed(2)}
+                    </div>
+                    <Button onClick={handleAddItem}>Add to Order</Button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -363,63 +420,6 @@ export const EditOrderModal = () => {
                         </div>
                       </div>
                     ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Add New Item */}
-            <div>
-              <h3 className="font-medium mb-2">Add New Item</h3>
-              <div className="space-y-3">
-                <Input
-                  placeholder="Search menu items..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-
-                {searchQuery && (
-                  <div className="border rounded-lg max-h-60 overflow-y-auto">
-                    {filteredMenuItems.length === 0 ? (
-                      <div className="p-3 text-center text-muted-foreground">
-                        No items found
-                      </div>
-                    ) : (
-                      <div className="divide-y">
-                        {filteredMenuItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className="p-3 flex justify-between items-center hover:bg-accent cursor-pointer"
-                            onClick={() => {
-                              setNewItemId(item.id!);
-                              setSearchQuery("");
-                            }}
-                          >
-                            <div>
-                              <div className="font-medium">{item.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {currency}
-                                {item.price.toFixed(2)}
-                              </div>
-                            </div>
-                            <Plus className="h-4 w-4" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {newItemId && (
-                  <div className="flex gap-2">
-                    <div className="flex-1 border rounded-lg p-3">
-                      {menuItems.find((item) => item.id === newItemId)?.name} -{" "}
-                      {currency}
-                      {menuItems
-                        .find((item) => item.id === newItemId)
-                        ?.price.toFixed(2)}
-                    </div>
-                    <Button onClick={handleAddItem}>Add to Order</Button>
                   </div>
                 )}
               </div>
