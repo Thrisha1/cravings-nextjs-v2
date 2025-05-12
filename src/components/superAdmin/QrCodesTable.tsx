@@ -25,6 +25,8 @@ import {
 import { Label } from "@/components/ui/label";
 import * as XLSX from 'xlsx';
 import QRCode from 'qrcode';
+import * as XLSX from 'xlsx';
+import QRCode from 'qrcode';
 
 interface QrCode {
   id: string;
@@ -246,6 +248,7 @@ export function QrCodesTable({
       <div className="flex justify-end space-x-2">
         <Button onClick={() => setIsBulkGenerateOpen(true)}>Bulk QR Generate</Button>
         <Button onClick={handleCopyAllLinks}>Copy All Links</Button>
+        <Button onClick={generateTableSheet}>Generate Table Sheet</Button>
         <Button onClick={generateTableSheet}>Generate Table Sheet</Button>
         <Button onClick={() => setIsCreateDialogOpen(true)}>Create New QR Code</Button>
       </div>
