@@ -1,4 +1,4 @@
-// lib/hasuraSubscription.ts
+
 import { createClient, Client } from 'graphql-ws';
 
 interface SubscriptionOptions {
@@ -61,8 +61,8 @@ class HasuraSubscriptionClient {
 
 // Initialize with your Hasura configuration
 const hasuraConfig: HasuraClientConfig = {
-  url: 'wss://curious-ferret-93.hasura.app/v1/graphql',
-  adminSecret: 'grK3WUtZW9mXGtYtjEqU44QfmFkWOMga9qQoa1uBvR03n7DXLkTodHH9cWDcN6cn',
+  url: process.env.NEXT_PUBLIC_HASURA_GRAPHQL_ENDPOINT_WSS as string,
+  adminSecret: process.env.NEXT_PUBLIC_HASURA_GRAPHQL_ADMIN_SECRET as string,
 };
 
 export const hasuraClient = HasuraSubscriptionClient.getInstance(hasuraConfig);
