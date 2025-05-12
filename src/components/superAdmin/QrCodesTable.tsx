@@ -23,6 +23,8 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import * as XLSX from 'xlsx';
+import QRCode from 'qrcode';
 
 interface QrCode {
   id: string;
@@ -183,11 +185,68 @@ export function QrCodesTable({
       });
   };
 
+  const generateTableSheet = async () => {
+    try {
+      // Generate QR codes for each table
+      const qrCodePromises = qrCodes.map(async (qr) => {
+        const qrUrl = `https://cravings.live/qrScan/${qr.id}`;
+        const qrCodeBuffer = await QRCode.toBuffer(qrUrl, {
+          width: 200,
+          margin: 1,
+          color: {
+            dark: '#000000',
+            light: '#ffffff'
+          }
+        });
+
+        // Convert buffer to base64
+        const base64Image = qrCodeBuffer.toString('base64');
+        
+        return {
+          table_no: qr.table_number,
+          qr_code: {
+            t: 's', // string type
+            v: base64Image, // base64 image data
+            s: { // style
+              alignment: { vertical: 'center', horizontal: 'center' },
+              font: { sz: 12 }
+            }
+          }
+        };
+      });
+
+      const worksheetData = await Promise.all(qrCodePromises);
+
+      // Create a new workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+
+      // Set column widths
+      const wscols = [
+        { wch: 15 }, // table_no column width
+        { wch: 50 }  // qr_code column width
+      ];
+      worksheet['!cols'] = wscols;
+
+      // Add the worksheet to the workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Table QR Codes");
+
+      // Generate the Excel file
+      XLSX.writeFile(workbook, "1.xlsx");
+
+      toast.success("Table sheet generated successfully");
+    } catch (error) {
+      console.error('Error generating QR codes:', error);
+      toast.error("Failed to generate table sheet");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end space-x-2">
         <Button onClick={() => setIsBulkGenerateOpen(true)}>Bulk QR Generate</Button>
         <Button onClick={handleCopyAllLinks}>Copy All Links</Button>
+        <Button onClick={generateTableSheet}>Generate Table Sheet</Button>
         <Button onClick={() => setIsCreateDialogOpen(true)}>Create New QR Code</Button>
       </div>
 
