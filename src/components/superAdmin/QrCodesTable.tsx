@@ -25,8 +25,6 @@ import {
 import { Label } from "@/components/ui/label";
 import * as XLSX from 'xlsx';
 import QRCode from 'qrcode';
-import * as XLSX from 'xlsx';
-import QRCode from 'qrcode';
 
 interface QrCode {
   id: string;
