@@ -23,7 +23,7 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import QRCode from 'qrcode';
 
 interface QrCode {
@@ -187,56 +187,54 @@ export function QrCodesTable({
 
   const generateTableSheet = async () => {
     try {
-      // Generate QR codes for each table
-      const qrCodePromises = qrCodes.map(async (qr) => {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Table QR Codes");
+
+      // Add header
+      worksheet.columns = [
+        { header: 'Table No', key: 'table_no', width: 15 },
+        { header: 'QR Code', key: 'qr_code', width: 30 }
+      ];
+
+      for (let i = 0; i < qrCodes.length; i++) {
+        const qr = qrCodes[i];
         const qrUrl = `https://cravings.live/qrScan/${qr.id}`;
-        const qrCodeBuffer = await QRCode.toBuffer(qrUrl, {
-          width: 200,
-          margin: 1,
-          color: {
-            dark: '#000000',
-            light: '#ffffff'
-          }
+        
+        // Generate QR code as base64
+        const base64 = await QRCode.toDataURL(qrUrl);
+
+        // Add row
+        const row = worksheet.addRow([qr.table_number, '']);
+
+        // Add image to workbook
+        const imageId = workbook.addImage({
+          base64: base64,
+          extension: 'png',
         });
 
-        // Convert buffer to base64
-        const base64Image = qrCodeBuffer.toString('base64');
-        
-        return {
-          table_no: qr.table_number,
-          qr_code: {
-            t: 's', // string type
-            v: base64Image, // base64 image data
-            s: { // style
-              alignment: { vertical: 'center', horizontal: 'center' },
-              font: { sz: 12 }
-            }
-          }
-        };
-      });
+        // Adjust image position in the worksheet (column B, starting at row index + 1)
+        worksheet.addImage(imageId, {
+          tl: { col: 1, row: i + 1 }, // top-left: column 2 (B), current row
+          ext: { width: 100, height: 100 }
+        });
 
-      const worksheetData = await Promise.all(qrCodePromises);
+        // Set row height to fit the image
+        worksheet.getRow(i + 2).height = 80;
+      }
 
-      // Create a new workbook and worksheet
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+      // Write to file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '1.xlsx';
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Table sheet with QR codes generated!");
 
-      // Set column widths
-      const wscols = [
-        { wch: 15 }, // table_no column width
-        { wch: 50 }  // qr_code column width
-      ];
-      worksheet['!cols'] = wscols;
-
-      // Add the worksheet to the workbook
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Table QR Codes");
-
-      // Generate the Excel file
-      XLSX.writeFile(workbook, "1.xlsx");
-
-      toast.success("Table sheet generated successfully");
     } catch (error) {
-      console.error('Error generating QR codes:', error);
+      console.error("Error generating Excel sheet:", error);
       toast.error("Failed to generate table sheet");
     }
   };
@@ -246,7 +244,6 @@ export function QrCodesTable({
       <div className="flex justify-end space-x-2">
         <Button onClick={() => setIsBulkGenerateOpen(true)}>Bulk QR Generate</Button>
         <Button onClick={handleCopyAllLinks}>Copy All Links</Button>
-        <Button onClick={generateTableSheet}>Generate Table Sheet</Button>
         <Button onClick={generateTableSheet}>Generate Table Sheet</Button>
         <Button onClick={() => setIsCreateDialogOpen(true)}>Create New QR Code</Button>
       </div>

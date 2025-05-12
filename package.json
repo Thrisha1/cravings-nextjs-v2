@@ -47,6 +47,7 @@
     "dayjs": "^1.11.13",
     "embla-carousel-autoplay": "^8.5.2",
     "embla-carousel-react": "^8.5.2",
+    "exceljs": "^4.4.0",
     "firebase": "^11.1.0",
     "fuse.js": "^7.1.0",
     "googleapis": "^144.0.0",
