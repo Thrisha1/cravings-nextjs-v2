@@ -1,4 +1,3 @@
-
 //query
 
 export const getOrdersOfPartnerQuery = `
@@ -17,7 +16,6 @@ export const getOrdersOfPartnerQuery = `
       partner_id
 }
 }`;
-
 
 //mutation
 export const createOrderMutation = `
@@ -61,7 +59,6 @@ export const createOrderItemsMutation = `
                     }
                   }
 `;
-
 
 export const updateOrderMutation = `
   mutation UpdateOrder(
@@ -138,8 +135,7 @@ export const getOrderByIdQuery = `
   }
 `;
 
-// subscription 
-
+// subscription
 
 export const subscriptionQuery = `
 subscription GetPartnerOrders($partner_id: uuid!) {
@@ -179,9 +175,6 @@ subscription GetPartnerOrders($partner_id: uuid!) {
 }
 `;
 
-
-
-
 export const userSubscriptionQuery = `
 subscription GetUserOrders($user_id: uuid!) {
   orders(
@@ -203,6 +196,9 @@ subscription GetUserOrders($user_id: uuid!) {
       full_name
       phone
       email
+    }
+    partner {
+      name
     }
     order_items {
       id

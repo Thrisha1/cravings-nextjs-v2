@@ -26,6 +26,9 @@ export interface Order {
   qrId?: string | null;
   status: "pending" | "completed" | "cancelled";
   partnerId: string;
+  partner?: {
+    name?: string;
+  };
   phone?: string | null;
   userId?: string;
   user?: {
@@ -71,7 +74,7 @@ interface OrderState {
   subscribeOrders: (callback?: (orders: Order[]) => void) => () => void;
   partnerOrders: Order[];
   userOrders: Order[];
-  subscribeUserOrders: (callback?: (orders: Order[]) => void) => () => void;
+  subscribeUserOrders: (callback?: (orders: Order[]) => void) => () => void 
 }
 
 const useOrderStore = create(
@@ -106,6 +109,7 @@ const useOrderStore = create(
               phone: order.phone,
               deliveryAddress: order.delivery_address,
               partnerId: order.partner_id,
+              partner: order.partner,
               userId: order.user_id,
               user: order.user,
               items: order.order_items.map((item: any) => ({

@@ -77,7 +77,7 @@ const Page = () => {
         </div>
       ) : userOrders.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
-          You haven't placed any orders yet.
+          You haven&apos;t placed any orders yet.
         </div>
       ) : (
         <div className="space-y-6">
@@ -90,6 +90,9 @@ const Page = () => {
                 <div>
                   <h3 className="font-medium">
                     Order #{order.id.split("-")[0]}
+                  </h3>
+                  <h3 className="text-sm text-gray-500">
+                    Ordered from : {order.partner?.name}
                   </h3>
                   <p className="text-sm text-gray-500">
                     {format(new Date(order.createdAt), "PPPp")}

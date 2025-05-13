@@ -102,37 +102,33 @@ const OrderDrawer = ({
   
   *📋 Order Items:*
     ${items
-      ?.map(
-        (item, index) =>
-          `${index + 1}. ${item.name} (${item.category.name})
+        ?.map(
+          (item, index) =>
+            `${index + 1}. ${item.name} (${item.category.name})
      ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
-            2
-          )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(2)}`
-      )
-      .join("\n\n")}
+              2
+            )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(2)}`
+        )
+        .join("\n\n")}
   
-  ${
-    hotelData?.gst_percentage
-      ? `*GST (${hotelData.gst_percentage}%):* ${
-          hotelData.currency
+  ${hotelData?.gst_percentage
+        ? `*GST (${hotelData.gst_percentage}%):* ${hotelData.currency
         }${getGstAmount(totalPrice as number, hotelData.gst_percentage).toFixed(
           2
         )}`
-      : ""
-  }
-  ${
-    hotelData?.gst_percentage
-      ? `*Subtotal:* ${hotelData.currency}${totalPrice}`
-      : ""
-  }
-  ${
-    hotelData?.gst_percentage
-      ? `*Total Price:* ${hotelData.currency}${(
+        : ""
+      }
+  ${hotelData?.gst_percentage
+        ? `*Subtotal:* ${hotelData.currency}${totalPrice}`
+        : ""
+      }
+  ${hotelData?.gst_percentage
+        ? `*Total Price:* ${hotelData.currency}${(
           (totalPrice as number) +
           getGstAmount(totalPrice as number, hotelData.gst_percentage)
         ).toFixed(2)}`
-      : `*Total Price:* ${hotelData.currency}${totalPrice}`
-  }
+        : `*Total Price:* ${hotelData.currency}${totalPrice}`
+      }
   `;
 
     // Use the selected WhatsApp number if available, otherwise fall back to default
@@ -201,14 +197,32 @@ const OrderDrawer = ({
               />
               <span className="font-medium">Order #{order.id.slice(0, 8)}</span>
             </div>
-            <div
-              onClick={handleViewOrder}
-              style={{
-                color: styles.accent,
-              }}
-              className="font-black"
-            >
-              View Order
+
+            <div className="flex gap-3">
+              <div
+                onClick={() => { 
+                  clearOrder()
+                  toast.success("order cleared. now place a new order")
+                }}
+                style={{
+                  color: styles.accent,
+                  border: "2px solid " + styles.accent,
+                }}
+                className={`font-black rounded-lg px-2 py-1 cursor-pointer`}
+              >
+                Place new order
+              </div>
+
+              <div
+                onClick={handleViewOrder}
+                style={{
+                  color: styles.accent,
+                  border: "2px solid " + styles.accent,
+                }}
+                className={`font-black rounded-lg px-2 py-1 cursor-pointer`}
+              >
+                View Order
+              </div>
             </div>
           </div>
         ) : (
@@ -227,14 +241,18 @@ const OrderDrawer = ({
               </div>
             </div>
 
-            <div
-              onClick={handleViewOrder}
-              style={{
-                color: styles.accent,
-              }}
-              className="font-black relative"
-            >
-              View Order
+            <div className="flex gap-3">
+
+
+              <div
+                onClick={handleViewOrder}
+                style={{
+                  color: styles.accent,
+                }}
+                className="font-black relative"
+              >
+                View Order
+              </div>
             </div>
           </>
         )}
