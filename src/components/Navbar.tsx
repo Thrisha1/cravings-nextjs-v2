@@ -4,14 +4,21 @@ import { Button } from "./ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { UtensilsCrossed, Menu, X, Banknote, ChevronLeft } from "lucide-react";
+import { UtensilsCrossed, Menu, X, Banknote, ChevronLeft, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 // import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import LocationAccess from "./LocationAccess";
 import { FeatureFlags } from "@/screens/HotelMenuPage_v2";
 import { getFeatures } from "@/lib/getFeatures";
+import { toast } from "sonner";
 // import SyncUserOfferCoupons from "./SyncUserOfferCoupons";
+
+// Add type for beforeinstallprompt event
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
 export function Navbar() {
   const router = useRouter();
@@ -23,6 +30,8 @@ export function Navbar() {
   const [userLocation, setUserLocation] = useState("");
   // const [isTooltipOpen, setIsTooltipOpen] = useState(true);
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
     if (userData?.role === "partner") {
@@ -33,6 +42,39 @@ export function Navbar() {
       setFeatures(feature);
     }
   }, [userData]);
+
+  useEffect(() => {
+    // Check if device is iOS
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & typeof globalThis).MSStream;
+    setIsIOS(isIOSDevice);
+
+    // Handle PWA installation prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    });
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (isIOS) {
+      toast.info(
+        "To install the app on iOS:\n1. Tap the Share button\n2. Scroll down and tap 'Add to Home Screen'",
+        { duration: 5000 }
+      );
+      return;
+    }
+
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        toast.success('App installed successfully!');
+      }
+      setDeferredPrompt(null);
+    } else {
+      toast.info('The app is already installed or installation is not supported on this device.');
+    }
+  };
 
   // Add array of paths where navbar should be hidden
   const hiddenPaths = [
@@ -102,6 +144,13 @@ export function Navbar() {
           {link.label}
         </Link>
       ))}
+      <button
+        onClick={handleInstallClick}
+        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-full hover:bg-orange-700 transition-colors"
+      >
+        <Download className="w-4 h-4" />
+        Download Now
+      </button>
       {!userData && (
         <Link href="/partner" onClick={() => setIsOpen(false)}>
           <Button className="text-white font-medium bg-orange-600 hover:bg-orange-50 hover:border-orange-600 hover:text-orange-600 px-5 text-[1rem] py-3 rounded-full transition-all duration-300">
