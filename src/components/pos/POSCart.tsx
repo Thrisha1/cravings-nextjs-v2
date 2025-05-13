@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { usePOSStore } from "@/store/posStore";
+import { ExtraCharge, usePOSStore } from "@/store/posStore";
 import { Plus, Minus, ShoppingCart, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -41,6 +41,7 @@ export const POSCart = () => {
     decreaseQuantity,
     checkout,
     setUserPhone,
+    addExtraCharge,
     setTableNumber,
     tableNumbers,
     tableNumber,
@@ -52,6 +53,8 @@ export const POSCart = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+  const [isExtraChargesModalOpen, setIsExtraChargesModalOpen] = useState(false);
+  const [extraCharges, setExtraCharges] = useState<ExtraCharge>({ name: "", amount: 0, id: "" });
   const [phoneInput, setPhoneInput] = useState("");
   
 
@@ -89,12 +92,25 @@ export const POSCart = () => {
   const handlePhoneSubmit = () => {
     setUserPhone(phoneInput || null);
     setIsPhoneModalOpen(false);
-    performCheckout();
+    setIsExtraChargesModalOpen(true);
   };
 
   const handleSkipPhone = () => {
     setUserPhone(null);
     setIsPhoneModalOpen(false);
+    setIsExtraChargesModalOpen(true);
+  };
+
+  const handleExtraChargesSubmit = () => {
+    setIsExtraChargesModalOpen(false);
+    if (extraCharges.name && extraCharges.amount) {
+      addExtraCharge(extraCharges);
+    }
+    performCheckout();
+  };
+
+  const handleSkipExtraCharges = () => {
+    setIsExtraChargesModalOpen(false);
     performCheckout();
   };
 
@@ -104,6 +120,7 @@ export const POSCart = () => {
       toast.success("Checkout successful");
       setIsOpen(false);
       setPhoneInput("");
+      setExtraCharges({ name: "", amount: 0 , id: "" });
     } catch (error) {
       console.error("Checkout failed:", error);
       toast.error("Checkout failed");
@@ -315,6 +332,45 @@ export const POSCart = () => {
               Skip
             </Button>
             <Button onClick={handlePhoneSubmit}>Continue</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Extra Charges Modal */}
+      <Dialog open={isExtraChargesModalOpen} onOpenChange={setIsExtraChargesModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Extra Charges</DialogTitle>
+            <DialogDescription>
+              Add any extra charges (optional)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className=" w-full">
+              <Input
+                id="charge-name"
+                placeholder="Charge name"
+                className="w-full"
+                value={extraCharges.name}
+                onChange={(e) => setExtraCharges({...extraCharges, name: e.target.value})}
+              />
+            </div>
+            <div className="w-full">
+              <Input
+                id="charge-amount"
+                type="number"
+                placeholder="Amount"
+                className="w-full"
+                value={extraCharges.amount || ""}
+                onChange={(e) => setExtraCharges({...extraCharges, amount: Number(e.target.value)})}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="secondary" onClick={handleSkipExtraCharges}>
+              Skip
+            </Button>
+            <Button onClick={handleExtraChargesSubmit}>Complete Order</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

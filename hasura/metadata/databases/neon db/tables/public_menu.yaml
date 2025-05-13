@@ -23,6 +23,13 @@ array_relationships:
         table:
           name: order_items
           schema: public
+  - name: pos_items
+    using:
+      foreign_key_constraint_on:
+        column: menu_id
+        table:
+          name: pos_items
+          schema: public
   - name: reviews
     using:
       foreign_key_constraint_on:

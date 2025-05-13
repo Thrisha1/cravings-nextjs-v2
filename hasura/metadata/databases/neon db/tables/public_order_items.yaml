@@ -8,3 +8,11 @@ object_relationships:
   - name: order
     using:
       foreign_key_constraint_on: order_id
+array_relationships:
+  - name: pos
+    using:
+      foreign_key_constraint_on:
+        column: order_id
+        table:
+          name: pos
+          schema: public

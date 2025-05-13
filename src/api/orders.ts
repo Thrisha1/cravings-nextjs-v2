@@ -31,6 +31,8 @@ export const createOrderMutation = `
                     $delivery_address: String,
                     $phone: String
                     $status: String
+                    $gst_included: numeric,
+                    $extra_charges: jsonb,
                   ) {
                     insert_orders_one(object: {
                       id: $id
@@ -44,6 +46,8 @@ export const createOrderMutation = `
                       type: $type
                       phone: $phone
                       delivery_address: $delivery_address
+                      gst_included: $gst_included
+                      extra_charges: $extra_charges
                     }) {
                       id
                       total_price
@@ -152,6 +156,8 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     delivery_address
     status
     partner_id
+    gst_included
+    extra_charges
     phone
     user_id
     user {
@@ -190,6 +196,13 @@ subscription GetUserOrders($user_id: uuid!) {
     delivery_address
     status
     partner_id
+    partner {
+      gst_percentage
+      currency
+      store_name
+    }
+    gst_included
+    extra_charges
     phone
     user_id
     user {

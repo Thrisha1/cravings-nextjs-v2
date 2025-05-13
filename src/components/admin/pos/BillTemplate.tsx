@@ -1,95 +1,133 @@
+import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
 import { Partner } from "@/store/authStore";
 import { Order } from "@/store/orderStore";
 import React from "react";
 
-const BillTemplate = ({
-  ref,
-  userData,
-  order,
-}: {
+interface BillTemplateProps {
   ref: React.RefObject<HTMLDivElement | null>;
   userData: Partner;
   order: Order;
-}) => {
-  if (!order) return null;
+  extraCharges?: Array<{
+    name: string;
+    amount: number;
+    id?: string;
+  }>;
+}
 
-  const currency = (userData as Partner)?.currency || "$";
-  const gstPercentage = (userData as Partner)?.gst_percentage || 0;
+const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
+  ({ userData, order, extraCharges = [] }, ref) => {
+    if (!order) return null;
 
-  const calculateGst = (amount: number) => {
-    return (amount * gstPercentage) / 100;
-  };
+    const currency = userData?.currency || "$";
+    const gstPercentage = userData?.gst_percentage || 0;
 
-  const gstAmount = calculateGst(order.totalPrice);
-  const grandTotal = order.totalPrice + gstAmount;
+    // Calculate amounts
+    const foodSubtotal = order.totalPrice;
 
-  return (
-    <div ref={ref} className="p-4 bill-template">
-      <h2 className="text-xl font-bold text-center">
-        {(userData as Partner)?.store_name || "Restaurant"}
-      </h2>
-      <p className="text-center text-sm">
-        {(userData as Partner)?.district || "Address not specified"}
-      </p>
-      <div className="border-b border-black my-2"></div>
-      <div className="flex justify-between mb-2">
-        <span className="font-medium">Order #:</span>
-        <span>{order.id}</span>
-      </div>
-      {/* <div className="flex justify-between mb-2">
-                <span className="font-medium">Table:</span>
-                <span>{order.type || "Takeaway"}</span>
-              </div> */}
-      <div className="flex justify-between mb-4">
-        <span className="font-medium">Date:</span>
-        <span>{new Date(order.createdAt).toLocaleString()}</span>
-      </div>
-      <div className="border-b border-black my-2"></div>
-      <h3 className="font-bold mb-2">Items:</h3>
-      <ul className="space-y-2">
-        {order.items.map((item) => (
-          <li key={item.id} className="flex justify-between">
-            <span>
-              {item.quantity}x {item.name}
-            </span>
-            <span>
-              {currency}
-              {(item.price * item.quantity).toFixed(2)}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <div className="border-b border-black my-2"></div>
-      <div className="space-y-1 mt-4">
-        <div className="flex justify-between">
-          <span>Subtotal:</span>
-          <span>
-            {currency}
-            {order.totalPrice.toFixed(2)}
-          </span>
-        </div>
-        {gstPercentage > 0 && (
-          <div className="flex justify-between">
-            <span>GST ({gstPercentage}%):</span>
-            <span>
-              {currency}
-              {gstAmount.toFixed(2)}
-            </span>
+    const chargesSubtotal = extraCharges.reduce(
+      (sum, charge) => sum + charge.amount,
+      0
+    );
+
+    const subtotal = foodSubtotal + chargesSubtotal;
+    const gstAmount = getGstAmount(foodSubtotal, gstPercentage);
+    const grandTotal = subtotal + gstAmount;
+
+    return (
+      <div ref={ref} className="p-4 bill-template" style={{ fontFamily: 'monospace', maxWidth: '300px' }}>
+        {/* Header */}
+        <h2 className="text-xl font-bold text-center uppercase">
+          {userData?.store_name || "Restaurant"}
+        </h2>
+        <p className="text-center text-xs mb-2">
+          {[userData?.district].filter(Boolean).join(", ") || "Address not specified"}
+        </p>
+        <p className="text-center text-xs mb-2">
+          {userData?.phone ? `Tel: ${userData.phone}` : ""}
+        </p>
+        <div className="border-b border-black my-2"></div>
+
+        {/* Order Info */}
+        <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+          <div>
+            <span className="font-medium">Order #:</span>
+            <span> {order.id.slice(0, 8)}</span>
           </div>
+          <div className="text-right">
+            <span className="font-medium">Date:</span>
+            <span> {new Date(order.createdAt).toLocaleDateString()}</span>
+          </div>
+          <div>
+            <span className="font-medium">Table:</span>
+            <span> {order.tableNumber || "Takeaway"}</span>
+          </div>
+          <div className="text-right">
+            <span className="font-medium">Time:</span>
+            <span> {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+        </div>
+        <div className="border-b border-black my-2"></div>
+
+        {/* Order Items */}
+        <h3 className="font-bold text-sm uppercase mb-1">Items Ordered</h3>
+        <ul className="space-y-1 text-sm">
+          {order.items.map((item) => (
+            <li key={item.id} className="flex justify-between">
+              <span>
+                {item.quantity}x {item.name}
+              </span>
+              <span>
+                {currency}{(item.price * item.quantity).toFixed(2)}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {/* Extra Charges */}
+        {extraCharges.length > 0 && (
+          <>
+            <div className="border-t border-dashed border-gray-400 my-2"></div>
+            <h3 className="font-bold text-sm uppercase mb-1">Extra Charges</h3>
+            <ul className="space-y-1 text-sm">
+              {extraCharges.map((charge) => (
+                <li key={charge.id} className="flex justify-between">
+                  <span>{charge.name}</span>
+                  <span>{currency}{charge?.amount?.toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
-        <div className="flex justify-between font-bold text-lg mt-2">
-          <span>Grand Total:</span>
-          <span>
-            {currency}
-            {grandTotal.toFixed(2)}
-          </span>
+
+        {/* Totals */}
+        <div className="border-t border-black my-2"></div>
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span>Subtotal:</span>
+            <span>{currency}{subtotal.toFixed(2)}</span>
+          </div>
+          {gstPercentage > 0 && (
+            <div className="flex justify-between">
+              <span>GST ({gstPercentage}%):</span>
+              <span>{currency}{gstAmount.toFixed(2)}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-bold text-base mt-2 border-t border-black pt-1">
+            <span>TOTAL:</span>
+            <span>{currency}{grandTotal.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-xs mt-4 pt-2 border-t border-dashed border-gray-400">
+          <p>Thank you for your visit!</p>
+          <p className="mt-1">{(userData?.gst_no) ? `GSTIN: ${userData.gst_no}` : ""}</p>
         </div>
       </div>
-      <div className="text-center text-sm mt-6">
-        Thank you for dining with us!
-      </div>
-    </div>
-  );
-};
+    );
+  }
+);
+
+BillTemplate.displayName = "BillTemplate";
 
 export default BillTemplate;

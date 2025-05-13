@@ -13,6 +13,7 @@
 - "!include public_pos.yaml"
 - "!include public_pos_items.yaml"
 - "!include public_qr_codes.yaml"
+- "!include public_qr_groups.yaml"
 - "!include public_reviews.yaml"
 - "!include public_spatial_ref_sys.yaml"
 - "!include public_super_admin.yaml"

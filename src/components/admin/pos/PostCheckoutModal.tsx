@@ -20,6 +20,7 @@ export const PostCheckoutModal = () => {
   const {
     order,
     clearCart,
+    extraCharges,
     setPostCheckoutModalOpen,
     postCheckoutModalOpen,
     setEditOrderModalOpen,
@@ -58,8 +59,12 @@ export const PostCheckoutModal = () => {
     return (amount * gstPercentage) / 100;
   };
 
-  const gstAmount = calculateGst(order.totalPrice);
-  const grandTotal = order.totalPrice + gstAmount;
+  // Calculate totals
+  const foodSubtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
+  const subtotal = foodSubtotal + extraChargesTotal;
+  const gstAmount = calculateGst(foodSubtotal);
+  const grandTotal = subtotal + gstAmount;
 
   return (
     <>
@@ -87,11 +92,19 @@ export const PostCheckoutModal = () => {
                 {order.items.reduce((acc, item) => acc + item.quantity, 0)}
               </span>
             </div>
+            {/* Show extra charges if they exist */}
+            {extraCharges.length > 0 && (
+              <div className="flex items-center justify-between">
+                <span>Extra Charges:</span>
+                <span className="font-medium">
+                  {currency}{extraChargesTotal.toFixed(2)}
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span>Grand Total:</span>
               <span className="font-medium">
-                {currency}
-                {grandTotal.toFixed(2)}
+                {currency}{grandTotal.toFixed(2)}
               </span>
             </div>
           </div>
@@ -122,7 +135,12 @@ export const PostCheckoutModal = () => {
         <KOTTemplate ref={kotRef} order={order} />
 
         {/* Bill Template */}
-        <BillTemplate ref={billRef} order={order} userData={userData as Partner} />
+        <BillTemplate 
+          ref={billRef} 
+          order={order} 
+          userData={userData as Partner} 
+          extraCharges={extraCharges}
+        />
       </div>
     </>
   );

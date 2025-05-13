@@ -30,6 +30,7 @@ import Link from "next/link";
 import { log, table } from "console";
 import { usePathname } from "next/navigation";
 import { getFeatures } from "@/lib/getFeatures";
+import { QrGroup } from "@/app/qr-management/page";
 
 export const getGstAmount = (price: number, gstPercentage: number) => {
   const gstAmount = (price * gstPercentage) / 100;
@@ -41,11 +42,13 @@ const OrderDrawer = ({
   hotelData,
   tableNumber,
   qrId,
+  qrGroup,
 }: {
   styles: Styles;
   hotelData: HotelData;
   tableNumber?: number;
   qrId?: string;
+  qrGroup?: QrGroup | null;
 }) => {
   const {
     userAddress,
@@ -69,9 +72,7 @@ const OrderDrawer = ({
   useEffect(() => {
     if (hotelData) {
       console.log("User Data:", hotelData?.role, hotelData?.feature_flags);
-
       const feature = getFeatures(hotelData?.feature_flags as string);
-
       setFeatures(feature);
     }
   }, [hotelData]);
@@ -82,22 +83,35 @@ const OrderDrawer = ({
     }
   }, []);
 
+  const calculateGrandTotal = () => {
+    const baseTotal = order?.totalPrice ?? totalPrice ?? 0;
+    let grandTotal = baseTotal;
+
+    // Add GST if applicable
+    if (hotelData?.gst_percentage) {
+      grandTotal += getGstAmount(baseTotal, hotelData.gst_percentage);
+    }
+
+    // Add QR group extra charge if applicable
+    if (qrGroup?.extra_charge) {
+      grandTotal += qrGroup.extra_charge;
+    }
+
+    return grandTotal.toFixed(2);
+  };
+
   const getWhatsapLink = () => {
     const savedAddress = userAddress || "N/A";
-
     const selectedWhatsAppNumber = localStorage?.getItem(
       `hotel-${hotelData.id}-whatsapp-area`
     );
 
-    console.log(selectedWhatsAppNumber);
-
-    const whatsappMsg = `
+  const whatsappMsg = `
   *🍽️ Order Details 🍽️*
   
-  *Table:* ${tableNumber || "N/A"}
   *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
-  ${tableNumber ? `*Table:* ${tableNumber}` : "Order Type : Delivery"}
-  ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
+  ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : "*Order Type:* Delivery"}
+  ${(tableNumber ?? 0) > 0 ? "" : `*Delivery Address:* ${savedAddress}`}
   *Time:* ${new Date().toLocaleTimeString()}
   
   *📋 Order Items:*
@@ -116,22 +130,23 @@ const OrderDrawer = ({
         }${getGstAmount(totalPrice as number, hotelData.gst_percentage).toFixed(
           2
         )}`
-        : ""
-      }
-  ${hotelData?.gst_percentage
-        ? `*Subtotal:* ${hotelData.currency}${totalPrice}`
-        : ""
-      }
-  ${hotelData?.gst_percentage
-        ? `*Total Price:* ${hotelData.currency}${(
-          (totalPrice as number) +
-          getGstAmount(totalPrice as number, hotelData.gst_percentage)
-        ).toFixed(2)}`
-        : `*Total Price:* ${hotelData.currency}${totalPrice}`
-      }
+      : ""
+  }
+  ${
+    qrGroup?.extra_charge
+      ? `*${qrGroup.name} :* ${hotelData.currency}${qrGroup.extra_charge.toFixed(
+          2
+        )}`
+      : ""
+  }
+  ${
+    hotelData?.gst_percentage || qrGroup?.extra_charge
+      ? `*Subtotal:* ${hotelData.currency}${totalPrice}`
+      : ""
+  }
+  *Total Price:* ${hotelData.currency}${calculateGrandTotal()}
   `;
 
-    // Use the selected WhatsApp number if available, otherwise fall back to default
     const number =
       selectedWhatsAppNumber ||
       hotelData?.whatsapp_numbers[0]?.number ||
@@ -144,11 +159,22 @@ const OrderDrawer = ({
 
     return whatsappUrl;
   };
+
   const handlePlaceOrder = async () => {
     setIsLoading(true);
-
     try {
-      const result = await placeOrder(hotelData, tableNumber, qrId);
+
+      const extraCharge = {
+        amount: qrGroup?.extra_charge ,
+        name: qrGroup?.name
+      }
+
+      const gstAmount = getGstAmount(
+        totalPrice as number,
+        hotelData?.gst_percentage as number
+      );
+
+      const result = await placeOrder(hotelData, tableNumber, qrId , gstAmount, extraCharge);
       if (result) {
         toast.success("Order placed successfully!");
         clearOrder();
@@ -167,7 +193,6 @@ const OrderDrawer = ({
     const hotelArea = localStorage.getItem(
       `hotel-${hotelData.id}-whatsapp-area`
     );
-
     const needsAddress = !isQrScan && !userAddress;
     const needsWhatsAppArea = featrues?.multiwhatsapp.enabled && !hotelArea;
 
@@ -181,12 +206,11 @@ const OrderDrawer = ({
 
   return (
     <Drawer open={isOpen} onOpenChange={setIsOpen}>
-      {/* Bottom bar */}
       <div
         style={{
           ...styles.border,
         }}
-        className="fixed bottom-0 z-[51] bg-white text-black w-full px-[8%] py-6 rounded-t-[35px] bottom-bar-shadow flex items-center justify-between"
+        className="fixed bottom-0 z-[51] left-1/2 -translate-x-1/2 lg:max-w-[50%] bg-white text-black w-full px-[8%] py-6 rounded-t-[35px] bottom-bar-shadow flex items-center justify-between"
       >
         {order ? (
           <div className="flex items-center gap-4 w-full justify-between">
@@ -258,7 +282,7 @@ const OrderDrawer = ({
         )}
       </div>
 
-      <DrawerContent className="max-h-[80vh] z-[52]">
+      <DrawerContent className="max-h-[80vh] z-[52] lg:max-w-[50%] mx-auto">
         <DrawerHeader>
           <DrawerTitle>
             <HeadingWithAccent
@@ -344,28 +368,47 @@ const OrderDrawer = ({
         </div>
 
         <DrawerFooter className="border-t">
-          {hotelData?.gst_percentage ? (
+          {hotelData?.gst_percentage || qrGroup?.extra_charge ? (
             <>
-              <div className="flex justify-between items-center mb-4 text-sm">
-                <span className="font-bold">Total:</span>
-                <span className="font-bold" style={{ color: styles.accent }}>
+              <div className="flex justify-between items-center mb-2 text-sm">
+                <span className="font-bold">Subtotal:</span>
+                <span className="font-bold">
                   {hotelData.currency}
                   {(order?.totalPrice ?? totalPrice ?? 0).toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between items-center mb-4">
-                <span className="font-bold">{`Grand Total (+ GST (${hotelData.gst_percentage}%)):`}</span>
+
+              {(hotelData?.gst_percentage !== 0) && (
+                <div className="flex justify-between items-center mb-2 text-sm">
+                  <span className="font-bold">{`GST (${hotelData.gst_percentage}%):`}</span>
+                  <span className="font-bold">
+                    {hotelData.currency}
+                    {getGstAmount(
+                      order?.totalPrice ?? totalPrice ?? 0,
+                      hotelData?.gst_percentage ?? 0
+                    ).toFixed(2)}
+                  </span>
+                </div>
+              )}
+
+              {qrGroup?.extra_charge && (
+                <div className="flex justify-between items-center mb-2 text-sm">
+                  <span className="font-bold">{`${qrGroup.name} Charge:`}</span>
+                  <span className="font-bold">
+                    {hotelData.currency}
+                    {qrGroup.extra_charge.toFixed(2)}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center mt-4">
+                <span className="font-bold text-lg">Grand Total:</span>
                 <span
                   className="font-bold text-lg"
                   style={{ color: styles.accent }}
                 >
                   {hotelData.currency}
-                  {(
-                    getGstAmount(
-                      order?.totalPrice ?? totalPrice ?? 0,
-                      hotelData.gst_percentage
-                    ) + (order?.totalPrice ?? totalPrice ?? 0)
-                  ).toFixed(2)}
+                  {calculateGrandTotal()}
                 </span>
               </div>
             </>
@@ -393,7 +436,6 @@ const OrderDrawer = ({
                       href={getWhatsapLink()}
                       onClick={handlePlaceOrder}
                       target="_blank"
-                      // onClick={handlePlaceOrder}
                       style={{ backgroundColor: styles.accent }}
                       className="flex-1 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
                     >
