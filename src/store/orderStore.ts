@@ -429,7 +429,7 @@ const useOrderStore = create(
             return null;
           }
 
-          const type = tableNumber ? "table_order" : "delivery";
+          const type = (tableNumber ?? 0) > 0 ? "table_order" : "delivery";
 
           const exCharges = [];
 

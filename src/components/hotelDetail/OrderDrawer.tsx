@@ -106,13 +106,12 @@ const OrderDrawer = ({
       `hotel-${hotelData.id}-whatsapp-area`
     );
 
-    const whatsappMsg = `
+  const whatsappMsg = `
   *🍽️ Order Details 🍽️*
   
-  *Table:* ${tableNumber || "N/A"}
   *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
-  ${tableNumber ? `*Table:* ${tableNumber}` : "Order Type : Delivery"}
-  ${tableNumber ? "" : `*Delivery Address:* ${savedAddress}`}
+  ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : "*Order Type:* Delivery"}
+  ${(tableNumber ?? 0) > 0 ? "" : `*Delivery Address:* ${savedAddress}`}
   *Time:* ${new Date().toLocaleTimeString()}
   
   *📋 Order Items:*

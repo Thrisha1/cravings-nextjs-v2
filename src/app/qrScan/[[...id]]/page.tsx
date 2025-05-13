@@ -32,7 +32,7 @@ const page = async ({
 
   // console.log("Table Number:", tableNumber);
 
-  if (tableNumber !== 0) {
+  // if (tableNumber !== 0) {
     const { query: search } = await searchParams;
     const auth = await getAuthCookie();
     const hotelId = qr_codes[0].partner_id;
@@ -98,9 +98,9 @@ const page = async ({
         qrGroup={qr_codes[0].qr_group}
       />
     );
-  } else {
-    return <QrPayment />;
-  }
+  // } else {
+  //   return <QrPayment />;
+  // }
 };
 
 export default page;
