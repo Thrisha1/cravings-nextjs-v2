@@ -70,6 +70,9 @@ export interface HotelDataMenus extends Omit<MenuItem, "category"> {
     id: string;
     priority: number;
   };
+  offers: {
+    offer_price: number;
+  }[];
 }
 
 const isUUID = (str: string) =>
@@ -114,7 +117,7 @@ const HotelPage = async ({
     { tags: [hotelId as string, "hotel-data"] }
   );
 
-  const hoteldata = hotelId
+  let hoteldata = hotelId
     ? ((await getHotelData(hotelId))?.partners[0] as HotelData)
     : null;
   const offers = hoteldata?.offers;
@@ -151,13 +154,25 @@ const HotelPage = async ({
 
   const socialLinks = getSocialLinks(hoteldata as HotelData);
 
+  const menuItemWithOfferPrice = hoteldata?.menus?.map((item) => {
+    return {
+      ...item,
+      price: item.offers?.[0]?.offer_price || item.price,
+      
+    }
+  });
+
+  const hotelDataWithOfferPrice = {
+    ...hoteldata,
+    menus: menuItemWithOfferPrice,
+  };
 
   return (
     <>
       <HotelMenuPage
         socialLinks={socialLinks}
         offers={filteredOffers}
-        hoteldata={hoteldata as HotelData}
+        hoteldata={hotelDataWithOfferPrice as HotelData}
         auth={auth || null}
         theme={theme}
         tableNumber={0}

@@ -15,6 +15,9 @@ export const getMenu = `
             partner_id
             priority
             price
+            offers {
+              offer_price
+            }
             description
             is_top
             is_available

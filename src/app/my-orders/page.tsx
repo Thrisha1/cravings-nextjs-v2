@@ -108,7 +108,7 @@ const Page = () => {
                       Order #{order.id.split("-")[0]}
                     </h3>
                     <h3 className="text-sm text-gray-500">
-                    Ordered from : {order.partner?.name}
+                    Ordered from : {order.partner?.store_name}
                   </h3>
                   <p className="text-sm text-gray-500">
                       {format(new Date(order.createdAt), "PPPp")}

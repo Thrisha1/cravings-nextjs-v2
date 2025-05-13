@@ -26,6 +26,7 @@ const OrderItemCard = ({
   setOrder: (order: Order) => void;
   setEditOrderModalOpen: (open: boolean) => void;
 }) => {
+  
   const { userData } = useAuthStore();
   const billRef = React.useRef<HTMLDivElement>(null);
   const kotRef = React.useRef<HTMLDivElement>(null);
@@ -90,7 +91,7 @@ const OrderItemCard = ({
       <div className="mt-4 border-t pt-4">
         <h4 className="font-medium mb-2">Order Items</h4>
         <div className="space-y-2">
-          {order.items?.length ? (
+          {order.items?.length > 0 ? (
             order.items.map((item: OrderItem) => (
               <div key={item.id} className="flex justify-between text-sm">
                 <div>
