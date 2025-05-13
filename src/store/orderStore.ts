@@ -26,6 +26,11 @@ export interface Order {
   qrId?: string | null;
   status: "pending" | "completed" | "cancelled";
   partnerId: string;
+  partner?: {
+    gst_percentage?: number;
+    currency?: string;
+    store_name?: string;
+  }
   phone?: string | null;
   userId?: string;
   user?: {
@@ -33,6 +38,14 @@ export interface Order {
   };
   type?: "table_order" | "delivery" | "pos";
   deliveryAddress?: string | null;
+  gstIncluded?: number;
+  extraCharges?:
+    | {
+        name: string;
+        amount: number;
+        id?: string;
+      }[]
+    | null;
 }
 
 interface HotelOrderState {
@@ -61,7 +74,12 @@ interface OrderState {
   placeOrder: (
     hotelData: HotelData,
     tableNumber?: number,
-    qrId?: string
+    qrId?: string,
+    gstIncluded?: number,
+    extraCharges?: {
+      name: string | undefined;
+      amount: number | undefined;
+    }
   ) => Promise<Order | null>;
   getCurrentOrder: () => HotelOrderState;
   fetchOrderOfPartner: (partnerId: string) => Promise<Order[] | null>;
@@ -107,6 +125,9 @@ const useOrderStore = create(
               deliveryAddress: order.delivery_address,
               partnerId: order.partner_id,
               userId: order.user_id,
+              gstIncluded: order.gst_included,
+              extraCharges: order.extra_charges,
+              partner : order.partner,
               user: order.user,
               items: order.order_items.map((item: any) => ({
                 id: item.id,
@@ -148,6 +169,8 @@ const useOrderStore = create(
               phone: order.phone,
               deliveryAddress: order.delivery_address,
               partnerId: order.partner_id,
+              gstIncluded: order.gst_included,
+              extraCharges: order.extra_charges,
               userId: order.user_id,
               user: order.user,
               items: order.order_items.map((item: any) => ({
@@ -377,7 +400,13 @@ const useOrderStore = create(
         });
       },
 
-      placeOrder: async (hotelData, tableNumber, qrId) => {
+      placeOrder: async (
+        hotelData,
+        tableNumber,
+        qrId,
+        gstIncluded,
+        extraCharges
+      ) => {
         try {
           const state = get();
           if (!state.hotelId) return null;
@@ -402,13 +431,21 @@ const useOrderStore = create(
 
           const type = tableNumber ? "table_order" : "delivery";
 
+          const exCharges = [];
+
+          if(extraCharges?.name && extraCharges?.amount) {
+            exCharges.push({
+              ...extraCharges,
+              id : crypto.randomUUID()
+            });
+          }
+
           const createdAt = new Date().toISOString();
           const orderResponse = await fetchFromHasura(createOrderMutation, {
             id: currentOrder.orderId,
-            totalPrice: hotelData?.gst_percentage
-              ? currentOrder.totalPrice +
-                getGstAmount(currentOrder.totalPrice, hotelData.gst_percentage)
-              : currentOrder.totalPrice,
+            totalPrice: currentOrder.totalPrice,
+            gst_included: gstIncluded,
+            extra_charges: exCharges || null,
             createdAt,
             tableNumber: tableNumber || null,
             qrId: qrId || null,

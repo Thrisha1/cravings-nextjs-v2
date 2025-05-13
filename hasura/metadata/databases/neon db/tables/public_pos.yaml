@@ -5,6 +5,9 @@ object_relationships:
   - name: order_item
     using:
       foreign_key_constraint_on: order_id
+  - name: partner
+    using:
+      foreign_key_constraint_on: partner_id
 array_relationships:
   - name: pos_items
     using:

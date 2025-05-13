@@ -151,6 +151,7 @@ const HotelPage = async ({
 
   const socialLinks = getSocialLinks(hoteldata as HotelData);
 
+
   return (
     <>
       <HotelMenuPage

@@ -21,6 +21,7 @@ import { usePathname } from "next/navigation";
 import SocialLinkList from "@/components/SocialLinkList";
 import AuthModal from "@/components/hotelDetail/AuthModal";
 import { getFeatures } from "@/lib/getFeatures";
+import { QrGroup } from "@/app/qr-management/page";
 
 export type MenuItem = {
   description: string;
@@ -51,6 +52,7 @@ interface HotelMenuPageProps {
   theme: ThemeConfig | null;
   tableNumber: number;
   socialLinks: SocialLinks;
+  qrGroup?: QrGroup | null;
 }
 
 export type FeatureFlags = {
@@ -102,6 +104,7 @@ const HotelMenuPage = ({
   theme,
   tableNumber,
   socialLinks,
+  qrGroup
 }: HotelMenuPageProps) => {
   const styles: Styles = {
     backgroundColor: theme?.colors?.bg || "#F5F5F5",
@@ -266,6 +269,7 @@ const HotelMenuPage = ({
           getFeatures(hoteldata?.feature_flags || "")?.delivery.enabled)) && (
         <section>
           <OrderDrawer
+            qrGroup={qrGroup}
             styles={styles}
             qrId={pathname.includes("qrScan") ? pathname.split("/")[2] : ""}
             hotelData={hoteldata}

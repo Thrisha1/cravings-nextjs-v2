@@ -3,6 +3,10 @@ query GetQrTable($id: uuid!) {
   qr_codes(where: {id: {_eq: $id}}) {
     table_number,
     partner_id
+    qr_group {
+      extra_charge
+      name
+    }
   }
 }`;
 

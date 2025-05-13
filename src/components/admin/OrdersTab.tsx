@@ -16,6 +16,8 @@ import BillTemplate from "./pos/BillTemplate";
 import KOTTemplate from "./pos/KOTTemplate";
 import { EditOrderModal } from "./pos/EditOrderModal";
 import { usePOSStore } from "@/store/posStore";
+import { getGstAmount } from "../hotelDetail/OrderDrawer";
+import OrderItemCard from "./OrderItemCard";
 
 const OrdersTab = () => {
   const router = useRouter();
@@ -39,14 +41,6 @@ const OrdersTab = () => {
     editOrderModalOpen: isOpen,
     setEditOrderModalOpen,
   } = usePOSStore();
-
-  const handlePrintBill = useReactToPrint({
-    contentRef: billRef,
-  });
-
-  const handlePrintKOT = useReactToPrint({
-    contentRef: kotRef,
-  });
 
   useEffect(() => {
     soundRef.current = new Howl({
@@ -214,11 +208,6 @@ const OrdersTab = () => {
     router.push("/admin/pos");
   };
 
-  const calculateGst = (amount: number) => {
-    const gstPercentage = (userData as HotelData)?.gst_percentage || 0;
-    return (amount * gstPercentage) / 100;
-  };
-
   return (
     <div className="py-10 px-[8%]">
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
@@ -273,173 +262,32 @@ const OrdersTab = () => {
                   found
                 </p>
               ) : (
-                sortedOrders.map((order) => {
-                  const gstAmount = calculateGst(order.totalPrice);
-                  const grandTotal = order.totalPrice + gstAmount;
+                sortedOrders.map((order , index) => {
+                  const gstPercentage =
+                    (userData as Partner)?.gst_percentage || 0;
+                  const gstAmount = getGstAmount(
+                    order.totalPrice,
+                    gstPercentage
+                  );
+                  const totalPriceWithGst = order.totalPrice + gstAmount;
+
+                  const extraChargesTotal = (order?.extraCharges ?? []).reduce(
+                    (acc, charge) => acc + charge.amount,
+                    0
+                  );
+                  const grandTotal = totalPriceWithGst + extraChargesTotal;
 
                   return (
-                    <div
-                      key={order.id}
-                      className="border rounded-lg p-4 relative"
-                    >
-                      {order.status === "pending" && (
-                        <span className="absolute -top-1 -left-1 h-3 w-3">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                        </span>
-                      )}
-
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="font-medium">
-                            Order #{order.id.slice(0, 8)}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            {formatDate(order.createdAt)}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-2 py-1 rounded text-xs ${
-                              order.status === "completed"
-                                ? "bg-green-100 text-green-800"
-                                : order.status === "cancelled"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}
-                          >
-                            {order.status}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="mt-2 flex justify-between">
-                        <div>
-                          {order.type === "table_order" && (
-                            <p className="text-sm">
-                              Table: {order.tableNumber || "N/A"}
-                            </p>
-                          )}
-                          <p className="text-sm">
-                            Customer:{" "}
-                            {order.user?.phone || order.phone
-                              ? `+91${order.user?.phone || order.phone}`
-                              : "Unknown"}
-                          </p>
-                          {order.type === "delivery" && (
-                            <p className="text-sm mt-3">
-                              Delivery Address:{" "}
-                              {order.deliveryAddress || "Unknown"}
-                            </p>
-                          )}
-                        </div>
-                        <p className="font-medium">
-                          Total: {(userData as HotelData)?.currency}
-                          {order?.totalPrice?.toFixed(2)}
-                        </p>
-                      </div>
-
-                      <div className="mt-4 border-t pt-4">
-                        <h4 className="font-medium mb-2">Order Items</h4>
-                        <div className="space-y-2">
-                          {order.items?.length ? (
-                            order.items.map((item: OrderItem) => (
-                              <div
-                                key={item.id}
-                                className="flex justify-between text-sm"
-                              >
-                                <div>
-                                  <span className="font-medium">
-                                    {item.name}
-                                  </span>
-                                  <span className="text-gray-500 ml-2">
-                                    x{item.quantity}
-                                  </span>
-                                  {item.category && (
-                                    <span className="text-gray-400 text-xs ml-2 capitalize">
-                                      ({item.category.name.trim()})
-                                    </span>
-                                  )}
-                                </div>
-                                <span>
-                                  {(userData as HotelData)?.currency}
-                                  {(item.price * item.quantity).toFixed(2)}
-                                </span>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-gray-500 text-sm">
-                              No items found
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="mt-4 flex gap-2 flex-wrap">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handlePrintKOT}
-                          >
-                            <Printer className="h-4 w-4 mr-2" />
-                            Print KOT
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handlePrintBill}
-                          >
-                            <Printer className="h-4 w-4 mr-2" />
-                            Print Bill
-                          </Button>
-
-                          {order.status === "pending" && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  setOrder(order);
-                                  setEditOrderModalOpen(true);
-                                }}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit Order
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() =>
-                                  updateOrderStatus(order.id, "completed")
-                                }
-                              >
-                                Mark Completed
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() =>
-                                  updateOrderStatus(order.id, "cancelled")
-                                }
-                              >
-                                Cancel Order
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Hidden elements for printing */}
-                      <div className="hidden">
-                        {/* KOT Template */}
-                        <KOTTemplate ref={kotRef} order={order} />
-
-                        {/* Bill Template */}
-                        <BillTemplate
-                          ref={billRef}
-                          order={order}
-                          userData={userData as Partner}
-                        />
-                      </div>
-                    </div>
+                    <OrderItemCard
+                      key={order.id + "-" + index}
+                      grantTotal={grandTotal}
+                      gstAmount={gstAmount}
+                      gstPercentage={gstPercentage}
+                      order={order}
+                      setEditOrderModalOpen={setEditOrderModalOpen}
+                      setOrder={setOrder}
+                      updateOrderStatus={updateOrderStatus}
+                    />
                   );
                 })
               )}

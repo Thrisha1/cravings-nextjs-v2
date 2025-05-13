@@ -95,6 +95,7 @@ const page = async ({
         offers={filteredOffers}
         tableNumber={tableNumber}
         theme={theme}
+        qrGroup={qr_codes[0].qr_group}
       />
     );
   } else {

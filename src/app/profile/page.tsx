@@ -1,7 +1,7 @@
 "use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UtensilsCrossed, Tag, LogOutIcon, Pencil, Trash2 } from "lucide-react";
+import { UtensilsCrossed, Tag, LogOutIcon, Pencil, Trash2, ArrowRight } from "lucide-react";
 import { Partner, useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -692,7 +692,10 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveGst = async (e?: React.FormEvent | null, isDisabled?: boolean) => {
+  const handleSaveGst = async (
+    e?: React.FormEvent | null,
+    isDisabled?: boolean
+  ) => {
     e?.preventDefault();
 
     const gstPercent = !isDisabled ? gst.gst_percentage : 0;
@@ -747,7 +750,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-8">
+    <div className="min-h-screen w-full bg-orange-50 p-2">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Welcome Section */}
         <Card className="overflow-hidden hover:shadow-xl transition-shadow">
@@ -1598,6 +1601,17 @@ export default function ProfilePage() {
                     ? "This Gst will be used for your restaurant profile and billing"
                     : "GST is currently disabled for your restaurant"}
                 </p>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <div className="text-lg font-semibold mb-4">QrCode Settings</div>
+                <Link
+                  href={"/qr-management"}
+                  className=" hover:underline bg-gray-100 px-3 py-2 rounded-lg w-full flex items-center justify-between"
+                >
+                  Manage QrCode
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
               </div>
             </CardContent>
           </Card>
