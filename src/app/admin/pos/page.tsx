@@ -13,9 +13,6 @@ import { getFeatures } from "@/lib/getFeatures";
 const Page = async () => {
   const cookies = await getAuthCookie();
 
-  console.log(cookies);
-  
-
   if (!getFeatures(cookies?.feature_flags || "")?.pos?.enabled) {
     redirect("/admin");
   }

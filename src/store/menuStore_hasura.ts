@@ -111,6 +111,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           res.menu.map((mi: any) => {
             return {
               ...mi,
+              price : (mi.offers[0]?.offer_price || mi.price) ?? 0,
               category: {
                 id: mi.category.id,
                 name: mi.category.name,

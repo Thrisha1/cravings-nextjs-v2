@@ -197,7 +197,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signOut: () => {
     removeAuthCookie();
-    localStorage.removeItem("userAddress");
+    localStorage.clear();
     set({ userData: null, error: null });
   },
 

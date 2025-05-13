@@ -282,7 +282,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
           ...newOrder,
           items: cartItems,
           extraCharges: extraCharges,
-        } as Order,
+        } as unknown as Order,
       });
       set({ postCheckoutModalOpen: true });
     } catch (error) {

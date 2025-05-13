@@ -172,6 +172,9 @@ subscription GetPartnerOrders($partner_id: uuid!) {
         id
         name
         price
+        offers {
+          offer_price
+        }
         category {
           name
         }
@@ -220,6 +223,9 @@ subscription GetUserOrders($user_id: uuid!) {
         id
         name
         price
+        offers{
+          offer_price
+        }
         category {
           name
         }

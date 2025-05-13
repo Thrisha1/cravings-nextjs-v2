@@ -61,6 +61,9 @@ query GetPartnerAndOffersQuery($id: uuid!) {
       is_available
       name
       price
+      offers(where: {_and: [{end_time: {_gt: "now()"}}, {deletion_status: {_eq: 0}}]}) {
+        offer_price
+      }
     }
     offers(where: {_and: [{end_time: {_gt: "now()"}}, {deletion_status: {_eq: 0}}]}) {
       end_time

@@ -128,13 +128,12 @@ const useOrderStore = create(
               userId: order.user_id,
               gstIncluded: order.gst_included,
               extraCharges: order.extra_charges,
-              partner : order.partner,
               user: order.user,
               items: order.order_items.map((item: any) => ({
                 id: item.id,
                 quantity: item.quantity,
                 name: item.menu?.name || "Unknown",
-                price: item.menu?.price || 0,
+                price: (item.menu?.offers?.[0]?.offer_price || item.menu?.price) || 0,
                 category: item.menu?.category,
               })),
             }));
@@ -178,7 +177,7 @@ const useOrderStore = create(
                 id: item.id,
                 quantity: item.quantity,
                 name: item.menu?.name || "Unknown",
-                price: item.menu?.price || 0,
+                price: (item.menu?.offers?.[0]?.offer_price || item.menu?.price) || 0,
                 category: item.menu?.category,
               })),
             }));
