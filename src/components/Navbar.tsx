@@ -4,15 +4,12 @@ import { Button } from "./ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { UtensilsCrossed, Menu, X, Banknote, ChevronLeft, Download } from "lucide-react";
+import { UtensilsCrossed, Menu, X, ChevronLeft, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
-// import { useClaimedOffersStore } from "@/store/claimedOffersStore";
-import LocationAccess from "./LocationAccess";
 import { FeatureFlags } from "@/screens/HotelMenuPage_v2";
 import { getFeatures } from "@/lib/getFeatures";
 import { toast } from "sonner";
-// import SyncUserOfferCoupons from "./SyncUserOfferCoupons";
 
 // Add type for beforeinstallprompt event
 interface BeforeInstallPromptEvent extends Event {
@@ -24,11 +21,8 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const location = pathname.split("?")[0];
-  const { userData } = useAuthStore(); // Now we only use userData
-  // const { offersClaimable } = useClaimedOffersStore();
+  const { userData } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
-  const [userLocation, setUserLocation] = useState("");
-  // const [isTooltipOpen, setIsTooltipOpen] = useState(true);
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
@@ -45,13 +39,18 @@ export function Navbar() {
 
   useEffect(() => {
     // Check if device is iOS
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as Window & typeof globalThis).MSStream;
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
     setIsIOS(isIOSDevice);
 
     // Handle PWA installation prompt
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
+    });
+
+    // Listen for app installation
+    window.addEventListener('appinstalled', () => {
+      toast.success('App installed successfully!');
     });
   }, []);
 
@@ -72,7 +71,19 @@ export function Navbar() {
       }
       setDeferredPrompt(null);
     } else {
-      toast.info('The app is already installed or installation is not supported on this device.');
+      // If no prompt available, try to open the app or show installation instructions
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      
+      if (isStandalone) {
+        // If already in standalone mode, just refresh
+        window.location.reload();
+      } else {
+        // Show installation instructions
+        toast.info(
+          "To install the app:\n1. Open your browser menu\n2. Look for 'Install App' or 'Add to Home Screen'\n3. Follow the prompts to install",
+          { duration: 5000 }
+        );
+      }
     }
   };
 
@@ -93,13 +104,6 @@ export function Navbar() {
     return regex.test(location);
   });
 
-  useEffect(() => {
-    const location = localStorage.getItem("loc");
-    if (location) {
-      setUserLocation(location);
-    }
-  }, [userData]); // Only depend on userData now
-
   const NavLinks = () => (
     <>
       {[
@@ -118,9 +122,6 @@ export function Navbar() {
               userData?.status === "active"
                 ? [{ href: "/admin/orders", label: "Orders" }]
                 : []),
-              // ...((features?.ordering.access || features?.delivery.access ) && (userData?.status === "active")
-              //   ? [{ href: "/admin/pos", label: "POS" }]
-              //   : []),
             ]
           : []),
         ...(userData?.role === "superadmin"
@@ -149,7 +150,7 @@ export function Navbar() {
         className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-full hover:bg-orange-700 transition-colors"
       >
         <Download className="w-4 h-4" />
-        Download Now
+        Download App
       </button>
       {!userData && (
         <Link href="/partner" onClick={() => setIsOpen(false)}>
@@ -200,10 +201,6 @@ export function Navbar() {
 
   return (
     <>
-      {/* <Suspense>
-        <SyncUserOfferCoupons />
-        <LocationAccess />
-      </Suspense> */}
       <nav className="w-full bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
@@ -241,38 +238,6 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-5">
-              {/* cravings cash button  */}
-              {/* <>
-                {userData && (
-                  <div
-                    onClick={() => {
-                      router.push("/coupons");
-                      setIsTooltipOpen(false);
-                    }}
-                    className="text-orange-500 gap-1 cursor-pointer font-bold flex items-center text-lg rounded-full relative"
-                  >
-                    <span>{offersClaimable}</span>
-                    <Banknote className="w-8 h-8" />
-
-                    {offersClaimable == 0 && isTooltipOpen && (
-                      <>
-
-                        <div className="absolute top-0 -right-1 rounded-full w-2 aspect-square bg-red-600 animate-pulse" />
-
-                        <div className="transition-all animate-tooltip duration-500 absolute bottom-0 translate-y-14 z-[10] left-1/2 -translate-x-1/2  rounded-xl  bg-white shadow-xl border-[1px]  border-black/10">
-                          <div className="text-center relative z-[8] px-3 py-2 rounded-xl text-nowrap leading-[17px] bg-white text-[10px] text-black">
-                            Click Here For More <br /> Cravings Cash
-                          </div>
-                          <span className="absolute bg-white border-[1px] border-black/10 rotate-45 w-3 h-3 -top-1 rounded-[2px] z-[7] left-1/2 -translate-x-1/2"></span>
-                        </div>
-                      </>
-                    )}
-
-                    <div></div>
-                  </div>
-                )}
-              </> */}
-
               {!userData && (
                 <Button
                   onClick={() => router.push("/login")}

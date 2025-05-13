@@ -223,6 +223,27 @@ export const EditOrderModal = () => {
             is_available: true,
             created_at: new Date().toISOString(),
             priority: 0,
+            offers: [{
+              offer_price: item.menu.price,
+              created_at: new Date().toISOString(),
+              end_time: new Date(Date.now() + 86400000).toISOString(), // 24 hours from now
+              start_time: new Date().toISOString(),
+              enquiries: 0,
+              items_available: 0,
+              id: "",
+              menu: {
+                id: item.menu_id,
+                name: item.menu.name,
+                price: item.menu.price,
+                category: {
+                  name: "",
+                  id: "",
+                  priority: 0,
+                },
+                description: "",
+                image_url: "",
+              }
+            }]
           })),
         });
       }
