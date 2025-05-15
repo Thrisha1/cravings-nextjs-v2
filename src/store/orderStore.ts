@@ -43,6 +43,7 @@ export interface Order {
     | {
         name: string;
         amount: number;
+        charge_type?: string;
         id?: string;
       }[]
     | null;
@@ -79,6 +80,7 @@ interface OrderState {
     extraCharges?: {
       name: string | undefined;
       amount: number | undefined;
+      charge_type?: string;
     }
   ) => Promise<Order | null>;
   getCurrentOrder: () => HotelOrderState;

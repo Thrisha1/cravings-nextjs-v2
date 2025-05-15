@@ -1,3 +1,4 @@
+import { QrGroup } from "@/app/qr-management/page";
 import {
   getExtraCharge,
   getGstAmount,
@@ -13,6 +14,7 @@ interface BillTemplateProps {
   extraCharges?: Array<{
     name: string;
     amount: number;
+    charge_type? : string;
     id?: string;
   }>;
 }
@@ -28,7 +30,7 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
     const foodSubtotal = order.totalPrice;
 
     const chargesSubtotal = extraCharges.reduce(
-      (sum, charge) => sum + getExtraCharge(order?.items || [], charge.amount || 0),
+      (sum, charge) => sum + getExtraCharge(order?.items || [], charge.amount || 0 , charge.charge_type as QrGroup['charge_type']),
       0
     );
 
@@ -109,7 +111,7 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
                   <span>{charge.name}</span>
                   <span>
                     {currency}
-                    {getExtraCharge(order?.items || [], charge.amount || 0)}
+                    {getExtraCharge(order?.items || [], charge.amount || 0 , charge.charge_type as QrGroup['charge_type']).toFixed(2)}
                   </span>
                 </li>
               ))}

@@ -36,6 +36,7 @@ export interface QrGroup {
   id: string;
   name: string;
   extra_charge: number;
+  charge_type: 'PER_ITEM' | 'FLAT_FEE';
 }
 
 interface QrCode {
@@ -50,6 +51,7 @@ const QrManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [newGroupName, setNewGroupName] = useState("");
   const [newExtraCharge, setNewExtraCharge] = useState(0);
+  const [newChargeType, setNewChargeType] = useState<'PER_ITEM' | 'FLAT_FEE'>('FLAT_FEE');
   const [editingGroup, setEditingGroup] = useState<QrGroup | null>(null);
   const { userData } = useAuthStore();
 
@@ -68,6 +70,7 @@ const QrManagementPage = () => {
             extra_charge
             id
             name
+            charge_type
           }
         }
       `;
@@ -90,6 +93,7 @@ const QrManagementPage = () => {
               name
               extra_charge
               id
+              charge_type
             }
           }
         }
@@ -116,15 +120,17 @@ const QrManagementPage = () => {
       }
 
       const mutation = `
-        mutation AddQrGroup($name: String!, $extra_charge: numeric!, $partner_id: uuid!) {
+        mutation AddQrGroup($name: String!, $extra_charge: numeric!, $partner_id: uuid!, $charge_type: String!) {
           insert_qr_groups_one(object: {
             name: $name,
             extra_charge: $extra_charge,
-            partner_id: $partner_id
+            partner_id: $partner_id,
+            charge_type: $charge_type
           }) {
             id
             name
             extra_charge
+            charge_type
           }
         }
       `;
@@ -133,13 +139,15 @@ const QrManagementPage = () => {
         name: newGroupName,
         extra_charge: newExtraCharge,
         partner_id: userData?.id,
+        charge_type: newChargeType
       });
 
-      toast.error("QR group added successfully");
+      toast.success("QR group added successfully");
 
       fetchQrGroups();
       setNewGroupName("");
       setNewExtraCharge(0);
+      setNewChargeType('FLAT_FEE');
     } catch (error) {
       console.error("Error adding QR group:", error);
       toast.error("Failed to add QR group");
@@ -156,17 +164,19 @@ const QrManagementPage = () => {
       }
 
       const mutation = `
-        mutation UpdateQrGroup($id: uuid!, $name: String!, $extra_charge: numeric!) {
+        mutation UpdateQrGroup($id: uuid!, $name: String!, $extra_charge: numeric!, $charge_type: String!) {
           update_qr_groups_by_pk(
             pk_columns: {id: $id},
             _set: {
               name: $name,
-              extra_charge: $extra_charge
+              extra_charge: $extra_charge,
+              charge_type: $charge_type
             }
           ) {
             id
             name
             extra_charge
+            charge_type
           }
         }
       `;
@@ -175,6 +185,7 @@ const QrManagementPage = () => {
         id: editingGroup.id,
         name: editingGroup.name,
         extra_charge: editingGroup.extra_charge,
+        charge_type: editingGroup.charge_type
       });
 
       toast.success("QR group updated successfully");
@@ -210,7 +221,7 @@ const QrManagementPage = () => {
 
       await fetchFromHasura(mutation, { id: groupId });
 
-      toast.error("QR group deleted successfully");
+      toast.success("QR group deleted successfully");
 
       fetchQrGroups();
     } catch (error) {
@@ -236,6 +247,7 @@ const QrManagementPage = () => {
             qr_group {
               id
               name
+              charge_type
             }
           }
         }
@@ -282,7 +294,7 @@ const QrManagementPage = () => {
       {/* QR Groups Table */}
       <div>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold ">QR Groups</h2>
+          <h2 className="text-xl font-semibold">QR Groups</h2>
           <div className="flex justify-end">
             <Dialog>
               <DialogTrigger asChild>
@@ -318,6 +330,23 @@ const QrManagementPage = () => {
                       className="col-span-3"
                     />
                   </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="chargeType" className="text-right">
+                      Charge Type
+                    </Label>
+                    <Select
+                      value={newChargeType}
+                      onValueChange={(value: 'PER_ITEM' | 'FLAT_FEE') => setNewChargeType(value)}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select charge type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="FLAT_FEE">Flat Fee</SelectItem>
+                        <SelectItem value="PER_ITEM">Per Item</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button onClick={handleAddGroup}>Save</Button>
@@ -332,8 +361,9 @@ const QrManagementPage = () => {
             <TableRow>
               <TableHead>Group Name</TableHead>
               <TableHead>Extra Charge</TableHead>
+              <TableHead>Charge Type</TableHead>
               <TableHead>No. of QR Codes</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -344,10 +374,13 @@ const QrManagementPage = () => {
                   <TableCell className="w-[32px]">
                     ${group.extra_charge}
                   </TableCell>
+                  <TableCell className="w-[32px] text-nowrap">
+                    {group.charge_type === 'PER_ITEM' ? 'Per Item' : 'Flat Fee'}
+                  </TableCell>
                   <TableCell className="w-[29px]">
                     {countQrCodesInGroup(group.id)}
                   </TableCell>
-                  <TableCell className="space-x-2">
+                  <TableCell className="space-x-2 flex justify-center">
                     <Button
                       variant="outline"
                       size="sm"
@@ -367,7 +400,7 @@ const QrManagementPage = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-4">
+                <TableCell colSpan={5} className="text-center py-4">
                   No QR groups found. Create your first group using the "Add New
                   Group" button.
                 </TableCell>
@@ -415,6 +448,28 @@ const QrManagementPage = () => {
                   className="col-span-3"
                 />
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="editChargeType" className="text-right">
+                  Charge Type
+                </Label>
+                <Select
+                  value={editingGroup.charge_type}
+                  onValueChange={(value: 'PER_ITEM' | 'FLAT_FEE') =>
+                    setEditingGroup({
+                      ...editingGroup,
+                      charge_type: value
+                    })
+                  }
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select charge type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FLAT_FEE">Flat Fee</SelectItem>
+                    <SelectItem value="PER_ITEM">Per Item</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <DialogFooter>
               <Button onClick={handleUpdateGroup}>Save Changes</Button>
@@ -431,6 +486,7 @@ const QrManagementPage = () => {
             <TableRow>
               <TableHead>Table Number</TableHead>
               <TableHead>Group Name</TableHead>
+              <TableHead>Charge Type</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -441,6 +497,13 @@ const QrManagementPage = () => {
                   <TableCell>{qrCode.table_number}</TableCell>
                   <TableCell>
                     {qrCode.qr_group?.name || "No Group Assigned"}
+                  </TableCell>
+                  <TableCell>
+                    {qrCode.qr_group?.charge_type === 'PER_ITEM' 
+                      ? 'Per Item' 
+                      : qrCode.qr_group?.charge_type === 'FLAT_FEE' 
+                        ? 'Flat Fee' 
+                        : '-'}
                   </TableCell>
                   <TableCell>
                     <Select
@@ -456,7 +519,7 @@ const QrManagementPage = () => {
                         <SelectItem value="unassign">Unassign</SelectItem>
                         {qrGroups.map((group) => (
                           <SelectItem key={group.id} value={group.id}>
-                            {group.name}
+                            {group.name} ({group.charge_type === 'PER_ITEM' ? 'Per Item' : 'Flat Fee'})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -466,7 +529,7 @@ const QrManagementPage = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-4">
+                <TableCell colSpan={4} className="text-center py-4">
                   No QR codes found. QR codes will appear here once they're
                   created.
                 </TableCell>

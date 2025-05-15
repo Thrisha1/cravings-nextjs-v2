@@ -92,7 +92,7 @@ const Page = () => {
             const gstPercentage = (order.partner as Partner)?.gst_percentage || 0;
             const gstAmount = getGstAmount(order.totalPrice, gstPercentage);
             const extraChargesTotal = (order.extraCharges || []).reduce(
-              (sum: number, charge: any) => sum + getExtraCharge(order?.items || [] , charge.amount) || 0,
+              (sum: number, charge: any) => sum + getExtraCharge(order?.items || [] , charge.amount , charge.charge_type) || 0,
               0
             ) || 0;
             console.log("Extra Charges Total:", extraChargesTotal);
@@ -202,7 +202,7 @@ const Page = () => {
                           <span>{charge.name}</span>
                           <span>
                             {(order.partner as Partner)?.currency || "$"}
-                            {getExtraCharge(order?.items || [] , charge.amount)}
+                            {getExtraCharge(order?.items || [] , charge.amount , charge.charge_type).toFixed(2)}
                           </span>
                         </li>
                       ))}
