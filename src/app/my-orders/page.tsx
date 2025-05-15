@@ -10,7 +10,7 @@ import useOrderStore from "@/store/orderStore";
 import { EditOrderModal } from "@/components/admin/pos/EditOrderModal";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { cancelOrderMutation } from "@/api/orders";
-import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
+import { getExtraCharge, getGstAmount } from "@/components/hotelDetail/OrderDrawer";
 
 const Page = () => {
   const { userData } = useAuthStore();
@@ -92,10 +92,14 @@ const Page = () => {
             const gstPercentage = (order.partner as Partner)?.gst_percentage || 0;
             const gstAmount = getGstAmount(order.totalPrice, gstPercentage);
             const extraChargesTotal = (order.extraCharges || []).reduce(
-              (sum: number, charge: any) => sum + charge.amount,
+              (sum: number, charge: any) => sum + getExtraCharge(order?.items || [] , charge.amount) || 0,
               0
             ) || 0;
-            const grandTotal = order.totalPrice + gstAmount + extraChargesTotal;
+            console.log("Extra Charges Total:", extraChargesTotal);
+            console.log(order.totalPrice);
+            
+            
+            const grandTotal = order.totalPrice + extraChargesTotal + gstAmount;
 
             return (
               <div
@@ -198,7 +202,7 @@ const Page = () => {
                           <span>{charge.name}</span>
                           <span>
                             {(order.partner as Partner)?.currency || "$"}
-                            {charge?.amount?.toFixed(2)}
+                            {getExtraCharge(order?.items || [] , charge.amount)}
                           </span>
                         </li>
                       ))}
