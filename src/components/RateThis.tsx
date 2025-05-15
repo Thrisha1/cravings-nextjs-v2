@@ -71,7 +71,7 @@ const RateThis = ({ type, hotel, styles }: RateThisProps) => {
           accent={styles.accent}
           className="text-2xl font-black sm:text-4xl text-center"
         >
-          Rate this {type === "hotel" ? "hotel" : "Item"}
+          Rate this {type === "hotel" ? "Business" : "Item"}
         </HeadingWithAccent>
         <p className="text-sm text-gray-500 text-center sm:text-base">
           {hasRated ? "Thanks for your rating!" : "Tell others what you think"}
