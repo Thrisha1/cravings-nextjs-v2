@@ -19,6 +19,7 @@ import { usePOSStore } from "@/store/posStore";
 import { getExtraCharge, getGstAmount } from "../hotelDetail/OrderDrawer";
 import OrderItemCard from "./OrderItemCard";
 import { QrGroup } from "@/app/qr-management/page";
+import TodaysEarnings from "./orders/TodaysEarnings";
 
 const OrdersTab = () => {
   const router = useRouter();
@@ -211,6 +212,7 @@ const OrdersTab = () => {
 
   return (
     <div className="py-10 px-[8%]">
+      <TodaysEarnings orders={orders} />
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
         <h2 className="text-2xl font-bold mb-5 sm:mb-0">Orders Management</h2>
         <div className="flex gap-2">
@@ -263,7 +265,7 @@ const OrdersTab = () => {
                   found
                 </p>
               ) : (
-                sortedOrders.map((order , index) => {
+                sortedOrders.map((order, index) => {
                   const gstPercentage =
                     (userData as Partner)?.gst_percentage || 0;
                   const gstAmount = getGstAmount(
@@ -273,7 +275,13 @@ const OrdersTab = () => {
                   const totalPriceWithGst = order.totalPrice + gstAmount;
 
                   const extraChargesTotal = (order?.extraCharges ?? []).reduce(
-                    (acc, charge) => acc + getExtraCharge(order?.items || [] , charge.amount , charge.charge_type as QrGroup['charge_type']) || 0,
+                    (acc, charge) =>
+                      acc +
+                        getExtraCharge(
+                          order?.items || [],
+                          charge.amount,
+                          charge.charge_type as QrGroup["charge_type"]
+                        ) || 0,
                     0
                   );
                   const grandTotal = totalPriceWithGst + extraChargesTotal;

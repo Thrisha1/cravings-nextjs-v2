@@ -14,7 +14,7 @@ import { toast } from "sonner";
 // Add type for beforeinstallprompt event
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
 export function Navbar() {
@@ -24,7 +24,8 @@ export function Navbar() {
   const { userData } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
@@ -43,14 +44,14 @@ export function Navbar() {
     setIsIOS(isIOSDevice);
 
     // Handle PWA installation prompt
-    window.addEventListener('beforeinstallprompt', (e) => {
+    window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     });
 
     // Listen for app installation
-    window.addEventListener('appinstalled', () => {
-      toast.success('App installed successfully!');
+    window.addEventListener("appinstalled", () => {
+      toast.success("App installed successfully!");
     });
   }, []);
 
@@ -66,14 +67,16 @@ export function Navbar() {
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        toast.success('App installed successfully!');
+      if (outcome === "accepted") {
+        toast.success("App installed successfully!");
       }
       setDeferredPrompt(null);
     } else {
       // If no prompt available, try to open the app or show installation instructions
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      
+      const isStandalone = window.matchMedia(
+        "(display-mode: standalone)"
+      ).matches;
+
       if (isStandalone) {
         // If already in standalone mode, just refresh
         window.location.reload();
@@ -145,13 +148,7 @@ export function Navbar() {
           {link.label}
         </Link>
       ))}
-      <button
-        onClick={handleInstallClick}
-        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-full hover:bg-orange-700 transition-colors"
-      >
-        <Download className="w-4 h-4" />
-        Download App
-      </button>
+
       {!userData && (
         <Link href="/partner" onClick={() => setIsOpen(false)}>
           <Button className="text-white font-medium bg-orange-600 hover:bg-orange-50 hover:border-orange-600 hover:text-orange-600 px-5 text-[1rem] py-3 rounded-full transition-all duration-300">
@@ -202,7 +199,7 @@ export function Navbar() {
   return (
     <>
       <nav className="w-full bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 ">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <div
@@ -251,6 +248,13 @@ export function Navbar() {
 
               <div className="hidden md:flex items-center space-x-8">
                 <NavLinks />
+                <button
+                  onClick={handleInstallClick}
+                  className="inline-flex items-center h-fit text-nowrap text-xs gap-2 px-4 py-2  font-medium text-white bg-orange-600 rounded-full hover:bg-orange-700 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Download App
+                </button>
               </div>
 
               <div className="md:hidden flex items-center">
@@ -265,25 +269,34 @@ export function Navbar() {
                     side="right"
                     className="w-[80%] sm:w-[385px] z-[52]"
                   >
-                    <div className="flex flex-col space-y-4 mt-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-2">
-                          <UtensilsCrossed className="h-6 w-6 text-orange-600" />
-                          <span className="text-xl font-bold text-gray-900">
-                            Cravings
-                          </span>
+                    <div className="flex flex-col justify-between h-full pb-5 space-y-4 mt-4">
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center space-x-2">
+                            <UtensilsCrossed className="h-6 w-6 text-orange-600" />
+                            <span className="text-xl font-bold text-gray-900">
+                              Cravings
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsOpen(false)}
+                          >
+                            <X className="h-6 w-6" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setIsOpen(false)}
-                        >
-                          <X className="h-6 w-6" />
-                        </Button>
+                        <div className="flex flex-col justify-between space-y-4">
+                          <NavLinks />
+                        </div>
                       </div>
-                      <div className="flex flex-col space-y-4">
-                        <NavLinks />
-                      </div>
+                      <button
+                        onClick={handleInstallClick}
+                        className="inline-flex items-center h-fit text-nowrap text-xs gap-2 px-4 py-2  font-medium text-white bg-orange-600 rounded-full hover:bg-orange-700 transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download App
+                      </button>
                     </div>
                   </SheetContent>
                 </Sheet>
