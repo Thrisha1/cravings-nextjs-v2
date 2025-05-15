@@ -14,7 +14,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Button } from "../ui/button";
-import useOrderStore from "@/store/orderStore";
+import useOrderStore, { OrderItem } from "@/store/orderStore";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 import { Loader2, CheckCircle } from "lucide-react";
@@ -35,6 +35,15 @@ import { QrGroup } from "@/app/qr-management/page";
 export const getGstAmount = (price: number, gstPercentage: number) => {
   const gstAmount = (price * gstPercentage) / 100;
   return gstAmount;
+};
+
+export const getExtraCharge = (items: OrderItem[], extraCharge: number) => {
+
+  if (!extraCharge) return 0;
+  if (items.length === 0) return 0;
+
+  const totalQuantity = items.reduce((acc, item) => acc + item.quantity, 0);
+  return totalQuantity * extraCharge;
 };
 
 const OrderDrawer = ({
@@ -92,10 +101,11 @@ const OrderDrawer = ({
       grandTotal += getGstAmount(baseTotal, hotelData.gst_percentage);
     }
 
-    // Add QR group extra charge if applicable
-    if (qrGroup?.extra_charge) {
-      grandTotal += qrGroup.extra_charge;
-    }
+    const extraChargeTotal = getExtraCharge(
+      items || [],
+      qrGroup?.extra_charge || 0
+    );
+    grandTotal += extraChargeTotal;
 
     return grandTotal.toFixed(2);
   };
@@ -106,46 +116,47 @@ const OrderDrawer = ({
       `hotel-${hotelData.id}-whatsapp-area`
     );
 
-    const whatsappMsg = `
-    *🍽️ Order Details 🍽️*
-    
-    *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
-    ${(tableNumber ?? 0) > 0 ? `*${hotelData.business_type === 'resort' ? 'Room' : 'Table'}:* ${tableNumber}` : "*Order Type:* Delivery"}
-    ${(tableNumber ?? 0) > 0 ? "" : `*Delivery Address:* ${savedAddress}`}
-    *Time:* ${new Date().toLocaleTimeString()}
-    
-    *📋 Order Items:*
-      ${items
-          ?.map(
-            (item, index) =>
-              `${index + 1}. ${item.name} (${item.category.name})
-   ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
-            2
-          )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(2)}`
-          )
-          .join("\n\n")}
-    
-    ${hotelData?.gst_percentage
-          ? `*GST (${hotelData.gst_percentage}%):* ${hotelData.currency
-          }${getGstAmount(totalPrice as number, hotelData.gst_percentage).toFixed(
-            2
-          )}`
-        : ""
-    }
-    ${
-      qrGroup?.extra_charge
-        ? `*${qrGroup.name} :* ${hotelData.currency}${qrGroup.extra_charge.toFixed(
-            2
-          )}`
-        : ""
-    }
-    ${
-      hotelData?.gst_percentage || qrGroup?.extra_charge
-        ? `*Subtotal:* ${hotelData.currency}${totalPrice}`
-        : ""
-    }
-    *Total Price:* ${hotelData.currency}${calculateGrandTotal()}
-    `;
+  const whatsappMsg = `
+  *🍽️ Order Details 🍽️*
+  
+  *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
+  ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : "*Order Type:* Delivery"}
+  ${(tableNumber ?? 0) > 0 ? "" : `*Delivery Address:* ${savedAddress}`}
+  *Time:* ${new Date().toLocaleTimeString()}
+  
+  *📋 Order Items:*
+    ${items
+        ?.map(
+          (item, index) =>
+            `${index + 1}. ${item.name} (${item.category.name})
+     ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
+              2
+            )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(2)}`
+        )
+        .join("\n\n")}
+  
+  ${hotelData?.gst_percentage
+        ? `*GST (${hotelData.gst_percentage}%):* ${hotelData.currency
+        }${getGstAmount(totalPrice as number, hotelData.gst_percentage).toFixed(
+          2
+        )}`
+      : ""
+  }
+  ${
+    qrGroup?.extra_charge
+      ? `*${qrGroup.name} :* ${hotelData.currency}${getExtraCharge(
+          items || [],
+          qrGroup?.extra_charge
+        ).toFixed(2)}`
+      : ""
+  }
+  ${
+    hotelData?.gst_percentage || qrGroup?.extra_charge
+      ? `*Subtotal:* ${hotelData.currency}${totalPrice}`
+      : ""
+  }
+  *Total Price:* ${hotelData.currency}${calculateGrandTotal()}
+  `;
 
     const number =
       selectedWhatsAppNumber ||
@@ -163,18 +174,23 @@ const OrderDrawer = ({
   const handlePlaceOrder = async () => {
     setIsLoading(true);
     try {
-
       const extraCharge = {
-        amount: qrGroup?.extra_charge ,
-        name: qrGroup?.name
-      }
+        amount: qrGroup?.extra_charge,
+        name: qrGroup?.name,
+      };
 
       const gstAmount = getGstAmount(
         totalPrice as number,
         hotelData?.gst_percentage as number
       );
 
-      const result = await placeOrder(hotelData, tableNumber, qrId , gstAmount, extraCharge);
+      const result = await placeOrder(
+        hotelData,
+        tableNumber,
+        qrId,
+        gstAmount,
+        extraCharge
+      );
       if (result) {
         toast.success("Order placed successfully!");
         clearOrder();
@@ -212,74 +228,33 @@ const OrderDrawer = ({
         }}
         className="fixed bottom-0 z-[51] left-1/2 -translate-x-1/2 lg:max-w-[50%] bg-white text-black w-full px-[8%] py-6 rounded-t-[35px] bottom-bar-shadow flex items-center justify-between"
       >
-        {order ? (
-          <div className="flex items-center gap-4 w-full justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle
-                style={{ color: styles.accent }}
-                className="w-5 h-5"
-              />
-              <span className="font-medium">Order #{order.id.slice(0, 8)}</span>
+        <>
+          <div className="z-[51]">
+            <div className="flex gap-2 items-center font-black text-xl ">
+              <div>PRICE : </div>
+              <div style={{ color: styles.accent }}>
+                {hotelData.currency}
+                {calculateGrandTotal() || 0}
+              </div>
             </div>
-
-            <div className="flex gap-3">
-              <div
-                onClick={() => { 
-                  clearOrder()
-                  toast.success("order cleared. now place a new order")
-                }}
-                style={{
-                  color: styles.accent,
-                  border: "2px solid " + styles.accent,
-                }}
-                className={`font-black rounded-lg px-2 py-1 cursor-pointer`}
-              >
-                Place new order
-              </div>
-
-              <div
-                onClick={handleViewOrder}
-                style={{
-                  color: styles.accent,
-                  border: "2px solid " + styles.accent,
-                }}
-                className={`font-black rounded-lg px-2 py-1 cursor-pointer`}
-              >
-                View Order
-              </div>
+            <div className="flex gap-2 items-center text-sm text-black/70">
+              <div>Items :</div>
+              <div>{items?.length}</div>
             </div>
           </div>
-        ) : (
-          <>
-            <div className="z-[51]">
-              <div className="flex gap-2 items-center font-black text-xl ">
-                <div>PRICE : </div>
-                <div style={{ color: styles.accent }}>
-                  {hotelData.currency}
-                  {totalPrice}
-                </div>
-              </div>
-              <div className="flex gap-2 items-center text-sm text-black/70">
-                <div>Items :</div>
-                <div>{items?.length}</div>
-              </div>
+
+          <div className="flex gap-3">
+            <div
+              onClick={handleViewOrder}
+              style={{
+                color: styles.accent,
+              }}
+              className="font-black relative"
+            >
+              View Order
             </div>
-
-            <div className="flex gap-3">
-
-
-              <div
-                onClick={handleViewOrder}
-                style={{
-                  color: styles.accent,
-                }}
-                className="font-black relative"
-              >
-                View Order
-              </div>
-            </div>
-          </>
-        )}
+          </div>
+        </>
       </div>
 
       <DrawerContent className="max-h-[80vh] z-[52] lg:max-w-[50%] mx-auto">
@@ -378,7 +353,7 @@ const OrderDrawer = ({
                 </span>
               </div>
 
-              {(hotelData?.gst_percentage !== 0) && (
+              {hotelData?.gst_percentage !== 0 && (
                 <div className="flex justify-between items-center mb-2 text-sm">
                   <span className="font-bold">{`GST (${hotelData.gst_percentage}%):`}</span>
                   <span className="font-bold">
@@ -396,7 +371,9 @@ const OrderDrawer = ({
                   <span className="font-bold">{`${qrGroup.name} Charge:`}</span>
                   <span className="font-bold">
                     {hotelData.currency}
-                    {qrGroup.extra_charge.toFixed(2)}
+                    {getExtraCharge(items || [], qrGroup?.extra_charge).toFixed(
+                      2
+                    )}
                   </span>
                 </div>
               )}

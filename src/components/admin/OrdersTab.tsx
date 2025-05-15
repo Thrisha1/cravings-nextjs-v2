@@ -16,7 +16,7 @@ import BillTemplate from "./pos/BillTemplate";
 import KOTTemplate from "./pos/KOTTemplate";
 import { EditOrderModal } from "./pos/EditOrderModal";
 import { usePOSStore } from "@/store/posStore";
-import { getGstAmount } from "../hotelDetail/OrderDrawer";
+import { getExtraCharge, getGstAmount } from "../hotelDetail/OrderDrawer";
 import OrderItemCard from "./OrderItemCard";
 
 const OrdersTab = () => {
@@ -272,7 +272,7 @@ const OrdersTab = () => {
                   const totalPriceWithGst = order.totalPrice + gstAmount;
 
                   const extraChargesTotal = (order?.extraCharges ?? []).reduce(
-                    (acc, charge) => acc + charge.amount,
+                    (acc, charge) => acc + getExtraCharge(order?.items || [] , charge.amount) || 0,
                     0
                   );
                   const grandTotal = totalPriceWithGst + extraChargesTotal;

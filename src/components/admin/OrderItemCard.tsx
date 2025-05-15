@@ -8,6 +8,7 @@ import { Edit, Printer } from "lucide-react";
 import KOTTemplate from "./pos/KOTTemplate";
 import BillTemplate from "./pos/BillTemplate";
 import { useReactToPrint } from "react-to-print";
+import { getExtraCharge } from "../hotelDetail/OrderDrawer";
 
 const OrderItemCard = ({
   order,
@@ -22,11 +23,13 @@ const OrderItemCard = ({
   gstPercentage: number;
   gstAmount: number;
   grantTotal: number;
-  updateOrderStatus: (orderId: string, newStatus: "completed" | "cancelled") => Promise<void>;
+  updateOrderStatus: (
+    orderId: string,
+    newStatus: "completed" | "cancelled"
+  ) => Promise<void>;
   setOrder: (order: Order) => void;
   setEditOrderModalOpen: (open: boolean) => void;
 }) => {
-  
   const { userData } = useAuthStore();
   const billRef = React.useRef<HTMLDivElement>(null);
   const kotRef = React.useRef<HTMLDivElement>(null);
@@ -124,7 +127,9 @@ const OrderItemCard = ({
                   <span>{charge.name}</span>
                   <span>
                     {(userData as HotelData)?.currency}
-                    {charge?.amount?.toFixed(2)}
+                    {getExtraCharge(order?.items || [], charge.amount).toFixed(
+                      2
+                    )}
                   </span>
                 </div>
               ))}
