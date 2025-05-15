@@ -47,6 +47,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     theme
     gst_no
     gst_percentage
+    business_type
     menus(where: {deletion_status: {_eq: 0}}) {
       category {
         name

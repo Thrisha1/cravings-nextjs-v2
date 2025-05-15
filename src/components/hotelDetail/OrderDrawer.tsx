@@ -106,46 +106,46 @@ const OrderDrawer = ({
       `hotel-${hotelData.id}-whatsapp-area`
     );
 
-  const whatsappMsg = `
-  *🍽️ Order Details 🍽️*
-  
-  *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
-  ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : "*Order Type:* Delivery"}
-  ${(tableNumber ?? 0) > 0 ? "" : `*Delivery Address:* ${savedAddress}`}
-  *Time:* ${new Date().toLocaleTimeString()}
-  
-  *📋 Order Items:*
-    ${items
-        ?.map(
-          (item, index) =>
-            `${index + 1}. ${item.name} (${item.category.name})
-     ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
-              2
-            )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(2)}`
-        )
-        .join("\n\n")}
-  
-  ${hotelData?.gst_percentage
-        ? `*GST (${hotelData.gst_percentage}%):* ${hotelData.currency
-        }${getGstAmount(totalPrice as number, hotelData.gst_percentage).toFixed(
-          2
-        )}`
-      : ""
-  }
-  ${
-    qrGroup?.extra_charge
-      ? `*${qrGroup.name} :* ${hotelData.currency}${qrGroup.extra_charge.toFixed(
-          2
-        )}`
-      : ""
-  }
-  ${
-    hotelData?.gst_percentage || qrGroup?.extra_charge
-      ? `*Subtotal:* ${hotelData.currency}${totalPrice}`
-      : ""
-  }
-  *Total Price:* ${hotelData.currency}${calculateGrandTotal()}
-  `;
+    const whatsappMsg = `
+    *🍽️ Order Details 🍽️*
+    
+    *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
+    ${(tableNumber ?? 0) > 0 ? `*${hotelData.business_type === 'resort' ? 'Room' : 'Table'}:* ${tableNumber}` : "*Order Type:* Delivery"}
+    ${(tableNumber ?? 0) > 0 ? "" : `*Delivery Address:* ${savedAddress}`}
+    *Time:* ${new Date().toLocaleTimeString()}
+    
+    *📋 Order Items:*
+      ${items
+          ?.map(
+            (item, index) =>
+              `${index + 1}. ${item.name} (${item.category.name})
+   ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
+            2
+          )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(2)}`
+          )
+          .join("\n\n")}
+    
+    ${hotelData?.gst_percentage
+          ? `*GST (${hotelData.gst_percentage}%):* ${hotelData.currency
+          }${getGstAmount(totalPrice as number, hotelData.gst_percentage).toFixed(
+            2
+          )}`
+        : ""
+    }
+    ${
+      qrGroup?.extra_charge
+        ? `*${qrGroup.name} :* ${hotelData.currency}${qrGroup.extra_charge.toFixed(
+            2
+          )}`
+        : ""
+    }
+    ${
+      hotelData?.gst_percentage || qrGroup?.extra_charge
+        ? `*Subtotal:* ${hotelData.currency}${totalPrice}`
+        : ""
+    }
+    *Total Price:* ${hotelData.currency}${calculateGrandTotal()}
+    `;
 
     const number =
       selectedWhatsAppNumber ||

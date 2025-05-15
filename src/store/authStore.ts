@@ -62,6 +62,7 @@ export interface Partner extends BaseUser {
   social_links?: string;
   gst_no?: string;
   gst_percentage?: number;
+  business_type?: string; 
 }
 
 export interface SuperAdmin extends BaseUser {
