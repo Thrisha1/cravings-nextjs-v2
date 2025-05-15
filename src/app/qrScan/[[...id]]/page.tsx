@@ -29,6 +29,9 @@ const page = async ({
     id: id,
   });
 
+  console.log(qr_codes);
+  
+
   const tableNumber = qr_codes[0].table_number;
 
   // console.log("Table Number:", tableNumber);

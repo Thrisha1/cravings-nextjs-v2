@@ -37,13 +37,21 @@ export const getGstAmount = (price: number, gstPercentage: number) => {
   return gstAmount;
 };
 
-export const getExtraCharge = (items: OrderItem[], extraCharge: number) => {
-
-  if (!extraCharge) return 0;
+export const getExtraCharge = (
+  items: OrderItem[], 
+  extraCharge: number, 
+  chargeType: 'PER_ITEM' | 'FLAT_FEE'
+) => {
+  if (!extraCharge || extraCharge <= 0) return 0;
   if (items.length === 0) return 0;
 
-  const totalQuantity = items.reduce((acc, item) => acc + item.quantity, 0);
-  return totalQuantity * extraCharge;
+  if (chargeType === 'PER_ITEM') {
+    const totalQuantity = items.reduce((acc, item) => acc + item.quantity, 0);
+    return totalQuantity * extraCharge;
+  } else {
+    // For FLAT_FEE, we just return the extra charge once
+    return extraCharge;
+  }
 };
 
 const OrderDrawer = ({
@@ -103,7 +111,8 @@ const OrderDrawer = ({
 
     const extraChargeTotal = getExtraCharge(
       items || [],
-      qrGroup?.extra_charge || 0
+      qrGroup?.extra_charge || 0,
+      qrGroup?.charge_type || "FLAT_FEE"
     );
     grandTotal += extraChargeTotal;
 
@@ -146,7 +155,8 @@ const OrderDrawer = ({
     qrGroup?.extra_charge
       ? `*${qrGroup.name} :* ${hotelData.currency}${getExtraCharge(
           items || [],
-          qrGroup?.extra_charge
+          qrGroup?.extra_charge,
+          qrGroup?.charge_type || "FLAT_FEE"
         ).toFixed(2)}`
       : ""
   }
@@ -177,6 +187,7 @@ const OrderDrawer = ({
       const extraCharge = {
         amount: qrGroup?.extra_charge,
         name: qrGroup?.name,
+        charge_type: qrGroup?.charge_type,
       };
 
       const gstAmount = getGstAmount(
@@ -371,7 +382,7 @@ const OrderDrawer = ({
                   <span className="font-bold">{`${qrGroup.name} Charge:`}</span>
                   <span className="font-bold">
                     {hotelData.currency}
-                    {getExtraCharge(items || [], qrGroup?.extra_charge).toFixed(
+                    {getExtraCharge(items || [], qrGroup?.extra_charge , qrGroup?.charge_type).toFixed(
                       2
                     )}
                   </span>

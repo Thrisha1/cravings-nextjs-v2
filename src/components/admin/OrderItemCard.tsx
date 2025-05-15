@@ -9,6 +9,7 @@ import KOTTemplate from "./pos/KOTTemplate";
 import BillTemplate from "./pos/BillTemplate";
 import { useReactToPrint } from "react-to-print";
 import { getExtraCharge } from "../hotelDetail/OrderDrawer";
+import { QrGroup } from "@/app/qr-management/page";
 
 const OrderItemCard = ({
   order,
@@ -127,7 +128,7 @@ const OrderItemCard = ({
                   <span>{charge.name}</span>
                   <span>
                     {(userData as HotelData)?.currency}
-                    {getExtraCharge(order?.items || [], charge.amount).toFixed(
+                    {getExtraCharge(order?.items || [], charge.amount , charge.charge_type as QrGroup["charge_type"]).toFixed(
                       2
                     )}
                   </span>

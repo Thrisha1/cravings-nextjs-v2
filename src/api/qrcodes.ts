@@ -6,6 +6,7 @@ query GetQrTable($id: uuid!) {
     qr_group {
       extra_charge
       name
+      charge_type
     }
   }
 }`;

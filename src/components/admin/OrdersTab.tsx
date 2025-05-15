@@ -18,6 +18,7 @@ import { EditOrderModal } from "./pos/EditOrderModal";
 import { usePOSStore } from "@/store/posStore";
 import { getExtraCharge, getGstAmount } from "../hotelDetail/OrderDrawer";
 import OrderItemCard from "./OrderItemCard";
+import { QrGroup } from "@/app/qr-management/page";
 
 const OrdersTab = () => {
   const router = useRouter();
@@ -272,7 +273,7 @@ const OrdersTab = () => {
                   const totalPriceWithGst = order.totalPrice + gstAmount;
 
                   const extraChargesTotal = (order?.extraCharges ?? []).reduce(
-                    (acc, charge) => acc + getExtraCharge(order?.items || [] , charge.amount) || 0,
+                    (acc, charge) => acc + getExtraCharge(order?.items || [] , charge.amount , charge.charge_type as QrGroup['charge_type']) || 0,
                     0
                   );
                   const grandTotal = totalPriceWithGst + extraChargesTotal;
