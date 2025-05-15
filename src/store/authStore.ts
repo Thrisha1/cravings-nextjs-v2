@@ -88,6 +88,15 @@ interface AuthState {
     phone: string,
     upiId: string
   ) => Promise<void>;
+  createPartner: (
+    email: string,
+    password: string,
+    hotelName: string,
+    area: string,
+    location: string,
+    phone: string,
+    upiId: string
+  ) => Promise<Partner>;
   signInWithPhone: (phone: string, partnerId?: string) => Promise<User | null>;
   signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
   signInSuperAdminWithEmail: (email: string, password: string) => Promise<void>;
@@ -339,5 +348,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         ...udpatedUser,
       } as AuthUser,
     });
+  },
+
+  createPartner: async (
+    hotelName: string,
+    phone: string,
+    upiId: string,
+    area: string,
+    location: string,
+    email: string,
+    password: string
+  ) => {
+    try {
+      const existingPartner = await fetchFromHasura(partnerQuery, { email });
+      if (existingPartner?.partners?.length > 0) {
+        throw new Error("A partner account with this email already exists");
+      }
+
+      const response = (await fetchFromHasura(partnerMutation, {
+        object: {
+          email,
+          password,
+          name: hotelName,
+          store_name: hotelName,
+          location,
+          district: area,
+          status: "active",
+          upi_id: upiId,
+          phone,
+          description: "",
+          role: "partner",
+        },
+      })) as { insert_partners_one: Partner };
+
+      if (!response?.insert_partners_one) {
+        throw new Error("Failed to create partner account");
+      }
+
+      return response.insert_partners_one;
+    } catch (error) {
+      console.error("Partner creation failed:", error);
+      throw error;
+    }
   },
 }));
