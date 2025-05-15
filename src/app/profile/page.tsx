@@ -787,7 +787,7 @@ export default function ProfilePage() {
                   className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
                 >
                   <Tag className="sm:size-4 size-8 mr-2" />
-                  View My Restaurant
+                  View My Business Website
                 </Link>
               )}
             </div>
