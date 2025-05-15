@@ -153,6 +153,8 @@ const ItemCard = ({
         open={isOpen}
         setOpen={setIsOpen}
         item={item}
+        currency={currency}
+        hotelData={hotelData as HotelData}
       />
     </div>
   );
