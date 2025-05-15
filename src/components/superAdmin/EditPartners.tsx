@@ -35,9 +35,8 @@ import {
 } from "@/components/ui/select";
 
 interface PartnerWithDetails extends Partner {
-  password?: string;
   place_id?: string;
-  currency?: string;
+  currency: string;
   show_price_data?: boolean;
   razorpay_linked_account_id?: string;
   business_type?: string;
@@ -208,7 +207,7 @@ const EditPartners = () => {
           <DialogHeader>
             <DialogTitle>Edit Partner Details</DialogTitle>
             <DialogDescription>
-              Make changes to the partner's information here.
+              Make changes to the partners information here.
             </DialogDescription>
           </DialogHeader>
           {selectedPartner && (
@@ -286,7 +285,7 @@ const EditPartners = () => {
                   <Label htmlFor="description">Description</Label>
                   <Input
                     id="description"
-                    value={selectedPartner.description}
+                    value={selectedPartner.description || ""}
                     onChange={(e) =>
                       setSelectedPartner({ ...selectedPartner, description: e.target.value })
                     }
