@@ -442,6 +442,11 @@ const useOrderStore = create(
             });
           }
 
+          const grandTotal = currentOrder.totalPrice + (gstIncluded || 0) + (exCharges?.reduce((acc, charge) => acc + (charge.amount || 0), 0) || 0);
+
+          console.log(grandTotal, "grandTotal");
+          
+
           const createdAt = new Date().toISOString();
           const orderResponse = await fetchFromHasura(createOrderMutation, {
             id: currentOrder.orderId,

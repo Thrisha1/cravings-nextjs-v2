@@ -232,7 +232,7 @@ const HotelMenuPage = ({
       {/* offers  */}
       {offers.length > 0 && (
         <section className="px-[8%]">
-          <OfferList offers={offers} styles={styles} menus={hoteldata?.menus}  />
+          <OfferList offers={offers} styles={styles} menus={hoteldata?.menus} features={getFeatures(hoteldata?.feature_flags || "")}  />
         </section>
       )}
 

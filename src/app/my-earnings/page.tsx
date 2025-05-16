@@ -24,7 +24,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Download } from 'lucide-react'
 import { Skeleton } from "@/components/ui/skeleton"
 import { fetchFromHasura } from '@/lib/hasuraClient'
-import { useAuthStore } from '@/store/authStore'
+import { Partner, useAuthStore } from '@/store/authStore'
 
 // Helper function to format date as YYYY-MM-DD
 const formatDate = (date: Date) => format(date, 'yyyy-MM-dd')
@@ -211,8 +211,10 @@ const OrderReport = () => {
   }, [activeTab, dateRange.startDate, dateRange.endDate, userData?.id])
 
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    if(userData) {
+      fetchData()
+    }
+  }, [fetchData , userData])
 
   const handleDateRangeChange = useCallback((range: { startDate: Date; endDate: Date }) => {
     if (
@@ -342,7 +344,7 @@ const OrderReport = () => {
                 <Skeleton className="h-8 w-[100px]" />
               ) : (
                 <div className="text-2xl font-bold">
-                  ₹{reportData?.orders_aggregate?.aggregate?.sum?.total_price || 0}
+                {(userData as Partner)?.currency}{reportData?.orders_aggregate?.aggregate?.sum?.total_price?.toFixed(2) || 0}
                 </div>
               )}
             </CardContent>

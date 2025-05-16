@@ -1,5 +1,5 @@
 "use client";
-import { Styles } from "@/screens/HotelMenuPage_v2";
+import { FeatureFlags, Styles } from "@/screens/HotelMenuPage_v2";
 import { Offer } from "@/store/offerStore_hasura";
 import React from "react";
 import OfferCardMin from "../OfferCardMin";
@@ -13,13 +13,14 @@ const OfferList = ({
   offers,
   styles,
   menus,
+  features
 }: {
   offers: Offer[];
   styles: Styles;
   menus: HotelDataMenus[];
+  features: FeatureFlags;
 }) => {
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
-  const { features } = useAuthStore();
 
   return (
     <div className="flex flex-col gap-6 my-5">
