@@ -65,7 +65,8 @@ export default function OfferDetail({
       await addClaimedOffer(offer);
     }
 
-    setClaimModalOpen(true);
+    // setClaimModalOpen(true);
+    navigate.push(`/hotels/${hotelData.store_name}/${hotelData.id}`);
   };
 
   const isUpcoming = new Date(offer.start_time) > new Date();
@@ -159,7 +160,13 @@ export default function OfferDetail({
                 {isUpcoming && (
                   <div className="flex items-center text-lg text-gray-500">
                     <Clock className="w-4 h-4 mr-2" />
-                    <CountdownTimer endTime={offer.end_time} upcoming={new Date(offer.start_time).setHours(0,0,0,0) > new Date().setHours(0,0,0,0)} />
+                    <CountdownTimer
+                      endTime={offer.end_time}
+                      upcoming={
+                        new Date(offer.start_time).setHours(0, 0, 0, 0) >
+                        new Date().setHours(0, 0, 0, 0)
+                      }
+                    />
                   </div>
                 )}
                 <div className="flex items-center text-lg text-gray-500">
@@ -202,8 +209,11 @@ export default function OfferDetail({
 
               <div className={`h-[36px] w-full`}>
                 {offer.deletion_status === 1 || isUpcoming ? (
-                  <Button disabled className="w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-gray-600 hover:bg-gray-700 rounded-sm">
-                    { isUpcoming ? "Upcoming" : "Expired"}
+                  <Button
+                    disabled
+                    className="w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-gray-600 hover:bg-gray-700 rounded-sm"
+                  >
+                    {isUpcoming ? "Upcoming" : "Expired"}
                   </Button>
                 ) : (
                   <>

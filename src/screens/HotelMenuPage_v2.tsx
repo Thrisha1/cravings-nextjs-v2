@@ -6,7 +6,6 @@ import { HotelData, SocialLinks } from "@/app/hotels/[...id]/page";
 import ThemeChangeButton, {
   ThemeConfig,
 } from "@/components/hotelDetail/ThemeChangeButton";
-
 import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
 import { Category } from "@/store/categoryStore_hasura";
 import PopularItemsList from "@/components/hotelDetail/PopularItemsList";
@@ -233,7 +232,7 @@ const HotelMenuPage = ({
       {/* offers  */}
       {offers.length > 0 && (
         <section className="px-[8%]">
-          <OfferList offers={offers} styles={styles} />
+          <OfferList offers={offers} styles={styles} menus={hoteldata?.menus}  />
         </section>
       )}
 
