@@ -128,6 +128,7 @@ const AuthModal = ({
               if (result) {
                 console.log("Login successful", result);
                 useOrderStore.getState().setOpenAuthModal(false);
+                useOrderStore.getState().setOpenOrderDrawer(true);
               }
             }}
             className="w-full"

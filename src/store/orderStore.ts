@@ -69,6 +69,7 @@ interface OrderState {
   items: OrderItem[] | null;
   orderId: string | null;
   totalPrice: number | null;
+  open_order_drawer: boolean;
 
   setHotelId: (id: string) => void;
   addItem: (item: HotelDataMenus) => void;
@@ -97,6 +98,7 @@ interface OrderState {
   userOrders: Order[];
   subscribeUserOrders: (callback?: (orders: Order[]) => void) => () => void;
   deleteOrder: (orderId: string) => Promise<boolean>;
+  setOpenOrderDrawer: (open: boolean) => void;
 }
 
 const useOrderStore = create(
@@ -112,6 +114,7 @@ const useOrderStore = create(
       partnerOrders: [],
       totalPrice: 0,
       userOrders: [],
+      open_order_drawer: false,
 
       subscribeUserOrders: (callback) => {
         const userId = useAuthStore.getState().userData?.id;
@@ -269,11 +272,11 @@ const useOrderStore = create(
       },
 
       addItem: (item) => {
-        const user = useAuthStore.getState().userData;
-        if (!user) {
-          set({ open_auth_modal: true });
-          return;
-        }
+        // const user = useAuthStore.getState().userData;
+        // if (!user) {
+        //   set({ open_auth_modal: true });
+        //   return;
+        // }
 
         const state = get();
         if (!state.hotelId) return;
@@ -701,6 +704,8 @@ const useOrderStore = create(
           };
         });
       },
+
+      setOpenOrderDrawer: (open: boolean) => set({ open_order_drawer: open }),
     }),
     {
       name: "order-storage",

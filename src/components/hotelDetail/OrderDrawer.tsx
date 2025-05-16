@@ -79,10 +79,11 @@ const OrderDrawer = ({
     removeItem,
     setOpenAuthModal,
     clearOrder,
+    open_order_drawer,
+    setOpenOrderDrawer,
   } = useOrderStore();
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
   const [isQrScan, setIsQrScan] = useState(false);
   const [featrues, setFeatures] = useState<FeatureFlags | null>(null);
 
@@ -228,11 +229,11 @@ const OrderDrawer = ({
       return;
     }
 
-    setIsOpen(true);
+    setOpenOrderDrawer(true);
   };
 
   return (
-    <Drawer open={isOpen} onOpenChange={setIsOpen}>
+    <Drawer open={open_order_drawer} onOpenChange={setOpenOrderDrawer}>
       <div
         style={{
           ...styles.border,
