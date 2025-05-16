@@ -4,12 +4,23 @@ import { Partner, useAuthStore } from "@/store/authStore";
 import { Order, OrderItem } from "@/store/orderStore";
 import React from "react";
 import { Button } from "../ui/button";
-import { Edit, Printer } from "lucide-react";
+import { Edit, Printer, Trash2 } from "lucide-react";
 import KOTTemplate from "./pos/KOTTemplate";
 import BillTemplate from "./pos/BillTemplate";
 import { useReactToPrint } from "react-to-print";
 import { getExtraCharge } from "../hotelDetail/OrderDrawer";
 import { QrGroup } from "@/app/qr-management/page";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 const OrderItemCard = ({
   order,
@@ -19,6 +30,7 @@ const OrderItemCard = ({
   updateOrderStatus,
   setOrder,
   setEditOrderModalOpen,
+  deleteOrder,
 }: {
   order: Order;
   gstPercentage: number;
@@ -30,10 +42,13 @@ const OrderItemCard = ({
   ) => Promise<void>;
   setOrder: (order: Order) => void;
   setEditOrderModalOpen: (open: boolean) => void;
+  deleteOrder: (orderId: string) => Promise<boolean>;
 }) => {
   const { userData } = useAuthStore();
   const billRef = React.useRef<HTMLDivElement>(null);
   const kotRef = React.useRef<HTMLDivElement>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const handlePrintBill = useReactToPrint({
     contentRef: billRef,
@@ -43,6 +58,28 @@ const OrderItemCard = ({
     contentRef: kotRef,
   });
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      toast.loading("Deleting order...");
+      const success = await deleteOrder(order.id);
+      if (success) {
+        toast.dismiss();
+        toast.success("Order deleted successfully");
+        setIsDeleteDialogOpen(false);
+      } else {
+        toast.dismiss();
+        toast.error("Failed to delete order");
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error deleting order:", error);
+      toast.error("An error occurred while deleting the order");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="border rounded-lg p-4 relative">
       {order.status === "pending" && (
@@ -51,6 +88,32 @@ const OrderItemCard = ({
           <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
         </span>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              order and all its associated items from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="flex justify-between items-center">
         <div>
@@ -128,9 +191,11 @@ const OrderItemCard = ({
                   <span>{charge.name}</span>
                   <span>
                     {(userData as HotelData)?.currency}
-                    {getExtraCharge(order?.items || [], charge.amount , charge.charge_type as QrGroup["charge_type"]).toFixed(
-                      2
-                    )}
+                    {getExtraCharge(
+                      order?.items || [],
+                      charge.amount,
+                      charge.charge_type as QrGroup["charge_type"]
+                    ).toFixed(2)}
                   </span>
                 </div>
               ))}
@@ -159,34 +224,43 @@ const OrderItemCard = ({
           </div>
         </div>
 
-        <div className="mt-4 flex gap-2 flex-wrap">
-          <Button size="sm" variant="outline" onClick={handlePrintKOT}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print KOT
-          </Button>
-          <Button size="sm" variant="outline" onClick={handlePrintBill}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print Bill
-          </Button>
+        <div className="mt-4 flex gap-2 items-center justify-between">
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={handlePrintKOT}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print KOT
+            </Button>
+            <Button size="sm" variant="outline" onClick={handlePrintBill}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print Bill
+            </Button>
+
+            {order.status === "pending" && (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setOrder(order);
+                    setEditOrderModalOpen(true);
+                  }}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Order
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Order
+                </Button>
+              </>
+            )}
+          </div>
 
           {order.status === "pending" && (
-            <>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setOrder(order);
-                  setEditOrderModalOpen(true);
-                }}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Order
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => updateOrderStatus(order.id, "completed")}
-              >
-                Mark Completed
-              </Button>
+            <div className="flex gap-2">
               <Button
                 size="sm"
                 variant="destructive"
@@ -194,17 +268,21 @@ const OrderItemCard = ({
               >
                 Cancel Order
               </Button>
-            </>
+              <Button
+                className="bg-green-600 text-white"
+                size="sm"
+                onClick={() => updateOrderStatus(order.id, "completed")}
+              >
+                Mark Completed
+              </Button>
+            </div>
           )}
         </div>
       </div>
 
       {/* Hidden elements for printing */}
       <div className="hidden">
-        {/* KOT Template */}
         <KOTTemplate ref={kotRef} order={order} />
-
-        {/* Bill Template */}
         <BillTemplate
           ref={billRef}
           order={order}
