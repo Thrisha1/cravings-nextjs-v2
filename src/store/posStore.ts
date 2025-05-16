@@ -2,14 +2,14 @@ import { create } from "zustand";
 import { MenuItem } from "./menuStore_hasura";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { Partner, useAuthStore } from "./authStore";
-import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
+import { getExtraCharge, getGstAmount } from "@/components/hotelDetail/OrderDrawer";
 import {
   createOrderItemsMutation,
   createOrderMutation,
   getOrdersOfPartnerQuery,
 } from "@/api/orders";
 import { deleteBillMutation } from "@/api/pos";
-import { Order } from "./orderStore";
+import { Order, OrderItem } from "./orderStore";
 
 interface CartItem extends MenuItem {
   quantity: number;
@@ -233,7 +233,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         0
       );
 
-      const grandTotal = foodSubtotal;
+      const grandTotal = foodSubtotal + getExtraCharge(cartItems as OrderItem[], extraCharges[0]?.amount || 0 , "FLAT_FEE") + getGstAmount(foodSubtotal, gstPercentage);
 
       const orderId = crypto.randomUUID();
       const newOrder = {

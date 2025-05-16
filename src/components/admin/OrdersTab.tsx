@@ -268,11 +268,13 @@ const OrdersTab = () => {
                 sortedOrders.map((order, index) => {
                   const gstPercentage =
                     (userData as Partner)?.gst_percentage || 0;
-                  const gstAmount = getGstAmount(
-                    order.totalPrice,
-                    gstPercentage
-                  );
-                  const totalPriceWithGst = order.totalPrice + gstAmount;
+
+                  const foodSubtotal = order.items.reduce((sum, item) => {
+                    return sum + item.price * item.quantity;
+                  }, 0);
+
+                  const gstAmount = getGstAmount(foodSubtotal, gstPercentage);
+                  const totalPriceWithGst = foodSubtotal + gstAmount;
 
                   const extraChargesTotal = (order?.extraCharges ?? []).reduce(
                     (acc, charge) =>

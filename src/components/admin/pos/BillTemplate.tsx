@@ -27,7 +27,7 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
     const gstPercentage = userData?.gst_percentage || 0;
 
     // Calculate amounts
-    const foodSubtotal = order.totalPrice;
+    const foodSubtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     const chargesSubtotal = extraCharges.reduce(
       (sum, charge) => sum + getExtraCharge(order?.items || [], charge.amount || 0 , charge.charge_type as QrGroup['charge_type']),
