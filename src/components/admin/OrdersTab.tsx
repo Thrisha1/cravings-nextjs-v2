@@ -28,7 +28,7 @@ const OrdersTab = () => {
   const { subscribeOrders, partnerOrders } = useOrderStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showOnlyPending, setShowOnlyPending] = useState<boolean>(false);
+  const [showOnlyPending, setShowOnlyPending] = useState<boolean>(true);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest");
   const [activeTab, setActiveTab] = useState<"table" | "delivery">("table");
   const [newOrders, setNewOrders] = useState({ table: false, delivery: false });
@@ -72,10 +72,10 @@ const OrdersTab = () => {
       setActiveTab("delivery");
     }
 
-    if (storedFilter === "pending") {
-      setShowOnlyPending(true);
-    } else {
+    if (storedFilter === "all") {
       setShowOnlyPending(false);
+    } else {
+      setShowOnlyPending(true);
     }
 
     if (orderFilter === "newest") {
@@ -172,17 +172,15 @@ const OrdersTab = () => {
 
       if (newPendingOrders.length > 0) {
         soundRef.current?.play();
-
-        if (Notification.permission === "granted") {
-          newPendingOrders.forEach((order) => {
-            new Notification(
-              `New ${activeTab === "table" ? "Table Order" : "Delivery"}`,
-              {
-                body: `Order #${order.id.slice(0, 8)} received`,
-              }
-            );
-          });
-        }
+        
+        newPendingOrders.forEach((order) => {
+          toast.info(
+            `New ${activeTab === "table" ? "Table Order" : "Delivery"} received`, 
+            {
+              description: `Order #${order.id.slice(0, 8)}`,
+            }
+          );
+        });
 
         setNewOrders((prev) => ({
           ...prev,
@@ -197,14 +195,6 @@ const OrdersTab = () => {
       // unsubscribe();
     };
   }, [userData?.id, activeTab]);
-
-  useEffect(() => {
-    if ("Notification" in window && Notification.permission !== "denied") {
-      Notification.requestPermission().then((permission) => {
-        console.log("Notification permission:", permission);
-      });
-    }
-  }, []);
 
   const handleCreateNewOrder = () => {
     router.push("/admin/pos");
