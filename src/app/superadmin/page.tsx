@@ -10,7 +10,6 @@ import UpdateHotelUpiId from "@/components/superAdmin/UpdateHotelUpiId";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React from "react";
-import CreatePartner from "@/components/superAdmin/CreatePartner";
 
 type SearchParams = Promise<{ [key: string]: string | undefined }>;
 
@@ -62,11 +61,6 @@ const page = async (props: { searchParams: SearchParams }) => {
       component: <EditPartners />,
       id: "edit-partners",
     },
-    {
-      name: "Create Partner",
-      component: <CreatePartner />,
-      id: "create-partner",
-    }
   ];
 
   if (page) {
