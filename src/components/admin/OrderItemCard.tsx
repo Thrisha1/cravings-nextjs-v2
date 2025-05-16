@@ -224,8 +224,8 @@ const OrderItemCard = ({
           </div>
         </div>
 
-        <div className="mt-4 flex gap-2 items-center justify-between">
-          <div className="flex gap-2">
+        <div className="mt-4 flex gap-2 items-center justify-between flex-wrap">
+          <div className="flex gap-2 flex-wrap">
             <Button size="sm" variant="outline" onClick={handlePrintKOT}>
               <Printer className="h-4 w-4 mr-2" />
               Print KOT
@@ -260,7 +260,7 @@ const OrderItemCard = ({
           </div>
 
           {order.status === "pending" && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 size="sm"
                 variant="destructive"

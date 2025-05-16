@@ -24,6 +24,9 @@ export function ImageGridModal({
   currentImage,
   onSelectImage,
 }: ImageGridModalProps) {
+
+  console.log("category", category);
+
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
 import { useMenuStore } from "@/store/menuStore_hasura";
 import { getImageSource } from "@/lib/getImageSource";
+import axios from "axios";
 
 export const useBulkUpload = () => {
   const [jsonInput, setJsonInput] = useState("");
@@ -240,6 +241,7 @@ export const useBulkUpload = () => {
   };
 
   const handleEdit = (index: number, item: MenuItem) => {
+    console.log("item", item);
     setEditingItem({ index, item });
     setIsEditModalOpen(true);
   };
@@ -327,6 +329,70 @@ export const useBulkUpload = () => {
     }
   };
 
+  const handleGenerateImages = async () => {
+    if (!menuItems) return;
+
+    try {
+      const response = await axios.post("http://localhost:8000/fullImages", menuItems, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.data && Array.isArray(response.data)) {
+        setMenuItems(response.data);
+        localStorage.setItem("bulkMenuItems", JSON.stringify(response.data));
+        toast.success("Full images generated successfully!");
+      } else {
+        throw new Error("Invalid response from image generation server");
+      }
+    } catch (err) {
+      console.error(`Image generation error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      toast.error("Failed to generate full images");
+    }
+  };
+
+  const handlePartialImageGeneration = async () => {
+    if (!menuItems) return;
+
+    try {
+      const response = await axios.post("http://localhost:8000/partialImages", menuItems, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.data && Array.isArray(response.data)) {
+        setMenuItems(response.data);
+        localStorage.setItem("bulkMenuItems", JSON.stringify(response.data));
+        toast.success("Partial images generated successfully!");
+      } else {
+        throw new Error("Invalid response from partial image generation server");
+      }
+    } catch (err) {
+      console.error(`Partial image generation error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      toast.error("Failed to generate partial images");
+    }
+  };
+
+  const handleGenerateAIImages = async () => {
+    if (!menuItems) return;
+
+    try {
+      const response = await axios.post("http://localhost:8000/generateAIImages", menuItems, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.data && Array.isArray(response.data)) {
+        console.log("response.data", response.data);
+        setMenuItems(response.data);
+        localStorage.setItem("bulkMenuItems", JSON.stringify(response.data));
+        toast.success("AI images generated successfully!");
+      } else {
+        throw new Error("Invalid response from AI image generation server");
+      }
+    } catch (err) {
+      console.error(`AI Image generation error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      toast.error("Failed to generate AI images");
+    }
+  };
+
   return {
     jsonInput,
     setJsonInput,
@@ -350,5 +416,8 @@ export const useBulkUpload = () => {
     handleImageClick,
     handleHotelSelect,
     handleCategoryChange,
+    handleGenerateImages,
+    handlePartialImageGeneration,
+    handleGenerateAIImages,
   };
 };

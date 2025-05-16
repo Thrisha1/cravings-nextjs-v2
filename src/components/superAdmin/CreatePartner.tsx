@@ -25,6 +25,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useCreatePartnerStore } from "@/store/createPartnerStore";
+import { useCreatePartnerBulkUpload } from "@/hooks/useBulkUpload";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 function CreatePartner() {
   const { createPartner } = useAuthStore();
@@ -35,7 +37,6 @@ function CreatePartner() {
     jsonInput,
     setJsonInput,
     parsedJson,
-    setParsedJson,
     partner,
     setPartner,
     clearData,
@@ -43,6 +44,17 @@ function CreatePartner() {
     handlePartialImageGeneration,
     handleGenerateAIImages,
   } = useCreatePartnerStore();
+
+  const {
+    menuItems,
+    handleJsonSubmit,
+    handleAddToMenu,
+    handleDelete,
+    handleUploadSelected,
+    handleEdit,
+    handleCategoryChange,
+  } = useCreatePartnerBulkUpload();
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -56,6 +68,14 @@ function CreatePartner() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isJsonVisible, setIsJsonVisible] = useState<boolean>(true);
   const [isProductView, setIsProductView] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editProductIndex, setEditProductIndex] = useState<number | null>(null);
+  const [editProductData, setEditProductData] = useState({
+    name: "",
+    description: "",
+    price: "",
+    category: ""
+  });
 
   const currentPartner = partner;
 
@@ -136,17 +156,6 @@ function CreatePartner() {
     window.open("https://www.google.com/maps", "_blank");
   };
 
-  const handleJsonSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const parsed = JSON.parse(jsonInput);
-      setParsedJson(parsed);
-      toast.success("JSON parsed successfully!");
-    } catch {
-      toast.error("Invalid JSON format");
-    }
-  };
-
   const toggleJsonVisibility = () => {
     setIsJsonVisible((prev) => !prev);
   };
@@ -157,8 +166,48 @@ function CreatePartner() {
 
   const isAIGenerateEnabled = Array.isArray(parsedJson) && parsedJson.length > 0 && 'image_prompt' in parsedJson[0];
 
+  const openEditModal = (index: number) => {
+    setEditProductIndex(index);
+    setEditProductData(parsedJson[index]);
+    setIsEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditProductIndex(null);
+  };
+
+  const handleEditProductChange = (field: string, value: string) => {
+    setEditProductData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const saveProductChanges = () => {
+    if (editProductIndex !== null) {
+      const updatedJson = [...parsedJson];
+      updatedJson[editProductIndex] = editProductData;
+      setJsonInput(JSON.stringify(updatedJson, null, 2));
+      closeEditModal();
+    }
+  };
+
   return (
     <div className="p-6">
+      <div className="flex justify-between mb-6">
+        <Button
+          onClick={() => setStep(Math.max(1, step - 1))}
+          variant="outline"
+          disabled={step === 1}
+        >
+          Previous Step
+        </Button>
+        <Button
+          onClick={() => setStep(Math.min(3, step + 1))}
+          variant="outline"
+          disabled={step === 3}
+        >
+          Next Step
+        </Button>
+      </div>
       <div className="max-w-4xl mx-auto">
         {step === 1 && (
           <Card>
@@ -305,6 +354,7 @@ function CreatePartner() {
 
         {step === 2 && currentPartner && (
           <div className="">
+
             <Card className="mt-6">
               <CardHeader>
                 <CardTitle>Current Partner Details</CardTitle>
@@ -341,8 +391,6 @@ function CreatePartner() {
                 </div>
               </CardContent>
             </Card>
-
-
 
             <Card className="mt-6">
               <CardHeader>
@@ -405,9 +453,6 @@ function CreatePartner() {
               <div className="flex justify-between items-center px-4 py-5">
                 <div>
                   <CardTitle>Parsed JSON</CardTitle>
-                  <CardDescription>
-                    The JSON data you entered is displayed below.
-                  </CardDescription>
                 </div>
                 <div className="flex space-x-2">
                   <Button
@@ -423,6 +468,13 @@ function CreatePartner() {
                     className="ml-4"
                   >
                     {isProductView ? "Show JSON" : "Show Products"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setStep(3)}
+                    className="ml-4"
+                  >
+                    proceed to bulk upload
                   </Button>
                 </div>
               </div>
@@ -441,7 +493,7 @@ function CreatePartner() {
                             </div>
                             <img src={item.image} alt={item.name} className="size-24 mt-2" />
                           </div>
-
+                          <Button onClick={() => openEditModal(index)} className="mt-2">Edit</Button>
                         </Card>
                       ))}
                     </div>
@@ -456,15 +508,75 @@ function CreatePartner() {
           </div>
         )}
 
-        {/* {step === 3 && parsedJson && (
+        {step === 3 && parsedJson && (
           <div>
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle>Next step</CardTitle>
+                <CardTitle>Bulk Menu Upload</CardTitle>
+                <CardDescription>
+                  Manage and upload menu items in bulk.
+                </CardDescription>
               </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+                  {Array.isArray(parsedJson) && parsedJson.map((item, index) => (
+                    <Card key={index} className="p-4">
+                      <div className="flex justify-between items-center">
+                        <Input
+                          value={item.name}
+                          onChange={(e) => handleEdit(index, { ...item, name: e.target.value })}
+                          className="font-bold text-lg"
+                        />
+                        <Input
+                          value={item.price}
+                          type="number"
+                          onChange={(e) => handleEdit(index, { ...item, price: parseFloat(e.target.value) })}
+                          className="font-bold text-2xl text-right"
+                        />
+                      </div>
+                      <Textarea
+                        value={item.description}
+                        onChange={(e) => handleEdit(index, { ...item, description: e.target.value })}
+                        className="text-gray-600 mt-2"
+                      />
+                      <div className="flex gap-2 items-center mt-2">
+                        <label htmlFor="category" className="text-sm">
+                          Category :
+                        </label>
+                        <Input
+                          id="category"
+                          className="flex-1"
+                          placeholder="Enter category name"
+                          value={item.category}
+                          onChange={(e) => handleCategoryChange(index, { name: e.target.value, id: item.category.id, priority: 0 })}
+                        />
+                      </div>
+                      <div className="flex justify-between mt-4">
+                        <Button
+                          onClick={() => handleAddToMenu(item, index)}
+                          disabled={item.isAdded || !item.category.name}
+                        >
+                          Add to Menu
+                        </Button>
+                        <Button variant="destructive" onClick={() => handleDelete(index)}>
+                          Delete
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+
+                <Button
+                  className="mt-6"
+                  onClick={() => handleUploadSelected(partner?.id)}
+                  disabled={menuItems.every(item => !item.isSelected)}
+                >
+                  Confirm Bulk Upload
+                </Button>
+              </CardContent>
             </Card>
           </div>
-        )} */}
+        )}
 
         <Button
           onClick={clearData}
@@ -473,6 +585,42 @@ function CreatePartner() {
           Clear All Data
         </Button>
       </div>
+
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+            <DialogDescription>Edit the details of the product below.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Name"
+              value={editProductData.name}
+              onChange={(e) => handleEditProductChange('name', e.target.value)}
+            />
+            <Textarea
+              placeholder="Description"
+              value={editProductData.description}
+              onChange={(e) => handleEditProductChange('description', e.target.value)}
+            />
+            <Input
+              placeholder="Price"
+              type="number"
+              value={editProductData.price}
+              onChange={(e) => handleEditProductChange('price', e.target.value)}
+            />
+            <Input
+              placeholder="Category"
+              value={editProductData.category}
+              onChange={(e) => handleEditProductChange('category', e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={saveProductChanges}>Save</Button>
+            <Button variant="outline" onClick={closeEditModal}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
