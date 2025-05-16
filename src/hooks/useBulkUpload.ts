@@ -10,6 +10,7 @@ import { getImageSource } from "@/lib/getImageSource";
 import axios from "axios";
 
 export const useBulkUpload = () => {
+  const [loading, setLoading] = useState(false);
   const [jsonInput, setJsonInput] = useState("");
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -331,6 +332,7 @@ export const useBulkUpload = () => {
 
   const handleGenerateImages = async () => {
     if (!menuItems) return;
+    setLoading(true);
 
     try {
       const response = await axios.post("http://localhost:8000/fullImages", menuItems, {
@@ -347,12 +349,14 @@ export const useBulkUpload = () => {
     } catch (err) {
       console.error(`Image generation error: ${err instanceof Error ? err.message : 'Unknown error'}`);
       toast.error("Failed to generate full images");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handlePartialImageGeneration = async () => {
     if (!menuItems) return;
-
+    setLoading(true);
     try {
       const response = await axios.post("http://localhost:8000/partialImages", menuItems, {
         headers: { "Content-Type": "application/json" },
@@ -368,12 +372,14 @@ export const useBulkUpload = () => {
     } catch (err) {
       console.error(`Partial image generation error: ${err instanceof Error ? err.message : 'Unknown error'}`);
       toast.error("Failed to generate partial images");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGenerateAIImages = async () => {
     if (!menuItems) return;
-
+    setLoading(true);
     try {
       const response = await axios.post("http://localhost:8000/generateAIImages", menuItems, {
         headers: { "Content-Type": "application/json" },
@@ -390,10 +396,14 @@ export const useBulkUpload = () => {
     } catch (err) {
       console.error(`AI Image generation error: ${err instanceof Error ? err.message : 'Unknown error'}`);
       toast.error("Failed to generate AI images");
+    } finally {
+      setLoading(false);
     }
   };
 
   return {
+    loading,
+    setLoading,
     jsonInput,
     setJsonInput,
     menuItems,

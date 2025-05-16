@@ -17,6 +17,7 @@ const BulkUploadPage = () => {
   const router = useRouter();
   const { userData } = useAuthStore();
   const {
+    loading,
     jsonInput,
     menuItems,
     selectAll,
@@ -125,21 +126,23 @@ const BulkUploadPage = () => {
             <Button
               onClick={handleGenerateImages}
               className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={loading}
             >
-              Generate Full Images
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Full Images"}
             </Button>
             <Button
               onClick={handlePartialImageGeneration}
               className="bg-yellow-600 hover:bg-yellow-700 text-white"
+              disabled={loading}
             >
-              Generate Partial Images
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Partial Images"}
             </Button>
             <Button
               onClick={handleGenerateAIImages}
               className="bg-purple-600 hover:bg-purple-700 text-white"
-              disabled={!isAIGenerateEnabled}
+              disabled={loading || !isAIGenerateEnabled}
             >
-              {isAIGenerateEnabled ? "Generate AI Images" : "No AI prompt found"}
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate AI Images"}
             </Button>
           </div>
         )}
