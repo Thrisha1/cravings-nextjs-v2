@@ -10,8 +10,9 @@ import {
   userSubscriptionQuery,
 } from "@/api/orders";
 import { toast } from "sonner";
-import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
+import { getExtraCharge, getGstAmount } from "@/components/hotelDetail/OrderDrawer";
 import { subscribeToHasura } from "@/lib/hasuraSubscription";
+import { QrGroup } from "@/app/qr-management/page";
 
 export interface OrderItem extends HotelDataMenus {
   quantity: number;
@@ -442,10 +443,13 @@ const useOrderStore = create(
             });
           }
 
+          const grandTotal = currentOrder.totalPrice + getExtraCharge(currentOrder?.items , extraCharges?.amount ?? 0 , (extraCharges?.charge_type ?? "FLAT_FEE") as "PER_ITEM" | "FLAT_FEE") + (gstIncluded || 0);
+
+
           const createdAt = new Date().toISOString();
           const orderResponse = await fetchFromHasura(createOrderMutation, {
             id: currentOrder.orderId,
-            totalPrice: currentOrder.totalPrice,
+            totalPrice: grandTotal,
             gst_included: gstIncluded,
             extra_charges: exCharges || null,
             createdAt,

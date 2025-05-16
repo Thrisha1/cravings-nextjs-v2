@@ -19,6 +19,7 @@ import { usePOSStore } from "@/store/posStore";
 import { getExtraCharge, getGstAmount } from "../hotelDetail/OrderDrawer";
 import OrderItemCard from "./OrderItemCard";
 import { QrGroup } from "@/app/qr-management/page";
+import TodaysEarnings from "./orders/TodaysEarnings";
 
 const OrdersTab = () => {
   const router = useRouter();
@@ -27,7 +28,7 @@ const OrdersTab = () => {
   const { subscribeOrders, partnerOrders } = useOrderStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showOnlyPending, setShowOnlyPending] = useState<boolean>(false);
+  const [showOnlyPending, setShowOnlyPending] = useState<boolean>(true);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest");
   const [activeTab, setActiveTab] = useState<"table" | "delivery">("table");
   const [newOrders, setNewOrders] = useState({ table: false, delivery: false });
@@ -71,10 +72,10 @@ const OrdersTab = () => {
       setActiveTab("delivery");
     }
 
-    if (storedFilter === "pending") {
-      setShowOnlyPending(true);
-    } else {
+    if (storedFilter === "all") {
       setShowOnlyPending(false);
+    } else {
+      setShowOnlyPending(true);
     }
 
     if (orderFilter === "newest") {
@@ -171,17 +172,15 @@ const OrdersTab = () => {
 
       if (newPendingOrders.length > 0) {
         soundRef.current?.play();
-
-        if (Notification.permission === "granted") {
-          newPendingOrders.forEach((order) => {
-            new Notification(
-              `New ${activeTab === "table" ? "Table Order" : "Delivery"}`,
-              {
-                body: `Order #${order.id.slice(0, 8)} received`,
-              }
-            );
-          });
-        }
+        
+        newPendingOrders.forEach((order) => {
+          toast.info(
+            `New ${activeTab === "table" ? "Table Order" : "Delivery"} received`, 
+            {
+              description: `Order #${order.id.slice(0, 8)}`,
+            }
+          );
+        });
 
         setNewOrders((prev) => ({
           ...prev,
@@ -197,20 +196,13 @@ const OrdersTab = () => {
     };
   }, [userData?.id, activeTab]);
 
-  useEffect(() => {
-    if ("Notification" in window && Notification.permission !== "denied") {
-      Notification.requestPermission().then((permission) => {
-        console.log("Notification permission:", permission);
-      });
-    }
-  }, []);
-
   const handleCreateNewOrder = () => {
     router.push("/admin/pos");
   };
 
   return (
     <div className="py-10 px-[8%]">
+      <TodaysEarnings orders={orders} />
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
         <h2 className="text-2xl font-bold mb-5 sm:mb-0">Orders Management</h2>
         <div className="flex gap-2">
@@ -263,17 +255,25 @@ const OrdersTab = () => {
                   found
                 </p>
               ) : (
-                sortedOrders.map((order , index) => {
+                sortedOrders.map((order, index) => {
                   const gstPercentage =
                     (userData as Partner)?.gst_percentage || 0;
-                  const gstAmount = getGstAmount(
-                    order.totalPrice,
-                    gstPercentage
-                  );
-                  const totalPriceWithGst = order.totalPrice + gstAmount;
+
+                  const foodSubtotal = order.items.reduce((sum, item) => {
+                    return sum + item.price * item.quantity;
+                  }, 0);
+
+                  const gstAmount = getGstAmount(foodSubtotal, gstPercentage);
+                  const totalPriceWithGst = foodSubtotal + gstAmount;
 
                   const extraChargesTotal = (order?.extraCharges ?? []).reduce(
-                    (acc, charge) => acc + getExtraCharge(order?.items || [] , charge.amount , charge.charge_type as QrGroup['charge_type']) || 0,
+                    (acc, charge) =>
+                      acc +
+                        getExtraCharge(
+                          order?.items || [],
+                          charge.amount,
+                          charge.charge_type as QrGroup["charge_type"]
+                        ) || 0,
                     0
                   );
                   const grandTotal = totalPriceWithGst + extraChargesTotal;

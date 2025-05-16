@@ -127,9 +127,6 @@ export const POSCart = () => {
     }
   };
 
-  // Filter out table number 0 if it exists
-  const filteredTableNumbers = tableNumbers.filter(table => table !== 0);
-
   return (
     <>
       <Drawer open={isOpen} onOpenChange={setIsOpen}>
@@ -290,7 +287,7 @@ export const POSCart = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-3 gap-4 py-4">
-            {filteredTableNumbers.map((table) => (
+            {tableNumbers.map((table) => (
               <Button
                 key={table}
                 variant={tableNumber === table ? "default" : "outline"}

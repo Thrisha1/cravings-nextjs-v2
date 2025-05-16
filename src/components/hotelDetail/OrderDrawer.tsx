@@ -425,7 +425,7 @@ const OrderDrawer = ({
                       onClick={handlePlaceOrder}
                       target="_blank"
                       style={{ backgroundColor: styles.accent }}
-                      className="flex-1 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
+                      className="flex-1 flex items-center justify-center gap-2 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
                     >
                       {isLoading ? (
                         <>
