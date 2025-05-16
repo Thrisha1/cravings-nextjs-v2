@@ -20,7 +20,7 @@ const TodaysEarnings = ({ orders } : { orders : Order[] }) => {
 
     const query = `
         query Last24HoursCompletedOrders {
-            orders_aggregate(where: {_and: [{created_at: {_gte: "${date}"}}, {status: {_eq: "completed"}}]}) {
+            orders_aggregate(where: {_and: [{created_at: {_gte: "2025-05-16T05:01:43.394+00:00"}}, {status: {_eq: "completed"}}], partner_id: {_eq: "${userData?.id}"}})  {
                 aggregate {
                 sum {
                     total_price
@@ -31,22 +31,23 @@ const TodaysEarnings = ({ orders } : { orders : Order[] }) => {
 `;
 
     const { orders_aggregate } = await fetchFromHasura(query);
+    
 
-    setTodaysEarnings(orders_aggregate.aggregate.sum.total_price);
+    setTodaysEarnings(orders_aggregate.aggregate.sum.total_price || 0);
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, [orders]);
+    if(userData) {
+      fetchOrders();
+    }
+  }, [orders , userData]);
 
   return (
     <div className="bg-gray-100 rounded-xl w-full py-6 px-4 sm:px-10 mb-5 flex justify-between items-center">
       <div>
         <h1 className="text-lg font-bold">Today's Earnings</h1>
         <p className="text-4xl font-bold">
-          {todaysEarnings
-            ? `${(userData as Partner)?.currency}${todaysEarnings}`
-            : "Loading..."}
+          {`${(userData as Partner)?.currency || ""}${todaysEarnings}`}
         </p>
       </div>
 
