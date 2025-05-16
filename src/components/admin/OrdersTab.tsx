@@ -20,12 +20,21 @@ import { getExtraCharge, getGstAmount } from "../hotelDetail/OrderDrawer";
 import OrderItemCard from "./OrderItemCard";
 import { QrGroup } from "@/app/qr-management/page";
 import TodaysEarnings from "./orders/TodaysEarnings";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const OrdersTab = () => {
   const router = useRouter();
   const { userData, features } = useAuthStore();
   const prevOrdersRef = useRef<Order[]>([]);
-  const { subscribeOrders, partnerOrders } = useOrderStore();
+  const { subscribeOrders, partnerOrders, deleteOrder } = useOrderStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [showOnlyPending, setShowOnlyPending] = useState<boolean>(true);
@@ -33,6 +42,11 @@ const OrdersTab = () => {
   const [activeTab, setActiveTab] = useState<"table" | "delivery">("table");
   const [newOrders, setNewOrders] = useState({ table: false, delivery: false });
   const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
+  const [newOrderAlert, setNewOrderAlert] = useState({
+    show: false,
+    tableCount: 0,
+    deliveryCount: 0,
+  });
   const prevPendingOrdersCount = useRef({ table: 0, delivery: 0 });
   const soundRef = useRef<Howl | null>(null);
   const billRef = useRef<HTMLDivElement>(null);
@@ -162,39 +176,48 @@ const OrdersTab = () => {
     const unsubscribe = subscribeOrders((allOrders) => {
       const prevOrders = prevOrdersRef.current;
 
-      const newPendingOrders = allOrders.filter(
+      // Count new pending orders
+      const newTableOrders = allOrders.filter(
         (order) =>
           order.status === "pending" &&
-          ((activeTab === "table" && order.type === "table_order") ||
-            (activeTab === "delivery" && order.type === "delivery")) &&
+          order.type === "table_order" &&
           !prevOrders.some((prevOrder) => prevOrder.id === order.id)
       );
 
-      if (newPendingOrders.length > 0) {
+      const newDeliveryOrders = allOrders.filter(
+        (order) =>
+          order.status === "pending" &&
+          order.type === "delivery" &&
+          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      );
+
+      const totalNewOrders = newTableOrders.length + newDeliveryOrders.length;
+
+      if (totalNewOrders > 0) {
         soundRef.current?.play();
         
-        newPendingOrders.forEach((order) => {
-          toast.info(
-            `New ${activeTab === "table" ? "Table Order" : "Delivery"} received`, 
-            {
-              description: `Order #${order.id.slice(0, 8)}`,
-            }
-          );
+        // Show alert dialog
+        setNewOrderAlert({
+          show: true,
+          tableCount: newTableOrders.length,
+          deliveryCount: newDeliveryOrders.length,
         });
 
-        setNewOrders((prev) => ({
-          ...prev,
-          [activeTab]: true,
-        }));
+        // Update new order indicators
+        setNewOrders({
+          table: newTableOrders.length > 0,
+          delivery: newDeliveryOrders.length > 0,
+        });
+
       }
 
       prevOrdersRef.current = allOrders;
     });
 
     return () => {
-      // unsubscribe();
+      unsubscribe();
     };
-  }, [userData?.id, activeTab]);
+  }, [userData?.id]);
 
   const handleCreateNewOrder = () => {
     router.push("/admin/pos");
@@ -202,6 +225,37 @@ const OrdersTab = () => {
 
   return (
     <div className="py-10 px-[8%]">
+      {/* New Order Alert Dialog */}
+      <AlertDialog
+        open={newOrderAlert.show}
+        onOpenChange={(open) => setNewOrderAlert(prev => ({...prev, show: open}))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>New Orders Received!</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have {newOrderAlert.tableCount} new table order(s) and{" "}
+              {newOrderAlert.deliveryCount} new delivery order(s).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setNewOrderAlert({ show: false, tableCount: 0, deliveryCount: 0 });
+                // Switch to the tab with most new orders
+                if (newOrderAlert.tableCount > newOrderAlert.deliveryCount) {
+                  setActiveTab("table");
+                } else if (newOrderAlert.deliveryCount > 0) {
+                  setActiveTab("delivery");
+                }
+              }}
+            >
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <TodaysEarnings orders={orders} />
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
         <h2 className="text-2xl font-bold mb-5 sm:mb-0">Orders Management</h2>
@@ -280,6 +334,7 @@ const OrdersTab = () => {
 
                   return (
                     <OrderItemCard
+                      deleteOrder={deleteOrder}
                       key={order.id + "-" + index}
                       grantTotal={grandTotal}
                       gstAmount={gstAmount}
