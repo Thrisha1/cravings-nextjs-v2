@@ -257,9 +257,9 @@ const OrdersTab = () => {
       </AlertDialog>
 
       <TodaysEarnings orders={orders} />
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 flex-wrap">
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
         <h2 className="text-2xl font-bold mb-5 sm:mb-0">Orders Management</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2  flex-wrap justify-center">
           {features?.pos.enabled && (
             <Button size="sm" onClick={handleCreateNewOrder}>
               Create New Order
