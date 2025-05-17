@@ -33,7 +33,7 @@ export const createOrderMutation = `
                     $status: String,
                     $gst_included: numeric,
                     $extra_charges: jsonb,
-                    $delivery_charge: float8
+                    $delivery_location: geography
                   ) {
                     insert_orders_one(object: {
                       id: $id
@@ -49,7 +49,7 @@ export const createOrderMutation = `
                       delivery_address: $delivery_address
                       gst_included: $gst_included
                       extra_charges: $extra_charges
-                      delivery_charge: $delivery_charge
+                      delivery_location: $delivery_location
                     }) {
                       id
                       total_price

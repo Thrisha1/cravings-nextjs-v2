@@ -192,6 +192,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               password: "",
               currency: partner.currency,
               whatsapp_numbers : partner.whatsapp_numbers,
+              geo_location : {
+                type : partner.geo_location?.type,
+                coordinates : partner.geo_location?.coordinates,
+              },
               role: "partner",
             } as Partner,
             features : getFeatures(partner.feature_flags)
