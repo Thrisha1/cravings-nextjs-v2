@@ -30,7 +30,7 @@ import Link from "next/link";
 import { log, table } from "console";
 import { usePathname } from "next/navigation";
 import { getFeatures } from "@/lib/getFeatures";
-import { QrGroup } from "@/app/qr-management/page";
+import { QrGroup } from "@/app/admin/qr-management/page";
 
 export const getGstAmount = (price: number, gstPercentage: number) => {
   const gstAmount = (price * gstPercentage) / 100;

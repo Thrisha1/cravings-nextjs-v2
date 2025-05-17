@@ -15,7 +15,7 @@ import {
   getGstAmount,
 } from "@/components/hotelDetail/OrderDrawer";
 import { subscribeToHasura } from "@/lib/hasuraSubscription";
-import { QrGroup } from "@/app/qr-management/page";
+import { QrGroup } from "@/app/admin/qr-management/page";
 
 export interface OrderItem extends HotelDataMenus {
   quantity: number;

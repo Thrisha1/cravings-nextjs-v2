@@ -66,6 +66,10 @@ query GetPartnerAndOffersQuery($id: uuid!) {
       offers(where: {_and: [{end_time: {_gt: "now()"}}, {deletion_status: {_eq: 0}}]}) {
         offer_price
       }
+      stocks{
+        stock_quantity
+        stock_type
+      }
     }
     offers(where: {_and: [{end_time: {_gt: "now()"}}, {deletion_status: {_eq: 0}}]}) {
       end_time

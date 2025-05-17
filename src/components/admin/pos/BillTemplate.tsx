@@ -1,4 +1,4 @@
-import { QrGroup } from "@/app/qr-management/page";
+import { QrGroup } from "@/app/admin/qr-management/page";
 import {
   getExtraCharge,
   getGstAmount,

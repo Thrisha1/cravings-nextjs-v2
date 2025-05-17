@@ -3,8 +3,15 @@ import { ChatBubbleIcon, InstagramLogoIcon } from "@radix-ui/react-icons";
 import { FaGoogle, FaInstagram, FaWhatsapp } from "react-icons/fa";
 import React from "react";
 import { Styles } from "@/screens/HotelMenuPage_v2";
+import { MapPin } from "lucide-react";
 
-const SocialLinkList = ({ socialLinks , styles }: { socialLinks: SocialLinks , styles : Styles }) => {
+const SocialLinkList = ({
+  socialLinks,
+  styles,
+}: {
+  socialLinks: SocialLinks;
+  styles: Styles;
+}) => {
   return (
     <>
       {socialLinks && (
@@ -35,7 +42,7 @@ const SocialLinkList = ({ socialLinks , styles }: { socialLinks: SocialLinks , s
               <FaWhatsapp className="w-6 h-6" />
             </a>
           )}
-          {socialLinks.googleReview && (
+          {/* {socialLinks.googleReview && (
             <a
               href={socialLinks.googleReview}
               target="_blank"
@@ -46,6 +53,19 @@ const SocialLinkList = ({ socialLinks , styles }: { socialLinks: SocialLinks , s
               }}
             >
               <FaGoogle className="w-6 h-6" />
+            </a>
+          )} */}
+          {socialLinks.location && (
+            <a
+              href={socialLinks.location}
+              target="_blank"
+              rel="noopener noreferrer"
+              className=" hover:text-gray-700"
+              style={{
+                color: styles?.accent || "#000000",
+              }}
+            >
+              <MapPin className="w-6 h-6" />
             </a>
           )}
         </>

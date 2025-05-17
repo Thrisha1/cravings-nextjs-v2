@@ -20,7 +20,7 @@ import { usePathname } from "next/navigation";
 import SocialLinkList from "@/components/SocialLinkList";
 import AuthModal from "@/components/hotelDetail/AuthModal";
 import { getFeatures } from "@/lib/getFeatures";
-import { QrGroup } from "@/app/qr-management/page";
+import { QrGroup } from "@/app/admin/qr-management/page";
 import ShopClosedModalWarning from "@/components/admin/ShopClosedModalWarning";
 
 export type MenuItem = {
@@ -72,6 +72,10 @@ export type FeatureFlags = {
     access: boolean;
     enabled: boolean;
   };
+  stockmanagement: {
+    access: boolean;
+    enabled: boolean;
+  }
 };
 
 export const revertFeatureToString = (features: FeatureFlags): string => {
@@ -91,6 +95,10 @@ export const revertFeatureToString = (features: FeatureFlags): string => {
 
   if (features.pos.access) {
     parts.push(`pos-${features.pos.enabled}`);
+  }
+
+  if (features.stockmanagement.access) {
+    parts.push(`stockmanagement-${features.stockmanagement.enabled}`);
   }
 
   return parts.join(",");

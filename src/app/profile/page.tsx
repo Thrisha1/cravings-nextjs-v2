@@ -1663,13 +1663,29 @@ export default function ProfilePage() {
                   QrCode Settings
                 </div>
                 <Link
-                  href={"/qr-management"}
+                  href={"/admin/qr-management"}
                   className=" hover:underline bg-gray-100 px-3 py-2 rounded-lg w-full flex items-center justify-between"
                 >
                   Manage QrCode
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
               </div>
+
+              {getFeatures(userData.feature_flags as string)?.stockmanagement
+                .enabled && (
+                <div className="space-y-2 pt-4">
+                  <div className="text-lg font-semibold mb-4">
+                    Stock Management
+                  </div>
+                  <Link
+                    href={"/admin/stock-management"}
+                    className=" hover:underline bg-gray-100 px-3 py-2 rounded-lg w-full flex items-center justify-between"
+                  >
+                    Manage Stocks
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Link>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

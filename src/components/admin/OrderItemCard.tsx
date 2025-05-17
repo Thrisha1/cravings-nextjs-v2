@@ -9,7 +9,7 @@ import KOTTemplate from "./pos/KOTTemplate";
 import BillTemplate from "./pos/BillTemplate";
 import { useReactToPrint } from "react-to-print";
 import { getExtraCharge } from "../hotelDetail/OrderDrawer";
-import { QrGroup } from "@/app/qr-management/page";
+import { QrGroup } from "@/app/admin/qr-management/page";
 import {
   AlertDialog,
   AlertDialogAction,
