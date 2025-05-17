@@ -10,6 +10,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Partner, useAuthStore } from "@/store/authStore";
+import { useLocationStore } from "@/store/geolocationStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -65,6 +66,17 @@ const Currencies = [
 
 export default function ProfilePage() {
   const { userData, loading: authLoading, signOut, setState } = useAuthStore();
+  const {
+    coords,
+    geoString,
+    error: geoError,
+    getLocation,
+  } = useLocationStore();
+  const [deliveryRate, setDeliveryRate] = useState("");
+  const [geoLocation, setGeoLocation] = useState({
+    latitude: "",
+    longitude: "",
+  });
   const { claimedOffers } = useClaimedOffersStore();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -78,6 +90,8 @@ export default function ProfilePage() {
     currency: false,
     whatsappNumber: false,
     footNote: false,
+    geoLocation: false,
+    deliveryRate: false,
     instaLink: false,
     gst: false,
   });
@@ -88,6 +102,8 @@ export default function ProfilePage() {
     whatsappNumber: false,
     currency: false,
     footNote: false,
+    geoLocation: false,
+    deliveryRate: false,
     instaLink: false,
     gst: false,
   });
@@ -122,6 +138,7 @@ export default function ProfilePage() {
       setUpiId(userData.upi_id || "");
       setPlaceId(userData.place_id || "");
       setDescription(userData.description || "");
+      setDeliveryRate(userData.delivery_rate || "");
       setCurrency(
         Currencies.find(
           (curr) => curr.value === userData.currency
@@ -161,8 +178,28 @@ export default function ProfilePage() {
 
       setUserFeatures(feature);
       console.log(feature);
+
+      if (userData.geo_location) {
+        const match = userData.geo_location.match(/POINT\(([^ ]+) ([^)]+)\)/);
+        if (match) {
+          const [_, lng, lat] = match;
+          setGeoLocation({
+            latitude: lat,
+            longitude: lng,
+          });
+        }
+      }
     }
   }, [userData]);
+  // Add this effect to watch for store changes
+  useEffect(() => {
+    if (coords && isEditing.geoLocation) {
+      setGeoLocation({
+        latitude: coords.lat.toString(),
+        longitude: coords.lng.toString(),
+      });
+    }
+  }, [coords, isEditing.geoLocation]);
 
   const profile = {
     name:
@@ -207,6 +244,135 @@ export default function ProfilePage() {
       setIsDeleting(false);
     }
   };
+
+  const handleGetCurrentLocation = async () => {
+    try {
+      console.log("Fetching location...");
+      
+      const newCoords = await getLocation();
+      
+      if (newCoords) {
+        console.log("Location received:", newCoords);
+        setGeoLocation({
+          latitude: newCoords.lat.toString(),
+          longitude: newCoords.lng.toString()
+        });
+      }
+    } catch (error) {
+      console.error("Error getting location:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to get location");
+    }
+  };
+  
+  // Also add this effect to watch store changes
+  useEffect(() => {
+    console.log("Store changed:", {
+      coords,
+      geoString,
+      error
+    });
+  
+    if (coords && isEditing.geoLocation) {
+      console.log("Updating geoLocation from store:", {
+        lat: coords.lat,
+        lng: coords.lng
+      });
+  
+      setGeoLocation({
+        latitude: coords.lat.toString(),
+        longitude: coords.lng.toString()
+      });
+    }
+  }, [coords, geoString, error, isEditing.geoLocation]);
+
+  const handleSaveGeoLocation = async () => {
+    try {
+      const { latitude, longitude } = geoLocation;
+
+      // Validate coordinates are present
+      if (!latitude || !longitude) {
+        toast.error("Please enter both latitude and longitude");
+        return;
+      }
+
+      // Convert to numbers and validate ranges
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+
+      if (isNaN(lat) || isNaN(lng)) {
+        toast.error("Please enter valid numeric coordinates");
+        return;
+      }
+
+      // Validate coordinate ranges
+      if (lat < -90 || lat > 90) {
+        toast.error("Latitude must be between -90 and 90 degrees");
+        return;
+      }
+
+      if (lng < -180 || lng > 180) {
+        toast.error("Longitude must be between -180 and 180 degrees");
+        return;
+      }
+
+      // Create the correct format for geography type
+      // Using SRID=4326;POINT(longitude latitude) format
+      const geographyFormat = `SRID=4326;POINT(${lng} ${lat})`;
+
+      console.log("Saving location with format:", geographyFormat); // Debug log
+
+      setIsSaving((prev) => ({ ...prev, geoLocation: true }));
+      toast.loading("Updating location...");
+
+      // First verify the mutation
+      const mutation = updatePartnerMutation;
+      console.log("Mutation:", mutation); // Debug log
+      console.log("Update data:", {
+        id: userData?.id,
+        updates: {
+          geo_location: geographyFormat,
+        },
+      }); // Debug log
+
+      const response = await fetchFromHasura(mutation, {
+        id: userData?.id,
+        updates: {
+          geo_location: geographyFormat,
+        },
+      });
+
+      console.log("Hasura response:", response); // Debug log
+
+      if (!response) {
+        throw new Error("No response from server");
+      }
+
+      // Update local state
+      setState({ geo_location: geographyFormat });
+      toast.dismiss();
+      toast.success("Location updated successfully!");
+      setIsEditing((prev) => ({ ...prev, geoLocation: false }));
+    } catch (error) {
+      console.error("Error updating location:", error);
+      toast.dismiss();
+      
+      // Handle specific error cases
+      if (error instanceof Error) {
+        if (error.message.includes("permission denied")) {
+          toast.error("You don't have permission to update the location");
+        } else if (error.message.includes("invalid input syntax")) {
+          toast.error("Invalid coordinate format. Please check your input");
+        } else {
+          toast.error(`Failed to update location: ${error.message}`);
+        }
+      } else {
+        toast.error("Failed to update location. Please try again.");
+      }
+    } finally {
+      setIsSaving((prev) => ({ ...prev, geoLocation: false }));
+    }
+  };
+  
 
   const handleSaveUpiId = async () => {
     if (!userData) return;
@@ -748,6 +914,45 @@ export default function ProfilePage() {
       });
     }
   };
+// (Delivery Rate)
+
+  const handleSaveDeliveryRate = async () => {
+    try {
+      if (!userData) return;
+      toast.loading("Updating delivery rate...");
+
+      setIsSaving((prev) => ({ ...prev, deliveryRate: true }));
+
+      // Validate delivery rate is a positive number
+      const rate = parseFloat(deliveryRate);
+      if (isNaN(rate) || rate < 0) {
+        toast.dismiss();
+        toast.error("Please enter a valid delivery rate (must be a positive number)");
+        return;
+      }
+
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          delivery_rate: deliveryRate, // Send as string to match database type
+        },
+      });
+
+      revalidateTag(userData?.id as string);
+      setState({ delivery_rate: deliveryRate }); // Store as string in state
+      toast.dismiss();
+      toast.success("Delivery rate updated successfully!");
+      setIsEditing((prev) => ({ ...prev, deliveryRate: false }));
+    } catch (error) {
+      console.error("Error updating delivery rate:", error);
+      toast.dismiss();
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update delivery rate"
+      );
+    } finally {
+      setIsSaving((prev) => ({ ...prev, deliveryRate: false }));
+    }
+  };
 
   const handleShopOpenClose = async () => {
     try {
@@ -995,6 +1200,7 @@ export default function ProfilePage() {
                   This Bio will be used for your restaurant profile
                 </p>
               </div>
+              
 
               {/* <div className="space-y-2 pt-4">
                 <label htmlFor="upiId" className="text-lg font-semibold">
@@ -1101,6 +1307,109 @@ export default function ProfilePage() {
                   >
                     Get Place Id
                   </Link>
+                </p>
+              </div>
+
+              
+            
+
+              {/* Geo Location Section */}
+              <div className="space-y-4 w-full">
+              <label htmlFor="placeId" className="text-lg font-semibold">
+                  Location
+                </label>
+  <div className="grid grid-cols-2 gap-4">
+    <div>
+      <label className="text-sm text-gray-600">Latitude</label>
+      <Input
+        type="text"
+        value={geoLocation.latitude}
+        onChange={(e) => setGeoLocation(prev => ({
+          ...prev,
+          latitude: e.target.value
+        }))}
+        placeholder="Enter latitude"
+      />
+    </div>
+    <div>
+      <label className="text-sm text-gray-600">Longitude</label>
+      <Input
+        type="text"
+        value={geoLocation.longitude}
+        onChange={(e) => setGeoLocation(prev => ({
+          ...prev,
+          longitude: e.target.value
+        }))}
+        placeholder="Enter longitude"
+      />
+    </div>
+  </div>
+  <div className="flex gap-2">
+    <Button
+      onClick={handleGetCurrentLocation}
+      variant="outline"
+      disabled={isLoading}
+    >
+      {isLoading ? "Getting Location..." : "Get Current Location"}
+    </Button>
+    <Button
+      onClick={handleSaveGeoLocation}
+      disabled={isSaving.geoLocation}
+      className="bg-orange-600 hover:bg-orange-700 text-white"
+    >
+      {isSaving.geoLocation ? "Saving..." : "Save"}
+    </Button>
+  </div>
+  {error && (
+    <p className="text-sm text-red-500">{error}</p>
+  )}
+</div>
+
+              <div className="space-y-2 pt-4">
+                <label htmlFor="deliveryRate" className="text-lg font-semibold">
+                  Delivery Rate
+                </label>
+                <div className="flex gap-2">
+                  {isEditing.deliveryRate ? (
+                    <>
+                      <Input
+                        id="deliveryRate"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Enter delivery rate"
+                        value={deliveryRate}
+                        onChange={(e) => setDeliveryRate(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleSaveDeliveryRate}
+                        disabled={isSaving.deliveryRate || !deliveryRate}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isSaving.deliveryRate ? <>Saving...</> : "Save"}
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-gray-700">
+                        {deliveryRate ? `${currency.value}${deliveryRate}` : "No delivery rate set"}
+                      </span>
+                      <Button
+                        onClick={() => {
+                          setIsEditing((prev) => ({ ...prev, deliveryRate: true }));
+                          setDeliveryRate(deliveryRate ? deliveryRate : "");
+                        }}
+                        variant="ghost"
+                        className="hover:bg-orange-100"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500">
+                  This delivery rate will be used for calculating delivery charges for orders
                 </p>
               </div>
 
@@ -1330,7 +1639,6 @@ export default function ProfilePage() {
                   This Footnote will be used for your restaurant profile
                 </p>
               </div>
-
               <div className="space-y-2 pt-4">
                 <div className="text-lg font-semibold">Price Settings</div>
 

@@ -10,6 +10,9 @@ import { HotelData } from "@/app/hotels/[...id]/page";
 import { Button } from "../ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { getFeatures } from "@/lib/getFeatures";
+import { useLocationStore } from "@/store/geolocationStore";
+import { toast } from "sonner";
+import { Loader2, MapPin } from "lucide-react";
 
 const AuthModal = ({
   styles,
@@ -23,6 +26,42 @@ const AuthModal = ({
   const { open_auth_modal, setUserAddress, setOpenAuthModal } = useOrderStore();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
+  const { coords, error: geoError, getLocation, isLoading: isGeoLoading } = useLocationStore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Removed the useEffect that was automatically fetching location when modal opens
+
+  const handleSubmit = async () => {
+    if (!phoneNumber) {
+      toast.error("Please enter your phone number");
+      return;
+    }
+
+    if (!tableNumber && !address) {
+      toast.error("Please enter your delivery address");
+      return;
+    }
+
+    if (!coords) {
+      toast.error("Please allow location access to continue");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      setUserAddress(address);
+      const result = await useAuthStore.getState().signInWithPhone(phoneNumber, hoteldata?.id);
+      if (result) {
+        console.log("Login successful", result);
+        useOrderStore.getState().setOpenAuthModal(false);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Failed to sign in. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Dialog open={open_auth_modal} onOpenChange={setOpenAuthModal}>
@@ -49,7 +88,7 @@ const AuthModal = ({
               type="tel"
               id="phone"
               value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
+              onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
               style={{
                 backgroundColor: styles.backgroundColor,
                 color: styles.color,
@@ -79,9 +118,58 @@ const AuthModal = ({
             </div>
           )}
 
+          {/* Location Section */}
+          <div className="space-y-2">
+            <Label className="mb-2 flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Location Access
+            </Label>
+            
+            <Button
+              type="button"
+              onClick={() => getLocation()}
+              className="w-full"
+              variant="outline"
+              disabled={isGeoLoading}
+              style={{
+                borderColor: styles.border.borderColor,
+              }}
+            >
+              {isGeoLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Getting Location...
+                </>
+              ) : (
+                "Get Current Location"
+              )}
+            </Button>
+
+            {/* Location Status Display */}
+            <div className="p-4 rounded-lg border mt-2" style={{ borderColor: styles.border.borderColor }}>
+              {isGeoLoading ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Getting your location...
+                </div>
+              ) : coords ? (
+                <div className="text-sm">
+                  <div className="font-medium text-green-600">Location found</div>
+                </div>
+              ) : geoError ? (
+                <div className="text-sm text-red-600">
+                  {geoError}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">
+                  Please get your location to continue
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Add WhatsApp area selection if multiwhatsapp is enabled */}
-          {getFeatures(hoteldata?.feature_flags || "").multiwhatsapp
-            .enabled && (
+          {getFeatures(hoteldata?.feature_flags || "")?.multiwhatsapp?.enabled && (
             <div>
               <Label htmlFor="whatsapp-area" className="mb-2">
                 Select Delivery Area
@@ -112,32 +200,22 @@ const AuthModal = ({
           )}
 
           <Button
-            onClick={async () => {
-              if (!phoneNumber) {
-                alert("Please enter both phone number and address.");
-                return;
-              }
-              if (!tableNumber && !address) {
-                alert("Please enter the delivery address.");
-                return;
-              }
-              setUserAddress(address);
-              const result = await useAuthStore
-                .getState()
-                .signInWithPhone(phoneNumber, hoteldata?.id);
-              if (result) {
-                console.log("Login successful", result);
-                useOrderStore.getState().setOpenAuthModal(false);
-                useOrderStore.getState().setOpenOrderDrawer(true);
-              }
-            }}
+            onClick={handleSubmit}
+            disabled={isSubmitting || isGeoLoading || !coords}
             className="w-full"
             style={{
               backgroundColor: styles.accent,
               color: "#fff",
             }}
           >
-            Submit
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              "Submit"
+            )}
           </Button>
         </div>
       </DialogContent>

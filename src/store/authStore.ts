@@ -53,6 +53,8 @@ export interface Partner extends BaseUser {
   phone: string;
   district: string;
   delivery_status: boolean;
+  geo_location: string;  // Will store in Hasura format: "SRID=4326;POINT(lng lat)"
+  delivery_rate: string
   place_id?: string;
   theme?: string;
   currency: string;
