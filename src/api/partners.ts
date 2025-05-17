@@ -50,7 +50,10 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     theme
     gst_no
     gst_percentage
+    geo_location
+    delivery_rate
     business_type
+    delivery_rules
     menus(where: {deletion_status: {_eq: 0}}) {
       category {
         name
