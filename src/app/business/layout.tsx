@@ -1,7 +1,7 @@
 import { Navbar } from '@/components/Navbar';
 import React from 'react'
 
-const QrScanLayout = ({children}: {children: React.ReactNode}) => {
+const HotelsLayout = ({children}: {children: React.ReactNode}) => {
   return (
     <>
         <Navbar />
@@ -10,4 +10,4 @@ const QrScanLayout = ({children}: {children: React.ReactNode}) => {
   )
 }
 
-export default QrScanLayout;
+export default HotelsLayout;

@@ -200,8 +200,25 @@ const AuthModal = ({
           )}
 
           <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting || isGeoLoading || !coords}
+            onClick={async () => {
+              if (!phoneNumber) {
+                alert("Please enter both phone number and address.");
+                return;
+              }
+              if (!tableNumber && !address) {
+                alert("Please enter the delivery address.");
+                return;
+              }
+              setUserAddress(address);
+              const result = await useAuthStore
+                .getState()
+                .signInWithPhone(phoneNumber, hoteldata?.id);
+              if (result) {
+                console.log("Login successful", result);
+                useOrderStore.getState().setOpenAuthModal(false);
+                useOrderStore.getState().setOpenOrderDrawer(true);
+              }
+            }}
             className="w-full"
             style={{
               backgroundColor: styles.accent,

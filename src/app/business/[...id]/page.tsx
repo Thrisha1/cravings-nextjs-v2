@@ -84,10 +84,9 @@ export interface HotelData extends Partner {
 }
 
 export interface SocialLinks {
-  instagram?: string;
+  instagram: string;
   whatsapp?: string;
   googleReview?: string;
-  location?: string;
 }
 
 const HotelPage = async ({
@@ -167,7 +166,6 @@ const HotelPage = async ({
     ...hoteldata,
     menus: menuItemWithOfferPrice,
   };
-
 
   return (
     <>

@@ -18,6 +18,10 @@ export const getFeatures = (perm: string) => {
       access: false,
       enabled: false,
     },
+    stockmanagement: {
+      access: false,
+      enabled: false,
+    },
   };
 
   if (perm) {
@@ -38,6 +42,9 @@ export const getFeatures = (perm: string) => {
       }else if (key === "pos") {
         permissions.pos.access = true;
         permissions.pos.enabled = value === "true";
+      }else if (key === "stockmanagement") {
+        permissions.stockmanagement.access = true;
+        permissions.stockmanagement.enabled = value === "true";
       }
     }
   }

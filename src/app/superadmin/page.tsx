@@ -60,7 +60,7 @@ const page = async (props: { searchParams: SearchParams }) => {
       name: "Edit Partners",
       component: <EditPartners />,
       id: "edit-partners",
-    }
+    },
   ];
 
   if (page) {

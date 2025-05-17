@@ -10,9 +10,12 @@ import {
   userSubscriptionQuery,
 } from "@/api/orders";
 import { toast } from "sonner";
-import { getExtraCharge, getGstAmount } from "@/components/hotelDetail/OrderDrawer";
+import {
+  getExtraCharge,
+  getGstAmount,
+} from "@/components/hotelDetail/OrderDrawer";
 import { subscribeToHasura } from "@/lib/hasuraSubscription";
-import { QrGroup } from "@/app/qr-management/page";
+import { QrGroup } from "@/app/admin/qr-management/page";
 
 export interface OrderItem extends HotelDataMenus {
   quantity: number;
@@ -31,7 +34,7 @@ export interface Order {
     gst_percentage?: number;
     currency?: string;
     store_name?: string;
-  }
+  };
   phone?: string | null;
   userId?: string;
   user?: {
@@ -66,6 +69,7 @@ interface OrderState {
   items: OrderItem[] | null;
   orderId: string | null;
   totalPrice: number | null;
+  open_order_drawer: boolean;
 
   setHotelId: (id: string) => void;
   addItem: (item: HotelDataMenus) => void;
@@ -92,7 +96,9 @@ interface OrderState {
   subscribeOrders: (callback?: (orders: Order[]) => void) => () => void;
   partnerOrders: Order[];
   userOrders: Order[];
-  subscribeUserOrders: (callback?: (orders: Order[]) => void) => () => void 
+  subscribeUserOrders: (callback?: (orders: Order[]) => void) => () => void;
+  deleteOrder: (orderId: string) => Promise<boolean>;
+  setOpenOrderDrawer: (open: boolean) => void;
 }
 
 const useOrderStore = create(
@@ -108,6 +114,7 @@ const useOrderStore = create(
       partnerOrders: [],
       totalPrice: 0,
       userOrders: [],
+      open_order_drawer: false,
 
       subscribeUserOrders: (callback) => {
         const userId = useAuthStore.getState().userData?.id;
@@ -136,7 +143,8 @@ const useOrderStore = create(
                 id: item.id,
                 quantity: item.quantity,
                 name: item.menu?.name || "Unknown",
-                price: (item.menu?.offers?.[0]?.offer_price || item.menu?.price) || 0,
+                price:
+                  item.menu?.offers?.[0]?.offer_price || item.menu?.price || 0,
                 category: item.menu?.category,
               })),
             }));
@@ -180,7 +188,8 @@ const useOrderStore = create(
                 id: item.id,
                 quantity: item.quantity,
                 name: item.menu?.name || "Unknown",
-                price: (item.menu?.offers?.[0]?.offer_price || item.menu?.price) || 0,
+                price:
+                  item.menu?.offers?.[0]?.offer_price || item.menu?.price || 0,
                 category: item.menu?.category,
               })),
             }));
@@ -263,11 +272,11 @@ const useOrderStore = create(
       },
 
       addItem: (item) => {
-        const user = useAuthStore.getState().userData;
-        if (!user) {
-          set({ open_auth_modal: true });
-          return;
-        }
+        // const user = useAuthStore.getState().userData;
+        // if (!user) {
+        //   set({ open_auth_modal: true });
+        //   return;
+        // }
 
         const state = get();
         if (!state.hotelId) return;
@@ -339,6 +348,66 @@ const useOrderStore = create(
             totalPrice: hotelOrders[state.hotelId!].totalPrice,
           };
         });
+      },
+
+      deleteOrder: async (orderId: string) => {
+        try {
+          // First delete the order items
+          const deleteItemsResponse = await fetchFromHasura(
+            `mutation DeleteOrderItems($orderId: uuid!) {
+              delete_order_items(where: {order_id: {_eq: $orderId}}) {
+                affected_rows
+              }
+            }`,
+            { orderId }
+          );
+
+          if (deleteItemsResponse.errors) {
+            throw new Error(
+              deleteItemsResponse.errors[0]?.message ||
+                "Failed to delete order items"
+            );
+          }
+
+          // Then delete the order itself
+          const deleteOrderResponse = await fetchFromHasura(
+            `mutation DeleteOrder($orderId: uuid!) {
+              delete_orders_by_pk(id: $orderId) {
+                id
+              }
+            }`,
+            { orderId }
+          );
+
+          if (deleteOrderResponse.errors) {
+            throw new Error(
+              deleteOrderResponse.errors[0]?.message || "Failed to delete order"
+            );
+          }
+
+          // Update the local state if needed
+          set((state) => {
+            // Remove from partnerOrders if present
+            const partnerOrders = state.partnerOrders.filter(
+              (order) => order.id !== orderId
+            );
+
+            // Remove from userOrders if present
+            const userOrders = state.userOrders.filter(
+              (order) => order.id !== orderId
+            );
+
+            return { partnerOrders, userOrders };
+          });
+
+          toast.success("Order deleted successfully");
+          return true;
+        } catch (error) {
+          toast.error(
+            error instanceof Error ? error.message : "Failed to delete order"
+          );
+          return false;
+        }
       },
 
       increaseQuantity: (itemId) => {
@@ -436,15 +505,23 @@ const useOrderStore = create(
 
           const exCharges = [];
 
-          if(extraCharges?.name && extraCharges?.amount) {
+          if (extraCharges?.name && extraCharges?.amount) {
             exCharges.push({
               ...extraCharges,
-              id : crypto.randomUUID()
+              id: crypto.randomUUID(),
             });
           }
 
-          const grandTotal = currentOrder.totalPrice + getExtraCharge(currentOrder?.items , extraCharges?.amount ?? 0 , (extraCharges?.charge_type ?? "FLAT_FEE") as "PER_ITEM" | "FLAT_FEE") + (gstIncluded || 0);
-
+          const grandTotal =
+            currentOrder.totalPrice +
+            getExtraCharge(
+              currentOrder?.items,
+              extraCharges?.amount ?? 0,
+              (extraCharges?.charge_type ?? "FLAT_FEE") as
+                | "PER_ITEM"
+                | "FLAT_FEE"
+            ) +
+            (gstIncluded || 0);
 
           const createdAt = new Date().toISOString();
           const orderResponse = await fetchFromHasura(createOrderMutation, {
@@ -627,6 +704,8 @@ const useOrderStore = create(
           };
         });
       },
+
+      setOpenOrderDrawer: (open: boolean) => set({ open_order_drawer: open }),
     }),
     {
       name: "order-storage",

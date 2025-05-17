@@ -198,7 +198,7 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="w-full bg-white shadow-sm">
+      <nav className="w-full bg-white shadow-sm z-[60] relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 ">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -267,7 +267,7 @@ export function Navbar() {
                   </SheetTrigger>
                   <SheetContent
                     side="right"
-                    className="w-[80%] sm:w-[385px] z-[52]"
+                    className="w-[80%] sm:w-[385px] z-[60]"
                   >
                     <div className="flex flex-col justify-between h-full pb-5 space-y-4 mt-4">
                       <div>

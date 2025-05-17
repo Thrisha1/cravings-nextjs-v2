@@ -30,7 +30,7 @@ import Link from "next/link";
 import { log, table } from "console";
 import { usePathname } from "next/navigation";
 import { getFeatures } from "@/lib/getFeatures";
-import { QrGroup } from "@/app/qr-management/page";
+import { QrGroup } from "@/app/admin/qr-management/page";
 
 export const getGstAmount = (price: number, gstPercentage: number) => {
   const gstAmount = (price * gstPercentage) / 100;
@@ -79,10 +79,11 @@ const OrderDrawer = ({
     removeItem,
     setOpenAuthModal,
     clearOrder,
+    open_order_drawer,
+    setOpenOrderDrawer,
   } = useOrderStore();
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
   const [isQrScan, setIsQrScan] = useState(false);
   const [featrues, setFeatures] = useState<FeatureFlags | null>(null);
 
@@ -228,11 +229,11 @@ const OrderDrawer = ({
       return;
     }
 
-    setIsOpen(true);
+    setOpenOrderDrawer(true);
   };
 
   return (
-    <Drawer open={isOpen} onOpenChange={setIsOpen}>
+    <Drawer open={open_order_drawer} onOpenChange={setOpenOrderDrawer}>
       <div
         style={{
           ...styles.border,

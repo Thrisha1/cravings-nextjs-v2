@@ -14,10 +14,11 @@ export const getSocialLinks = (hoteldata: HotelData): SocialLinks => {
   const instaLink = socialLinksData?.instagram;
 
   return {
-    instagram: instaLink || "",
-    whatsapp: `https://wa.me/+91${
-      hoteldata?.whatsapp_numbers ? hoteldata.whatsapp_numbers[0]?.number : hoteldata?.phone
-    }`,
-    googleReview: `https://search.google.com/local/writereview?placeid=${hoteldata?.place_id}`,
+    instagram: instaLink || undefined,
+    whatsapp: (hoteldata?.whatsapp_numbers?.[0] || hoteldata?.phone) ? `https://wa.me/+91${
+      hoteldata?.whatsapp_numbers?.[0] ? hoteldata.whatsapp_numbers[0]?.number : hoteldata?.phone
+    }` : undefined,
+    googleReview: undefined,
+    location: hoteldata?.location || undefined,
   };
 };

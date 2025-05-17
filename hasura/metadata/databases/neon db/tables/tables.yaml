@@ -16,6 +16,7 @@
 - "!include public_qr_groups.yaml"
 - "!include public_reviews.yaml"
 - "!include public_spatial_ref_sys.yaml"
+- "!include public_stocks.yaml"
 - "!include public_super_admin.yaml"
 - "!include public_table_orders.yaml"
 - "!include public_users.yaml"

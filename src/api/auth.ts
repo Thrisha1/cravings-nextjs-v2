@@ -40,6 +40,7 @@ export const partnerIdQuery = `
       phone
       district
       theme
+      is_shop_open
       currency
       place_id
       gst_no
@@ -59,14 +60,23 @@ export const partnerLoginQuery = `
       email
       password
       store_name
-      feature_flags
-      location
+      store_banner
       whatsapp_numbers
+      footnote
+      location
       status
+      social_links
       upi_id
+      feature_flags
       description
       phone
       district
+      theme
+      is_shop_open
+      currency
+      place_id
+      gst_no
+      gst_percentage
     }
   }
 `;

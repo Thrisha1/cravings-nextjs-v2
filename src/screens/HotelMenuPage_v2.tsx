@@ -20,7 +20,8 @@ import { usePathname } from "next/navigation";
 import SocialLinkList from "@/components/SocialLinkList";
 import AuthModal from "@/components/hotelDetail/AuthModal";
 import { getFeatures } from "@/lib/getFeatures";
-import { QrGroup } from "@/app/qr-management/page";
+import { QrGroup } from "@/app/admin/qr-management/page";
+import ShopClosedModalWarning from "@/components/admin/ShopClosedModalWarning";
 
 export type MenuItem = {
   description: string;
@@ -71,8 +72,11 @@ export type FeatureFlags = {
     access: boolean;
     enabled: boolean;
   };
+  stockmanagement: {
+    access: boolean;
+    enabled: boolean;
+  }
 };
-
 
 export const revertFeatureToString = (features: FeatureFlags): string => {
   const parts: string[] = [];
@@ -89,8 +93,12 @@ export const revertFeatureToString = (features: FeatureFlags): string => {
     parts.push(`multiwhatsapp-${features.multiwhatsapp.enabled}`);
   }
 
-  if(features.pos.access){
+  if (features.pos.access) {
     parts.push(`pos-${features.pos.enabled}`);
+  }
+
+  if (features.stockmanagement.access) {
+    parts.push(`stockmanagement-${features.stockmanagement.enabled}`);
   }
 
   return parts.join(",");
@@ -103,7 +111,7 @@ const HotelMenuPage = ({
   theme,
   tableNumber,
   socialLinks,
-  qrGroup
+  qrGroup,
 }: HotelMenuPageProps) => {
   const styles: Styles = {
     backgroundColor: theme?.colors?.bg || "#F5F5F5",
@@ -177,7 +185,17 @@ const HotelMenuPage = ({
       className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 lg:px-[20%] `}
     >
       {/* Auth Modal */}
-      <AuthModal hoteldata={hoteldata} styles={styles} tableNumber={tableNumber} />
+      <AuthModal
+        hoteldata={hoteldata}
+        styles={styles}
+        tableNumber={tableNumber}
+      />
+
+      {/* shop closed modal */}
+      <ShopClosedModalWarning
+        hotelId={hoteldata?.id}
+        isShopOpen={hoteldata?.is_shop_open}
+      />
 
       {/* top part  */}
       <section className="px-[8%] pt-[20px]">
@@ -232,7 +250,12 @@ const HotelMenuPage = ({
       {/* offers  */}
       {offers.length > 0 && (
         <section className="px-[8%]">
-          <OfferList offers={offers} styles={styles} menus={hoteldata?.menus} features={getFeatures(hoteldata?.feature_flags || "")}  />
+          <OfferList
+            offers={offers}
+            styles={styles}
+            menus={hoteldata?.menus}
+            features={getFeatures(hoteldata?.feature_flags || "")}
+          />
         </section>
       )}
 

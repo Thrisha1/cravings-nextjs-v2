@@ -17,6 +17,7 @@ const BulkUploadPage = () => {
   const router = useRouter();
   const { userData } = useAuthStore();
   const {
+    loading,
     jsonInput,
     menuItems,
     selectAll,
@@ -38,7 +39,12 @@ const BulkUploadPage = () => {
     setIsEditModalOpen,
     setEditingItem,
     handleCategoryChange,
+    handleGenerateImages,
+    handlePartialImageGeneration,
+    handleGenerateAIImages,
   } = useBulkUpload();
+
+  const isAIGenerateEnabled = Array.isArray(menuItems) && menuItems.length > 0 && 'image_prompt' in menuItems[0];
 
   useEffect(() => {
     // console.log("Menu Items:", menuItems);
@@ -112,6 +118,32 @@ const BulkUploadPage = () => {
             <label htmlFor="selectAll" className="ml-2">
               Select All
             </label>
+          </div>
+        )}
+
+        {menuItems.length > 0 && (
+          <div className="flex space-x-4 py-4">
+            <Button
+              onClick={handleGenerateImages}
+              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Full Images"}
+            </Button>
+            <Button
+              onClick={handlePartialImageGeneration}
+              className="bg-yellow-600 hover:bg-yellow-700 text-white"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Partial Images"}
+            </Button>
+            <Button
+              onClick={handleGenerateAIImages}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              disabled={loading || !isAIGenerateEnabled}
+            >
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate AI Images"}
+            </Button>
           </div>
         )}
 

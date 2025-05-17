@@ -20,7 +20,7 @@ const TodaysEarnings = ({ orders } : { orders : Order[] }) => {
 
     const query = `
         query Last24HoursCompletedOrders {
-            orders_aggregate(where: {_and: [{created_at: {_gte: "2025-05-16T05:01:43.394+00:00"}}, {status: {_eq: "completed"}}], partner_id: {_eq: "${userData?.id}"}})  {
+            orders_aggregate(where: {_and: [{created_at: {_gte: "${date}"}}, {status: {_eq: "completed"}}], partner_id: {_eq: "${userData?.id}"}})  {
                 aggregate {
                 sum {
                     total_price

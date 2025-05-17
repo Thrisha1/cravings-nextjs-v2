@@ -84,7 +84,7 @@ export default function ProfilePage() {
   const { claimedOffers } = useClaimedOffersStore();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
-
+  const [isShopOpen, setIsShopOpen] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [upiId, setUpiId] = useState("");
   const [isSaving, setIsSaving] = useState({
@@ -170,6 +170,7 @@ export default function ProfilePage() {
         gst_percentage: userData.gst_percentage || 0,
         enabled: (userData.gst_percentage || 0) > 0 ? true : false,
       });
+      setIsShopOpen(userData.is_shop_open);
     }
   }, [userData]);
 
@@ -957,6 +958,39 @@ export default function ProfilePage() {
     }
   };
 
+  const handleShopOpenClose = async () => {
+    try {
+      if (!userData) return;
+
+      setIsShopOpen((prev) => !prev);
+
+      const isShopOpen = (userData as Partner)?.is_shop_open;
+
+      toast.loading(`Setting shop to ${isShopOpen ? "close" : "open"}...`, {
+        id: "shop-status",
+      });
+
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          is_shop_open: !isShopOpen,
+        },
+      });
+      revalidateTag(userData?.id as string);
+      setState({ is_shop_open: !isShopOpen });
+      toast.dismiss("shop-status");
+      toast.success(
+        `Shop status updated to ${!isShopOpen ? "open" : "close"} successfully!`
+      );
+    } catch (error) {
+      setIsShopOpen((prev) => !prev);
+      console.error("Error updating shop status:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update shop status"
+      );
+    }
+  };
+
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
   }
@@ -985,22 +1019,36 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex md:flex-row flex-col gap-4">
-              <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
-                <Tag className="sm:size-4 size-8 mr-2" />
-                {profile.offersClaimed} Offers Claimed
-              </Badge>
-              <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
-                <UtensilsCrossed className="sm:size-4 size-8 mr-2" />
-                {profile.restaurantsSubscribed} Restaurants Subscribed
-              </Badge>
+              {userData?.role === "user" && (
+                <>
+                  <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
+                    <Tag className="sm:size-4 size-8 mr-2" />
+                    {profile.offersClaimed} Offers Claimed
+                  </Badge>
+                  <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
+                    <UtensilsCrossed className="sm:size-4 size-8 mr-2" />
+                    {profile.restaurantsSubscribed} Restaurants Subscribed
+                  </Badge>
+                </>
+              )}
               {userData?.role === "partner" && (
-                <Link
-                  href={`/hotels/${userData?.id}`}
-                  className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
-                >
-                  <Tag className="sm:size-4 size-8 mr-2" />
-                  View My Business Website
-                </Link>
+                <>
+                  <Link
+                    href={`/hotels/${userData?.id}`}
+                    className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
+                  >
+                    <Tag className="sm:size-4 size-8 mr-2" />
+                    View My Business Website
+                  </Link>
+                  <Button
+                    onClick={handleShopOpenClose}
+                    className={`flex items-center h-[60px] font-semibold rounded-lg text-sm  sm:text-lg  sm:p-4 p-2  transition-colors ${
+                      isShopOpen ? "bg-red-500" : "bg-green-600"
+                    }`}
+                  >
+                    {isShopOpen ? "Close Shop" : "Open Shop"}
+                  </Button>
+                </>
               )}
             </div>
           </CardContent>
@@ -1923,13 +1971,29 @@ export default function ProfilePage() {
                   QrCode Settings
                 </div>
                 <Link
-                  href={"/qr-management"}
+                  href={"/admin/qr-management"}
                   className=" hover:underline bg-gray-100 px-3 py-2 rounded-lg w-full flex items-center justify-between"
                 >
                   Manage QrCode
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
               </div>
+
+              {getFeatures(userData.feature_flags as string)?.stockmanagement
+                .enabled && (
+                <div className="space-y-2 pt-4">
+                  <div className="text-lg font-semibold mb-4">
+                    Stock Management
+                  </div>
+                  <Link
+                    href={"/admin/stock-management"}
+                    className=" hover:underline bg-gray-100 px-3 py-2 rounded-lg w-full flex items-center justify-between"
+                  >
+                    Manage Stocks
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Link>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

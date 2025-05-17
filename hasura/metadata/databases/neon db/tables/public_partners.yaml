@@ -65,6 +65,13 @@ array_relationships:
         table:
           name: qr_codes
           schema: public
+  - name: qr_groups
+    using:
+      foreign_key_constraint_on:
+        column: partner_id
+        table:
+          name: qr_groups
+          schema: public
   - name: reviews
     using:
       foreign_key_constraint_on:

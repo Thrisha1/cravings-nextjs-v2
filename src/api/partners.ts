@@ -42,6 +42,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     footnote
     status
     store_name
+    is_shop_open
     currency
     place_id
     theme
@@ -64,6 +65,10 @@ query GetPartnerAndOffersQuery($id: uuid!) {
       price
       offers(where: {_and: [{end_time: {_gt: "now()"}}, {deletion_status: {_eq: 0}}]}) {
         offer_price
+      }
+      stocks{
+        stock_quantity
+        stock_type
       }
     }
     offers(where: {_and: [{end_time: {_gt: "now()"}}, {deletion_status: {_eq: 0}}]}) {
