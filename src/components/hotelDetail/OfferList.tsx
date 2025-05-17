@@ -45,8 +45,9 @@ const OfferList = ({
           if (!item) return null;
 
           return (
-            <div className="flex flex-col bg-white rounded-3xl">
-              <Link key={`offer-${offer.id}`} href={`/offers/${offer.id}`}>
+
+            <div key={`offer-${offer.id}`} className="flex flex-col bg-white rounded-3xl">
+              <Link  href={`/offers/${offer.id}`}>
                 <OfferCardMin
                   discount={Number(discount.toFixed(0))}
                   offer={offer}
