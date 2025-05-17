@@ -63,6 +63,7 @@ export interface Partner extends BaseUser {
   gst_no?: string;
   gst_percentage?: number;
   business_type?: string; 
+  is_shop_open: boolean;
 }
 
 export interface SuperAdmin extends BaseUser {

@@ -42,6 +42,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     footnote
     status
     store_name
+    is_shop_open
     currency
     place_id
     theme
