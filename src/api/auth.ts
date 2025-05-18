@@ -45,6 +45,7 @@ export const partnerIdQuery = `
       place_id
       gst_no
       gst_percentage
+      business_type
     }
   }
 `;

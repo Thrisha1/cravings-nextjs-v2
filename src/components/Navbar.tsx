@@ -32,6 +32,7 @@ export function Navbar() {
       console.log("User Data:", userData?.role, userData?.feature_flags);
 
       const feature = getFeatures(userData?.feature_flags as string);
+      console.log("Feature:", feature);
 
       setFeatures(feature);
     }
@@ -123,6 +124,9 @@ export function Navbar() {
               ...((features?.ordering.access || features?.delivery.access) &&
               userData?.status === "active"
                 ? [{ href: "/admin/orders", label: "Orders" }]
+                : []),
+              ...(features?.stockmanagement.access
+                ? [{ href: "/admin/stock-management", label: "Stock Management" }]
                 : []),
             ]
           : []),
