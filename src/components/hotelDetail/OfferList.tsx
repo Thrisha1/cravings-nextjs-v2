@@ -65,6 +65,17 @@ const OfferList = ({
               )}
 
               <Link href={`/offers/${offer.id}`}>
+            <div key={`offer-${offer.id}`} className="flex flex-col bg-white rounded-3xl relative">
+              {/* Out of stock or unavailable overlay */}
+              {(!isItemAvailabe) && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-3xl z-10 flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">
+                    {!item.is_available ? "Unavailable" : "Out of Stock"}
+                  </span>
+                </div>
+              )}
+
+              <Link href={`/offers/${offer.id}`}>
                 <OfferCardMin
                   discount={Number(discount.toFixed(0))}
                   offer={offer}
@@ -72,6 +83,9 @@ const OfferList = ({
                   onClick={() => {}}
                 />
               </Link>
+
+              {/* Quantity controls - only show if available and not out of stock */}
+              {(isItemAvailabe ) && (
 
               {/* Quantity controls - only show if available and not out of stock */}
               {(isItemAvailabe ) && (
@@ -96,10 +110,12 @@ const OfferList = ({
 
                   <div className="bg-[#e2e2e2] rounded aspect-square h-8 grid place-items-center font-bold text-black/70">
                     {items?.find((i) => i.id === item.id)?.quantity || 0}
+                    {items?.find((i) => i.id === item.id)?.quantity || 0}
                   </div>
 
                   <button
                     onClick={() => {
+                      
                       
                       addItem(item as HotelDataMenus);
                     }}
@@ -112,6 +128,19 @@ const OfferList = ({
                   >
                     +
                   </button>
+                </div>
+              )}
+
+              {/* Stock information display */}
+              {stockInfo?.show_stock && (
+                <div className="px-3 pb-2 text-xs text-center">
+                  {isOutOfStock ? (
+                    <span className="text-red-500 font-semibold">Out of Stock</span>
+                  ) : (
+                    <span className="text-green-600">
+                      In Stock: {stockInfo.stock_quantity}
+                    </span>
+                  )}
                 </div>
               )}
 

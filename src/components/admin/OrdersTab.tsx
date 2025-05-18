@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { revalidateTag } from "@/app/actions/revalidate";
+import { revalidateTag } from "@/app/actions/revalidate";
 
 const OrdersTab = () => {
   const router = useRouter();
@@ -106,6 +107,7 @@ const OrdersTab = () => {
     newStatus: "completed" | "cancelled"
   ) => {
     try {
+      // First update the order status
       // First update the order status
       // First update the order status
       const response = await fetchFromHasura(
@@ -204,6 +206,121 @@ const OrdersTab = () => {
         }
       }
 
+
+      if (newStatus === "completed") {
+        const order = orders.find((o) => o.id === orderId);
+        if (order) {
+
+          for (const item of order.items) {
+            if (item.stocks?.[0]?.id) {
+              await fetchFromHasura(
+                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
+                  update_stocks_by_pk(
+                    pk_columns: {id: $stockId},
+                    _inc: {stock_quantity: $quantity}
+                  ) {
+                    id
+                    stock_quantity
+                  }
+                }`,
+                {
+                  stockId: item.stocks?.[0]?.id,
+                  quantity: -item.quantity, 
+                }
+              );
+            }
+          }
+
+          revalidateTag(userData?.id as string);
+        }
+      }
+
+
+      if (newStatus === "completed") {
+        const order = orders.find((o) => o.id === orderId);
+        if (order) {
+          for (const item of order.items) {
+            if (item.stocks?.[0]?.id) {
+              await fetchFromHasura(
+                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
+                  update_stocks_by_pk(
+                    pk_columns: {id: $stockId},
+                    _inc: {stock_quantity: $quantity}
+                  ) {
+                    id
+                    stock_quantity
+                  }
+                }`,
+                {
+                  stockId: item.stocks?.[0]?.id,
+                  quantity: -item.quantity,
+                }
+              );
+            }
+          }
+
+          revalidateTag(userData?.id as string);
+        }
+      }
+
+
+      if (newStatus === "completed") {
+        const order = orders.find((o) => o.id === orderId);
+        if (order) {
+
+          for (const item of order.items) {
+            if (item.stocks?.[0]?.id) {
+              await fetchFromHasura(
+                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
+                  update_stocks_by_pk(
+                    pk_columns: {id: $stockId},
+                    _inc: {stock_quantity: $quantity}
+                  ) {
+                    id
+                    stock_quantity
+                  }
+                }`,
+                {
+                  stockId: item.stocks?.[0]?.id,
+                  quantity: -item.quantity, 
+                }
+              );
+            }
+          }
+
+          revalidateTag(userData?.id as string);
+        }
+      }
+
+
+      if (newStatus === "completed") {
+        const order = orders.find((o) => o.id === orderId);
+        if (order) {
+
+          for (const item of order.items) {
+            if (item.stocks?.[0]?.id) {
+              await fetchFromHasura(
+                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
+                  update_stocks_by_pk(
+                    pk_columns: {id: $stockId},
+                    _inc: {stock_quantity: $quantity}
+                  ) {
+                    id
+                    stock_quantity
+                  }
+                }`,
+                {
+                  stockId: item.stocks?.[0]?.id,
+                  quantity: -item.quantity, 
+                }
+              );
+            }
+          }
+
+          revalidateTag(userData?.id as string);
+        }
+      }
+
       setOrders((prev) =>
         prev.map((order) =>
           order.id === orderId ? { ...order, status: newStatus } : order
@@ -263,10 +380,7 @@ const OrdersTab = () => {
 
     const unsubscribe = subscribeOrders((allOrders) => {
       const prevOrders = prevOrdersRef.current;
-
-      console.log(allOrders , "allOrders");
       
-
       // Count new pending orders
       const newTableOrders = allOrders.filter(
         (order) =>
@@ -322,6 +436,9 @@ const OrdersTab = () => {
         onOpenChange={(open) =>
           setNewOrderAlert((prev) => ({ ...prev, show: open }))
         }
+        onOpenChange={(open) =>
+          setNewOrderAlert((prev) => ({ ...prev, show: open }))
+        }
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -334,6 +451,11 @@ const OrdersTab = () => {
           <AlertDialogFooter>
             <AlertDialogAction
               onClick={() => {
+                setNewOrderAlert({
+                  show: false,
+                  tableCount: 0,
+                  deliveryCount: 0,
+                });
                 setNewOrderAlert({
                   show: false,
                   tableCount: 0,
@@ -455,3 +577,4 @@ const OrdersTab = () => {
 };
 
 export default OrdersTab;
+

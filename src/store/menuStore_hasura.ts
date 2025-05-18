@@ -93,6 +93,9 @@ interface MenuState {
   updateItemsAsBatch: (
     items: { id: string; priority: number }[]
   ) => Promise<void>;
+  updateItemsAsBatch: (
+    items: { id: string; priority: number }[]
+  ) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -120,6 +123,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
             return {
               ...mi,
               price: (mi.offers[0]?.offer_price || mi.price) ?? 0,
+              price: (mi.offers[0]?.offer_price || mi.price) ?? 0,
               category: {
                 id: mi.category.id,
                 name: mi.category.name,
@@ -146,6 +150,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       if (!userData) throw new Error("User data not found");
 
+      const category = await addCategory(
+        item.category.name.trim().toLowerCase()
+      );
       const category = await addCategory(
         item.category.name.trim().toLowerCase()
       );
@@ -404,6 +411,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       const updatedItems = get().items.map((item: MenuItem) => {
         const category = updates.find((cat) => cat.id === item.category.id);
 
+
         return category
           ? {
               ...item,
@@ -434,11 +442,14 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   deleteCategoryAndItems: async (categoryId: string) => {
+  deleteCategoryAndItems: async (categoryId: string) => {
     try {
       toast.loading("Deleting category and its items...");
       const userData = useAuthStore.getState().userData as AuthUser;
 
+
       if (!userData) throw new Error("User data not found");
+
 
       // Execute the deletion
       await fetchFromHasura(delCategoryAndItems, {
@@ -446,25 +457,36 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         partnerId: userData.id,
       });
 
+
       // Update local state
       const items = get().items.filter(
         (item) => item.category.id !== categoryId
       );
+      const items = get().items.filter(
+        (item) => item.category.id !== categoryId
+      );
       set({ items });
+
 
       // Also update categories in category store
       const { categories, fetchCategories } = useCategoryStore.getState();
       const updatedCategories = categories.filter(
         (cat) => cat.id !== categoryId
       );
+      const updatedCategories = categories.filter(
+        (cat) => cat.id !== categoryId
+      );
       useCategoryStore.setState({ categories: updatedCategories });
+
 
       // Re-fetch to ensure consistency
       await fetchCategories(userData.id);
 
+
       // Re-group items
       get().groupItems();
       revalidateTag(userData.id);
+
 
       toast.dismiss();
       toast.success("Category and its items deleted successfully");
@@ -481,11 +503,19 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       priority: number;
     }[]
   ) => {
+  updateItemsAsBatch: async (
+    items: {
+      id: string;
+      priority: number;
+    }[]
+  ) => {
     try {
       toast.loading("Updating item priorities...");
       const user = useAuthStore.getState().userData as Partner;
 
+
       if (!user) throw new Error("User data not found");
+
 
       // Create the batch mutation
       const mutation = `
@@ -507,6 +537,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
             .join("\n")}
         }
       `;
+
 
       // Execute in chunks to avoid hitting Hasura limits
       const CHUNK_SIZE = 20;
@@ -532,8 +563,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           }
         `;
 
+
         await fetchFromHasura(chunkMutation, {});
       }
+
 
       // Update local state
       const updatedItems = get().items.map((currentItem) => {
@@ -543,9 +576,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           : currentItem;
       });
 
+
       set({ items: updatedItems });
       get().groupItems();
       revalidateTag(user?.id);
+
 
       toast.dismiss();
       toast.success("Item priorities updated successfully");

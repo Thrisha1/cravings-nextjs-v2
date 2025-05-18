@@ -337,6 +337,8 @@ const StockManagementPage = () => {
       );
       revalidateTag(userData?.id as string);
 
+      revalidateTag(userData?.id as string);
+
     } catch (error) {
       console.error("Error updating stock quantity:", error);
       fetchData();
@@ -378,11 +380,20 @@ const StockManagementPage = () => {
                 is_available: bulkAction === "AVAILABLE",
               };
             } else if (bulkAction === "STATIC" || bulkAction === "AUTO") {
+            } else if (bulkAction === "STATIC" || bulkAction === "AUTO") {
               return {
                 ...item,
                 stocks: item.stocks.map((stock) => ({
                   ...stock,
                   stock_type: bulkAction,
+                })),
+              };
+            } else if (bulkAction === "SHOW_STOCK" || bulkAction === "HIDE_STOCK") {
+              return {
+                ...item,
+                stocks: item.stocks.map((stock) => ({
+                  ...stock,
+                  show_stock: bulkAction === "SHOW_STOCK",
                 })),
               };
             } else if (bulkAction === "SHOW_STOCK" || bulkAction === "HIDE_STOCK") {
@@ -415,6 +426,7 @@ const StockManagementPage = () => {
           }
         );
       } else if (bulkAction === "STATIC" || bulkAction === "AUTO") {
+      } else if (bulkAction === "STATIC" || bulkAction === "AUTO") {
         await fetchFromHasura(
           `mutation UpdateBulkStockType($ids: [uuid!]!, $stockType: String!) {
             update_stocks(
@@ -444,9 +456,26 @@ const StockManagementPage = () => {
             showStock: bulkAction === "SHOW_STOCK",
           }
         );
+      } else if (bulkAction === "SHOW_STOCK" || bulkAction === "HIDE_STOCK") {
+        await fetchFromHasura(
+          `mutation UpdateBulkShowStock($ids: [uuid!]!, $showStock: Boolean!) {
+            update_stocks(
+              where: {menu_id: {_in: $ids}},
+              _set: {show_stock: $showStock}
+            ) {
+              affected_rows
+            }
+          }`,
+          {
+            ids: selectedItems,
+            showStock: bulkAction === "SHOW_STOCK",
+          }
+        );
       }
 
       setSelectedItems([]);
+      revalidateTag(userData?.id as string);
+
       revalidateTag(userData?.id as string);
 
     } catch (error) {
@@ -489,6 +518,7 @@ const StockManagementPage = () => {
             <div key={i} className="flex space-x-4">
               <Skeleton className="h-12 flex-1" />
               <Skeleton className="h-12 w-24" />
+              <Skeleton className="h-12 w-32" />
               <Skeleton className="h-12 w-32" />
               <Skeleton className="h-12 w-32" />
             </div>
@@ -554,6 +584,7 @@ const StockManagementPage = () => {
               ) => setBulkAction(value)}
             >
               <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Bulk action" />
               </SelectTrigger>
               <SelectContent>
@@ -561,6 +592,8 @@ const StockManagementPage = () => {
                 <SelectItem value="UNAVAILABLE">Mark Unavailable</SelectItem>
                 <SelectItem value="STATIC">Set Type to Static</SelectItem>
                 <SelectItem value="AUTO">Set Type to Auto</SelectItem>
+                <SelectItem value="SHOW_STOCK">Show Stock</SelectItem>
+                <SelectItem value="HIDE_STOCK">Hide Stock</SelectItem>
                 <SelectItem value="SHOW_STOCK">Show Stock</SelectItem>
                 <SelectItem value="HIDE_STOCK">Hide Stock</SelectItem>
               </SelectContent>
@@ -603,6 +636,7 @@ const StockManagementPage = () => {
               <TableHead>Item Name</TableHead>
               <TableHead>Stock Available</TableHead>
               <TableHead>Stock Type</TableHead>
+              <TableHead>Show Stock</TableHead>
               <TableHead>Show Stock</TableHead>
             </TableRow>
           </TableHeader>
@@ -696,6 +730,23 @@ const StockManagementPage = () => {
                       <SelectContent>
                         <SelectItem value="AUTO">Auto</SelectItem>
                         <SelectItem value="STATIC">Static</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      value={stock.show_stock ? "SHOW" : "HIDE"}
+                      onValueChange={(value) =>
+                        updateShowStock(stock.id, value === "SHOW", item.id)
+                      }
+                      disabled={isUpdating}
+                    >
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Select visibility" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="SHOW">Show</SelectItem>
+                        <SelectItem value="HIDE">Hide</SelectItem>
                       </SelectContent>
                     </Select>
                   </TableCell>

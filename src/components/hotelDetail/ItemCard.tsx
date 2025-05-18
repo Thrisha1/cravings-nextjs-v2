@@ -68,6 +68,7 @@ const ItemCard = ({
               } ${!item.is_available ? "opacity-25" : ""}`}
             >
               <div className="capitalize text-xl font-bold">{item.name}</div>
+              <div className="capitalize text-xl font-bold">{item.name}</div>
               {currency !== "🚫" && (
                 <div
                   style={{
