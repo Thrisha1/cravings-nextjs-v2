@@ -10,34 +10,23 @@ export function KimiAiLink({ className = "" }: KimiAiLinkProps) {
       window.focus();
     }
     navigator.clipboard.writeText(
-      `Extract the menu items from the provided text and convert them into a valid JSON array following these specifications:
-      
-      1. Required JSON Structure for each item:
-      {
-        "name": "string (item name)",
-        "price": number (numeric value only),
-        "description": "string (brief 5-10 word description)",
-        "category": "string"
-      }
-
-      3. Rules:
-      - Price must be a number (no currency symbols)
-      - Descriptions should be concise but descriptive
-      - Output must be valid JSON (no trailing commas)
-      - Return only the JSON array with no additional text
-      
-      4. Example Output:
-      [
-        {
-          "name": "Example Dish",
-          "price": 200,
-          "description": "Brief description of the dish",
-          "category": "Mandhi Session"
-        }
-      ]`
+      `You are an expert in extracting structured data from restaurant menu images. Your task is to extract each dish along with its variant (e.g., Quarter, Half, Full) as separate items.
+            
+            - The main heading in the image (e.g., AL FAHAM) should be used as the category.
+            - For each dish like "Al Faham Normal", if there are sizes like Quarter, Half, Full, then extract them as separate items: "Al Faham Normal (Quarter)", "Al Faham Normal (Half)", etc.
+            - The name should include the size (e.g., "Al Faham Honey (Full)").
+            - The description should describe the item based on its name and size. Example: "A full portion of Al Faham Honey-flavored grilled chicken."
+            - The price must be the correct number (ignore struck-through or older prices if new prices are written nearby if price is not given give price as 1).
+            - Format your response as a JSON array only, with each object in this format:
+            {
+              "name": string,
+              "price": number,
+              "description": string,
+              "category": string
+            }`
     );
     toast.success("Prompt copied to clipboard!");
-    window.open("https://kimi.moonshot.cn/", "_blank");
+    window.open("https://aistudio.google.com/prompts/new_chat", "_blank");
   };
 
   return (
@@ -45,7 +34,7 @@ export function KimiAiLink({ className = "" }: KimiAiLinkProps) {
       onClick={handleClick}
       className={`underline text-sm py-2 text-blue-500 hover:text-blue-600 block text-right ${className}`}
     >
-      Go to KIMI.ai {"(prompt is copied to clipboard)"} {"->"}
+      Go to Gemini PRO {"(prompt is copied to clipboard)"} {"->"}
     </div>
   );
 }
