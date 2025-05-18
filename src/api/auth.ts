@@ -47,6 +47,7 @@ export const partnerIdQuery = `
       gst_percentage
       delivery_rate
       geo_location
+      business_type
     }
   }
 `;
