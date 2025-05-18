@@ -114,8 +114,8 @@ const StockManagementPage = () => {
         {
           objects: items.map((item) => ({
             menu_id: item.id,
-            stock_type: "AUTO",
-            stock_quantity: 0,
+            stock_type: "STATIC",
+            stock_quantity: 1,
             show_stock: false,
           })),
         }
