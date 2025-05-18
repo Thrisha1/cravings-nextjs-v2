@@ -1,5 +1,6 @@
 "use client";
 import { Styles } from "@/screens/HotelMenuPage_v2";
+import { Styles } from "@/screens/HotelMenuPage_v2";
 import { Offer } from "@/store/offerStore_hasura";
 import React from "react";
 import OfferCardMin from "../OfferCardMin";
@@ -8,6 +9,7 @@ import Link from "next/link";
 import { HotelDataMenus } from "@/app/hotels/[...id]/page";
 import useOrderStore from "@/store/orderStore";
 import { useAuthStore } from "@/store/authStore";
+import { FeatureFlags } from "@/lib/getFeatures";
 import { FeatureFlags } from "@/lib/getFeatures";
 
 const OfferList = ({

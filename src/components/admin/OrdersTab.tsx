@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { revalidateTag } from "@/app/actions/revalidate";
+import { revalidateTag } from "@/app/actions/revalidate";
 
 const OrdersTab = () => {
   const router = useRouter();
@@ -105,6 +106,7 @@ const OrdersTab = () => {
   ) => {
     try {
       // First update the order status
+      // First update the order status
       const response = await fetchFromHasura(
         `mutation UpdateOrderStatus($orderId: uuid!, $status: String!) {
           update_orders_by_pk(pk_columns: {id: $orderId}, _set: {status: $status}) {
@@ -135,6 +137,64 @@ const OrdersTab = () => {
                 {
                   stockId: item.stocks?.[0]?.id,
                   quantity: -item.quantity,
+                }
+              );
+            }
+          }
+
+          revalidateTag(userData?.id as string);
+        }
+      }
+
+
+      if (newStatus === "completed") {
+        const order = orders.find((o) => o.id === orderId);
+        if (order) {
+
+          for (const item of order.items) {
+            if (item.stocks?.[0]?.id) {
+              await fetchFromHasura(
+                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
+                  update_stocks_by_pk(
+                    pk_columns: {id: $stockId},
+                    _inc: {stock_quantity: $quantity}
+                  ) {
+                    id
+                    stock_quantity
+                  }
+                }`,
+                {
+                  stockId: item.stocks?.[0]?.id,
+                  quantity: -item.quantity, 
+                }
+              );
+            }
+          }
+
+          revalidateTag(userData?.id as string);
+        }
+      }
+
+
+      if (newStatus === "completed") {
+        const order = orders.find((o) => o.id === orderId);
+        if (order) {
+
+          for (const item of order.items) {
+            if (item.stocks?.[0]?.id) {
+              await fetchFromHasura(
+                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
+                  update_stocks_by_pk(
+                    pk_columns: {id: $stockId},
+                    _inc: {stock_quantity: $quantity}
+                  ) {
+                    id
+                    stock_quantity
+                  }
+                }`,
+                {
+                  stockId: item.stocks?.[0]?.id,
+                  quantity: -item.quantity, 
                 }
               );
             }
@@ -203,10 +263,7 @@ const OrdersTab = () => {
 
     const unsubscribe = subscribeOrders((allOrders) => {
       const prevOrders = prevOrdersRef.current;
-
-      // console.log(allOrders , "allOrders");
       
-
       // Count new pending orders
       const newTableOrders = allOrders.filter(
         (order) =>
@@ -226,6 +283,7 @@ const OrdersTab = () => {
 
       if (totalNewOrders > 0) {
         soundRef.current?.play();
+
 
         // Show alert dialog
         setNewOrderAlert({

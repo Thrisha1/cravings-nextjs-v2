@@ -15,6 +15,7 @@ const ItemCard = ({
   feature_flags,
   currency,
   hotelData,
+  hotelData,
 }: {
   item: HotelDataMenus;
   styles: Styles;
@@ -24,6 +25,7 @@ const ItemCard = ({
   hotelData?: HotelData;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
   const hasOrderingFeature = getFeatures(feature_flags || "")?.ordering.enabled;
   const [itemQuantity, setItemQuantity] = useState<number | 0>(0);
@@ -39,12 +41,10 @@ const ItemCard = ({
 
   // Check if we should show stock information
   const showStock = item.stocks?.[0]?.show_stock;
-  const stockQuantity = item.stocks?.[0]?.stock_quantity ?? 9999;
-  const isOutOfStock = item.stocks?.[0]
-    ? item.stocks[0].stock_quantity <= 0
-    : false;
-  const hasStockFeature = getFeatures(feature_flags || "")?.stockmanagement
-    .enabled;
+  const stockQuantity = item.stocks?.[0]?.stock_quantity || 0;
+  const isOutOfStock = stockQuantity <= 0;
+
+  const hasStockFeature = getFeatures(feature_flags || "")?.stockmanagement.enabled;
 
   return (
     <div className="h-full relative">
@@ -54,6 +54,10 @@ const ItemCard = ({
         className={`pt-8 pb-5 rounded-[35px] px-6 flex-1 relative bg-white text-black ${className}`}
       >
         <div className="flex flex-col gap-y-2 justify-between items-start w-full">
+          <div
+            onClick={() => setIsOpen(true)}
+            className={`flex justify-between w-full`}
+          >
           <div
             onClick={() => setIsOpen(true)}
             className={`flex justify-between w-full`}
@@ -75,6 +79,9 @@ const ItemCard = ({
                   {hotelData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09"
                     ? item.price.toFixed(3)
                     : item.price}
+                  {hotelData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09"
+                    ? item.price.toFixed(3)
+                    : item.price}
                 </div>
               )}
               <DescriptionWithTextBreak
@@ -84,7 +91,7 @@ const ItemCard = ({
                 {item.description}
               </DescriptionWithTextBreak>
               {/* Show stock information if enabled */}
-              {showStock && hasStockFeature && (
+              {(showStock && hasStockFeature) && (
                 <div className="text-xs mt-1">
                   {isOutOfStock ? (
                     <span className="text-red-500 font-semibold">
@@ -104,11 +111,13 @@ const ItemCard = ({
                   src={item.image_url}
                   alt={item.name}
                   className={`object-cover w-full h-full ${
-                    !item.is_available || (isOutOfStock && hasStockFeature)
-                      ? "grayscale"
-                      : ""
+                    (!item.is_available || (isOutOfStock && hasStockFeature)) ? "grayscale" : ""
                   }`}
                 />
+                {/* Show unavailable badge if either item is unavailable or out of stock with show_stock */}
+                {(!item.is_available || (isOutOfStock && hasStockFeature)) && (
+                  <div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-center text-sm font-semibold py-2 px-3 w-full">
+                    {!item.is_available ? "Unavailable" : "Out of Stock"}
                 {/* Show unavailable badge if either item is unavailable or out of stock with show_stock */}
                 {(!item.is_available || (isOutOfStock && hasStockFeature)) && (
                   <div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-center text-sm font-semibold py-2 px-3 w-full">
@@ -142,9 +151,9 @@ const ItemCard = ({
                   -
                 </button>
 
-                <div className="bg-[#e2e2e2] rounded aspect-square h-8 grid place-items-center font-bold text-black/70">
-                  {itemQuantity}
-                </div>
+              <div className="bg-[#e2e2e2] rounded aspect-square h-8 grid place-items-center font-bold text-black/70">
+                {itemQuantity}
+              </div>
 
                 <button
                   onClick={() => {

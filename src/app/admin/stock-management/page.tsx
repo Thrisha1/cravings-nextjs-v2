@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw, Check, X, Search } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { revalidateTag } from "@/app/actions/revalidate";
+import { revalidateTag } from "@/app/actions/revalidate";
 
 type MenuItem = {
   name: string;
@@ -33,6 +34,7 @@ type MenuItem = {
     id: string;
     stock_quantity: number;
     stock_type: "STATIC" | "AUTO";
+    show_stock: boolean;
     show_stock: boolean;
   }[];
 };
@@ -53,6 +55,7 @@ const StockManagementPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<
+    "AVAILABLE" | "UNAVAILABLE" | "STATIC" | "AUTO" | "SHOW_STOCK" | "HIDE_STOCK"
     "AVAILABLE" | "UNAVAILABLE" | "STATIC" | "AUTO" | "SHOW_STOCK" | "HIDE_STOCK"
   >("AVAILABLE");
 
@@ -75,6 +78,7 @@ const StockManagementPage = () => {
               id
               stock_quantity
               stock_type
+              show_stock
               show_stock
             }
           }
@@ -121,6 +125,7 @@ const StockManagementPage = () => {
         }
       );
       revalidateTag(userData?.id as string);
+      revalidateTag(userData?.id as string);
     } catch (error) {
       console.error("Error creating stocks:", error);
     }
@@ -164,8 +169,56 @@ const StockManagementPage = () => {
       );
       revalidateTag(userData?.id as string);
 
+      revalidateTag(userData?.id as string);
+
     } catch (error) {
       console.error("Error updating stock type:", error);
+      fetchData();
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const updateShowStock = async (
+    stockId: string,
+    showStock: boolean,
+    menuItemId: string
+  ) => {
+    try {
+      setIsUpdating(true);
+
+      setMenuItems((prevItems) =>
+        prevItems.map((item) => {
+          if (item.id === menuItemId) {
+            return {
+              ...item,
+              stocks: item.stocks.map((stock) =>
+                stock.id === stockId ? { ...stock, show_stock: showStock } : stock
+              ),
+            };
+          }
+          return item;
+        })
+      );
+
+      await fetchFromHasura(
+        `mutation UpdateShowStock($stockId: uuid!, $showStock: Boolean!) {
+          update_stocks_by_pk(
+            pk_columns: {id: $stockId},
+            _set: {show_stock: $showStock}
+          ) {
+            id
+          }
+        }`,
+        {
+          stockId,
+          showStock,
+        }
+      );
+      revalidateTag(userData?.id as string);
+      
+    } catch (error) {
+      console.error("Error updating show_stock:", error);
       fetchData();
     } finally {
       setIsUpdating(false);
