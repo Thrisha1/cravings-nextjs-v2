@@ -1,4 +1,52 @@
-import { FeatureFlags } from "@/screens/HotelMenuPage_v2";
+
+export type FeatureFlags = {
+  ordering: {
+    access: boolean;
+    enabled: boolean;
+  };
+  delivery: {
+    access: boolean;
+    enabled: boolean;
+  };
+  multiwhatsapp: {
+    access: boolean;
+    enabled: boolean;
+  };
+  pos: {
+    access: boolean;
+    enabled: boolean;
+  };
+  stockmanagement: {
+    access: boolean;
+    enabled: boolean;
+  }
+};
+
+export const revertFeatureToString = (features: FeatureFlags): string => {
+  const parts: string[] = [];
+
+  if (features.ordering.access) {
+    parts.push(`ordering-${features.ordering.enabled}`);
+  }
+
+  if (features.delivery.access) {
+    parts.push(`delivery-${features.delivery.enabled}`);
+  }
+
+  if (features.multiwhatsapp.access) {
+    parts.push(`multiwhatsapp-${features.multiwhatsapp.enabled}`);
+  }
+
+  if (features.pos.access) {
+    parts.push(`pos-${features.pos.enabled}`);
+  }
+
+  if (features.stockmanagement.access) {
+    parts.push(`stockmanagement-${features.stockmanagement.enabled}`);
+  }
+
+  return parts.join(",");
+};
 
 export const getFeatures = (perm: string) => {
   const permissions: FeatureFlags = {
@@ -51,3 +99,4 @@ export const getFeatures = (perm: string) => {
 
   return permissions;
 };
+

@@ -209,6 +209,7 @@ const useOrderStore = create(
                 price:
                   item.menu?.offers?.[0]?.offer_price || item.menu?.price || 0,
                 category: item.menu?.category,
+                stocks : item.menu?.stocks, 
               })),
             }));
 

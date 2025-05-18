@@ -1,6 +1,5 @@
 "use client";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { FeatureFlags, revertFeatureToString } from "@/screens/HotelMenuPage_v2";
 import { Partner } from "@/store/authStore";
 import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -18,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { toast } from "sonner";
-import { getFeatures } from "@/lib/getFeatures";
+import { FeatureFlags, getFeatures, revertFeatureToString } from "@/lib/getFeatures";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {

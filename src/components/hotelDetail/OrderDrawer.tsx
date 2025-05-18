@@ -1,6 +1,6 @@
 "use client";
 import { HotelData } from "@/app/hotels/[...id]/page";
-import { FeatureFlags, Styles } from "@/screens/HotelMenuPage_v2";
+import { Styles } from "@/screens/HotelMenuPage_v2";
 import HeadingWithAccent from "@/components/HeadingWithAccent";
 import React, { useEffect, useState } from "react";
 import {
@@ -29,7 +29,7 @@ import {
 import Link from "next/link";
 import { log, table } from "console";
 import { usePathname } from "next/navigation";
-import { getFeatures } from "@/lib/getFeatures";
+import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
 import { QrGroup } from "@/app/admin/qr-management/page";
 // import { fetchFromHasura } from "@/lib/hasuraClient";
 

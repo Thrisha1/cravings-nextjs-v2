@@ -7,8 +7,7 @@ import Link from "next/link";
 import { UtensilsCrossed, Menu, X, ChevronLeft, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
-import { FeatureFlags } from "@/screens/HotelMenuPage_v2";
-import { getFeatures } from "@/lib/getFeatures";
+import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
 import { toast } from "sonner";
 
 // Add type for beforeinstallprompt event
