@@ -94,7 +94,7 @@ const page = async ({ params }: Props) => {
 
       return {
         id,
-        ...userData,
+        ...userData.partners_by_pk,
       } as Partner;
     },
     [offerData.id || ""],
@@ -104,6 +104,7 @@ const page = async ({ params }: Props) => {
   );
 
   const hotelData = await getHotelData(offerData?.partner?.id as string);
+  console.log("Hotel Data", hotelData);
 
   return <OfferDetail offer={offerData} hotelData={hotelData} />;
 };
