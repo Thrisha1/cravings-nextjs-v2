@@ -121,6 +121,7 @@ export function MenuTab() {
       is_top: false,
       is_available: true,
       priority: 0,
+      
     });
   };
 

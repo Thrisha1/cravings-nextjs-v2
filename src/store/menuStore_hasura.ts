@@ -32,7 +32,7 @@ export interface MenuItem {
   is_top: boolean;
   is_available: boolean;
   priority: number;
-  stocks: {
+  stocks?: {
     stock_quantity: number;
     stock_type: string;
     show_stock: boolean;

@@ -46,7 +46,7 @@ const OfferList = ({
           const hasStockFeature = features?.stockmanagement?.enabled;
           const stockInfo = item.stocks?.[0];
           
-          const isOutOfStock = ((stockInfo?.stock_quantity <= 0) && hasStockFeature);
+          const isOutOfStock = (((stockInfo?.stock_quantity ?? 0) <= 0) && hasStockFeature);
 
           const isItemAvailabe = item.is_available && !isOutOfStock;
 
@@ -76,7 +76,7 @@ const OfferList = ({
                 <div className="flex gap-2 items-center justify-center w-full p-3">
                   <button
                     onClick={() => {
-                      if (stockInfo?.stock_quantity > 1) {
+                      if ((stockInfo?.stock_quantity ?? 0) > 1) {
                         decreaseQuantity(item.id as string);
                       } else {
                         removeItem(item.id as string);
