@@ -335,7 +335,7 @@ export const useBulkUpload = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post("https://backend.cravings.live/api/image-gen/fullImages", menuItems, {
+      const response = await axios.post("https://backend.cravings.notime.co.in/api/image-gen/fullImages", menuItems, {
         headers: { "Content-Type": "application/json" },
       });
 
@@ -358,7 +358,7 @@ export const useBulkUpload = () => {
     if (!menuItems) return;
     setLoading(true);
     try {
-      const response = await axios.post("https://backend.cravings.live/api/image-gen/partialImages", menuItems, {
+      const response = await axios.post("https://backend.cravings.notime.co.in/api/image-gen/partialImages", menuItems, {
         headers: { "Content-Type": "application/json" },
       });
 
@@ -381,7 +381,7 @@ export const useBulkUpload = () => {
     if (!menuItems) return;
     setLoading(true);
     try {
-      const response = await axios.post("https://backend.cravings.live/api/image-gen/generateAIImages", menuItems, {
+      const response = await axios.post("https://backend.cravings.notime.co.in/api/image-gen/generateAIImages", menuItems, {
         headers: { "Content-Type": "application/json" },
       });
 
