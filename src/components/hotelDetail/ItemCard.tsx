@@ -46,9 +46,6 @@ const ItemCard = ({
   const hasStockFeature = getFeatures(feature_flags || "")?.stockmanagement
     .enabled;
 
-  console.log(stockQuantity, "stockQuantity");
-  console.log(isOutOfStock, "isOutOfStock");
-
   return (
     <div className="h-full relative">
       <div
