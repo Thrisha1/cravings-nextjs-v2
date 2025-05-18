@@ -66,7 +66,7 @@ export default function OfferDetail({
     }
 
     // setClaimModalOpen(true);
-    navigate.push(`/hotels/${hotelData.store_name}/${hotelData.id}`);
+    navigate.push(`/hotels/${hotelData.store_name.replace(/\s+/g, '-')}/${hotelData.id}`);
   };
 
   const isUpcoming = new Date(offer.start_time) > new Date();
@@ -227,7 +227,7 @@ export default function OfferDetail({
                     ) : (
                       <Link
                         className={`w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm `}
-                        href={"/login"}
+                        href={`/hotels/${hotelData.store_name.replace(/\s+/g, '-')}/${hotelData.id}`}
                       >
                         Claim Offer
                       </Link>
