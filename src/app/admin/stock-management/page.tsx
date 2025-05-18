@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Check, X, Search } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { revalidateTag } from "@/app/actions/revalidate";
 
 type MenuItem = {
   name: string;
@@ -32,6 +33,7 @@ type MenuItem = {
     id: string;
     stock_quantity: number;
     stock_type: "STATIC" | "AUTO";
+    show_stock: boolean;
   }[];
 };
 
@@ -51,7 +53,7 @@ const StockManagementPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<
-    "AVAILABLE" | "UNAVAILABLE" | "STATIC" | "AUTO"
+    "AVAILABLE" | "UNAVAILABLE" | "STATIC" | "AUTO" | "SHOW_STOCK" | "HIDE_STOCK"
   >("AVAILABLE");
 
   useEffect(() => {
@@ -73,6 +75,7 @@ const StockManagementPage = () => {
               id
               stock_quantity
               stock_type
+              show_stock
             }
           }
         }`,
@@ -113,9 +116,11 @@ const StockManagementPage = () => {
             menu_id: item.id,
             stock_type: "AUTO",
             stock_quantity: 0,
+            show_stock: false,
           })),
         }
       );
+      revalidateTag(userData?.id as string);
     } catch (error) {
       console.error("Error creating stocks:", error);
     }
@@ -157,8 +162,56 @@ const StockManagementPage = () => {
           stockType: newType,
         }
       );
+      revalidateTag(userData?.id as string);
+
     } catch (error) {
       console.error("Error updating stock type:", error);
+      fetchData();
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const updateShowStock = async (
+    stockId: string,
+    showStock: boolean,
+    menuItemId: string
+  ) => {
+    try {
+      setIsUpdating(true);
+
+      setMenuItems((prevItems) =>
+        prevItems.map((item) => {
+          if (item.id === menuItemId) {
+            return {
+              ...item,
+              stocks: item.stocks.map((stock) =>
+                stock.id === stockId ? { ...stock, show_stock: showStock } : stock
+              ),
+            };
+          }
+          return item;
+        })
+      );
+
+      await fetchFromHasura(
+        `mutation UpdateShowStock($stockId: uuid!, $showStock: Boolean!) {
+          update_stocks_by_pk(
+            pk_columns: {id: $stockId},
+            _set: {show_stock: $showStock}
+          ) {
+            id
+          }
+        }`,
+        {
+          stockId,
+          showStock,
+        }
+      );
+      revalidateTag(userData?.id as string);
+      
+    } catch (error) {
+      console.error("Error updating show_stock:", error);
       fetchData();
     } finally {
       setIsUpdating(false);
@@ -229,6 +282,8 @@ const StockManagementPage = () => {
           quantity: editingItem.currentValue,
         }
       );
+      revalidateTag(userData?.id as string);
+
     } catch (error) {
       console.error("Error updating stock quantity:", error);
       fetchData();
@@ -269,12 +324,20 @@ const StockManagementPage = () => {
                 ...item,
                 is_available: bulkAction === "AVAILABLE",
               };
-            } else {
+            } else if (bulkAction === "STATIC" || bulkAction === "AUTO") {
               return {
                 ...item,
                 stocks: item.stocks.map((stock) => ({
                   ...stock,
                   stock_type: bulkAction,
+                })),
+              };
+            } else if (bulkAction === "SHOW_STOCK" || bulkAction === "HIDE_STOCK") {
+              return {
+                ...item,
+                stocks: item.stocks.map((stock) => ({
+                  ...stock,
+                  show_stock: bulkAction === "SHOW_STOCK",
                 })),
               };
             }
@@ -298,7 +361,7 @@ const StockManagementPage = () => {
             isAvailable: bulkAction === "AVAILABLE",
           }
         );
-      } else {
+      } else if (bulkAction === "STATIC" || bulkAction === "AUTO") {
         await fetchFromHasura(
           `mutation UpdateBulkStockType($ids: [uuid!]!, $stockType: String!) {
             update_stocks(
@@ -313,9 +376,26 @@ const StockManagementPage = () => {
             stockType: bulkAction,
           }
         );
+      } else if (bulkAction === "SHOW_STOCK" || bulkAction === "HIDE_STOCK") {
+        await fetchFromHasura(
+          `mutation UpdateBulkShowStock($ids: [uuid!]!, $showStock: Boolean!) {
+            update_stocks(
+              where: {menu_id: {_in: $ids}},
+              _set: {show_stock: $showStock}
+            ) {
+              affected_rows
+            }
+          }`,
+          {
+            ids: selectedItems,
+            showStock: bulkAction === "SHOW_STOCK",
+          }
+        );
       }
 
       setSelectedItems([]);
+      revalidateTag(userData?.id as string);
+
     } catch (error) {
       console.error("Error performing bulk action:", error);
       fetchData();
@@ -356,6 +436,7 @@ const StockManagementPage = () => {
             <div key={i} className="flex space-x-4">
               <Skeleton className="h-12 flex-1" />
               <Skeleton className="h-12 w-24" />
+              <Skeleton className="h-12 w-32" />
               <Skeleton className="h-12 w-32" />
             </div>
           ))}
@@ -416,10 +497,10 @@ const StockManagementPage = () => {
             <Select
               value={bulkAction}
               onValueChange={(
-                value: "AVAILABLE" | "UNAVAILABLE" | "STATIC" | "AUTO"
+                value: "AVAILABLE" | "UNAVAILABLE" | "STATIC" | "AUTO" | "SHOW_STOCK" | "HIDE_STOCK"
               ) => setBulkAction(value)}
             >
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Bulk action" />
               </SelectTrigger>
               <SelectContent>
@@ -427,6 +508,8 @@ const StockManagementPage = () => {
                 <SelectItem value="UNAVAILABLE">Mark Unavailable</SelectItem>
                 <SelectItem value="STATIC">Set Type to Static</SelectItem>
                 <SelectItem value="AUTO">Set Type to Auto</SelectItem>
+                <SelectItem value="SHOW_STOCK">Show Stock</SelectItem>
+                <SelectItem value="HIDE_STOCK">Hide Stock</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -467,6 +550,7 @@ const StockManagementPage = () => {
               <TableHead>Item Name</TableHead>
               <TableHead>Stock Available</TableHead>
               <TableHead>Stock Type</TableHead>
+              <TableHead>Show Stock</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -559,6 +643,23 @@ const StockManagementPage = () => {
                       <SelectContent>
                         <SelectItem value="AUTO">Auto</SelectItem>
                         <SelectItem value="STATIC">Static</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Select
+                      value={stock.show_stock ? "SHOW" : "HIDE"}
+                      onValueChange={(value) =>
+                        updateShowStock(stock.id, value === "SHOW", item.id)
+                      }
+                      disabled={isUpdating}
+                    >
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Select visibility" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="SHOW">Show</SelectItem>
+                        <SelectItem value="HIDE">Hide</SelectItem>
                       </SelectContent>
                     </Select>
                   </TableCell>

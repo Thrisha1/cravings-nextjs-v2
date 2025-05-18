@@ -18,8 +18,7 @@ import {
   removeAuthCookie,
 } from "@/app/auth/actions";
 import { sendRegistrationWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
-import { FeatureFlags } from "@/screens/HotelMenuPage_v2";
-import { getFeatures } from "@/lib/getFeatures";
+import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
 
 // Interfaces remain the same
 interface BaseUser {

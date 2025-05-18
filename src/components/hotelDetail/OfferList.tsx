@@ -1,5 +1,5 @@
 "use client";
-import { FeatureFlags, Styles } from "@/screens/HotelMenuPage_v2";
+import { Styles } from "@/screens/HotelMenuPage_v2";
 import { Offer } from "@/store/offerStore_hasura";
 import React from "react";
 import OfferCardMin from "../OfferCardMin";
@@ -8,6 +8,7 @@ import Link from "next/link";
 import { HotelDataMenus } from "@/app/hotels/[...id]/page";
 import useOrderStore from "@/store/orderStore";
 import { useAuthStore } from "@/store/authStore";
+import { FeatureFlags } from "@/lib/getFeatures";
 
 const OfferList = ({
   offers,
@@ -21,6 +22,7 @@ const OfferList = ({
   features: FeatureFlags;
 }) => {
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
+  const { userData } = useAuthStore();
 
   return (
     <div className="flex flex-col gap-6 my-5">
@@ -38,15 +40,29 @@ const OfferList = ({
           const isUpcoming = new Date(offer.start_time) > new Date();
 
           const item = menus.find((item) => item.id === offer.menu.id);
-
-          const itemInCart = (items || []).find((i) => i.id === item?.id);
-          const itemQuantity = itemInCart ? itemInCart.quantity : 0;
-
           if (!item) return null;
 
+          // Stock management logic
+          const hasStockFeature = features?.stockmanagement?.enabled;
+          const stockInfo = item.stocks?.[0];
+          
+          const isOutOfStock = ((stockInfo?.stock_quantity <= 0) && hasStockFeature);
+
+          const isItemAvailabe = item.is_available && !isOutOfStock;
+
+
           return (
-            <div className="flex flex-col bg-white rounded-3xl">
-              <Link key={`offer-${offer.id}`} href={`/offers/${offer.id}`}>
+            <div key={`offer-${offer.id}`} className="flex flex-col bg-white rounded-3xl relative">
+              {/* Out of stock or unavailable overlay */}
+              {(!isItemAvailabe) && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-3xl z-10 flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">
+                    {!item.is_available ? "Unavailable" : "Out of Stock"}
+                  </span>
+                </div>
+              )}
+
+              <Link href={`/offers/${offer.id}`}>
                 <OfferCardMin
                   discount={Number(discount.toFixed(0))}
                   offer={offer}
@@ -54,14 +70,16 @@ const OfferList = ({
                   onClick={() => {}}
                 />
               </Link>
-              {item?.is_available && features?.ordering?.enabled && (
+
+              {/* Quantity controls - only show if available and not out of stock */}
+              {(isItemAvailabe ) && (
                 <div className="flex gap-2 items-center justify-center w-full p-3">
                   <button
                     onClick={() => {
-                      if (itemQuantity > 1) {
-                        decreaseQuantity(item?.id as string);
+                      if (stockInfo?.stock_quantity > 1) {
+                        decreaseQuantity(item.id as string);
                       } else {
-                        removeItem(item?.id as string);
+                        removeItem(item.id as string);
                       }
                     }}
                     style={{
@@ -75,11 +93,12 @@ const OfferList = ({
                   </button>
 
                   <div className="bg-[#e2e2e2] rounded aspect-square h-8 grid place-items-center font-bold text-black/70">
-                    {itemQuantity}
+                    {items?.find((i) => i.id === item.id)?.quantity || 0}
                   </div>
 
                   <button
                     onClick={() => {
+                      
                       addItem(item as HotelDataMenus);
                     }}
                     style={{
@@ -91,6 +110,19 @@ const OfferList = ({
                   >
                     +
                   </button>
+                </div>
+              )}
+
+              {/* Stock information display */}
+              {stockInfo?.show_stock && (
+                <div className="px-3 pb-2 text-xs text-center">
+                  {isOutOfStock ? (
+                    <span className="text-red-500 font-semibold">Out of Stock</span>
+                  ) : (
+                    <span className="text-green-600">
+                      In Stock: {stockInfo.stock_quantity}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
