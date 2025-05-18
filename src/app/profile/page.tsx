@@ -1082,7 +1082,7 @@ export default function ProfilePage() {
               {userData?.role === "partner" && (
                 <>
                   <Link
-                    href={`/hotels/${userData?.id}`}
+                    href={`${userData?.business_type === 'restaurant' ? '/hotels' : '/business'}/${userData?.store_name?.replace(/\s+/g, '-')}/${userData?.id}`}
                     className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
                   >
                     <Tag className="sm:size-4 size-8 mr-2" />
