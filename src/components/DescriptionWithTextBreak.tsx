@@ -23,7 +23,7 @@ const DescriptionWithTextBreak = ({
 
   // Check if text needs truncation
   const needsTruncation = text.length > maxChars;
-  const displayText = isExpanded ? text : `${text.slice(0, maxChars)}...`;
+  const displayText = isExpanded ? text : `${text.slice(0, maxChars)}${needsTruncation ? "..." : ""}`;
 
   return (
     <div className={className}>
