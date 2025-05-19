@@ -45,9 +45,10 @@ export const partnerIdQuery = `
       place_id
       gst_no
       gst_percentage
-      delivery_rate
-      geo_location
       business_type
+      geo_location
+      delivery_rate
+      delivery_rules
     }
   }
 `;
@@ -80,8 +81,9 @@ export const partnerLoginQuery = `
       place_id
       gst_no
       gst_percentage
-      delivery_rate
       geo_location
+      delivery_rate
+      delivery_rules
     }
   }
 `;
@@ -158,6 +160,3 @@ export const deleteUserMutation = `
     }
   }
 `;
-
-
-

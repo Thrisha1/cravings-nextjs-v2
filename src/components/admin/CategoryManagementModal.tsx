@@ -122,7 +122,7 @@ export function CategoryManagementModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full lg:max-w-4xl h-full lg:h-[90vh] flex flex-col">
+      <DialogContent className="w-full lg:max-w-4xl h-full lg:h-[90vh] flex flex-col z-[60]">
         <DialogHeader>
           <div className="flex justify-end">
             <DialogClose>X Close</DialogClose>
@@ -166,9 +166,9 @@ export function CategoryManagementModal({
                 <TableHeader className="bg-gray-50 sticky top-0">
                   <TableRow>
                     <TableHead>Category Name</TableHead>
-                    <TableHead className="w-[50px] text-center">
+                    {/* <TableHead className="w-[50px] text-center">
                       Priority
-                    </TableHead>
+                    </TableHead> */}
                     <TableHead className="w-[100px] text-center">
                       Actions
                     </TableHead>
@@ -227,9 +227,9 @@ export function CategoryManagementModal({
                                     className="w-full"
                                   />
                                 </TableCell>
-                                <TableCell className="text-center font-medium">
+                                {/* <TableCell className="text-center font-medium">
                                   {originalIndex + 1}
-                                </TableCell>
+                                </TableCell> */}
                                 <TableCell>
                                   <div className="flex justify-center gap-1">
                                     <Button

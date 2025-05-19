@@ -19,6 +19,7 @@ import {
 } from "@/app/auth/actions";
 import { sendRegistrationWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
+import { DeliveryRules } from "./orderStore";
 
 // Interfaces remain the same
 interface BaseUser {
@@ -63,8 +64,9 @@ export interface Partner extends BaseUser {
   phone: string;
   district: string;
   delivery_status: boolean;
-  geo_location: string;
+  geo_location: GeoLocation ;
   delivery_rate: number;
+  delivery_rules: DeliveryRules;
   place_id?: string;
   theme?: string;
   currency: string;
