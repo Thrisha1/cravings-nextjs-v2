@@ -52,6 +52,11 @@ import { getSocialLinks } from "@/lib/getSocialLinks";
 import { FeatureFlags, getFeatures, revertFeatureToString } from "@/lib/getFeatures";
 import { updateAuthCookie } from "../auth/actions";
 
+interface GeoJSONPoint {
+  type: 'Point';
+  coordinates: [number, number];
+}
+
 const Currencies = [
   { label: "INR", value: "₹" },
   { label: "USD", value: "$" },
@@ -72,7 +77,7 @@ export default function ProfilePage() {
     error: geoError,
     getLocation,
   } = useLocationStore();
-  const [deliveryRate, setDeliveryRate] = useState("");
+  const [deliveryRate, setDeliveryRate] = useState<number>(0);
   const [geoLocation, setGeoLocation] = useState({
     latitude: "",
     longitude: "",
@@ -134,11 +139,24 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (userData?.role === "partner") {
+      // console.log("Debug - UserData:", {
+      //   delivery_rate: userData.delivery_rate,
+      //   geo_location: userData.geo_location,
+      //   raw_userData: userData
+      // });
+
       setBannerImage(userData.store_banner || null);
       setUpiId(userData.upi_id || "");
       setPlaceId(userData.place_id || "");
       setDescription(userData.description || "");
-      setDeliveryRate(userData.delivery_rate || "");
+      
+      // Debug log before setting delivery rate
+      console.log("Debug - Setting delivery rate:", userData.delivery_rate);
+      const deliveryRateValue = typeof userData.delivery_rate === 'number' ? userData.delivery_rate : 
+                              typeof userData.delivery_rate === 'string' ? parseFloat(userData.delivery_rate) : 0;
+      setDeliveryRate(deliveryRateValue);
+      console.log("Debug - Delivery rate set to:", deliveryRateValue);
+
       setCurrency(
         Currencies.find(
           (curr) => curr.value === userData.currency
@@ -167,39 +185,73 @@ export default function ProfilePage() {
         enabled: (userData.gst_percentage || 0) > 0 ? true : false,
       });
       setIsShopOpen(userData.is_shop_open);
-    }
-  }, [userData]);
 
-  useEffect(() => {
-    if (userData?.role === "partner") {
-      console.log("User Data:", userData?.role, userData?.feature_flags);
-
-      const feature = getFeatures(userData?.feature_flags as string);
-
-      setUserFeatures(feature);
-      console.log(feature);
-
+      // Debug log before setting geo location
+      // console.log("Debug - Setting geo location:", userData.geo_location);
+      
+      // Initialize location from userData.geo_location
       if (userData.geo_location) {
-        const match = userData.geo_location.match(/POINT\(([^ ]+) ([^)]+)\)/);
-        if (match) {
-          const [_, lng, lat] = match;
-          setGeoLocation({
-            latitude: lat,
-            longitude: lng,
-          });
+        try {
+          let lat, lng;
+          const geoLocationData = userData.geo_location;
+          console.log("Debug - Geo location data type:", typeof geoLocationData);
+
+          if (typeof geoLocationData === 'string') {
+            // Handle string format (SRID or GeoJSON string)
+            if (geoLocationData.includes('POINT')) {
+              // Handle SRID format: SRID=4326;POINT(lng lat)
+              const match = geoLocationData.match(/POINT\(([^ ]+) ([^)]+)\)/);
+              console.log("Debug - POINT match:", match);
+              if (match) {
+                [, lng, lat] = match;
+              }
+            } else {
+              try {
+                // Handle GeoJSON string format
+                const geoJson = JSON.parse(geoLocationData) as GeoJSONPoint;
+                if (geoJson.type === 'Point' && Array.isArray(geoJson.coordinates)) {
+                  [lng, lat] = geoJson.coordinates;
+                }
+              } catch (e) {
+                console.error("Debug - Failed to parse GeoJSON string:", e);
+              }
+            }
+          } else if (typeof geoLocationData === 'object') {
+            // Handle object format (GeoJSON object)
+            const geoJson = geoLocationData as GeoJSONPoint;
+            if (geoJson.type === 'Point' && Array.isArray(geoJson.coordinates)) {
+              [lng, lat] = geoJson.coordinates;
+            }
+          }
+          
+          console.log("Debug - Extracted coordinates:", { lat, lng });
+          
+          if (lat && lng) {
+            const newGeoLocation = {
+              latitude: lat.toString(),
+              longitude: lng.toString()
+            };
+            console.log("Debug - Setting new geo location:", newGeoLocation);
+            setGeoLocation(newGeoLocation);
+          }
+        } catch (error) {
+          console.error('Debug - Error parsing location:', error);
         }
       }
     }
   }, [userData]);
-  // Add this effect to watch for store changes
+
+  // Add effect to log state changes
   useEffect(() => {
-    if (coords && isEditing.geoLocation) {
-      setGeoLocation({
-        latitude: coords.lat.toString(),
-        longitude: coords.lng.toString(),
-      });
-    }
-  }, [coords, isEditing.geoLocation]);
+    console.log("Debug - Current state:", {
+      deliveryRate,
+      geoLocation,
+      isEditing: {
+        deliveryRate: isEditing.deliveryRate,
+        geoLocation: isEditing.geoLocation
+      }
+    });
+  }, [deliveryRate, geoLocation, isEditing.deliveryRate, isEditing.geoLocation]);
 
   const profile = {
     name:
@@ -315,31 +367,31 @@ export default function ProfilePage() {
         return;
       }
 
-      // Create the correct format for geography type
-      // Using SRID=4326;POINT(longitude latitude) format
-      const geographyFormat = `SRID=4326;POINT(${lng} ${lat})`;
+      // Create GeoJSON format for the point
+      const geoJsonPoint = {
+        type: "Point",
+        coordinates: [lng, lat],
+        crs: {
+          type: "name",
+          properties: {
+            name: "urn:ogc:def:crs:OGC:1.3:CRS84"
+          }
+        }
+      };
 
-      console.log("Saving location with format:", geographyFormat); // Debug log
+      const geoJsonString = JSON.stringify(geoJsonPoint);
+      console.log("Saving location with format:", geoJsonString); // Debug log
 
       setIsSaving((prev) => ({ ...prev, geoLocation: true }));
       toast.loading("Updating location...");
 
-      // First verify the mutation
-      const mutation = updatePartnerMutation;
-      console.log("Mutation:", mutation); // Debug log
-      console.log("Update data:", {
+      const response = await fetchFromHasura(updatePartnerMutation, {
         id: userData?.id,
         updates: {
-          geo_location: geographyFormat,
-        },
-      }); // Debug log
-
-      const response = await fetchFromHasura(mutation, {
-        id: userData?.id,
-        updates: {
-          geo_location: geographyFormat,
+          geo_location: geoJsonString,
         },
       });
+      revalidateTag(userData?.id as string);
 
       console.log("Hasura response:", response); // Debug log
 
@@ -347,7 +399,8 @@ export default function ProfilePage() {
         throw new Error("No response from server");
       }
 
-      // Update local state
+      // Update local state with the SRID format for display
+      const geographyFormat = `SRID=4326;POINT(${lng} ${lat})`;
       setState({ geo_location: geographyFormat });
       toast.dismiss();
       toast.success("Location updated successfully!");
@@ -914,7 +967,6 @@ export default function ProfilePage() {
       });
     }
   };
-// (Delivery Rate)
 
   const handleSaveDeliveryRate = async () => {
     try {
@@ -924,8 +976,7 @@ export default function ProfilePage() {
       setIsSaving((prev) => ({ ...prev, deliveryRate: true }));
 
       // Validate delivery rate is a positive number
-      const rate = parseFloat(deliveryRate);
-      if (isNaN(rate) || rate < 0) {
+      if (isNaN(deliveryRate) || deliveryRate < 0) {
         toast.dismiss();
         toast.error("Please enter a valid delivery rate (must be a positive number)");
         return;
@@ -934,12 +985,13 @@ export default function ProfilePage() {
       await fetchFromHasura(updatePartnerMutation, {
         id: userData?.id,
         updates: {
-          delivery_rate: deliveryRate, // Send as string to match database type
+          delivery_rate: deliveryRate,
         },
       });
+      
 
       revalidateTag(userData?.id as string);
-      setState({ delivery_rate: deliveryRate }); // Store as string in state
+      setState({ delivery_rate: deliveryRate });
       toast.dismiss();
       toast.success("Delivery rate updated successfully!");
       setIsEditing((prev) => ({ ...prev, deliveryRate: false }));
@@ -1314,56 +1366,80 @@ export default function ProfilePage() {
             
 
               {/* Geo Location Section */}
-              <div className="space-y-4 w-full">
-              <label htmlFor="placeId" className="text-lg font-semibold">
+              <div className="space-y-2 pt-4">
+                <label htmlFor="location" className="text-lg font-semibold">
                   Location
                 </label>
-  <div className="grid grid-cols-2 gap-4">
-    <div>
-      <label className="text-sm text-gray-600">Latitude</label>
-      <Input
-        type="text"
-        value={geoLocation.latitude}
-        onChange={(e) => setGeoLocation(prev => ({
-          ...prev,
-          latitude: e.target.value
-        }))}
-        placeholder="Enter latitude"
-      />
-    </div>
-    <div>
-      <label className="text-sm text-gray-600">Longitude</label>
-      <Input
-        type="text"
-        value={geoLocation.longitude}
-        onChange={(e) => setGeoLocation(prev => ({
-          ...prev,
-          longitude: e.target.value
-        }))}
-        placeholder="Enter longitude"
-      />
-    </div>
-  </div>
-  <div className="flex gap-2">
-    <Button
-      onClick={handleGetCurrentLocation}
-      variant="outline"
-      disabled={isLoading}
-    >
-      {isLoading ? "Getting Location..." : "Get Current Location"}
-    </Button>
-    <Button
-      onClick={handleSaveGeoLocation}
-      disabled={isSaving.geoLocation}
-      className="bg-orange-600 hover:bg-orange-700 text-white"
-    >
-      {isSaving.geoLocation ? "Saving..." : "Save"}
-    </Button>
-  </div>
-  {error && (
-    <p className="text-sm text-red-500">{error}</p>
-  )}
-</div>
+                <div className="flex gap-2">
+                  {isEditing.geoLocation ? (
+                    <div className="grid gap-4 w-full">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-gray-600">Latitude</label>
+                          <Input
+                            type="text"
+                            value={geoLocation.latitude}
+                            onChange={(e) => setGeoLocation(prev => ({
+                              ...prev,
+                              latitude: e.target.value
+                            }))}
+                            placeholder="Enter latitude"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-600">Longitude</label>
+                          <Input
+                            type="text"
+                            value={geoLocation.longitude}
+                            onChange={(e) => setGeoLocation(prev => ({
+                              ...prev,
+                              longitude: e.target.value
+                            }))}
+                            placeholder="Enter longitude"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleGetCurrentLocation}
+                          variant="outline"
+                          disabled={isLoading}
+                        >
+                          {isLoading ? "Getting Location..." : "Get Current Location"}
+                        </Button>
+                        <Button
+                          onClick={handleSaveGeoLocation}
+                          disabled={isSaving.geoLocation}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isSaving.geoLocation ? "Saving..." : "Save"}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-gray-700">
+                        {geoLocation.latitude && geoLocation.longitude 
+                          ? `Lat: ${parseFloat(geoLocation.latitude).toFixed(6)}, Long: ${parseFloat(geoLocation.longitude).toFixed(6)}`
+                          : "No location set"}
+                      </span>
+                      <Button
+                        onClick={() => {
+                          console.log("Debug - Edit location clicked, current value:", geoLocation);
+                          setIsEditing((prev) => ({ ...prev, geoLocation: true }));
+                        }}
+                        variant="ghost"
+                        className="hover:bg-orange-100"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500">
+                  This location will be used to show your restaurant on the map
+                </p>
+              </div>
 
               <div className="space-y-2 pt-4">
                 <label htmlFor="deliveryRate" className="text-lg font-semibold">
@@ -1379,26 +1455,28 @@ export default function ProfilePage() {
                         step="0.01"
                         placeholder="Enter delivery rate"
                         value={deliveryRate}
-                        onChange={(e) => setDeliveryRate(e.target.value)}
+                        onChange={(e) => setDeliveryRate(parseFloat(e.target.value))}
                         className="flex-1"
                       />
                       <Button
                         onClick={handleSaveDeliveryRate}
-                        disabled={isSaving.deliveryRate || !deliveryRate}
+                        disabled={isSaving.deliveryRate || isNaN(deliveryRate)}
                         className="bg-orange-600 hover:bg-orange-700 text-white"
                       >
-                        {isSaving.deliveryRate ? <>Saving...</> : "Save"}
+                        {isSaving.deliveryRate ? "Saving..." : "Save"}
                       </Button>
                     </>
                   ) : (
                     <div className="flex justify-between items-center w-full">
                       <span className="text-gray-700">
-                        {deliveryRate ? `${currency.value}${deliveryRate}` : "No delivery rate set"}
+                        {deliveryRate !== undefined && deliveryRate !== null
+                          ? `${currency.value}${deliveryRate.toFixed(2)}`
+                          : "No delivery rate set"}
                       </span>
                       <Button
                         onClick={() => {
+                          console.log("Debug - Edit delivery rate clicked, current value:", deliveryRate);
                           setIsEditing((prev) => ({ ...prev, deliveryRate: true }));
-                          setDeliveryRate(deliveryRate ? deliveryRate : "");
                         }}
                         variant="ghost"
                         className="hover:bg-orange-100"
@@ -1639,327 +1717,53 @@ export default function ProfilePage() {
                   This Footnote will be used for your restaurant profile
                 </p>
               </div>
-              <div className="space-y-2 pt-4">
-                <div className="text-lg font-semibold">Price Settings</div>
 
-                {/* show pricing  */}
-                <div className="flex gap-2">
-                  <label htmlFor="show-pricing">Show Pricing : </label>
+              <div className="space-y-2 pt-4">
+                <label htmlFor="gstNo" className="text-lg font-semibold">
+                  GST Settings
+                </label>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Enable GST Calculation</span>
                   <Switch
-                    checked={showPricing}
-                    onCheckedChange={handleShowPricingChange}
+                    checked={gst.enabled}
+                    onCheckedChange={(checked) => setGst(prev => ({...prev, enabled: checked}))}
                   />
                 </div>
-
-                {/* currency  */}
-                {userData.currency !== "🚫" && (
-                  <div className="flex gap-2 items-center">
-                    <label htmlFor="currency">Currency : </label>
-                    <div className="flex gap-2 flex-1">
-                      {isEditing.currency ? (
-                        <>
-                          <Select
-                            value={currency.label} // Use label as the value for selection
-                            onValueChange={(selectedLabel) => {
-                              const selectedCurrency = Currencies.find(
-                                (curr) => curr.label === selectedLabel
-                              );
-                              if (selectedCurrency) {
-                                setCurrency(selectedCurrency);
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="Select currency" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Currencies.map((curr) => (
-                                <SelectItem key={curr.label} value={curr.label}>
-                                  {curr.value} - {curr.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            onClick={handleSaveCurrency}
-                            disabled={isSaving.currency || !currency}
-                            className="bg-orange-600 hover:bg-orange-700 text-white"
-                          >
-                            {isSaving.currency ? <>Saving...</> : "Save"}
-                          </Button>
-                        </>
-                      ) : (
-                        <div className="flex justify-between items-center w-full">
-                          <span className="text-gray-700">
-                            {currency ? (
-                              <>
-                                {currency.value} - {currency.label}
-                              </>
-                            ) : (
-                              "No currency selected"
-                            )}
-                          </span>
-                          <Button
-                            onClick={() => {
-                              setIsEditing((prev) => ({
-                                ...prev,
-                                currency: true,
-                              }));
-                              setCurrency(currency || Currencies[0]);
-                            }}
-                            variant="ghost"
-                            className="hover:bg-orange-100"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2 pt-4">
-                {features && (
-                  <>
-                    <div className="text-lg font-semibold">
-                      Feature Settings
-                    </div>
-
-                    {features.ordering.access && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium">Ordering</div>
-                          <div className="text-sm text-gray-500">
-                            {features.ordering.enabled ? "Enabled" : "Disabled"}
-                          </div>
-                        </div>
-                        <Switch
-                          checked={features.ordering.enabled}
-                          onCheckedChange={(enabled) => {
-                            const updates = {
-                              ...features,
-                              ordering: {
-                                ...features.ordering,
-                                enabled: enabled,
-                              },
-                            };
-
-                            setFeatures(updates);
-                            setUserFeatures(updates);
-                            handleFeatureEnabledChange(updates);
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {features.delivery.access && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium">Delivery</div>
-                          <div className="text-sm text-gray-500">
-                            {features.delivery.enabled ? "Enabled" : "Disabled"}
-                          </div>
-                        </div>
-                        <Switch
-                          checked={features.delivery.enabled}
-                          onCheckedChange={(enabled) => {
-                            const updates = {
-                              ...features,
-                              delivery: {
-                                ...features.delivery,
-                                enabled: enabled,
-                              },
-                            };
-
-                            setFeatures(updates);
-                            setUserFeatures(updates);
-                            handleFeatureEnabledChange(updates);
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {features.multiwhatsapp.access && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium">
-                            Multiple Whatsapp Numbers
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {features.multiwhatsapp.enabled
-                              ? "Enabled"
-                              : "Disabled"}
-                          </div>
-                        </div>
-                        <Switch
-                          checked={features.multiwhatsapp.enabled}
-                          onCheckedChange={(enabled) => {
-                            const updates = {
-                              ...features,
-                              multiwhatsapp: {
-                                ...features.multiwhatsapp,
-                                enabled: enabled,
-                              },
-                            };
-
-                            setFeatures(updates);
-                            setUserFeatures(updates);
-                            handleFeatureEnabledChange(updates);
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {features.pos.access && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium">POS</div>
-                          <div className="text-sm text-gray-500">
-                            {features.pos.enabled ? "Enabled" : "Disabled"}
-                          </div>
-                        </div>
-                        <Switch
-                          checked={features.pos.enabled}
-                          onCheckedChange={(enabled) => {
-                            const updates = {
-                              ...features,
-                              pos: {
-                                ...features.pos,
-                                enabled: enabled,
-                              },
-                            };
-
-                            setFeatures(updates);
-                            setUserFeatures(updates);
-                            handleFeatureEnabledChange(updates);
-                          }}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <div className="space-y-2 pt-4">
-                <div className="flex justify-between items-center">
-                  <h1 className="text-lg font-semibold">Gst Settings</h1>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-600">Enable GST</span>
-                    <Switch
-                      checked={gst.enabled}
-                      onCheckedChange={(checked) => {
-                        setGst((prev) => ({
-                          ...prev,
-                          enabled: checked,
-                          gst_percentage: checked ? prev.gst_percentage : 0,
-                        }));
-                        if (!checked) {
-                          handleSaveGst(null, true);
-                        }
-                      }}
-                      className="data-[state=checked]:bg-black"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  {isEditing.gst ? (
-                    <form onSubmit={handleSaveGst} className="space-y-2 w-full">
+                {gst.enabled && (
+                  <div className="grid gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label htmlFor="gst_no" className="font-semibold">
-                          Gst No.
-                        </label>
+                        <label htmlFor="gstNo" className="text-sm text-gray-600">GST Number</label>
                         <Input
-                          id="gst_no"
+                          id="gstNo"
                           type="text"
-                          placeholder="Enter your Gst number"
-                          pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
+                          placeholder="Enter GST Number"
                           value={gst.gst_no}
-                          onChange={(e) =>
-                            setGst((prev) => {
-                              return { ...prev, gst_no: e.target.value };
-                            })
-                          }
-                          className="flex-1"
-                          disabled={!gst.enabled}
+                          onChange={(e) => setGst(prev => ({...prev, gst_no: e.target.value}))}
                         />
                       </div>
                       <div>
-                        <label
-                          htmlFor="gst_percentage"
-                          className="font-semibold"
-                        >
-                          Gst Percentage
-                        </label>
+                        <label htmlFor="gstPercent" className="text-sm text-gray-600">GST Percentage (%)</label>
                         <Input
-                          id="gst_percentage"
+                          id="gstPercent"
                           type="number"
-                          placeholder="Enter your Gst percentage"
+                          min="0"
+                          step="0.01"
+                          placeholder="Enter GST Percentage"
                           value={gst.gst_percentage}
-                          onChange={(e) =>
-                            setGst((prev) => {
-                              return {
-                                ...prev,
-                                gst_percentage: Number(e.target.value),
-                              };
-                            })
-                          }
-                          className="flex-1"
-                          disabled={!gst.enabled}
+                          onChange={(e) => setGst(prev => ({...prev, gst_percentage: parseFloat(e.target.value) || 0}))}
                         />
                       </div>
-
-                      <Button
-                        disabled={isSaving.gst}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.gst ? <>Saving...</> : "Save"}
-                      </Button>
-                    </form>
-                  ) : (
-                    <div className="flex justify-between items-center w-full">
-                      <div className="flex flex-col gap-2">
-                        {gst.enabled ? (
-                          <>
-                            <div className="text-gray-700">
-                              {gst.gst_no
-                                ? `GST no: ${gst.gst_no}`
-                                : "No Gst no. set"}
-                            </div>
-                            <div className="text-gray-700">
-                              {gst.gst_percentage
-                                ? `GST percentage: ${gst.gst_percentage}%`
-                                : "No Gst percentage set"}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-gray-700">
-                            GST is currently disabled
-                          </div>
-                        )}
-                      </div>
-                      <Button
-                        onClick={() => {
-                          setIsEditing((prev) => ({
-                            ...prev,
-                            gst: true,
-                          }));
-                        }}
-                        variant="ghost"
-                        className="hover:bg-orange-100"
-                        disabled={!gst.enabled}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
                     </div>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500">
-                  {gst.enabled
-                    ? "This Gst will be used for your restaurant profile and billing"
-                    : "GST is currently disabled for your restaurant"}
-                </p>
+                    <Button
+                      onClick={() => handleSaveGst()}
+                      disabled={isSaving.gst}
+                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                    >
+                      {isSaving.gst ? <>Saving...</> : "Save GST Settings"}
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2 pt-4">
