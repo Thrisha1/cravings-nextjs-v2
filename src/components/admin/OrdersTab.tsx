@@ -44,6 +44,7 @@ const OrdersTab = () => {
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest");
   const [activeTab, setActiveTab] = useState<"table" | "delivery">("delivery");
   const [activeTab, setActiveTab] = useState<"table" | "delivery">("delivery");
+  const [activeTab, setActiveTab] = useState<"table" | "delivery">("delivery");
   const [newOrders, setNewOrders] = useState({ table: false, delivery: false });
   const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
   const [newOrderAlert, setNewOrderAlert] = useState({
@@ -296,6 +297,34 @@ const OrdersTab = () => {
       if (newStatus === "completed") {
         const order = orders.find((o) => o.id === orderId);
         if (order) {
+          for (const item of order.items) {
+            if (item.stocks?.[0]?.id) {
+              await fetchFromHasura(
+                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
+                  update_stocks_by_pk(
+                    pk_columns: {id: $stockId},
+                    _inc: {stock_quantity: $quantity}
+                  ) {
+                    id
+                    stock_quantity
+                  }
+                }`,
+                {
+                  stockId: item.stocks?.[0]?.id,
+                  quantity: -item.quantity,
+                }
+              );
+            }
+          }
+
+          revalidateTag(userData?.id as string);
+        }
+      }
+
+
+      if (newStatus === "completed") {
+        const order = orders.find((o) => o.id === orderId);
+        if (order) {
 
           for (const item of order.items) {
             if (item.stocks?.[0]?.id) {
@@ -312,6 +341,90 @@ const OrdersTab = () => {
                 {
                   stockId: item.stocks?.[0]?.id,
                   quantity: -item.quantity, 
+                }
+              );
+            }
+          }
+
+          revalidateTag(userData?.id as string);
+        }
+      }
+
+
+      if (newStatus === "completed") {
+        const order = orders.find((o) => o.id === orderId);
+        if (order) {
+          for (const item of order.items) {
+            if (item.stocks?.[0]?.id) {
+              await fetchFromHasura(
+                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
+                  update_stocks_by_pk(
+                    pk_columns: {id: $stockId},
+                    _inc: {stock_quantity: $quantity}
+                  ) {
+                    id
+                    stock_quantity
+                  }
+                }`,
+                {
+                  stockId: item.stocks?.[0]?.id,
+                  quantity: -item.quantity,
+                }
+              );
+            }
+          }
+
+          revalidateTag(userData?.id as string);
+        }
+      }
+
+
+      if (newStatus === "completed") {
+        const order = orders.find((o) => o.id === orderId);
+        if (order) {
+          for (const item of order.items) {
+            if (item.stocks?.[0]?.id) {
+              await fetchFromHasura(
+                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
+                  update_stocks_by_pk(
+                    pk_columns: {id: $stockId},
+                    _inc: {stock_quantity: $quantity}
+                  ) {
+                    id
+                    stock_quantity
+                  }
+                }`,
+                {
+                  stockId: item.stocks?.[0]?.id,
+                  quantity: -item.quantity, 
+                }
+              );
+            }
+          }
+
+          revalidateTag(userData?.id as string);
+        }
+      }
+
+
+      if (newStatus === "completed") {
+        const order = orders.find((o) => o.id === orderId);
+        if (order) {
+          for (const item of order.items) {
+            if (item.stocks?.[0]?.id) {
+              await fetchFromHasura(
+                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
+                  update_stocks_by_pk(
+                    pk_columns: {id: $stockId},
+                    _inc: {stock_quantity: $quantity}
+                  ) {
+                    id
+                    stock_quantity
+                  }
+                }`,
+                {
+                  stockId: item.stocks?.[0]?.id,
+                  quantity: -item.quantity,
                 }
               );
             }
@@ -380,7 +493,7 @@ const OrdersTab = () => {
 
     const unsubscribe = subscribeOrders((allOrders) => {
       const prevOrders = prevOrdersRef.current;
-      
+
       // Count new pending orders
       const newTableOrders = allOrders.filter(
         (order) =>
@@ -504,6 +617,9 @@ const OrdersTab = () => {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="table" className="relative">
+            Table Orders
+            {newOrders.table && (
           <TabsTrigger value="table" className="relative">
             Table Orders
             {newOrders.table && (
