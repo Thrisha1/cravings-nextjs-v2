@@ -13,7 +13,7 @@ export default async function PartnerQrCodesPage({
   searchParams: SearchParams;
 }) {
   const { partnerId } = await params;
-  const { store_name } = await searchParams;
+  const { store_name = '' } = await searchParams;
   const response = await fetchFromHasura(GET_QR_CODES_BY_PARTNER, {
     partner_id: partnerId,
   });
