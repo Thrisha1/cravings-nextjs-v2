@@ -49,6 +49,7 @@ export interface Order {
   type?: "table_order" | "delivery" | "pos";
   deliveryAddress?: string | null;
   gstIncluded?: number;
+  delivery_charge?: number | null;  // Added this field
   extraCharges?:
     | {
         name: string;
@@ -57,6 +58,14 @@ export interface Order {
         id?: string;
       }[]
     | null;
+}
+
+export interface DeliveryInfo {
+  distance: number;
+  cost: number;
+  ratePerKm: number;
+  restaurantName: string;
+  restaurantAddress: string;
 }
 
 interface HotelOrderState {
@@ -84,6 +93,8 @@ interface OrderState {
     lat: number;
     lng: number;
   } | null;
+  deliveryInfo: DeliveryInfo | null;
+  deliveryCost: number | null;
 
   setHotelId: (id: string) => void;
   addItem: (item: HotelDataMenus) => void;
@@ -97,10 +108,11 @@ interface OrderState {
     qrId?: string,
     gstIncluded?: number,
     extraCharges?: {
-      name: string | undefined;
-      amount: number | undefined;
+      name: string;
+      amount: number;
       charge_type?: string;
-    }
+    } | null,
+    deliveryCharge?: number
   ) => Promise<Order | null>;
   getCurrentOrder: () => HotelOrderState;
   fetchOrderOfPartner: (partnerId: string) => Promise<Order[] | null>;
@@ -114,6 +126,8 @@ interface OrderState {
   subscribeUserOrders: (callback?: (orders: Order[]) => void) => () => void;
   deleteOrder: (orderId: string) => Promise<boolean>;
   setOpenOrderDrawer: (open: boolean) => void;
+  setDeliveryInfo: (info: DeliveryInfo | null) => void;
+  setDeliveryCost: (cost: number | null) => void;
 }
 
 const useOrderStore = create(
@@ -130,6 +144,8 @@ const useOrderStore = create(
       totalPrice: 0,
       userOrders: [],
       open_order_drawer: false,
+      deliveryInfo: null,
+      deliveryCost: null,
       coordinates: null,
 
       setUserCoordinates: (coords) => {
@@ -157,7 +173,8 @@ const useOrderStore = create(
               partner: order.partner,
               userId: order.user_id,
               gstIncluded: order.gst_included,
-              extraCharges: order.extra_charges,
+              extraCharges: order.extra_charges || [],  // Handle null case
+              delivery_charge: order.delivery_charge,  // Include delivery_charge
               user: order.user,
               items: order.order_items.map((i: any) => ({
                 id: i.item.id,
@@ -167,7 +184,7 @@ const useOrderStore = create(
                 category: i.menu?.category,
               })),
             }));
-
+      
             if (allOrders) {
               set({ userOrders: allOrders });
               if (callback) callback(allOrders);
@@ -177,7 +194,7 @@ const useOrderStore = create(
             console.error("Subscription error:", error);
           },
         });
-
+      
         return unsubscribe;
       },
 
@@ -202,7 +219,8 @@ const useOrderStore = create(
               deliveryAddress: order.delivery_address,
               partnerId: order.partner_id,
               gstIncluded: order.gst_included,
-              extraCharges: order.extra_charges,
+              extraCharges: order.extra_charges || [],  // Handle null case
+              delivery_charge: order.delivery_charge,  // Include delivery_charge
               userId: order.user_id,
               user: order.user,
               items: order.order_items.map((i: any) => ({
@@ -500,7 +518,12 @@ const useOrderStore = create(
         tableNumber,
         qrId,
         gstIncluded,
-        extraCharges
+        extraCharges?: {
+          name: string;
+          amount: number;
+          charge_type?: string;
+        } | null,
+        deliveryCharge?: number
       ) => {
         try {
           const state = get();
@@ -526,14 +549,34 @@ const useOrderStore = create(
 
           const type = (tableNumber ?? 0) > 0 ? "table_order" : "delivery";
 
-          const exCharges = [];
+          // Debug logs for extra charges
+          // console.log("🔍 Extra Charges Debug:");
+          // console.log("Extra Charges Input:", extraCharges);
+          // console.log("Extra Charges Name:", extraCharges?.name);
+          // console.log("Extra Charges Amount:", extraCharges?.amount);
 
-          if (extraCharges?.name && extraCharges?.amount) {
+          // Include all extra charges with IDs
+          let exCharges = [];
+    
+          // Add any provided extra charges
+          if (extraCharges) {
             exCharges.push({
               ...extraCharges,
               id: crypto.randomUUID(),
             });
           }
+
+          if (type === "delivery" && deliveryCharge && deliveryCharge > 0) {
+            exCharges.push({
+              name: "Delivery Charge",
+              amount: deliveryCharge,
+              charge_type: "FLAT_FEE",
+              id: crypto.randomUUID(),
+            });
+          } 
+
+          const subtotal = currentOrder.totalPrice;
+          console.log("total price",currentOrder.totalPrice);
 
           const grandTotal =
             currentOrder.totalPrice +
@@ -544,14 +587,16 @@ const useOrderStore = create(
                 | "PER_ITEM"
                 | "FLAT_FEE"
             ) +
-            (gstIncluded || 0);
+            (gstIncluded || 0) +
+            (deliveryCharge || 0);
 
           const createdAt = new Date().toISOString();
+          
           const orderResponse = await fetchFromHasura(createOrderMutation, {
             id: currentOrder.orderId,
-            totalPrice: grandTotal,
+            totalPrice: subtotal,
             gst_included: gstIncluded,
-            extra_charges: exCharges || null,
+            extra_charges: exCharges.length > 0 ? exCharges : null,  // Use null when empty to avoid [] 
             createdAt,
             tableNumber: tableNumber || null,
             qrId: qrId || null,
@@ -660,6 +705,9 @@ const useOrderStore = create(
                 status
                 partner_id
                 user_id
+                gst_included
+                extra_charges
+                delivery_charge
                 user {
                   full_name
                   phone
@@ -699,6 +747,9 @@ const useOrderStore = create(
             deliveryAddress: order.delivery_address,
             partnerId: order.partner_id,
             userId: order.user_id,
+            gstIncluded: order.gst_included,
+            extraCharges: order.extra_charges || [],
+            delivery_charge: order.delivery_charge,
             user: order.user,
             items: order.order_items.map((item: any) => ({
               id: item.id,
@@ -745,6 +796,10 @@ const useOrderStore = create(
       },
 
       setOpenOrderDrawer: (open: boolean) => set({ open_order_drawer: open }),
+
+      setDeliveryInfo: (info: DeliveryInfo | null) => set({ deliveryInfo: info }),
+
+      setDeliveryCost: (cost: number | null) => set({ deliveryCost: cost }),
     }),
     {
       name: "order-storage",
