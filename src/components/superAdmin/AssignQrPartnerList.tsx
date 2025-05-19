@@ -34,8 +34,8 @@ export function AssignQrPartnerList({ initialHotels }: { initialHotels: Hotel[] 
     );
   };
 
-  const handleViewQrCodes = (partnerId: string) => {
-    router.push(`/superadmin/${partnerId}/qrcodes`);
+  const handleViewQrCodes = (partnerId: string,store_name:string) => {
+    router.push(`/superadmin/${partnerId}/qrcodes?store_name=${store_name}`);
   };
 
   return (
@@ -71,7 +71,7 @@ export function AssignQrPartnerList({ initialHotels }: { initialHotels: Hotel[] 
                 <TableCell className="flex space-x-2">
                   <Button 
                     variant="outline"
-                    onClick={() => handleViewQrCodes(hotel.id)}
+                    onClick={() => handleViewQrCodes(hotel.id,hotel.store_name)}
                   >
                     View QR Codes
                   </Button>
