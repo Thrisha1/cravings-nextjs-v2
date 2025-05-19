@@ -42,6 +42,7 @@ const OrdersTab = () => {
   const [showOnlyPending, setShowOnlyPending] = useState<boolean>(true);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest");
   const [activeTab, setActiveTab] = useState<"table" | "delivery">("delivery");
+  const [activeTab, setActiveTab] = useState<"table" | "delivery">("delivery");
   const [newOrders, setNewOrders] = useState({ table: false, delivery: false });
   const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
   const [newOrderAlert, setNewOrderAlert] = useState({
@@ -179,7 +180,6 @@ const OrdersTab = () => {
       if (newStatus === "completed") {
         const order = orders.find((o) => o.id === orderId);
         if (order) {
-
           for (const item of order.items) {
             if (item.stocks?.[0]?.id) {
               await fetchFromHasura(
@@ -194,7 +194,7 @@ const OrdersTab = () => {
                 }`,
                 {
                   stockId: item.stocks?.[0]?.id,
-                  quantity: -item.quantity, 
+                  quantity: -item.quantity,
                 }
               );
             }
@@ -263,7 +263,7 @@ const OrdersTab = () => {
 
     const unsubscribe = subscribeOrders((allOrders) => {
       const prevOrders = prevOrdersRef.current;
-      
+
       // Count new pending orders
       const newTableOrders = allOrders.filter(
         (order) =>

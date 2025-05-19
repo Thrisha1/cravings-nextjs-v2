@@ -8,8 +8,9 @@ import {
   Pencil,
   Trash2,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
-import { Partner, useAuthStore } from "@/store/authStore";
+import { GeoLocation, Partner, useAuthStore } from "@/store/authStore";
 import { useLocationStore } from "@/store/geolocationStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -49,11 +50,18 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { HotelData, SocialLinks } from "../hotels/[...id]/page";
 import { getSocialLinks } from "@/lib/getSocialLinks";
-import { FeatureFlags, getFeatures, revertFeatureToString } from "@/lib/getFeatures";
+import {
+  FeatureFlags,
+  getFeatures,
+  revertFeatureToString,
+} from "@/lib/getFeatures";
 import { updateAuthCookie } from "../auth/actions";
+import { DeliveryRules } from "@/store/orderStore";
+import { Label } from "@/components/ui/label";
+
 
 interface GeoJSONPoint {
-  type: 'Point';
+  type: "Point";
   coordinates: [number, number];
 }
 
@@ -77,10 +85,10 @@ export default function ProfilePage() {
     error: geoError,
     getLocation,
   } = useLocationStore();
-  const [deliveryRate, setDeliveryRate] = useState<number>(0);
+  const [deliveryRate, setDeliveryRate] = useState(0);
   const [geoLocation, setGeoLocation] = useState({
-    latitude: "",
-    longitude: "",
+    latitude: 0,
+    longitude: 0,
   });
   const { claimedOffers } = useClaimedOffersStore();
   const router = useRouter();
@@ -99,6 +107,7 @@ export default function ProfilePage() {
     deliveryRate: false,
     instaLink: false,
     gst: false,
+    deliverySettings: false,
   });
   const [isEditing, setIsEditing] = useState({
     upiId: false,
@@ -111,6 +120,7 @@ export default function ProfilePage() {
     deliveryRate: false,
     instaLink: false,
     gst: false,
+    deliverySettings : false,
   });
   const [placeId, setPlaceId] = useState("");
   const [gst, setGst] = useState({
@@ -119,6 +129,11 @@ export default function ProfilePage() {
     enabled: false,
   });
   const [description, setDescription] = useState("");
+  const [deliveryRules, setDeliveryRules] = useState<DeliveryRules>({
+    delivery_radius: 5,
+    first_km_free: 0,
+    is_fixed_rate: false,
+  });
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [whatsappNumbers, setWhatsappNumbers] = useState<
     { number: string; area: string }[]
@@ -149,14 +164,7 @@ export default function ProfilePage() {
       setUpiId(userData.upi_id || "");
       setPlaceId(userData.place_id || "");
       setDescription(userData.description || "");
-      
-      // Debug log before setting delivery rate
-      console.log("Debug - Setting delivery rate:", userData.delivery_rate);
-      const deliveryRateValue = typeof userData.delivery_rate === 'number' ? userData.delivery_rate : 
-                              typeof userData.delivery_rate === 'string' ? parseFloat(userData.delivery_rate) : 0;
-      setDeliveryRate(deliveryRateValue);
-      console.log("Debug - Delivery rate set to:", deliveryRateValue);
-
+      setDeliveryRate(userData.delivery_rate || 0);
       setCurrency(
         Currencies.find(
           (curr) => curr.value === userData.currency
@@ -185,59 +193,26 @@ export default function ProfilePage() {
         enabled: (userData.gst_percentage || 0) > 0 ? true : false,
       });
       setIsShopOpen(userData.is_shop_open);
+      setDeliveryRules({
+        delivery_radius: userData.delivery_rules?.delivery_radius || 5,
+        first_km_free: userData.delivery_rules?.first_km_free || 0,
+        is_fixed_rate: userData.delivery_rules?.is_fixed_rate || false,
+      });
+      setGeoLocation({
+        latitude: userData.geo_location.coordinates[1],
+        longitude: userData.geo_location.coordinates[0],
+      })
+    }
+  }, [userData]);
 
-      // Debug log before setting geo location
-      // console.log("Debug - Setting geo location:", userData.geo_location);
-      
-      // Initialize location from userData.geo_location
-      if (userData.geo_location) {
-        try {
-          let lat, lng;
-          const geoLocationData = userData.geo_location;
-          console.log("Debug - Geo location data type:", typeof geoLocationData);
+  useEffect(() => {
+    if (userData?.role === "partner") {
+      console.log("User Data:", userData?.role, userData?.feature_flags);
 
-          if (typeof geoLocationData === 'string') {
-            // Handle string format (SRID or GeoJSON string)
-            if (geoLocationData.includes('POINT')) {
-              // Handle SRID format: SRID=4326;POINT(lng lat)
-              const match = geoLocationData.match(/POINT\(([^ ]+) ([^)]+)\)/);
-              console.log("Debug - POINT match:", match);
-              if (match) {
-                [, lng, lat] = match;
-              }
-            } else {
-              try {
-                // Handle GeoJSON string format
-                const geoJson = JSON.parse(geoLocationData) as GeoJSONPoint;
-                if (geoJson.type === 'Point' && Array.isArray(geoJson.coordinates)) {
-                  [lng, lat] = geoJson.coordinates;
-                }
-              } catch (e) {
-                console.error("Debug - Failed to parse GeoJSON string:", e);
-              }
-            }
-          } else if (typeof geoLocationData === 'object') {
-            // Handle object format (GeoJSON object)
-            const geoJson = geoLocationData as GeoJSONPoint;
-            if (geoJson.type === 'Point' && Array.isArray(geoJson.coordinates)) {
-              [lng, lat] = geoJson.coordinates;
-            }
-          }
-          
-          console.log("Debug - Extracted coordinates:", { lat, lng });
-          
-          if (lat && lng) {
-            const newGeoLocation = {
-              latitude: lat.toString(),
-              longitude: lng.toString()
-            };
-            console.log("Debug - Setting new geo location:", newGeoLocation);
-            setGeoLocation(newGeoLocation);
-          }
-        } catch (error) {
-          console.error('Debug - Error parsing location:', error);
-        }
-      }
+      const feature = getFeatures(userData?.feature_flags as string);
+
+      setUserFeatures(feature);
+      console.log(feature);
     }
   }, [userData]);
 
@@ -248,10 +223,15 @@ export default function ProfilePage() {
       geoLocation,
       isEditing: {
         deliveryRate: isEditing.deliveryRate,
-        geoLocation: isEditing.geoLocation
-      }
+        geoLocation: isEditing.geoLocation,
+      },
     });
-  }, [deliveryRate, geoLocation, isEditing.deliveryRate, isEditing.geoLocation]);
+  }, [
+    deliveryRate,
+    geoLocation,
+    isEditing.deliveryRate,
+    isEditing.geoLocation,
+  ]);
 
   const profile = {
     name:
@@ -300,39 +280,41 @@ export default function ProfilePage() {
   const handleGetCurrentLocation = async () => {
     try {
       console.log("Fetching location...");
-      
+
       const newCoords = await getLocation();
-      
+
       if (newCoords) {
         console.log("Location received:", newCoords);
         setGeoLocation({
-          latitude: newCoords.lat.toString(),
-          longitude: newCoords.lng.toString()
+          latitude: newCoords.lat,
+          longitude: newCoords.lng,
         });
       }
     } catch (error) {
       console.error("Error getting location:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to get location");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to get location"
+      );
     }
   };
-  
+
   // Also add this effect to watch store changes
   useEffect(() => {
     console.log("Store changed:", {
       coords,
       geoString,
-      error
+      error,
     });
-  
+
     if (coords && isEditing.geoLocation) {
       console.log("Updating geoLocation from store:", {
         lat: coords.lat,
-        lng: coords.lng
+        lng: coords.lng,
       });
-  
+
       setGeoLocation({
-        latitude: coords.lat.toString(),
-        longitude: coords.lng.toString()
+        latitude: coords.lat,
+        longitude: coords.lng,
       });
     }
   }, [coords, geoString, error, isEditing.geoLocation]);
@@ -348,8 +330,8 @@ export default function ProfilePage() {
       }
 
       // Convert to numbers and validate ranges
-      const lat = parseFloat(latitude);
-      const lng = parseFloat(longitude);
+      const lat = latitude;
+      const lng = longitude;
 
       if (isNaN(lat) || isNaN(lng)) {
         toast.error("Please enter valid numeric coordinates");
@@ -367,31 +349,33 @@ export default function ProfilePage() {
         return;
       }
 
-      // Create GeoJSON format for the point
-      const geoJsonPoint = {
+      // Create the correct format for geography type
+      // Using SRID=4326;POINT(longitude latitude) format
+      const geographyFormat = {
         type: "Point",
-        coordinates: [lng, lat],
-        crs: {
-          type: "name",
-          properties: {
-            name: "urn:ogc:def:crs:OGC:1.3:CRS84"
-          }
-        }
-      };
+        coordinates: [lng, lat],  
+      } as GeoLocation;
 
-      const geoJsonString = JSON.stringify(geoJsonPoint);
-      console.log("Saving location with format:", geoJsonString); // Debug log
 
       setIsSaving((prev) => ({ ...prev, geoLocation: true }));
       toast.loading("Updating location...");
 
-      const response = await fetchFromHasura(updatePartnerMutation, {
+      // First verify the mutation
+      const mutation = updatePartnerMutation;
+      console.log("Mutation:", mutation); // Debug log
+      console.log("Update data:", {
         id: userData?.id,
         updates: {
-          geo_location: geoJsonString,
+          geo_location: geographyFormat,
+        },
+      }); // Debug log
+
+      const response = await fetchFromHasura(mutation, {
+        id: userData?.id,
+        updates: {
+          geo_location: geographyFormat,
         },
       });
-      revalidateTag(userData?.id as string);
 
       console.log("Hasura response:", response); // Debug log
 
@@ -399,8 +383,7 @@ export default function ProfilePage() {
         throw new Error("No response from server");
       }
 
-      // Update local state with the SRID format for display
-      const geographyFormat = `SRID=4326;POINT(${lng} ${lat})`;
+      // Update local state
       setState({ geo_location: geographyFormat });
       toast.dismiss();
       toast.success("Location updated successfully!");
@@ -408,8 +391,7 @@ export default function ProfilePage() {
     } catch (error) {
       console.error("Error updating location:", error);
       toast.dismiss();
-      
-      // Handle specific error cases
+
       if (error instanceof Error) {
         if (error.message.includes("permission denied")) {
           toast.error("You don't have permission to update the location");
@@ -425,7 +407,6 @@ export default function ProfilePage() {
       setIsSaving((prev) => ({ ...prev, geoLocation: false }));
     }
   };
-  
 
   const handleSaveUpiId = async () => {
     if (!userData) return;
@@ -967,39 +948,52 @@ export default function ProfilePage() {
       });
     }
   };
+  // (Delivery Rate)
 
-  const handleSaveDeliveryRate = async () => {
+  const handleSaveDeliverySettings = async () => {
     try {
       if (!userData) return;
-      toast.loading("Updating delivery rate...");
+      toast.loading("Updating delivery settings...");
 
       setIsSaving((prev) => ({ ...prev, deliveryRate: true }));
 
       // Validate delivery rate is a positive number
-      if (isNaN(deliveryRate) || deliveryRate < 0) {
+      const rate = deliveryRate;
+      if (isNaN(rate) || rate < 0) {
         toast.dismiss();
-        toast.error("Please enter a valid delivery rate (must be a positive number)");
+        toast.error(
+          "Please enter a valid delivery rate (must be a positive number)"
+        );
         return;
       }
+
+      // Prepare delivery rules object with defaults if not set
+      const rules = {
+        delivery_radius: deliveryRules?.delivery_radius || 5, // default 5km
+        first_km_free: deliveryRules?.first_km_free || false,
+        is_fixed_rate: deliveryRules?.is_fixed_rate || false,
+      } as DeliveryRules;
 
       await fetchFromHasura(updatePartnerMutation, {
         id: userData?.id,
         updates: {
           delivery_rate: deliveryRate,
+          delivery_rules : rules
         },
       });
-      
 
       revalidateTag(userData?.id as string);
-      setState({ delivery_rate: deliveryRate });
+      setState({ delivery_rate: deliveryRate , delivery_rules : rules }); 
       toast.dismiss();
-      toast.success("Delivery rate updated successfully!");
+      toast.success("Delivery settings updated successfully!");
       setIsEditing((prev) => ({ ...prev, deliveryRate: false }));
     } catch (error) {
-      console.error("Error updating delivery rate:", error);
+      console.error("Error updating delivery settings:", error);
       toast.dismiss();
       toast.error(
-        error instanceof Error ? error.message : "Failed to update delivery rate"
+        error instanceof Error
+          ? error.message
+          : "Failed to update delivery settings"
       );
     } finally {
       setIsSaving((prev) => ({ ...prev, deliveryRate: false }));
@@ -1082,7 +1076,13 @@ export default function ProfilePage() {
               {userData?.role === "partner" && (
                 <>
                   <Link
-                    href={`${userData?.business_type === 'restaurant' ? '/hotels' : '/business'}/${userData?.store_name?.replace(/\s+/g, '-')}/${userData?.id}`}
+                    href={`${
+                      userData?.business_type === "restaurant"
+                        ? "/hotels"
+                        : "/business"
+                    }/${userData?.store_name?.replace(/\s+/g, "-")}/${
+                      userData?.id
+                    }`}
                     className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
                   >
                     <Tag className="sm:size-4 size-8 mr-2" />
@@ -1197,7 +1197,6 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="bio" className="text-lg font-semibold">
                   Bio
@@ -1252,8 +1251,6 @@ export default function ProfilePage() {
                   This Bio will be used for your restaurant profile
                 </p>
               </div>
-              
-
               {/* <div className="space-y-2 pt-4">
                 <label htmlFor="upiId" className="text-lg font-semibold">
                   UPI ID
@@ -1305,7 +1302,6 @@ export default function ProfilePage() {
                   This UPI ID will be used for receiving payments from customers
                 </p>
               </div> */}
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="placeId" className="text-lg font-semibold">
                   Place ID
@@ -1361,134 +1357,229 @@ export default function ProfilePage() {
                   </Link>
                 </p>
               </div>
-
-              
-            
-
               {/* Geo Location Section */}
-              <div className="space-y-2 pt-4">
-                <label htmlFor="location" className="text-lg font-semibold">
+              <div className="space-y-4 w-full">
+                <label htmlFor="placeId" className="text-lg font-semibold">
                   Location
                 </label>
-                <div className="flex gap-2">
-                  {isEditing.geoLocation ? (
-                    <div className="grid gap-4 w-full">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm text-gray-600">Latitude</label>
-                          <Input
-                            type="text"
-                            value={geoLocation.latitude}
-                            onChange={(e) => setGeoLocation(prev => ({
-                              ...prev,
-                              latitude: e.target.value
-                            }))}
-                            placeholder="Enter latitude"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-gray-600">Longitude</label>
-                          <Input
-                            type="text"
-                            value={geoLocation.longitude}
-                            onChange={(e) => setGeoLocation(prev => ({
-                              ...prev,
-                              longitude: e.target.value
-                            }))}
-                            placeholder="Enter longitude"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleGetCurrentLocation}
-                          variant="outline"
-                          disabled={isLoading}
-                        >
-                          {isLoading ? "Getting Location..." : "Get Current Location"}
-                        </Button>
-                        <Button
-                          onClick={handleSaveGeoLocation}
-                          disabled={isSaving.geoLocation}
-                          className="bg-orange-600 hover:bg-orange-700 text-white"
-                        >
-                          {isSaving.geoLocation ? "Saving..." : "Save"}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between items-center w-full">
-                      <span className="text-gray-700">
-                        {geoLocation.latitude && geoLocation.longitude 
-                          ? `Lat: ${parseFloat(geoLocation.latitude).toFixed(6)}, Long: ${parseFloat(geoLocation.longitude).toFixed(6)}`
-                          : "No location set"}
-                      </span>
-                      <Button
-                        onClick={() => {
-                          console.log("Debug - Edit location clicked, current value:", geoLocation);
-                          setIsEditing((prev) => ({ ...prev, geoLocation: true }));
-                        }}
-                        variant="ghost"
-                        className="hover:bg-orange-100"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-600">Latitude</label>
+                    <Input
+                      type="text"
+                      value={geoLocation.latitude}
+                      onChange={(e) =>
+                        setGeoLocation((prev) => ({
+                          ...prev,
+                          latitude: parseFloat(e.target.value),
+                        }))
+                      }
+                      placeholder="Enter latitude"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600">Longitude</label>
+                    <Input
+                      type="text"
+                      value={geoLocation.longitude}
+                      onChange={(e) =>
+                        setGeoLocation((prev) => ({
+                          ...prev,
+                          longitude: parseFloat(e.target.value),
+                        }))
+                      }
+                      placeholder="Enter longitude"
+                    />
+                  </div>
                 </div>
-                <p className="text-sm text-gray-500">
-                  This location will be used to show your restaurant on the map
-                </p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleGetCurrentLocation}
+                    variant="outline"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Getting Location..." : "Get Current Location"}
+                  </Button>
+                  <Button
+                    onClick={handleSaveGeoLocation}
+                    disabled={isSaving.geoLocation}
+                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                  >
+                    {isSaving.geoLocation ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+                {error && <p className="text-sm text-red-500">{error}</p>}
               </div>
 
-              <div className="space-y-2 pt-4">
-                <label htmlFor="deliveryRate" className="text-lg font-semibold">
-                  Delivery Rate
-                </label>
-                <div className="flex gap-2">
-                  {isEditing.deliveryRate ? (
-                    <>
-                      <Input
-                        id="deliveryRate"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="Enter delivery rate"
-                        value={deliveryRate}
-                        onChange={(e) => setDeliveryRate(parseFloat(e.target.value))}
-                        className="flex-1"
-                      />
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Delivery Settings</h3>
+                  {isEditing.deliverySettings ? (
+                    <div className="flex gap-2">
                       <Button
-                        onClick={handleSaveDeliveryRate}
-                        disabled={isSaving.deliveryRate || isNaN(deliveryRate)}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                        variant="outline"
+                        onClick={() =>
+                          setIsEditing({
+                            ...isEditing,
+                            deliverySettings: false,
+                          })
+                        }
                       >
-                        {isSaving.deliveryRate ? "Saving..." : "Save"}
+                        Cancel
                       </Button>
-                    </>
+                      <Button
+                        onClick={handleSaveDeliverySettings}
+                        disabled={isSaving.deliverySettings}
+                      >
+                        {isSaving.deliverySettings ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          "Save Changes"
+                        )}
+                      </Button>
+                    </div>
                   ) : (
-                    <div className="flex justify-between items-center w-full">
-                      <span className="text-gray-700">
-                        {deliveryRate !== undefined && deliveryRate !== null
-                          ? `${currency.value}${deliveryRate.toFixed(2)}`
-                          : "No delivery rate set"}
-                      </span>
-                      <Button
-                        onClick={() => {
-                          console.log("Debug - Edit delivery rate clicked, current value:", deliveryRate);
-                          setIsEditing((prev) => ({ ...prev, deliveryRate: true }));
-                        }}
-                        variant="ghost"
-                        className="hover:bg-orange-100"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
+                    <Button
+                      onClick={() =>
+                        setIsEditing({ ...isEditing, deliverySettings: true })
+                      }
+                      variant="ghost"
+                      className="gap-2"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Edit
+                    </Button>
+                  )}
+                </div>
+
+                {/* Delivery Rate */}
+                <div className="space-y-2">
+                  <Label>
+                    Delivery Rate ({currency.value})
+                  </Label>
+                  {isEditing.deliverySettings ? (
+                    <Input
+                      id="deliveryRate"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={deliveryRate}
+                      onChange={(e) => setDeliveryRate(Number(e.target.value))}
+                    />
+                  ) : (
+                    <div className="p-3 rounded-md border bg-muted/50">
+                      {deliveryRate ? deliveryRate.toFixed(2) : "Not set"}
                     </div>
                   )}
                 </div>
-                <p className="text-sm text-gray-500">
-                  This delivery rate will be used for calculating delivery charges for orders
-                </p>
+
+                {/* Delivery Rules */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Delivery Radius */}
+                  <div className="space-y-2">
+                    <Label >Delivery Radius (km)</Label>
+                    {isEditing.deliverySettings ? (
+                      <Input
+                        id="deliveryRadius"
+                        type="number"
+                        min="1"
+                        value={deliveryRules.delivery_radius}
+                        onChange={(e) =>
+                          setDeliveryRules({
+                            ...deliveryRules,
+                            delivery_radius: Number(e.target.value),
+                          })
+                        }
+                      />
+                    ) : (
+                      <div className="p-3 rounded-md border bg-muted/50">
+                        {deliveryRules.delivery_radius} km
+                      </div>
+                    )}
+                  </div>
+
+                  {/* First KM Free */}
+                  <div className="space-y-2">
+                    <Label>First KM Free</Label>
+                    {isEditing.deliverySettings ? (
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={deliveryRules.first_km_free}
+                        onChange={(e) =>
+                          setDeliveryRules({
+                            ...deliveryRules,
+                            first_km_free: Number(e.target.value),
+                          })
+                        }
+                        placeholder="Enter first free KM"
+                      />
+                    ) : (
+                      <div className="p-3 rounded-md border bg-muted/50">
+                        {deliveryRules.first_km_free} km
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Rate Type */}
+                  <div className="space-y-2">
+                    <Label>Rate Type</Label>
+                    {isEditing.deliverySettings ? (
+                      <Select
+                        value={
+                          deliveryRules.is_fixed_rate ? "fixed" : "variable"
+                        }
+                        onValueChange={(value) =>
+                          setDeliveryRules({
+                            ...deliveryRules,
+                            is_fixed_rate: value === "fixed",
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select rate type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="fixed">Fixed Rate</SelectItem>
+                          <SelectItem value="variable">
+                            Variable (per km)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="p-3 rounded-md border bg-muted/50">
+                        {deliveryRules.is_fixed_rate
+                          ? "Fixed Rate"
+                          : "Variable (per km)"}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Help Text */}
+                {!isEditing.deliverySettings && (
+                  <p className="text-sm text-muted-foreground">
+                    {deliveryRules.is_fixed_rate
+                      ? `Flat rate of ${currency.value}${deliveryRate.toFixed(
+                          2
+                        )} will be applied for deliveries within ${
+                          deliveryRules.delivery_radius
+                        } km`
+                      : `Variable rate starting from ${
+                          currency.value
+                        }${deliveryRate.toFixed(
+                          2
+                        )} will be applied for deliveries within ${
+                          deliveryRules.delivery_radius
+                        } km${
+                          deliveryRules.first_km_free ? " (first km free)" : ""
+                        }`}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2 pt-4">
@@ -1619,7 +1710,6 @@ export default function ProfilePage() {
                     : "This Whatsapp Number will be used for receiving messages from customers"}
                 </p>
               </div>
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="instaLink" className="text-lg font-semibold">
                   Instagram Link
@@ -1668,7 +1758,6 @@ export default function ProfilePage() {
                   This Instagram Link will be used for your restaurant profile
                 </p>
               </div>
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="footNote" className="text-lg font-semibold">
                   Footnote
@@ -1717,33 +1806,51 @@ export default function ProfilePage() {
                   This Footnote will be used for your restaurant profile
                 </p>
               </div>
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="gstNo" className="text-lg font-semibold">
                   GST Settings
                 </label>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Enable GST Calculation</span>
+                  <span className="text-sm text-gray-500">
+                    Enable GST Calculation
+                  </span>
                   <Switch
                     checked={gst.enabled}
-                    onCheckedChange={(checked) => setGst(prev => ({...prev, enabled: checked}))}
+                    onCheckedChange={(checked) =>
+                      setGst((prev) => ({ ...prev, enabled: checked }))
+                    }
                   />
                 </div>
                 {gst.enabled && (
                   <div className="grid gap-2">
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label htmlFor="gstNo" className="text-sm text-gray-600">GST Number</label>
+                        <label
+                          htmlFor="gstNo"
+                          className="text-sm text-gray-600"
+                        >
+                          GST Number
+                        </label>
                         <Input
                           id="gstNo"
                           type="text"
                           placeholder="Enter GST Number"
                           value={gst.gst_no}
-                          onChange={(e) => setGst(prev => ({...prev, gst_no: e.target.value}))}
+                          onChange={(e) =>
+                            setGst((prev) => ({
+                              ...prev,
+                              gst_no: e.target.value,
+                            }))
+                          }
                         />
                       </div>
                       <div>
-                        <label htmlFor="gstPercent" className="text-sm text-gray-600">GST Percentage (%)</label>
+                        <label
+                          htmlFor="gstPercent"
+                          className="text-sm text-gray-600"
+                        >
+                          GST Percentage (%)
+                        </label>
                         <Input
                           id="gstPercent"
                           type="number"
@@ -1751,7 +1858,12 @@ export default function ProfilePage() {
                           step="0.01"
                           placeholder="Enter GST Percentage"
                           value={gst.gst_percentage}
-                          onChange={(e) => setGst(prev => ({...prev, gst_percentage: parseFloat(e.target.value) || 0}))}
+                          onChange={(e) =>
+                            setGst((prev) => ({
+                              ...prev,
+                              gst_percentage: parseFloat(e.target.value) || 0,
+                            }))
+                          }
                         />
                       </div>
                     </div>
@@ -1765,7 +1877,6 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
-
               <div className="space-y-2 pt-4">
                 <div className="text-lg font-semibold mb-4">
                   QrCode Settings
@@ -1778,7 +1889,6 @@ export default function ProfilePage() {
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
               </div>
-
               {getFeatures(userData.feature_flags as string)?.stockmanagement
                 .enabled && (
                 <div className="space-y-2 pt-4">
