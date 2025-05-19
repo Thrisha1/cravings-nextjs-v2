@@ -79,7 +79,7 @@ export function AssignQrPartnerList({ initialHotels }: { initialHotels: Hotel[] 
                     partnerId={hotel.id}
                     onSuccess={() => {
                       // Refresh data or handle success
-                      handleViewQrCodes(hotel.id);
+                      handleViewQrCodes(hotel.id,hotel.store_name);
                     }}
                   />
                 </TableCell>
