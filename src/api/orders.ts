@@ -172,12 +172,6 @@ subscription GetPartnerOrders($partner_id: uuid!) {
       quantity
       item
       menu {
-        id
-        name
-        price
-        offers(where: {end_time: {_gt: "now()"}, deletion_status: {_eq: 0}}) {
-          offer_price
-        }
         category {
           name
         }
@@ -228,12 +222,6 @@ subscription GetUserOrders($user_id: uuid!) {
       quantity
       item
       menu {
-        id
-        name
-        price
-        offers(where: {end_time: {_gt: "now()"}, deletion_status: {_eq: 0}}) {
-          offer_price
-        }
         category {
           name
         }
