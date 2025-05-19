@@ -36,9 +36,11 @@ interface QrCode {
 export function QrCodesTable({
   qrCodes: initialQrCodes,
   partnerId,
+  store_name,
 }: {
   qrCodes: QrCode[];
   partnerId: string;
+  store_name: string;
 }) {
   const [qrCodes, setQrCodes] = useState<QrCode[]>(initialQrCodes);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -172,7 +174,7 @@ export function QrCodesTable({
 
   const handleCopyAllLinks = () => {
     const links = qrCodes
-      .map(qr => `https://cravings.live/qrScan/${qr.id}`)
+      .map(qr => `https://cravings.live/qrScan/${store_name.replace(/\s+/g, '-')}/${qr.id}`)
       .join('\n');
     
     navigator.clipboard.writeText(links)
@@ -198,7 +200,7 @@ export function QrCodesTable({
 
       for (let i = 0; i < qrCodes.length; i++) {
         const qr = qrCodes[i];
-        const qrUrl = `https://cravings.live/qrScan/${qr.id}`;
+        const qrUrl = `https://cravings.live/qrScan/${store_name.replace(/\s+/g, '-')}/${qr.id}`;
         
         // Generate QR code as base64
         const base64 = await QRCode.toDataURL(qrUrl);
@@ -241,6 +243,9 @@ export function QrCodesTable({
 
   return (
     <div className="space-y-4">
+      <div className="text-xl font-bold">
+        {store_name}
+      </div>
       <div className="flex justify-end space-x-2">
         <Button onClick={() => setIsBulkGenerateOpen(true)}>Bulk QR Generate</Button>
         <Button onClick={handleCopyAllLinks}>Copy All Links</Button>
