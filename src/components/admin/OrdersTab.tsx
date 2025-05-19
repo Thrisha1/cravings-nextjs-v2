@@ -40,7 +40,7 @@ const OrdersTab = () => {
   const [loading, setLoading] = useState(true);
   const [showOnlyPending, setShowOnlyPending] = useState<boolean>(true);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest");
-  const [activeTab, setActiveTab] = useState<"table" | "delivery">("table");
+  const [activeTab, setActiveTab] = useState<"table" | "delivery">("delivery");
   const [newOrders, setNewOrders] = useState({ table: false, delivery: false });
   const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
   const [newOrderAlert, setNewOrderAlert] = useState({
@@ -117,11 +117,9 @@ const OrdersTab = () => {
 
       if (response.errors) throw new Error(response.errors[0].message);
 
-
       if (newStatus === "completed") {
         const order = orders.find((o) => o.id === orderId);
         if (order) {
-
           for (const item of order.items) {
             if (item.stocks?.[0]?.id) {
               await fetchFromHasura(
@@ -136,7 +134,7 @@ const OrdersTab = () => {
                 }`,
                 {
                   stockId: item.stocks?.[0]?.id,
-                  quantity: -item.quantity, 
+                  quantity: -item.quantity,
                 }
               );
             }
@@ -205,7 +203,7 @@ const OrdersTab = () => {
 
     const unsubscribe = subscribeOrders((allOrders) => {
       const prevOrders = prevOrdersRef.current;
-      
+
       // Count new pending orders
       const newTableOrders = allOrders.filter(
         (order) =>
@@ -311,18 +309,18 @@ const OrdersTab = () => {
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="grid w-full grid-cols-2 mb-6 relative">
-          <TabsTrigger value="table" className="relative">
-            Table Orders
-            {newOrders.table && (
+          <TabsTrigger value="delivery" className="relative">
+            Deliveries
+            {newOrders.delivery && (
               <span className="absolute -top-1 -right-1 h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="delivery" className="relative">
-            Deliveries
-            {newOrders.delivery && (
+          <TabsTrigger value="table" className="relative">
+            Table Orders
+            {newOrders.table && (
               <span className="absolute -top-1 -right-1 h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>

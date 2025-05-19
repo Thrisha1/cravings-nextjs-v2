@@ -3,11 +3,13 @@ import { GET_QR_TABLE } from "@/api/qrcodes";
 import { getAuthCookie } from "@/app/auth/actions";
 import { HotelData } from "@/app/hotels/[...id]/page";
 import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
+import { getFeatures } from "@/lib/getFeatures";
 import { getSocialLinks } from "@/lib/getSocialLinks";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import HotelMenuPage from "@/screens/HotelMenuPage_v2";
 import QrPayment from "@/screens/QrPayment";
 import { Offer } from "@/store/offerStore_hasura";
+import { AlertTriangle } from "lucide-react";
 import { unstable_cache } from "next/cache";
 import React from "react";
 
@@ -30,7 +32,6 @@ const page = async ({
   });
 
   console.log(qr_codes);
-  
 
   const tableNumber = qr_codes[0].table_number;
 
@@ -101,17 +102,49 @@ const page = async ({
     menus: menuItemWithOfferPrice,
   };
 
-  return (
-    <HotelMenuPage
-      socialLinks={socialLinks}
-      auth={auth}
-      hoteldata={hotelDataWithOfferPrice as HotelData}
-      offers={filteredOffers}
-      tableNumber={tableNumber}
-      theme={theme}
-      qrGroup={qr_codes[0].qr_group}
-    />
-  );
+  if (hoteldata) {
+    const features = getFeatures(hoteldata.feature_flags as string);
+    const isOrderingEnabled = features?.ordering.enabled && tableNumber !== 0;
+    const isDeliveryEnabled = features?.delivery.enabled && tableNumber === 0;
+
+    if (isOrderingEnabled || isDeliveryEnabled) {
+      return (
+        <HotelMenuPage
+          socialLinks={socialLinks}
+          auth={auth}
+          hoteldata={hotelDataWithOfferPrice as HotelData}
+          offers={filteredOffers}
+          tableNumber={tableNumber}
+          theme={theme}
+          qrGroup={qr_codes[0].qr_group}
+        />
+      );
+    }
+
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50 p-4">
+        <div className="w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+          <div className="flex flex-col space-y-4 text-center">
+            <div className="space-y-2">
+              <AlertTriangle className="mx-auto h-10 w-10 text-yellow-500" />
+              <h2 className="text-2xl font-bold tracking-tight">
+                Access Restricted
+              </h2>
+              <p className="text-muted-foreground">
+                {tableNumber === 0
+                  ? "Delivery is not enabled for this hotel."
+                  : "In-restaurant ordering is not enabled for this hotel."}
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Please contact staff for assistance.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // } else {
   //   return <QrPayment />;
   // }
