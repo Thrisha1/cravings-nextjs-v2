@@ -139,13 +139,12 @@ const useOrderStore = create(
               gstIncluded: order.gst_included,
               extraCharges: order.extra_charges,
               user: order.user,
-              items: order.order_items.map((item: any) => ({
-                id: item.id,
-                quantity: item.quantity,
-                name: item.menu?.name || "Unknown",
-                price:
-                  item.menu?.offers?.[0]?.offer_price || item.menu?.price || 0,
-                category: item.menu?.category,
+              items: order.order_items.map((i: any) => ({
+                id: i.item.id,
+                quantity: i.quantity,
+                name: i.item?.name || "Unknown",
+                price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
+                category: i.menu?.category,
               })),
             }));
 
@@ -169,6 +168,8 @@ const useOrderStore = create(
           query: subscriptionQuery,
           variables: { partner_id: partnerId },
           onNext: (data) => {
+            console.log(data);
+
             const allOrders = data.data?.orders.map((order: any) => ({
               id: order.id,
               totalPrice: order.total_price,
@@ -184,14 +185,13 @@ const useOrderStore = create(
               extraCharges: order.extra_charges,
               userId: order.user_id,
               user: order.user,
-              items: order.order_items.map((item: any) => ({
-                id: item.id,
-                quantity: item.quantity,
-                name: item.menu?.name || "Unknown",
-                price:
-                  item.menu?.offers?.[0]?.offer_price || item.menu?.price || 0,
-                category: item.menu?.category,
-                stocks : item.menu?.stocks, 
+              items: order.order_items.map((i: any) => ({
+                id: i.item.id,
+                quantity: i.quantity,
+                name: i.item.name || "Unknown",
+                price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
+                category: i.menu?.category,
+                stocks: i.menu?.stocks,
               })),
             }));
 
@@ -554,6 +554,12 @@ const useOrderStore = create(
                 order_id: orderId,
                 menu_id: item.id,
                 quantity: item.quantity,
+                item: {
+                  id: item.id,
+                  name: item.name,
+                  price: item.price,
+                  offers: item.offers,
+                },
               })),
             }
           );

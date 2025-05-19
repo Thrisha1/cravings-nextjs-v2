@@ -2,7 +2,10 @@ import { create } from "zustand";
 import { MenuItem } from "./menuStore_hasura";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { Partner, useAuthStore } from "./authStore";
-import { getExtraCharge, getGstAmount } from "@/components/hotelDetail/OrderDrawer";
+import {
+  getExtraCharge,
+  getGstAmount,
+} from "@/components/hotelDetail/OrderDrawer";
 import {
   createOrderItemsMutation,
   createOrderMutation,
@@ -13,6 +16,9 @@ import { Order, OrderItem } from "./orderStore";
 
 interface CartItem extends MenuItem {
   quantity: number;
+  offers?: {
+    offer_price: number;
+  }[];
 }
 
 export interface ExtraCharge {
@@ -233,7 +239,14 @@ export const usePOSStore = create<POSState>((set, get) => ({
         0
       );
 
-      const grandTotal = foodSubtotal + getExtraCharge(cartItems as OrderItem[], extraCharges[0]?.amount || 0 , "FLAT_FEE") + getGstAmount(foodSubtotal, gstPercentage);
+      const grandTotal =
+        foodSubtotal +
+        getExtraCharge(
+          cartItems as OrderItem[],
+          extraCharges[0]?.amount || 0,
+          "FLAT_FEE"
+        ) +
+        getGstAmount(foodSubtotal, gstPercentage);
 
       const orderId = crypto.randomUUID();
       const newOrder = {
@@ -248,8 +261,6 @@ export const usePOSStore = create<POSState>((set, get) => ({
         extra_charges: extraCharges,
         gst_included: gstPercentage,
       };
-
-      console.log("New Order:", newOrder);
 
       const orderResponse = await fetchFromHasura(
         createOrderMutation,
@@ -267,6 +278,12 @@ export const usePOSStore = create<POSState>((set, get) => ({
           order_id: orderId,
           menu_id: item.id,
           quantity: item.quantity,
+          item: {
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            offers: item.offers,
+          },
         })),
       });
 

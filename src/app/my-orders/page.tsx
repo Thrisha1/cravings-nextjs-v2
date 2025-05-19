@@ -95,14 +95,12 @@ const Page = () => {
               (sum: number, charge: any) => sum + getExtraCharge(order?.items || [] , charge.amount , charge.charge_type) || 0,
               0
             ) || 0;
-            console.log("Extra Charges Total:", extraChargesTotal);
-            console.log(order.totalPrice);
-            
-            
+
             const grandTotal = order.totalPrice + extraChargesTotal + gstAmount;
 
             return (
               <div
+                id={`order-${order.id}`}
                 key={order.id}
                 className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
               >
