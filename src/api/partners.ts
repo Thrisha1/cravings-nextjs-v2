@@ -34,6 +34,8 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     delivery_status
     id
     description
+    geo_location
+    delivery_rate
     feature_flags
     phone
     whatsapp_numbers

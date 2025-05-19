@@ -22,14 +22,15 @@ const Page = () => {
     if (userData?.id) {
       const unsubscribe = subscribeUserOrders((orders) => {
         setLoading(false);
+        
       });
-
+      console.log("OrderStore here",unsubscribe);
       return () => {
         unsubscribe();
       };
     }
   }, [userData]);
-
+    
   const handleEditOrder = (order: any) => {
     setOrder({
       id: order.id,
@@ -95,8 +96,8 @@ const Page = () => {
               (sum: number, charge: any) => sum + getExtraCharge(order?.items || [] , charge.amount , charge.charge_type) || 0,
               0
             ) || 0;
-            console.log("Extra Charges Total:", extraChargesTotal);
-            console.log(order.totalPrice);
+            // console.log("Extra Charges Total:", extraChargesTotal);
+            // console.log(order.totalPrice);
             
             
             const grandTotal = order.totalPrice + extraChargesTotal + gstAmount;

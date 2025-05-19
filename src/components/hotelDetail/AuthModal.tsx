@@ -7,12 +7,101 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { HotelData } from "@/app/hotels/[...id]/page";
+
+// Define the exact geo_location structure based on the provided format
+interface GeoLocation {
+  type: string;
+  crs: {
+    type: string;
+    properties: {
+      name: string;
+    };
+  };
+  coordinates: number[];
+}
+
+// Instead of extending HotelData, create a separate type for the function parameter
+type DeliveryHotelData = Omit<HotelData, 'geo_location'> & {
+  geo_location: GeoLocation;
+  delivery_rate: string;
+};
 import { Button } from "../ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { getFeatures } from "@/lib/getFeatures";
 import { useLocationStore } from "@/store/geolocationStore";
 import { toast } from "sonner";
 import { Loader2, MapPin } from "lucide-react";
+// import { fetchFromHasura } from "@/lib/hasuraClient";
+// import { usePartnerStore } from "@/store/usePartnerStore";
+
+const calculateDeliveryDistanceAndCost = async (hotelData: DeliveryHotelData) => {
+  console.log("🗺️ Starting delivery distance calculation...");
+  try {
+    // Get delivery data directly from hotelData
+    if (!hotelData?.geo_location?.coordinates || !hotelData?.delivery_rate) {
+      console.error("❌ Restaurant geo_location or delivery_rate not found in hotelData");
+      return null;
+    }
+
+    // Get user coordinates from locationStore
+    const userLocationData = useLocationStore.getState();
+    if (!userLocationData.coords || typeof userLocationData.coords.lng !== 'number' || typeof userLocationData.coords.lat !== 'number') {
+      console.error("❌ Invalid user location format or coordinates");
+      return null;
+    }
+
+    // Extract coordinates
+    const restaurantCoords = hotelData.geo_location.coordinates; // [lng, lat]
+    const userLocation = [userLocationData.coords.lng, userLocationData.coords.lat]; // [lng, lat]
+
+    console.log("📍 Restaurant coordinates:", restaurantCoords);
+    console.log("📍 User coordinates:", userLocation);
+
+    // Calculate distance using Mapbox Directions API
+    const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    if (!mapboxToken) {
+      console.error("❌ Mapbox token not found in environment variables");
+      return null;
+    }
+    
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${userLocation.join(',')};${restaurantCoords.join(',')}?access_token=${mapboxToken}`;
+    console.log("🌐 Calling Mapbox API...");
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    console.log("🗺️ Mapbox API response:", data);
+
+    if (!data.routes || data.routes.length === 0) {
+      console.error("❌ No route found between user and restaurant");
+      return null;
+    }
+
+    // Get distance in kilometers
+    const distanceInKm = data.routes[0].distance / 1000;
+    const deliveryRate = parseFloat(hotelData.delivery_rate);
+    const deliveryCost = distanceInKm * deliveryRate;
+
+    console.log("📏 Distance (km):", distanceInKm);
+    console.log("💰 Delivery rate per km:", deliveryRate);
+    console.log("💵 Calculated delivery cost:", deliveryCost);
+
+    // Prepare delivery information object
+    const deliveryInfo = {
+      distance: distanceInKm,
+      cost: deliveryCost,
+      ratePerKm: deliveryRate,
+      calculatedAt: new Date().toISOString(),
+      restaurantName: hotelData.store_name || hotelData.name,
+      restaurantAddress: hotelData.location,
+      
+    };
+
+    return deliveryInfo;
+  } catch (error) {
+    console.error("❌ Error calculating delivery distance:", error);
+    return null;
+  }
+};
 
 const AuthModal = ({
   styles,
@@ -29,8 +118,6 @@ const AuthModal = ({
   const { coords, error: geoError, getLocation, isLoading: isGeoLoading } = useLocationStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Removed the useEffect that was automatically fetching location when modal opens
-
   const handleSubmit = async () => {
     if (!phoneNumber) {
       toast.error("Please enter your phone number");
@@ -42,23 +129,47 @@ const AuthModal = ({
       return;
     }
 
-    if (!coords) {
-      toast.error("Please allow location access to continue");
-      return;
+    if (!tableNumber && !coords) {
+       toast.error("Please allow location access to calculate delivery cost");
+       return;
     }
 
     setIsSubmitting(true);
     try {
+      let deliveryCalculationResult = null;
+      // Calculate delivery distance and cost for delivery orders
+      if (!tableNumber) {
+        console.log("📦 Calculating delivery cost for delivery order...");
+        // Type assertion to help TypeScript understand the structure
+        deliveryCalculationResult = await calculateDeliveryDistanceAndCost(hoteldata as unknown as DeliveryHotelData);
+        console.log("📊 Delivery calculation result:", deliveryCalculationResult);
+
+        if (deliveryCalculationResult) {
+          // Update the order store with delivery info
+          useOrderStore.getState().setDeliveryInfo(deliveryCalculationResult);
+          useOrderStore.getState().setDeliveryCost(deliveryCalculationResult.cost);
+          toast.success(`Delivery cost: ${hoteldata.currency}${deliveryCalculationResult.cost.toFixed(2)}`);
+        } else {
+          toast.error("Could not calculate delivery cost. Please ensure location services are enabled and try again.");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Proceed with user login and opening the order drawer
       setUserAddress(address);
       const result = await useAuthStore.getState().signInWithPhone(phoneNumber, hoteldata?.id);
       if (result) {
-        console.log("Login successful", result);
         useOrderStore.getState().setOpenAuthModal(false);
+        // Ensure order drawer opens *after* delivery cost is calculated and stored
+        useOrderStore.getState().setOpenOrderDrawer(true);
+      } else {
+        toast.error("Sign in failed. Please check your phone number.");
+        setIsSubmitting(false);
       }
     } catch (error) {
-      console.error("Login error:", error);
-      toast.error("Failed to sign in. Please try again.");
-    } finally {
+      console.error("Submission error:", error);
+      toast.error("Failed to process your request. Please try again.");
       setIsSubmitting(false);
     }
   };
@@ -127,7 +238,14 @@ const AuthModal = ({
             
             <Button
               type="button"
-              onClick={() => getLocation()}
+              onClick={() => {
+                console.log("Getting location...");
+                getLocation().then(() => {
+                  console.log("Location fetch completed");
+                }).catch(err => {
+                  console.error("Location error:", err);
+                });
+              }}
               className="w-full"
               variant="outline"
               disabled={isGeoLoading}
@@ -154,22 +272,22 @@ const AuthModal = ({
                 </div>
               ) : coords ? (
                 <div className="text-sm">
-                  <div className="font-medium text-green-600">Location found</div>
+                  <div className="font-medium text-green-600">✓ Location found</div>
                 </div>
               ) : geoError ? (
                 <div className="text-sm text-red-600">
                   {geoError}
                 </div>
               ) : (
-                <div className="text-sm text-gray-500">
-                  Please get your location to continue
+                <div className="text-sm text-red-500 ">
+                  You can only Submit After Providing Your Location
                 </div>
               )}
             </div>
           </div>
 
           {/* Add WhatsApp area selection if multiwhatsapp is enabled */}
-          {getFeatures(hoteldata?.feature_flags || "")?.multiwhatsapp?.enabled && (
+          {getFeatures(hoteldata?.feature_flags || "")?.multiwhatsapp?.enabled && hoteldata?.whatsapp_numbers && hoteldata.whatsapp_numbers.length > 0 && (
             <div>
               <Label htmlFor="whatsapp-area" className="mb-2">
                 Select Delivery Area
@@ -188,11 +306,12 @@ const AuthModal = ({
                   color: styles.color,
                   border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
                 }}
+                defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`hotel-${hoteldata.id}-whatsapp-area`) || "" : ""}
               >
                 <option value="">Select your area</option>
                 {hoteldata.whatsapp_numbers.map((number) => (
                   <option key={number.number} value={number.number}>
-                    {number.area || `Area ${number.number}`}
+                    {number.area || number.number}
                   </option>
                 ))}
               </select>
@@ -200,25 +319,8 @@ const AuthModal = ({
           )}
 
           <Button
-            onClick={async () => {
-              if (!phoneNumber) {
-                alert("Please enter both phone number and address.");
-                return;
-              }
-              if (!tableNumber && !address) {
-                alert("Please enter the delivery address.");
-                return;
-              }
-              setUserAddress(address);
-              const result = await useAuthStore
-                .getState()
-                .signInWithPhone(phoneNumber, hoteldata?.id);
-              if (result) {
-                console.log("Login successful", result);
-                useOrderStore.getState().setOpenAuthModal(false);
-                useOrderStore.getState().setOpenOrderDrawer(true);
-              }
-            }}
+            onClick={handleSubmit}
+            disabled={isSubmitting || isGeoLoading || (!tableNumber && (!address || !coords))}
             className="w-full"
             style={{
               backgroundColor: styles.accent,

@@ -10,6 +10,7 @@ import { getAuthCookie } from "@/app/auth/actions";
 import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
 import { Metadata } from "next";
 import { getSocialLinks } from "@/lib/getSocialLinks";
+import { usePartnerStore } from "@/store/usePartnerStore";
 // import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
 
 export async function generateMetadata({
@@ -20,6 +21,8 @@ export async function generateMetadata({
   const { id: hotelIds } = await params;
 
   const hotelId = isUUID(hotelIds?.[0] || "") ? hotelIds?.[0] : hotelIds?.[1];
+  
+  
 
   const getHotelData = unstable_cache(
     async (id: string) => {
@@ -27,6 +30,7 @@ export async function generateMetadata({
         const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
           id,
         });
+        
         return {
           id,
           ...partnerData.partners[0],
@@ -41,6 +45,7 @@ export async function generateMetadata({
   );
 
   const hotel = await getHotelData(hotelId);
+  // console.log("partnerdata",hotel);
 
   if (!hotel) {
     throw new Error("Hotel not found");

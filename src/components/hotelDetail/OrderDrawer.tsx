@@ -31,6 +31,7 @@ import { log, table } from "console";
 import { usePathname } from "next/navigation";
 import { getFeatures } from "@/lib/getFeatures";
 import { QrGroup } from "@/app/admin/qr-management/page";
+// import { fetchFromHasura } from "@/lib/hasuraClient";
 
 export const getGstAmount = (price: number, gstPercentage: number) => {
   const gstAmount = (price * gstPercentage) / 100;
@@ -81,11 +82,19 @@ const OrderDrawer = ({
     clearOrder,
     open_order_drawer,
     setOpenOrderDrawer,
+    deliveryInfo,
+    deliveryCost,
   } = useOrderStore();
   const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(false);
+  
   const [isQrScan, setIsQrScan] = useState(false);
   const [featrues, setFeatures] = useState<FeatureFlags | null>(null);
+
+  useEffect(() => {
+    // Set isQrScan based on pathname and qrId
+    setIsQrScan(pathname.includes("qrScan") && !!qrId);
+  }, [pathname, qrId]);
 
   useEffect(() => {
     if (hotelData) {
@@ -95,11 +104,83 @@ const OrderDrawer = ({
     }
   }, [hotelData]);
 
-  useEffect(() => {
-    if (pathname.includes("qrScan")) {
-      setIsQrScan(true);
-    }
-  }, []);
+  // const calculateDeliveryDistanceAndCost = async () => {
+  //   console.log("🗺️ Starting delivery distance calculation...");
+  //   try {
+  //     // Get restaurant data from localStorage
+  //     const restaurantDataStr = localStorage.getItem(`restaurant-${hotelData.id}-delivery-data`);
+  //     console.log("🏪 Restaurant data from localStorage:", restaurantDataStr);
+      
+  //     if (!restaurantDataStr) {
+  //       console.error("❌ Restaurant delivery data not found in localStorage");
+  //       return null;
+  //     }
+  //     const restaurantData = JSON.parse(restaurantDataStr);
+      
+  //     // Validate essential data is present
+  //     if (!restaurantData?.geo_location?.coordinates || !restaurantData?.delivery_rate) {
+  //       console.error("❌ Restaurant geo_location or delivery_rate not found in localStorage");
+  //       return null;
+  //     }
+
+  //     // Get user coordinates from localStorage
+  //     const userCoordsStr = localStorage.getItem('user-location-store');
+  //     console.log("👤 User location from localStorage:", userCoordsStr);
+      
+  //     if (!userCoordsStr) {
+  //       console.error("❌ User coordinates not found in localStorage");
+  //       return null;
+  //     }
+  //     const userLocationData = JSON.parse(userCoordsStr);
+  //     if (!userLocationData.state?.coords || typeof userLocationData.state.coords.lng !== 'number' || typeof userLocationData.state.coords.lat !== 'number') {
+  //       console.error("❌ Invalid user location format or coordinates in localStorage");
+  //       return null;
+  //     }
+
+  //     // Extract coordinates
+  //     const restaurantCoords = restaurantData.geo_location.coordinates; // [lng, lat]
+  //     const userLocation = [userLocationData.state.coords.lng, userLocationData.state.coords.lat]; // [lng, lat]
+
+  //     console.log("📍 Restaurant coordinates:", restaurantCoords);
+  //     console.log("📍 User coordinates:", userLocation);
+
+  //     // Calculate distance using Mapbox Directions API
+  //     const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  //     if (!mapboxToken) {
+  //       console.error("❌ Mapbox token not found in environment variables");
+  //       return null;
+  //     }
+      
+  //     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${userLocation.join(',')};${restaurantCoords.join(',')}?access_token=${mapboxToken}`;
+  //     console.log("🌐 Calling Mapbox API...");
+      
+  //     const response = await fetch(url);
+  //     const data = await response.json();
+  //     console.log("🗺️ Mapbox API response:", data);
+
+  //     if (!data.routes || data.routes.length === 0) {
+  //       console.error("❌ No route found between user and restaurant");
+  //       return null;
+  //     }
+
+  //     // Get distance in kilometers
+  //     const distanceInKm = data.routes[0].distance / 1000;
+  //     const deliveryRate = parseFloat(restaurantData.delivery_rate);
+  //     const deliveryCost = distanceInKm * deliveryRate;
+
+  //     console.log("📏 Distance (km):", distanceInKm);
+  //     console.log("💰 Delivery rate per km:", deliveryRate);
+  //     console.log("💵 (at order drawer)Calculated delivery cost:", deliveryCost);
+
+  //     return {
+  //       distance: distanceInKm,
+  //       deliveryCost: deliveryCost
+  //     };
+  //   } catch (error) {
+  //     console.error("❌ Error calculating delivery distance:", error);
+  //     return null;
+  //   }
+  // };
 
   const calculateGrandTotal = () => {
     const baseTotal = order?.totalPrice ?? totalPrice ?? 0;
@@ -110,12 +191,20 @@ const OrderDrawer = ({
       grandTotal += getGstAmount(baseTotal, hotelData.gst_percentage);
     }
 
-    const extraChargeTotal = getExtraCharge(
-      items || [],
-      qrGroup?.extra_charge || 0,
-      qrGroup?.charge_type || "FLAT_FEE"
-    );
-    grandTotal += extraChargeTotal;
+    // Add delivery cost for delivery orders
+    if (!isQrScan && deliveryCost && items && items.length > 0) {
+      grandTotal += deliveryCost;
+    }
+
+    // Add extra charges if applicable
+    if (qrGroup?.extra_charge) {
+      const extraChargeTotal = getExtraCharge(
+        items || [],
+        qrGroup.extra_charge,
+        qrGroup.charge_type || "FLAT_FEE"
+      );
+      grandTotal += extraChargeTotal;
+    }
 
     return grandTotal.toFixed(2);
   };
@@ -126,48 +215,68 @@ const OrderDrawer = ({
       `hotel-${hotelData.id}-whatsapp-area`
     );
 
-  const whatsappMsg = `
-  *🍽️ Order Details 🍽️*
-  
-  *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
-  ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : "*Order Type:* Delivery"}
-  ${(tableNumber ?? 0) > 0 ? "" : `*Delivery Address:* ${savedAddress}`}
-  *Time:* ${new Date().toLocaleTimeString()}
-  
-  *📋 Order Items:*
-    ${items
-        ?.map(
-          (item, index) =>
-            `${index + 1}. ${item.name} (${item.category.name})
-     ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
-              2
-            )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(2)}`
-        )
-        .join("\n\n")}
-  
-  ${hotelData?.gst_percentage
-        ? `*GST (${hotelData.gst_percentage}%):* ${hotelData.currency
-        }${getGstAmount(totalPrice as number, hotelData.gst_percentage).toFixed(
-          2
-        )}`
-      : ""
-  }
-  ${
-    qrGroup?.extra_charge
-      ? `*${qrGroup.name} :* ${hotelData.currency}${getExtraCharge(
-          items || [],
-          qrGroup?.extra_charge,
-          qrGroup?.charge_type || "FLAT_FEE"
-        ).toFixed(2)}`
-      : ""
-  }
-  ${
-    hotelData?.gst_percentage || qrGroup?.extra_charge
-      ? `*Subtotal:* ${hotelData.currency}${totalPrice}`
-      : ""
-  }
-  *Total Price:* ${hotelData.currency}${calculateGrandTotal()}
-  `;
+    // Get user location from localStorage
+    const userLocationData = localStorage.getItem('user-location-store');
+    let locationLink = '';
+    if (userLocationData) {
+      try {
+        const location = JSON.parse(userLocationData);
+        if (location.state?.coords) {
+          const { lat, lng } = location.state.coords;
+          locationLink = `\n*📍 Location:* https://www.google.com/maps?q=${lat},${lng}`;
+        }
+      } catch (error) {
+        console.error("Error parsing location data:", error);
+      }
+    }
+
+    const whatsappMsg = `
+    *🍽️ Order Details 🍽️*
+    
+    *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
+    ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : "*Order Type:* Delivery"}
+    ${(tableNumber ?? 0) > 0 ? "" : `*Delivery Address:* ${savedAddress}${locationLink}`}
+    *Time:* ${new Date().toLocaleTimeString()}
+    
+    *📋 Order Items:*
+      ${items
+          ?.map(
+            (item, index) =>
+              `${index + 1}. ${item.name} (${item.category.name})
+       ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
+                2
+              )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(2)}`
+          )
+          .join("\n\n")}
+    
+    ${hotelData?.gst_percentage
+          ? `*GST (${hotelData.gst_percentage}%):* ${hotelData.currency
+          }${getGstAmount(totalPrice as number, hotelData.gst_percentage).toFixed(
+            2
+          )}`
+        : ""
+    }
+    ${
+      !isQrScan && deliveryCost 
+        ? `*Delivery Charge:* ${hotelData.currency}${deliveryCost.toFixed(2)}`
+        : ""
+    }
+    ${
+      qrGroup?.extra_charge
+        ? `*${qrGroup.name} :* ${hotelData.currency}${getExtraCharge(
+            items || [],
+            qrGroup?.extra_charge,
+            qrGroup?.charge_type || "FLAT_FEE"
+          ).toFixed(2)}`
+        : ""
+    }
+    ${
+      hotelData?.gst_percentage || qrGroup?.extra_charge || (!isQrScan && deliveryCost)
+        ? `*Subtotal:* ${hotelData.currency}${totalPrice}`
+        : ""  
+    }
+    *Total Price:* ${hotelData.currency}${calculateGrandTotal()}
+    `;
 
     const number =
       selectedWhatsAppNumber ||
@@ -183,26 +292,65 @@ const OrderDrawer = ({
   };
 
   const handlePlaceOrder = async () => {
+    console.log("🚀 Starting order placement...");
+    console.log("📱 Is QR Scan:", isQrScan);
+    console.log("🏪 Hotel Data:", hotelData);
+    console.log("📍 User Address:", userAddress);
+    console.log("🔍 QR Group:", qrGroup);
+    
     setIsLoading(true);
     try {
-      const extraCharge = {
-        amount: qrGroup?.extra_charge,
-        name: qrGroup?.name,
-        charge_type: qrGroup?.charge_type,
-      };
+      // Calculate subtotal (sum of all items' prices)
+      const subtotal = items?.reduce((acc, item) => acc + (item.price * item.quantity), 0) || 0;
+      console.log("💰 Subtotal:", subtotal);
+
+      // Use existing delivery cost if available
+      let finalDeliveryCost = deliveryCost || 0;
+      
+      // If no delivery cost is set yet and it's a delivery order, calculate it
+      if (!isQrScan && !finalDeliveryCost) {
+        console.log("📦 Calculating delivery cost for delivery order...");
+        const deliveryCalculation = deliveryCost;
+        console.log("📊 Delivery calculation result:", deliveryCost);
+        
+        // if (deliveryCalculation) {
+        //   finalDeliveryCost = deliveryCalculation.deliveryCost;
+        //   console.log("✅ Final delivery cost:", finalDeliveryCost);
+        // } else {
+        //   console.log("⚠️ No delivery calculation available");
+        // }
+      } 
+      // else if (isQrScan) {
+      //   console.log("🍽️ Skipping delivery calculation for QR scan order");
+      //   finalDeliveryCost = 0;
+      // }
+
+      // Only create extraCharge if we have valid qrGroup data and it's a QR scan order
+      const extraCharge = isQrScan && qrGroup && qrGroup.extra_charge > 0 && qrGroup.name ? {
+        amount: qrGroup.extra_charge,
+        name: qrGroup.name,
+        charge_type: qrGroup.charge_type || "FLAT_FEE",
+      } : null;
+      console.log("💰 Extra charges:", extraCharge);
 
       const gstAmount = getGstAmount(
-        totalPrice as number,
+        subtotal,
         hotelData?.gst_percentage as number
       );
+      console.log("🧾 GST Amount:", gstAmount);
 
+      // Place order with all information
       const result = await placeOrder(
         hotelData,
         tableNumber,
         qrId,
         gstAmount,
-        extraCharge
+        extraCharge,
+        finalDeliveryCost
       );
+      
+      console.log("📝 Order placement result:", result);
+      
       if (result) {
         toast.success("Order placed successfully!");
         clearOrder();
@@ -210,7 +358,7 @@ const OrderDrawer = ({
         toast.error("Failed to place order. Please try again.");
       }
     } catch (error) {
-      console.error("Error placing order:", error);
+      console.error("❌ Error placing order:", error);
       toast.error("Failed to place order. Please try again.");
     } finally {
       setIsLoading(false);
@@ -252,6 +400,9 @@ const OrderDrawer = ({
             <div className="flex gap-2 items-center text-sm text-black/70">
               <div>Items :</div>
               <div>{items?.length}</div>
+              {!isQrScan && deliveryInfo && items && items.length > 0 && (
+                <div className="ml-2">(+Delivery)</div>
+              )}
             </div>
           </div>
 
@@ -279,11 +430,15 @@ const OrderDrawer = ({
               {order ? "Order Details" : "Your Order"}
             </HeadingWithAccent>
           </DrawerTitle>
-          <DrawerDescription>
-            {order
-              ? `Order #${order.id.slice(0, 8)} - ${order.status}`
-              : "Review your items before placing order"}
-          </DrawerDescription>
+          {order ? (
+            <DrawerDescription>
+              Order #{order.id.slice(0, 8)} - {order.status}
+            </DrawerDescription>
+          ) : (
+            <DrawerDescription>
+              Review your items before placing order
+            </DrawerDescription>
+          )}
         </DrawerHeader>
 
         <div className="px-4 overflow-y-auto flex-1">
@@ -355,66 +510,70 @@ const OrderDrawer = ({
         </div>
 
         <DrawerFooter className="border-t">
-          {hotelData?.gst_percentage || qrGroup?.extra_charge ? (
-            <>
-              <div className="flex justify-between items-center mb-2 text-sm">
+          <div className="space-y-2">
+            {items && items.length > 0 && (
+              <div className="flex justify-between items-center text-sm">
                 <span className="font-bold">Subtotal:</span>
                 <span className="font-bold">
                   {hotelData.currency}
-                  {(order?.totalPrice ?? totalPrice ?? 0).toFixed(2)}
+                  {items.reduce((acc, item) => acc + (item.price * item.quantity), 0).toFixed(2)}
                 </span>
               </div>
+            )}
 
-              {hotelData?.gst_percentage !== 0 && (
-                <div className="flex justify-between items-center mb-2 text-sm">
-                  <span className="font-bold">{`GST (${hotelData.gst_percentage}%):`}</span>
-                  <span className="font-bold">
-                    {hotelData.currency}
-                    {getGstAmount(
-                      order?.totalPrice ?? totalPrice ?? 0,
-                      hotelData?.gst_percentage ?? 0
-                    ).toFixed(2)}
-                  </span>
-                </div>
-              )}
-
-              {qrGroup?.extra_charge && (
-                <div className="flex justify-between items-center mb-2 text-sm">
-                  <span className="font-bold">{`${qrGroup.name} Charge:`}</span>
-                  <span className="font-bold">
-                    {hotelData.currency}
-                    {getExtraCharge(items || [], qrGroup?.extra_charge , qrGroup?.charge_type).toFixed(
-                      2
-                    )}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex justify-between items-center mt-4">
-                <span className="font-bold text-lg">Grand Total:</span>
-                <span
-                  className="font-bold text-lg"
-                  style={{ color: styles.accent }}
-                >
+            {hotelData?.gst_percentage && items && items.length > 0 && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="font-bold">{`GST (${hotelData.gst_percentage}%):`}</span>
+                <span className="font-bold">
                   {hotelData.currency}
-                  {calculateGrandTotal()}
+                  {getGstAmount(
+                    items?.reduce((acc, item) => acc + (item.price * item.quantity), 0) || 0,
+                    hotelData.gst_percentage
+                  ).toFixed(2)}
                 </span>
               </div>
-            </>
-          ) : (
-            <>
-              <div className="flex justify-between items-center mb-4">
-                <span className="font-bold">Grand Total:</span>
-                <span
-                  className="font-bold text-lg"
-                  style={{ color: styles.accent }}
-                >
+            )}
+
+            {!isQrScan && deliveryInfo?.cost && items && items.length > 0 && (
+              <div className="flex justify-between items-center text-sm">
+                <div>
+                  <span className="font-bold">Delivery Charge:</span>
+                  <div className="text-xs text-gray-500">
+                    {deliveryInfo.distance.toFixed(1)} km × {hotelData.currency}{deliveryInfo.ratePerKm.toFixed(2)}/km
+                  </div>
+                </div>
+                <span className="font-bold">
                   {hotelData.currency}
-                  {(order?.totalPrice ?? totalPrice ?? 0).toFixed(2)}
+                  {deliveryInfo.cost.toFixed(2)}
                 </span>
               </div>
-            </>
-          )}
+            )}
+
+            {qrGroup?.extra_charge && items && items.length > 0 && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="font-bold">{qrGroup.name || "Extra Charge"}:</span>
+                <span className="font-bold">
+                  {hotelData.currency}
+                  {getExtraCharge(
+                    items || [],
+                    qrGroup.extra_charge,
+                    qrGroup.charge_type || "FLAT_FEE"
+                  ).toFixed(2)}
+                </span>
+              </div>
+            )}
+
+            <div className="flex justify-between items-center mt-4 pt-2 border-t">
+              <span className="font-bold text-lg">Grand Total:</span>
+              <span
+                className="font-bold text-lg"
+                style={{ color: styles.accent }}
+              >
+                {hotelData.currency}
+                {calculateGrandTotal()}
+              </span>
+            </div>
+          </div>
 
           <>
             {items && items.length > 0 && (

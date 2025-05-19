@@ -27,6 +27,16 @@ interface BaseUser {
   email: string;
   role: "user" | "partner" | "superadmin";
 }
+export interface GeoLocation {
+  type: "Point"; // likely always "Point" in your case
+  coordinates: [number, number]; // [longitude, latitude]
+  crs?: {
+    type: string;
+    properties: {
+      name: string;
+    };
+  };
+}
 
 export interface User extends BaseUser {
   role: "user";
@@ -54,8 +64,8 @@ export interface Partner extends BaseUser {
   phone: string;
   district: string;
   delivery_status: boolean;
-  geo_location: string;  // Will store in Hasura format: "SRID=4326;POINT(lng lat)"
-  delivery_rate: string
+  geo_location: string;
+  delivery_rate: number;
   place_id?: string;
   theme?: string;
   currency: string;
