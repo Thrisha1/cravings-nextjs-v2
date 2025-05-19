@@ -78,7 +78,7 @@ const ItemCard = ({
                 </div>
               )}
               <DescriptionWithTextBreak
-                maxLines={2}
+                maxChars={100}
                 className="text-sm opacity-50 mt-1"
               >
                 {item.description}
