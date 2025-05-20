@@ -1,8 +1,7 @@
 "use client";
 
-import { Partner } from "@/api/partners";
 import { useEffect } from "react";
-import { usePartnerStore } from "@/store/usePartnerStore";
+import { Partner, usePartnerStore } from "@/store/usePartnerStore";
 import PartnerCard from "./PartnerCard";
 
 export default function PartnerList({ initialPartners }: { initialPartners: Partner[] }) {
