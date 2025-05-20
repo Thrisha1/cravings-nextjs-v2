@@ -86,7 +86,9 @@ interface AuthState {
     area: string,
     location: string,
     phone: string,
-    upiId: string
+    upiId: string,
+    country: string,
+    state: string
   ) => Promise<void>;
   createPartner: (
     email: string,
@@ -95,7 +97,9 @@ interface AuthState {
     area: string,
     location: string,
     phone: string,
-    upiId: string
+    upiId: string,
+    country: string,
+    state: string
   ) => Promise<Partner>;
   signInWithPhone: (phone: string, partnerId?: string) => Promise<User | null>;
   signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
@@ -218,7 +222,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     area: string,
     location: string,
     email: string,
-    password: string
+    password: string,
+    country: string,
+    state: string
   ) => {
     set({ loading: true, error: null });
     try {
@@ -237,6 +243,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           district: area,
           status: "inactive",
           upi_id: upiId,
+          country,
+          state,
           phone,
           description: "",
           role: "partner",

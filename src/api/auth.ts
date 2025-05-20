@@ -142,6 +142,8 @@ export const partnerMutation = `
     description
     phone
     district
+    country
+    state
   }
 }`;
 
