@@ -49,7 +49,7 @@ export interface Order {
   type?: "table_order" | "delivery" | "pos";
   deliveryAddress?: string | null;
   gstIncluded?: number;
-  delivery_charge?: number | null;  // Added this field
+  delivery_charge?: number | null; // Added this field
   extraCharges?:
     | {
         name: string;
@@ -64,8 +64,7 @@ export interface DeliveryInfo {
   distance: number;
   cost: number;
   ratePerKm: number;
-  restaurantName: string;
-  restaurantAddress: string;
+  isOutOfRange: boolean;
 }
 
 interface HotelOrderState {
@@ -107,11 +106,13 @@ interface OrderState {
     tableNumber?: number,
     qrId?: string,
     gstIncluded?: number,
-    extraCharges?: {
-      name: string;
-      amount: number;
-      charge_type?: string;
-    } | null,
+    extraCharges?:
+      | {
+          name: string;
+          amount: number;
+          charge_type?: string;
+        }[]
+      | null,
     deliveryCharge?: number
   ) => Promise<Order | null>;
   getCurrentOrder: () => HotelOrderState;
@@ -173,8 +174,8 @@ const useOrderStore = create(
               partner: order.partner,
               userId: order.user_id,
               gstIncluded: order.gst_included,
-              extraCharges: order.extra_charges || [],  // Handle null case
-              delivery_charge: order.delivery_charge,  // Include delivery_charge
+              extraCharges: order.extra_charges || [], // Handle null case
+              delivery_charge: order.delivery_charge, // Include delivery_charge
               user: order.user,
               items: order.order_items.map((i: any) => ({
                 id: i.item.id,
@@ -184,7 +185,7 @@ const useOrderStore = create(
                 category: i.menu?.category,
               })),
             }));
-      
+
             if (allOrders) {
               set({ userOrders: allOrders });
               if (callback) callback(allOrders);
@@ -194,7 +195,7 @@ const useOrderStore = create(
             console.error("Subscription error:", error);
           },
         });
-      
+
         return unsubscribe;
       },
 
@@ -219,8 +220,8 @@ const useOrderStore = create(
               deliveryAddress: order.delivery_address,
               partnerId: order.partner_id,
               gstIncluded: order.gst_included,
-              extraCharges: order.extra_charges || [],  // Handle null case
-              delivery_charge: order.delivery_charge,  // Include delivery_charge
+              extraCharges: order.extra_charges || [], // Handle null case
+              delivery_charge: order.delivery_charge, // Include delivery_charge
               userId: order.user_id,
               user: order.user,
               items: order.order_items.map((i: any) => ({
@@ -272,7 +273,13 @@ const useOrderStore = create(
       getCurrentOrder: () => {
         const state = get();
         if (!state.hotelId) {
-          return { items: [], totalPrice: 0, order: null, orderId: null , coordinates: null };
+          return {
+            items: [],
+            totalPrice: 0,
+            order: null,
+            orderId: null,
+            coordinates: null,
+          };
         }
         return (
           state.hotelOrders[state.hotelId] || {
@@ -518,16 +525,21 @@ const useOrderStore = create(
         tableNumber,
         qrId,
         gstIncluded,
-        extraCharges?: {
-          name: string;
-          amount: number;
-          charge_type?: string;
-        } | null,
+        extraCharges?:
+          | {
+              name: string;
+              amount: number;
+              charge_type?: string;
+            }[]
+          | null,
         deliveryCharge?: number
       ) => {
         try {
           const state = get();
-          if (!state.hotelId) return null;
+          if (!state.hotelId) {
+            toast.error("No hotel selected");
+            return null;
+          }
 
           const currentOrder = state.hotelOrders[state.hotelId] || {
             items: [],
@@ -542,30 +554,34 @@ const useOrderStore = create(
           }
 
           const userData = useAuthStore.getState().userData;
-          if (!userData?.id && userData?.role !== "user") {
+          if (!userData?.id || userData?.role !== "user") {
             toast.error("Please login as user to place order");
             return null;
           }
 
           const type = (tableNumber ?? 0) > 0 ? "table_order" : "delivery";
 
-          // Debug logs for extra charges
-          // console.log("🔍 Extra Charges Debug:");
-          // console.log("Extra Charges Input:", extraCharges);
-          // console.log("Extra Charges Name:", extraCharges?.name);
-          // console.log("Extra Charges Amount:", extraCharges?.amount);
+          // Prepare extra charges array
+          const exCharges: {
+            name: string;
+            amount: number;
+            charge_type?: string;
+            id?: string;
+          }[] = [];
 
-          // Include all extra charges with IDs
-          let exCharges = [];
-    
           // Add any provided extra charges
-          if (extraCharges) {
-            exCharges.push({
-              ...extraCharges,
-              id: crypto.randomUUID(),
+          if (extraCharges && extraCharges.length > 0) {
+            extraCharges.forEach((charge) => {
+              exCharges.push({
+                name: charge.name,
+                amount: charge.amount,
+                charge_type: charge.charge_type || "FLAT_FEE",
+                id: crypto.randomUUID(),
+              });
             });
           }
 
+          // Add delivery charge if applicable
           if (type === "delivery" && deliveryCharge && deliveryCharge > 0) {
             exCharges.push({
               name: "Delivery Charge",
@@ -573,30 +589,31 @@ const useOrderStore = create(
               charge_type: "FLAT_FEE",
               id: crypto.randomUUID(),
             });
-          } 
+          }
 
-          const subtotal = currentOrder.totalPrice;
-          console.log("total price",currentOrder.totalPrice);
+          // Calculate subtotal from items
+          const subtotal = currentOrder.items.reduce(
+            (sum, item) => sum + item.price * item.quantity,
+            0
+          );
 
-          const grandTotal =
-            currentOrder.totalPrice +
-            getExtraCharge(
-              currentOrder?.items,
-              extraCharges?.amount ?? 0,
-              (extraCharges?.charge_type ?? "FLAT_FEE") as
-                | "PER_ITEM"
-                | "FLAT_FEE"
-            ) +
-            (gstIncluded || 0) +
-            (deliveryCharge || 0);
+          // Calculate total extra charges
+          const totalExtraCharges = exCharges.reduce(
+            (sum, charge) => sum + charge.amount,
+            0
+          );
+
+          // Calculate grand total
+          const grandTotal = subtotal + (gstIncluded || 0) + totalExtraCharges;
 
           const createdAt = new Date().toISOString();
-          
+
+          // Create order in database
           const orderResponse = await fetchFromHasura(createOrderMutation, {
-            id: currentOrder.orderId,
-            totalPrice: subtotal,
+            id: crypto.randomUUID(), // Generate new ID for each order
+            totalPrice: grandTotal,
             gst_included: gstIncluded,
-            extra_charges: exCharges.length > 0 ? exCharges : null,  // Use null when empty to avoid [] 
+            extra_charges: exCharges.length > 0 ? exCharges : null,
             createdAt,
             tableNumber: tableNumber || null,
             qrId: qrId || null,
@@ -604,14 +621,17 @@ const useOrderStore = create(
             userId: userData.id,
             type,
             status: "pending",
-            delivery_address: tableNumber ? null : get().userAddress,
-            delivery_location: {
-              type: "Point",
-              coordinates: [
-                get().coordinates?.lng || 0,
-                get().coordinates?.lat || 0,
-              ],
-            },
+            delivery_address: type === "delivery" ? state.userAddress : null,
+            delivery_location:
+              type === "delivery"
+                ? {
+                    type: "Point",
+                    coordinates: [
+                      state.coordinates?.lng || 0,
+                      state.coordinates?.lat || 0,
+                    ],
+                  }
+                : null,
           });
 
           if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
@@ -621,6 +641,8 @@ const useOrderStore = create(
           }
 
           const orderId = orderResponse.insert_orders_one.id;
+
+          // Create order items
           const itemsResponse = await fetchFromHasura(
             createOrderItemsMutation,
             {
@@ -633,6 +655,7 @@ const useOrderStore = create(
                   name: item.name,
                   price: item.price,
                   offers: item.offers,
+                  category: item.category,
                 },
               })),
             }
@@ -644,10 +667,11 @@ const useOrderStore = create(
             );
           }
 
+          // Prepare new order object
           const newOrder: Order = {
             id: orderId,
             items: currentOrder.items,
-            totalPrice: currentOrder.totalPrice,
+            totalPrice: grandTotal,
             createdAt,
             tableNumber: tableNumber || null,
             qrId: qrId || null,
@@ -655,31 +679,35 @@ const useOrderStore = create(
             partnerId: hotelData.id,
             userId: userData.id,
             user: {
-              phone: userData?.role === "user" ? userData.phone : "N/A",
+              phone: userData.phone || "N/A",
             },
+            gstIncluded,
+            extraCharges: exCharges,
           };
 
-          set((state) => {
-            const hotelOrders = { ...state.hotelOrders };
-            hotelOrders[state.hotelId!] = {
-              items: [],
-              totalPrice: 0,
-              order: newOrder,
-              orderId: null,
-              coordinates: null,
-            };
-            return {
-              hotelOrders,
-              order: newOrder,
-              items: [],
-              orderId: null,
-              totalPrice: 0,
-            };
-          });
+          // Update state
+          set((state) => ({
+            ...state,
+            hotelOrders: {
+              ...state.hotelOrders,
+              [state.hotelId!]: {
+                items: [],
+                totalPrice: 0,
+                order: newOrder,
+                orderId: null,
+                coordinates: null,
+              },
+            },
+            order: newOrder,
+            items: [],
+            orderId: null,
+            totalPrice: 0,
+          }));
 
           toast.success("Order placed successfully!");
           return newOrder;
         } catch (error) {
+          console.error("Order placement error:", error);
           toast.error(
             error instanceof Error ? error.message : "Failed to place order"
           );
@@ -797,7 +825,8 @@ const useOrderStore = create(
 
       setOpenOrderDrawer: (open: boolean) => set({ open_order_drawer: open }),
 
-      setDeliveryInfo: (info: DeliveryInfo | null) => set({ deliveryInfo: info }),
+      setDeliveryInfo: (info: DeliveryInfo | null) =>
+        set({ deliveryInfo: info }),
 
       setDeliveryCost: (cost: number | null) => set({ deliveryCost: cost }),
     }),
