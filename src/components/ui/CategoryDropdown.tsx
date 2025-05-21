@@ -11,7 +11,7 @@ import { Button } from "./button";
 import { Dialog, DialogContent } from "./dialog";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
-import { useCategoryStore } from "@/store/categoryStore_hasura";
+import { formatDisplayName, useCategoryStore } from "@/store/categoryStore_hasura";
 
 interface CategoryDropdownProps {
   value: string;
@@ -64,7 +64,7 @@ export const CategoryDropdown = ({
                   key={`${category.id}`}
                   value={category.name}
                 >
-                  {category.name}
+                  {formatDisplayName(category.name)}
                 </SelectItem>
               ))
             : null}

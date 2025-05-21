@@ -40,6 +40,27 @@ export interface MenuItem {
   }[];
 }
 
+interface MenuItem_withOffer_price {
+  id?: string;
+  name: string;
+  category: {
+    id: string;
+    name: string;
+    priority: number;
+  };
+  image_url: string;
+  image_source: string;
+  partner_id: string;
+  priority: number;
+  price: number;
+  offers: {
+    offer_price: number;
+  }[];
+  description: string;
+  is_top: boolean;
+  is_available: boolean;
+}
+
 interface CategoryImages {
   image_url: string;
   image_source: string;
@@ -116,13 +137,13 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         (await fetchFromHasura(getMenu, {
           partner_id: targetId,
         }).then((res) =>
-          res.menu.map((mi: any) => {
+          res.menu.map((mi: MenuItem_withOffer_price) => {
             return {
               ...mi,
               price: (mi.offers[0]?.offer_price || mi.price) ?? 0,
               category: {
                 id: mi.category.id,
-                name: mi.category.name,
+                name: (mi.category.name),
                 priority: mi.category.priority,
               },
             };
@@ -149,6 +170,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       const category = await addCategory(
         item.category.name.trim().toLowerCase()
       );
+
       const category_id = category?.id;
 
       if (!category_id) throw new Error("Category ID not found");
@@ -184,7 +206,13 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       });
 
       set({
-        items: [...get().items, insert_menu.returning[0]],
+        items: [...get().items, {
+          ...insert_menu.returning[0],
+          category: {
+            ...insert_menu.returning[0].category,
+            name: (insert_menu.returning[0].category.name)
+          }
+        }],
       });
       revalidateTag(userData?.id);
       get().groupItems();
@@ -210,7 +238,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       if (category?.id !== undefined) {
         const cat = categories.find(
           (cat) =>
-            cat.name.toLowerCase().trim() === category.name.toLowerCase().trim()
+            cat.name === (category.name)
         );
         catid = cat?.id;
         changedItem = { ...changedItem, category_id: catid };
@@ -309,7 +337,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
     // 1. Group items by category name (case-insensitive)
     const groupedByName: GroupedItems = items.reduce((acc, item) => {
-      const categoryName = item.category.name.toLowerCase();
+      const categoryName = item.category.name;
       if (!acc[categoryName]) {
         acc[categoryName] = [];
       }

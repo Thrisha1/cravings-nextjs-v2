@@ -18,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Category } from "@/store/categoryStore_hasura";
+import { Category, formatDisplayName, formatStorageName } from "@/store/categoryStore_hasura";
 import {
   DragDropContext,
   Droppable,
@@ -61,7 +61,7 @@ export function CategoryManagementModal({
   }, [open, initialCategories]);
 
   const filteredCategories = localCategories.filter((cat) =>
-    cat.name.toLowerCase().includes(searchTerm.toLowerCase())
+    cat.name.includes(formatStorageName(searchTerm))
   );
 
   const moveToPosition = useCallback(
@@ -99,7 +99,7 @@ export function CategoryManagementModal({
 
   const handleNameChange = (id: string, newName: string) => {
     setLocalCategories((prev) =>
-      prev.map((cat) => (cat.id === id ? { ...cat, name: newName } : cat))
+      prev.map((cat) => (cat.id === id ? { ...cat, name: formatStorageName(newName) } : cat))
     );
   };
 
@@ -141,7 +141,7 @@ export function CategoryManagementModal({
               <Input
                 placeholder="Search categories..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => setSearchTerm((e.target.value))}
                 className="pl-9"
               />
               {searchTerm && (
@@ -217,7 +217,7 @@ export function CategoryManagementModal({
                               >
                                 <TableCell>
                                   <Input
-                                    value={category.name}
+                                    value={formatDisplayName(category.name)}
                                     onChange={(e) =>
                                       handleNameChange(
                                         category.id,
