@@ -1,12 +1,13 @@
 import React from 'react'
+import { Metadata } from 'next'
 
-type Props = {
-  params: {
-    id: string[]
+export function generateMetadata({ params }: { params: { id: string[] } }): Metadata {
+  return {
+    title: `Order ${params.id.join('/')}`,
   }
 }
 
-function Page({ params }: Props) {
+export default function Page({ params }: { params: { id: string[] } }) {
   const { id } = params;
   return (
     <div>
@@ -14,5 +15,3 @@ function Page({ params }: Props) {
     </div>
   )
 }
-
-export default Page
