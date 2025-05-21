@@ -83,6 +83,7 @@ interface OrderState {
   hotelOrders: Record<string, HotelOrderState>;
   userAddress: string | null;
   open_auth_modal: boolean;
+  open_drawer_bottom : boolean;
   order: Order | null;
   items: OrderItem[] | null;
   orderId: string | null;
@@ -94,6 +95,8 @@ interface OrderState {
   } | null;
   deliveryInfo: DeliveryInfo | null;
   deliveryCost: number | null;
+  open_place_order_modal: boolean;
+  setOpenPlaceOrderModal: (open: boolean) => void;
 
   setHotelId: (id: string) => void;
   addItem: (item: HotelDataMenus) => void;
@@ -129,6 +132,7 @@ interface OrderState {
   setOpenOrderDrawer: (open: boolean) => void;
   setDeliveryInfo: (info: DeliveryInfo | null) => void;
   setDeliveryCost: (cost: number | null) => void;
+  setOpenDrawerBottom: (open: boolean) => void;
 }
 
 const useOrderStore = create(
@@ -148,9 +152,17 @@ const useOrderStore = create(
       deliveryInfo: null,
       deliveryCost: null,
       coordinates: null,
+      open_drawer_bottom: false,
+      open_place_order_modal: false,
+      setOpenPlaceOrderModal: (open) => set({ open_place_order_modal: open }),
+
+      setOpenDrawerBottom: (open) => set({ open_drawer_bottom: open }),
 
       setUserCoordinates: (coords) => {
+
+        
         set({ coordinates: coords });
+        
       },
 
       subscribeUserOrders: (callback) => {

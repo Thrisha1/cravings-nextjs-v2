@@ -17,3 +17,5 @@ declare module 'instascan' {
     name: string;
   }
 } 
+
+declare module '@mapbox/mapbox-gl-geocoder';

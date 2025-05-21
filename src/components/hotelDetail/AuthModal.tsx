@@ -1,6 +1,6 @@
 "use client";
 import useOrderStore, { DeliveryInfo } from "@/store/orderStore";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import { Label } from "../ui/label";
@@ -21,7 +21,7 @@ interface GeoLocation {
 }
 
 // Instead of extending HotelData, create a separate type for the function parameter
-type DeliveryHotelData = Omit<HotelData, "geo_location"> & {
+export type DeliveryHotelData = Omit<HotelData, "geo_location"> & {
   geo_location: GeoLocation;
   delivery_rate: string;
 };
@@ -31,10 +31,9 @@ import { getFeatures } from "@/lib/getFeatures";
 import { useLocationStore } from "@/store/geolocationStore";
 import { toast } from "sonner";
 import { Loader2, MapPin } from "lucide-react";
-// import { fetchFromHasura } from "@/lib/hasuraClient";
-// import { usePartnerStore } from "@/store/usePartnerStore";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
-const calculateDeliveryDistanceAndCost = async (
+export const calculateDeliveryDistanceAndCost = async (
   hotelData: DeliveryHotelData
 ) => {
   console.log("🗺️ Starting delivery distance calculation...");
@@ -124,14 +123,16 @@ const AuthModal = ({
   hoteldata: HotelData;
   tableNumber: number;
 }) => {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const {
     open_auth_modal,
     setUserAddress,
     setOpenAuthModal,
     setUserCoordinates,
+    userAddress,
   } = useOrderStore();
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState(userAddress || "");
   const {
     coords,
     error: geoError,
@@ -142,6 +143,18 @@ const AuthModal = ({
   const { userData: user } = useAuthStore();
   const hasDelivery = hoteldata?.geo_location && hoteldata?.delivery_rate > 0;
 
+  // Load previous address from localStorage if available
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedAddress = localStorage.getItem(
+        `hotel-${hoteldata.id}-delivery-address`
+      );
+      if (savedAddress && !address) {
+        setAddress(savedAddress);
+      }
+    }
+  }, [hoteldata.id, address]);
+
   const handleSubmit = async () => {
     if (!tableNumber && !address) {
       toast.error("Please enter your delivery address");
@@ -151,6 +164,14 @@ const AuthModal = ({
     if (hasDelivery && !coords) {
       toast.error("Please allow location access to continue");
       return;
+    }
+
+    // Save address to localStorage
+    if (address && typeof window !== "undefined") {
+      localStorage.setItem(
+        `hotel-${hoteldata.id}-delivery-address`,
+        address
+      );
     }
 
     if (user) {
@@ -235,7 +256,7 @@ const AuthModal = ({
   return (
     <Dialog open={open_auth_modal} onOpenChange={setOpenAuthModal}>
       <DialogContent
-        className="rounded-lg"
+        className={`rounded-lg `}
         style={{
           backgroundColor: styles.backgroundColor,
           color: styles.color,

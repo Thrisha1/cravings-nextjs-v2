@@ -1,268 +1,165 @@
 "use client";
-import { fetchFromHasura } from "@/lib/hasuraClient";
-import React from "react";
+import React, { useEffect, useRef, useState } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
-const GET_ORDER_ITEMS = `
-query GetOrderItems {
-  order_items(
-    where: {
-      _and: [
-        { order: { partner_id: { _neq: "397fd024-3044-40a7-be52-c82a03f07cbb" } } },
-        { 
-          _or: [
-            { item: { _is_null: true } },
-            { item: { _eq: [] } },
-             { item: { _eq: {} } }
-          ]
-        }
-      ]
-    }
-  ) {
-    id
-    quantity
-    menu {
-      id
-      name
-      price
-      offers(where: { deletion_status: { _eq: 0 }, end_time: { _gt: "now()" } }) {
-        offer_price
-      }
-    }
-    item
-  }
-}
-`;
+// Initialize Mapbox
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || '';
 
-const UPDATE_ORDER_ITEM = `
-  mutation UpdateOrderItem($id: uuid!, $item: jsonb!) {
-    update_order_items_by_pk(pk_columns: {id: $id}, _set: {item: $item}) {
-      id
-      item
-    }
-  }
-`;
+const MapboxLocationPicker = () => {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const marker = useRef<mapboxgl.Marker | null>(null);
+  const geocoder = useRef<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState<{ lng: number; lat: number } | null>(null);
 
-interface Offer {
-  offer_price: number;
-}
+  useEffect(() => {
+    if (!mapContainer.current) return;
 
-interface Menu {
-  id: string;
-  name: string;
-  price: number;
-  offers: Offer[];
-}
+    // Initialize map
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [77.5946, 12.9716], // Default to Bangalore
+      zoom: 12
+    });
 
-interface OrderItem {
-  id: string;
-  quantity: number;
-  menu: Menu;
-  item: {
-    id?: string;
-    name?: string;
-    price?: number;
-    offers?: Offer[];
-  };
-}
+    // Add geocoder control
+    const MapboxGeocoder = require('@mapbox/mapbox-gl-geocoder');
+    geocoder.current = new MapboxGeocoder({
+      accessToken: mapboxgl.accessToken,
+      mapboxgl: mapboxgl,
+      marker: false,
+      placeholder: 'Search for places...',
+    });
 
-const BATCH_SIZE = 20;
+    map.current.addControl(geocoder.current);
 
-const OrderItemsPage = () => {
-  const [orderItems, setOrderItems] = React.useState<OrderItem[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [updatingId, setUpdatingId] = React.useState<string | null>(null);
-  const [bulkUpdating, setBulkUpdating] = React.useState(false);
-  const [progress, setProgress] = React.useState(0);
+    // Handle geocoder result
+    geocoder.current.on('result', (e: any) => {
+      const [lng, lat] = e.result.center;
+      setSelectedLocation({ lng, lat });
+      updateMarker(lng, lat);
+      console.log('Selected location:', { lng, lat, address: e.result.place_name });
+    });
 
-  React.useEffect(() => {
-    const fetchOrderItems = async () => {
-      try {
-        const response = await fetchFromHasura(GET_ORDER_ITEMS);
-        setOrderItems(response?.order_items || []);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+    // Add click event handler
+    map.current.on('click', (e) => {
+      const { lng, lat } = e.lngLat;
+      setSelectedLocation({ lng, lat });
+      updateMarker(lng, lat);
+      console.log('Selected location:', { lng, lat });
+      reverseGeocode(lng, lat);
+    });
+
+    // Add navigation control
+    map.current.addControl(new mapboxgl.NavigationControl());
+
+    // Clean up on unmount
+    return () => {
+      if (map.current) map.current.remove();
     };
-
-    fetchOrderItems();
   }, []);
 
-  const handleUpdateItem = async (orderItem: OrderItem) => {
-    setUpdatingId(orderItem.id);
+  const updateMarker = (lng: number, lat: number) => {
+    // Remove existing marker if any
+    if (marker.current) marker.current.remove();
+
+    // Add new marker
+    marker.current = new mapboxgl.Marker()
+      .setLngLat([lng, lat])
+      .addTo(map.current!);
+
+    // Fly to the location
+    map.current?.flyTo({
+      center: [lng, lat],
+      zoom: 14
+    });
+  };
+
+  const reverseGeocode = async (lng: number, lat: number) => {
     try {
-      const itemData = {
-        id: orderItem.menu.id,
-        name: orderItem.menu.name,
-        price: orderItem.menu.price,
-        offers: orderItem.menu.offers,
-      };
-
-      await fetchFromHasura(UPDATE_ORDER_ITEM, {
-        id: orderItem.id,
-        item: itemData,
-      });
-
-      setOrderItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === orderItem.id ? { ...item, item: itemData } : item
-        )
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}`
       );
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setUpdatingId(null);
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        console.log('Address:', data.features[0].place_name);
+      }
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
     }
   };
 
-  const handleBulkUpdate = async () => {
-    setBulkUpdating(true);
-    setProgress(0);
+  const handleManualSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
 
     try {
-      // Process items in batches
-      for (let i = 0; i < orderItems.length; i += BATCH_SIZE) {
-        const batch = orderItems.slice(i, i + BATCH_SIZE);
-        const updatePromises = batch.map((orderItem) => {
-          const itemData = {
-            id: orderItem.menu.id,
-            name: orderItem.menu.name,
-            price: orderItem.menu.price,
-            offers: orderItem.menu.offers,
-          };
-
-          return fetchFromHasura(UPDATE_ORDER_ITEM, {
-            id: orderItem.id,
-            item: itemData,
-          }).then(() => {
-            return { id: orderItem.id, itemData };
-          });
-        });
-
-        // Wait for the current batch to complete
-        const results = await Promise.all(updatePromises);
-
-        // Update local state with the batch results
-        setOrderItems((prevItems) =>
-          prevItems.map((item) => {
-            const updatedItem = results.find((r) => r.id === item.id);
-            return updatedItem ? { ...item, item: updatedItem.itemData } : item;
-          })
-        );
-
-        // Update progress
-        setProgress(Math.min(i + BATCH_SIZE, orderItems.length));
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=${mapboxgl.accessToken}&limit=1`
+      );
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        const [lng, lat] = data.features[0].center;
+        setSelectedLocation({ lng, lat });
+        updateMarker(lng, lat);
+        console.log('Found location:', { lng, lat, address: data.features[0].place_name });
+      } else {
+        console.log('No results found');
       }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setBulkUpdating(false);
+    } catch (error) {
+      console.error('Geocoding error:', error);
     }
-  };
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-
-  const getDisplayData = (orderItem: OrderItem) => {
-    if (orderItem.item && orderItem.item.name) {
-      return {
-        name: orderItem.item.name,
-        price: orderItem.item.price,
-        offers: orderItem.item.offers || [],
-      };
-    }
-    return {
-      name: orderItem.menu.name,
-      price: orderItem.menu.price,
-      offers: orderItem.menu.offers || [],
-    };
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Order Items</h1>
-        <button
-          onClick={handleBulkUpdate}
-          disabled={bulkUpdating || orderItems.length === 0}
-          className={`px-4 py-2 rounded ${
-            bulkUpdating
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-green-500 hover:bg-green-600 text-white"
-          }`}
-        >
-          {bulkUpdating
-            ? `Updating... (${progress}/${orderItems.length})`
-            : `Bulk Update All (${orderItems.length} items)`}
-        </button>
+    <div className="w-full">
+      <div className="mb-4">
+        <form onSubmit={handleManualSearch} className="flex gap-2">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Enter an address or place"
+            className="flex-1 p-2 border rounded"
+          />
+          <button 
+            type="submit" 
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Search
+          </button>
+        </form>
       </div>
-
-      {bulkUpdating && (
-        <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
-          <div
-            className="bg-blue-600 h-2.5 rounded-full"
-            style={{ width: `${(progress / orderItems.length) * 100}%` }}
-          ></div>
+      
+      <div className="w-full h-[500px] relative">
+        <div ref={mapContainer} className="w-full h-full rounded-lg" />
+      </div>
+      
+      {selectedLocation && (
+        <div className="mt-4 p-3 bg-gray-100 rounded">
+          <p className="font-medium">Selected Location:</p>
+          <p>Longitude: {selectedLocation.lng.toFixed(6)}</p>
+          <p>Latitude: {selectedLocation.lat.toFixed(6)}</p>
         </div>
       )}
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
-          <thead>
-            <tr className="bg-gray-200 text-gray-700">
-              <th className="py-2 px-4">ID</th>
-              <th className="py-2 px-4">Item Name</th>
-              <th className="py-2 px-4">Quantity</th>
-              <th className="py-2 px-4">Price</th>
-              <th className="py-2 px-4">Offer Price</th>
-              <th className="py-2 px-4">Current Item JSON</th>
-              <th className="py-2 px-4">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orderItems?.map((orderItem) => {
-              const displayData = getDisplayData(orderItem);
-              return (
-                <tr key={orderItem.id} className="border-b">
-                  <td className="py-2 px-4">{orderItem.id}</td>
-                  <td className="py-2 px-4">{displayData.name}</td>
-                  <td className="py-2 px-4">{orderItem.quantity}</td>
-                  <td className="py-2 px-4">
-                    ${displayData.price?.toFixed(2)}
-                  </td>
-                  <td className="py-2 px-4">
-                    {displayData.offers?.[0]?.offer_price
-                      ? `$${displayData.offers[0].offer_price.toFixed(2)}`
-                      : "N/A"}
-                  </td>
-                  <td className="py-2 px-4 text-xs">
-                    <pre>{JSON.stringify(orderItem.item, null, 2)}</pre>
-                  </td>
-                  <td className="py-2 px-4">
-                    <button
-                      onClick={() => handleUpdateItem(orderItem)}
-                      disabled={updatingId === orderItem.id || bulkUpdating}
-                      className={`px-4 py-2 rounded ${
-                        updatingId === orderItem.id || bulkUpdating
-                          ? "bg-gray-400 cursor-not-allowed"
-                          : "bg-blue-500 hover:bg-blue-600 text-white"
-                      }`}
-                    >
-                      {updatingId === orderItem.id
-                        ? "Updating..."
-                        : "Update Item"}
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      
+      <p className="mt-2 text-sm text-gray-600">
+        Click on the map or search to select a location
+      </p>
     </div>
   );
 };
 
-export default OrderItemsPage;
+const Page = () => {
+  return (
+    <div className="p-4 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Location Picker with Search</h1>
+      <MapboxLocationPicker />
+    </div>
+  );
+};
+
+export default Page;
