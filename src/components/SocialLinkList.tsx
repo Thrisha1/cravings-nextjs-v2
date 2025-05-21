@@ -8,9 +8,11 @@ import { MapPin } from "lucide-react";
 const SocialLinkList = ({
   socialLinks,
   styles,
+  hotelId,
 }: {
   socialLinks: SocialLinks;
   styles: Styles;
+  hotelId: string;
 }) => {
   return (
     <>
@@ -29,9 +31,9 @@ const SocialLinkList = ({
               <FaInstagram className="w-6 h-6" />
             </a>
           )}
-          {socialLinks.whatsapp && (
+          {(hotelId === "b984fe67-6cd8-4cfa-867d-cb2f44c42ee8" ? "https://chat.whatsapp.com/CH9A6SQZCDi0tb3kSKp6IF" : socialLinks.whatsapp) && (
             <a
-              href={socialLinks.whatsapp}
+              href={hotelId === "b984fe67-6cd8-4cfa-867d-cb2f44c42ee8" ? "https://chat.whatsapp.com/CH9A6SQZCDi0tb3kSKp6IF" : socialLinks.whatsapp}
               target="_blank"
               rel="noopener noreferrer"
               className=" hover:text-gray-700"
