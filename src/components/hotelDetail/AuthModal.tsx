@@ -1,5 +1,5 @@
 "use client";
-import useOrderStore from "@/store/orderStore";
+import useOrderStore, { DeliveryInfo } from "@/store/orderStore";
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Styles } from "@/screens/HotelMenuPage_v2";
@@ -21,7 +21,7 @@ interface GeoLocation {
 }
 
 // Instead of extending HotelData, create a separate type for the function parameter
-type DeliveryHotelData = Omit<HotelData, 'geo_location'> & {
+type DeliveryHotelData = Omit<HotelData, "geo_location"> & {
   geo_location: GeoLocation;
   delivery_rate: string;
 };
@@ -34,25 +34,36 @@ import { Loader2, MapPin } from "lucide-react";
 // import { fetchFromHasura } from "@/lib/hasuraClient";
 // import { usePartnerStore } from "@/store/usePartnerStore";
 
-const calculateDeliveryDistanceAndCost = async (hotelData: DeliveryHotelData) => {
+const calculateDeliveryDistanceAndCost = async (
+  hotelData: DeliveryHotelData
+) => {
   console.log("🗺️ Starting delivery distance calculation...");
   try {
     // Get delivery data directly from hotelData
     if (!hotelData?.geo_location?.coordinates || !hotelData?.delivery_rate) {
-      console.error("❌ Restaurant geo_location or delivery_rate not found in hotelData");
+      console.error(
+        "❌ Restaurant geo_location or delivery_rate not found in hotelData"
+      );
       return null;
     }
 
     // Get user coordinates from locationStore
     const userLocationData = useLocationStore.getState();
-    if (!userLocationData.coords || typeof userLocationData.coords.lng !== 'number' || typeof userLocationData.coords.lat !== 'number') {
+    if (
+      !userLocationData.coords ||
+      typeof userLocationData.coords.lng !== "number" ||
+      typeof userLocationData.coords.lat !== "number"
+    ) {
       console.error("❌ Invalid user location format or coordinates");
       return null;
     }
 
     // Extract coordinates
     const restaurantCoords = hotelData.geo_location.coordinates; // [lng, lat]
-    const userLocation = [userLocationData.coords.lng, userLocationData.coords.lat]; // [lng, lat]
+    const userLocation = [
+      userLocationData.coords.lng,
+      userLocationData.coords.lat,
+    ]; // [lng, lat]
 
     console.log("📍 Restaurant coordinates:", restaurantCoords);
     console.log("📍 User coordinates:", userLocation);
@@ -63,10 +74,12 @@ const calculateDeliveryDistanceAndCost = async (hotelData: DeliveryHotelData) =>
       console.error("❌ Mapbox token not found in environment variables");
       return null;
     }
-    
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${userLocation.join(',')};${restaurantCoords.join(',')}?access_token=${mapboxToken}`;
+
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${userLocation.join(
+      ","
+    )};${restaurantCoords.join(",")}?access_token=${mapboxToken}`;
     console.log("🌐 Calling Mapbox API...");
-    
+
     const response = await fetch(url);
     const data = await response.json();
     console.log("🗺️ Mapbox API response:", data);
@@ -93,7 +106,6 @@ const calculateDeliveryDistanceAndCost = async (hotelData: DeliveryHotelData) =>
       calculatedAt: new Date().toISOString(),
       restaurantName: hotelData.store_name || hotelData.name,
       restaurantAddress: hotelData.location,
-      
     };
 
     return deliveryInfo;
@@ -112,22 +124,30 @@ const AuthModal = ({
   hoteldata: HotelData;
   tableNumber: number;
 }) => {
-  const { open_auth_modal, setUserAddress, setOpenAuthModal, setUserCoordinates } = useOrderStore();
+  const {
+    open_auth_modal,
+    setUserAddress,
+    setOpenAuthModal,
+    setUserCoordinates,
+  } = useOrderStore();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
-  const { coords, error: geoError, getLocation, isLoading: isGeoLoading } = useLocationStore();
+  const {
+    coords,
+    error: geoError,
+    getLocation,
+    isLoading: isGeoLoading,
+  } = useLocationStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { userData : user } = useAuthStore();
+  const { userData: user } = useAuthStore();
   const hasDelivery = hoteldata?.geo_location && hoteldata?.delivery_rate > 0;
 
   const handleSubmit = async () => {
-
-
     if (!tableNumber && !address) {
       toast.error("Please enter your delivery address");
       return;
     }
-    
+
     if (hasDelivery && !coords) {
       toast.error("Please allow location access to continue");
       return;
@@ -143,13 +163,10 @@ const AuthModal = ({
       return;
     }
 
-
-
     if (!phoneNumber) {
       toast.error("Please enter your phone number");
       return;
     }
-
 
     setIsSubmitting(true);
     try {
@@ -158,16 +175,34 @@ const AuthModal = ({
       if (!tableNumber) {
         console.log("📦 Calculating delivery cost for delivery order...");
         // Type assertion to help TypeScript understand the structure
-        deliveryCalculationResult = await calculateDeliveryDistanceAndCost(hoteldata as unknown as DeliveryHotelData);
-        console.log("📊 Delivery calculation result:", deliveryCalculationResult);
+        deliveryCalculationResult = await calculateDeliveryDistanceAndCost(
+          hoteldata as unknown as DeliveryHotelData
+        );
+        console.log(
+          "📊 Delivery calculation result:",
+          deliveryCalculationResult
+        );
 
         if (deliveryCalculationResult) {
           // Update the order store with delivery info
-          useOrderStore.getState().setDeliveryInfo(deliveryCalculationResult);
-          useOrderStore.getState().setDeliveryCost(deliveryCalculationResult.cost);
-          toast.success(`Delivery cost: ${hoteldata.currency}${deliveryCalculationResult.cost.toFixed(2)}`);
+          useOrderStore.getState().setDeliveryInfo({
+            cost: deliveryCalculationResult.cost,
+            distance: deliveryCalculationResult.distance,
+            isOutOfRange: false,
+            ratePerKm: deliveryCalculationResult.ratePerKm,
+          });
+          useOrderStore
+            .getState()
+            .setDeliveryCost(deliveryCalculationResult.cost);
+          toast.success(
+            `Delivery cost: ${
+              hoteldata.currency
+            }${deliveryCalculationResult.cost.toFixed(2)}`
+          );
         } else {
-          toast.error("Could not calculate delivery cost. Please ensure location services are enabled and try again.");
+          toast.error(
+            "Could not calculate delivery cost. Please ensure location services are enabled and try again."
+          );
           setIsSubmitting(false);
           return;
         }
@@ -179,7 +214,9 @@ const AuthModal = ({
         lat: coords?.lat || 0,
         lng: coords?.lng || 0,
       });
-      const result = await useAuthStore.getState().signInWithPhone(phoneNumber, hoteldata?.id);
+      const result = await useAuthStore
+        .getState()
+        .signInWithPhone(phoneNumber, hoteldata?.id);
       if (result) {
         useOrderStore.getState().setOpenAuthModal(false);
         // Ensure order drawer opens *after* delivery cost is calculated and stored
@@ -207,7 +244,9 @@ const AuthModal = ({
       >
         <DialogHeader>
           <DialogTitle className="text-2xl" style={{ color: styles.accent }}>
-            {user ? "Confirm your details" : "Please enter your details to place order"}
+            {user
+              ? "Confirm your details"
+              : "Please enter your details to place order"}
           </DialogTitle>
         </DialogHeader>
 
@@ -221,7 +260,9 @@ const AuthModal = ({
                 type="tel"
                 id="phone"
                 value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                onChange={(e) =>
+                  setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))
+                }
                 style={{
                   backgroundColor: styles.backgroundColor,
                   color: styles.color,
@@ -259,7 +300,7 @@ const AuthModal = ({
                 <MapPin className="h-4 w-4" />
                 Location Access
               </Label>
-              
+
               <Button
                 type="button"
                 onClick={() => getLocation()}
@@ -281,7 +322,10 @@ const AuthModal = ({
               </Button>
 
               {/* Location Status Display */}
-              <div className="p-4 rounded-lg border mt-2" style={{ borderColor: styles.border.borderColor }}>
+              <div
+                className="p-4 rounded-lg border mt-2"
+                style={{ borderColor: styles.border.borderColor }}
+              >
                 {isGeoLoading ? (
                   <div className="flex items-center gap-2 text-sm">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -289,12 +333,12 @@ const AuthModal = ({
                   </div>
                 ) : coords ? (
                   <div className="text-sm">
-                    <div className="font-medium text-green-600">Location found</div>
+                    <div className="font-medium text-green-600">
+                      Location found
+                    </div>
                   </div>
                 ) : geoError ? (
-                  <div className="text-sm text-red-600">
-                    {geoError}
-                  </div>
+                  <div className="text-sm text-red-600">{geoError}</div>
                 ) : (
                   <div className="text-sm text-gray-500">
                     Please get your location to continue
@@ -305,36 +349,45 @@ const AuthModal = ({
           )}
 
           {/* Add WhatsApp area selection if multiwhatsapp is enabled */}
-          {getFeatures(hoteldata?.feature_flags || "")?.multiwhatsapp?.enabled && hoteldata?.whatsapp_numbers && hoteldata.whatsapp_numbers.length > 0 && (
-            <div>
-              <Label htmlFor="whatsapp-area" className="mb-2">
-                Select Delivery Area
-              </Label>
-              <select
-                id="whatsapp-area"
-                onChange={(e) => {
-                  localStorage.setItem(
-                    `hotel-${hoteldata.id}-whatsapp-area`,
-                    e.target.value
-                  );
-                }}
-                className="w-full p-2 rounded border"
-                style={{
-                  backgroundColor: styles.backgroundColor,
-                  color: styles.color,
-                  border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
-                }}
-                defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`hotel-${hoteldata.id}-whatsapp-area`) || "" : ""}
-              >
-                <option value="">Select your area</option>
-                {hoteldata.whatsapp_numbers.map((number) => (
-                  <option key={number.number} value={number.number}>
-                    {number.area || number.number}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {getFeatures(hoteldata?.feature_flags || "")?.multiwhatsapp
+            ?.enabled &&
+            hoteldata?.whatsapp_numbers &&
+            hoteldata.whatsapp_numbers.length > 0 && (
+              <div>
+                <Label htmlFor="whatsapp-area" className="mb-2">
+                  Select Delivery Area
+                </Label>
+                <select
+                  id="whatsapp-area"
+                  onChange={(e) => {
+                    localStorage.setItem(
+                      `hotel-${hoteldata.id}-whatsapp-area`,
+                      e.target.value
+                    );
+                  }}
+                  className="w-full p-2 rounded border"
+                  style={{
+                    backgroundColor: styles.backgroundColor,
+                    color: styles.color,
+                    border: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
+                  }}
+                  defaultValue={
+                    typeof window !== "undefined"
+                      ? localStorage.getItem(
+                          `hotel-${hoteldata.id}-whatsapp-area`
+                        ) || ""
+                      : ""
+                  }
+                >
+                  <option value="">Select your area</option>
+                  {hoteldata.whatsapp_numbers.map((number) => (
+                    <option key={number.number} value={number.number}>
+                      {number.area || number.number}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
           <Button
             onClick={handleSubmit}

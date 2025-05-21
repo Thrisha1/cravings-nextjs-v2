@@ -15,7 +15,6 @@ const ItemCard = ({
   feature_flags,
   currency,
   hotelData,
-  hotelData,
 }: {
   item: HotelDataMenus;
   styles: Styles;
@@ -25,7 +24,6 @@ const ItemCard = ({
   hotelData?: HotelData;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
   const hasOrderingFeature = getFeatures(feature_flags || "")?.ordering.enabled;
   const [itemQuantity, setItemQuantity] = useState<number | 0>(0);
@@ -41,10 +39,12 @@ const ItemCard = ({
 
   // Check if we should show stock information
   const showStock = item.stocks?.[0]?.show_stock;
-  const stockQuantity = item.stocks?.[0]?.stock_quantity || 0;
-  const isOutOfStock = stockQuantity <= 0;
-
-  const hasStockFeature = getFeatures(feature_flags || "")?.stockmanagement.enabled;
+  const stockQuantity = item.stocks?.[0]?.stock_quantity ?? 9999;
+  const isOutOfStock = item.stocks?.[0]
+    ? item.stocks[0].stock_quantity <= 0
+    : false;
+  const hasStockFeature = getFeatures(feature_flags || "")?.stockmanagement
+    .enabled;
 
   return (
     <div className="h-full relative">
@@ -58,16 +58,11 @@ const ItemCard = ({
             onClick={() => setIsOpen(true)}
             className={`flex justify-between w-full`}
           >
-          <div
-            onClick={() => setIsOpen(true)}
-            className={`flex justify-between w-full`}
-          >
             <div
               className={`flex flex-col justify-center ${
                 item.image_url ? "w-1/2" : ""
               } ${!item.is_available ? "opacity-25" : ""}`}
             >
-              <div className="capitalize text-xl font-bold">{item.name}</div>
               <div className="capitalize text-xl font-bold">{item.name}</div>
               {currency !== "🚫" && (
                 <div
@@ -80,9 +75,6 @@ const ItemCard = ({
                   {hotelData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09"
                     ? item.price.toFixed(3)
                     : item.price}
-                  {hotelData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09"
-                    ? item.price.toFixed(3)
-                    : item.price}
                 </div>
               )}
               <DescriptionWithTextBreak
@@ -92,7 +84,7 @@ const ItemCard = ({
                 {item.description}
               </DescriptionWithTextBreak>
               {/* Show stock information if enabled */}
-              {(showStock && hasStockFeature) && (
+              {showStock && hasStockFeature && (
                 <div className="text-xs mt-1">
                   {isOutOfStock ? (
                     <span className="text-red-500 font-semibold">
@@ -112,13 +104,12 @@ const ItemCard = ({
                   src={item.image_url}
                   alt={item.name}
                   className={`object-cover w-full h-full ${
-                    (!item.is_available || (isOutOfStock && hasStockFeature)) ? "grayscale" : ""
+                    !item.is_available || (isOutOfStock && hasStockFeature)
+                      ? "grayscale"
+                      : ""
                   }`}
                 />
-                {/* Show unavailable badge if either item is unavailable or out of stock with show_stock */}
-                {(!item.is_available || (isOutOfStock && hasStockFeature)) && (
-                  <div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-center text-sm font-semibold py-2 px-3 w-full">
-                    {!item.is_available ? "Unavailable" : "Out of Stock"}
+               
                 {/* Show unavailable badge if either item is unavailable or out of stock with show_stock */}
                 {(!item.is_available || (isOutOfStock && hasStockFeature)) && (
                   <div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-center text-sm font-semibold py-2 px-3 w-full">
@@ -130,47 +121,45 @@ const ItemCard = ({
           </div>
 
           {/* Add to cart buttons */}
-          {hasOrderingFeature &&
-            item.is_available &&
-            (!hasStockFeature || !isOutOfStock) && (
-              <div className="flex gap-2 items-center justify-end w-full mt-2">
-                <button
-                  onClick={() => {
-                    if (itemQuantity > 1) {
-                      decreaseQuantity(item.id as string);
-                    } else {
-                      removeItem(item.id as string);
-                    }
-                  }}
-                  style={{
-                    backgroundColor: styles.accent,
-                    ...styles.border,
-                    color: "white",
-                  }}
-                  className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
-                >
-                  -
-                </button>
+          {item.is_available && hasOrderingFeature && (!hasStockFeature || !isOutOfStock) && (
+            <div className="flex gap-2 items-center justify-end w-full mt-2">
+              <button
+                onClick={() => {
+                  if (itemQuantity > 1) {
+                    decreaseQuantity(item.id as string);
+                  } else {
+                    removeItem(item.id as string);
+                  }
+                }}
+                style={{
+                  backgroundColor: styles.accent,
+                  ...styles.border,
+                  color: "white",
+                }}
+                className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
+              >
+                -
+              </button>
 
               <div className="bg-[#e2e2e2] rounded aspect-square h-8 grid place-items-center font-bold text-black/70">
                 {itemQuantity}
               </div>
 
-                <button
-                  onClick={() => {
-                    addItem(item);
-                  }}
-                  style={{
-                    backgroundColor: styles.accent,
-                    ...styles.border,
-                    color: "white",
-                  }}
-                  className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
-                >
-                  +
-                </button>
-              </div>
-            )}
+              <button
+                onClick={() => {
+                  addItem(item);
+                }}
+                style={{
+                  backgroundColor: styles.accent,
+                  ...styles.border,
+                  color: "white",
+                }}
+                className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
+              >
+                +
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

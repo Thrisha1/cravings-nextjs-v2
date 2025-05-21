@@ -1,13 +1,9 @@
 import React from 'react'
+import { PageProps } from '../../../../.next/types/app/(root)/page';
 
-type Props = {
-  params: {
-    id: string[]
-  }
-}
 
-function Page({ params }: Props) {
-  const { id } = params;
+async function Page({ params }: PageProps) {
+  const { id } = await params;
   return (
     <div>
       order detail page {id}

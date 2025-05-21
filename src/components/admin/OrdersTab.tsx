@@ -30,8 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { revalidateTag } from "@/app/actions/revalidate";
-import { revalidateTag } from "@/app/actions/revalidate";
-import { revalidateTag } from "@/app/actions/revalidate";
+
 
 const OrdersTab = () => {
   const router = useRouter();
@@ -42,8 +41,6 @@ const OrdersTab = () => {
   const [loading, setLoading] = useState(true);
   const [showOnlyPending, setShowOnlyPending] = useState<boolean>(true);
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest");
-  const [activeTab, setActiveTab] = useState<"table" | "delivery">("delivery");
-  const [activeTab, setActiveTab] = useState<"table" | "delivery">("delivery");
   const [activeTab, setActiveTab] = useState<"table" | "delivery">("delivery");
   const [newOrders, setNewOrders] = useState({ table: false, delivery: false });
   const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
@@ -110,7 +107,6 @@ const OrdersTab = () => {
     try {
       // First update the order status
       // First update the order status
-      // First update the order status
       const response = await fetchFromHasura(
         `mutation UpdateOrderStatus($orderId: uuid!, $status: String!) {
           update_orders_by_pk(pk_columns: {id: $orderId}, _set: {status: $status}) {
@@ -122,290 +118,6 @@ const OrdersTab = () => {
       );
 
       if (response.errors) throw new Error(response.errors[0].message);
-
-      if (newStatus === "completed") {
-        const order = orders.find((o) => o.id === orderId);
-        if (order) {
-          for (const item of order.items) {
-            if (item.stocks?.[0]?.id) {
-              await fetchFromHasura(
-                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
-                  update_stocks_by_pk(
-                    pk_columns: {id: $stockId},
-                    _inc: {stock_quantity: $quantity}
-                  ) {
-                    id
-                    stock_quantity
-                  }
-                }`,
-                {
-                  stockId: item.stocks?.[0]?.id,
-                  quantity: -item.quantity,
-                }
-              );
-            }
-          }
-
-          revalidateTag(userData?.id as string);
-        }
-      }
-
-
-      if (newStatus === "completed") {
-        const order = orders.find((o) => o.id === orderId);
-        if (order) {
-
-          for (const item of order.items) {
-            if (item.stocks?.[0]?.id) {
-              await fetchFromHasura(
-                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
-                  update_stocks_by_pk(
-                    pk_columns: {id: $stockId},
-                    _inc: {stock_quantity: $quantity}
-                  ) {
-                    id
-                    stock_quantity
-                  }
-                }`,
-                {
-                  stockId: item.stocks?.[0]?.id,
-                  quantity: -item.quantity, 
-                }
-              );
-            }
-          }
-
-          revalidateTag(userData?.id as string);
-        }
-      }
-
-
-      if (newStatus === "completed") {
-        const order = orders.find((o) => o.id === orderId);
-        if (order) {
-          for (const item of order.items) {
-            if (item.stocks?.[0]?.id) {
-              await fetchFromHasura(
-                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
-                  update_stocks_by_pk(
-                    pk_columns: {id: $stockId},
-                    _inc: {stock_quantity: $quantity}
-                  ) {
-                    id
-                    stock_quantity
-                  }
-                }`,
-                {
-                  stockId: item.stocks?.[0]?.id,
-                  quantity: -item.quantity,
-                }
-              );
-            }
-          }
-
-          revalidateTag(userData?.id as string);
-        }
-      }
-
-
-      if (newStatus === "completed") {
-        const order = orders.find((o) => o.id === orderId);
-        if (order) {
-
-          for (const item of order.items) {
-            if (item.stocks?.[0]?.id) {
-              await fetchFromHasura(
-                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
-                  update_stocks_by_pk(
-                    pk_columns: {id: $stockId},
-                    _inc: {stock_quantity: $quantity}
-                  ) {
-                    id
-                    stock_quantity
-                  }
-                }`,
-                {
-                  stockId: item.stocks?.[0]?.id,
-                  quantity: -item.quantity, 
-                }
-              );
-            }
-          }
-
-          revalidateTag(userData?.id as string);
-        }
-      }
-
-
-      if (newStatus === "completed") {
-        const order = orders.find((o) => o.id === orderId);
-        if (order) {
-          for (const item of order.items) {
-            if (item.stocks?.[0]?.id) {
-              await fetchFromHasura(
-                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
-                  update_stocks_by_pk(
-                    pk_columns: {id: $stockId},
-                    _inc: {stock_quantity: $quantity}
-                  ) {
-                    id
-                    stock_quantity
-                  }
-                }`,
-                {
-                  stockId: item.stocks?.[0]?.id,
-                  quantity: -item.quantity,
-                }
-              );
-            }
-          }
-
-          revalidateTag(userData?.id as string);
-        }
-      }
-
-
-      if (newStatus === "completed") {
-        const order = orders.find((o) => o.id === orderId);
-        if (order) {
-
-          for (const item of order.items) {
-            if (item.stocks?.[0]?.id) {
-              await fetchFromHasura(
-                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
-                  update_stocks_by_pk(
-                    pk_columns: {id: $stockId},
-                    _inc: {stock_quantity: $quantity}
-                  ) {
-                    id
-                    stock_quantity
-                  }
-                }`,
-                {
-                  stockId: item.stocks?.[0]?.id,
-                  quantity: -item.quantity, 
-                }
-              );
-            }
-          }
-
-          revalidateTag(userData?.id as string);
-        }
-      }
-
-
-      if (newStatus === "completed") {
-        const order = orders.find((o) => o.id === orderId);
-        if (order) {
-          for (const item of order.items) {
-            if (item.stocks?.[0]?.id) {
-              await fetchFromHasura(
-                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
-                  update_stocks_by_pk(
-                    pk_columns: {id: $stockId},
-                    _inc: {stock_quantity: $quantity}
-                  ) {
-                    id
-                    stock_quantity
-                  }
-                }`,
-                {
-                  stockId: item.stocks?.[0]?.id,
-                  quantity: -item.quantity,
-                }
-              );
-            }
-          }
-
-          revalidateTag(userData?.id as string);
-        }
-      }
-
-
-      if (newStatus === "completed") {
-        const order = orders.find((o) => o.id === orderId);
-        if (order) {
-
-          for (const item of order.items) {
-            if (item.stocks?.[0]?.id) {
-              await fetchFromHasura(
-                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
-                  update_stocks_by_pk(
-                    pk_columns: {id: $stockId},
-                    _inc: {stock_quantity: $quantity}
-                  ) {
-                    id
-                    stock_quantity
-                  }
-                }`,
-                {
-                  stockId: item.stocks?.[0]?.id,
-                  quantity: -item.quantity, 
-                }
-              );
-            }
-          }
-
-          revalidateTag(userData?.id as string);
-        }
-      }
-
-
-      if (newStatus === "completed") {
-        const order = orders.find((o) => o.id === orderId);
-        if (order) {
-          for (const item of order.items) {
-            if (item.stocks?.[0]?.id) {
-              await fetchFromHasura(
-                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
-                  update_stocks_by_pk(
-                    pk_columns: {id: $stockId},
-                    _inc: {stock_quantity: $quantity}
-                  ) {
-                    id
-                    stock_quantity
-                  }
-                }`,
-                {
-                  stockId: item.stocks?.[0]?.id,
-                  quantity: -item.quantity,
-                }
-              );
-            }
-          }
-
-          revalidateTag(userData?.id as string);
-        }
-      }
-
-
-      if (newStatus === "completed") {
-        const order = orders.find((o) => o.id === orderId);
-        if (order) {
-          for (const item of order.items) {
-            if (item.stocks?.[0]?.id) {
-              await fetchFromHasura(
-                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
-                  update_stocks_by_pk(
-                    pk_columns: {id: $stockId},
-                    _inc: {stock_quantity: $quantity}
-                  ) {
-                    id
-                    stock_quantity
-                  }
-                }`,
-                {
-                  stockId: item.stocks?.[0]?.id,
-                  quantity: -item.quantity, 
-                }
-              );
-            }
-          }
-
-          revalidateTag(userData?.id as string);
-        }
-      }
-
 
       if (newStatus === "completed") {
         const order = orders.find((o) => o.id === orderId);
@@ -552,9 +264,6 @@ const OrdersTab = () => {
         onOpenChange={(open) =>
           setNewOrderAlert((prev) => ({ ...prev, show: open }))
         }
-        onOpenChange={(open) =>
-          setNewOrderAlert((prev) => ({ ...prev, show: open }))
-        }
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -620,9 +329,6 @@ const OrdersTab = () => {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="table" className="relative">
-            Table Orders
-            {newOrders.table && (
           <TabsTrigger value="table" className="relative">
             Table Orders
             {newOrders.table && (

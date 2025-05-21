@@ -183,12 +183,6 @@ const useOrderStore = create(
                 name: i.item?.name || "Unknown",
                 price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
                 category: i.menu?.category,
-              items: order.order_items.map((i: any) => ({
-                id: i.item.id,
-                quantity: i.quantity,
-                name: i.item?.name || "Unknown",
-                price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
-                category: i.menu?.category,
               })),
             }));
 
@@ -214,8 +208,6 @@ const useOrderStore = create(
           onNext: (data) => {
             console.log(data);
 
-            console.log(data);
-
             const allOrders = data.data?.orders.map((order: any) => ({
               id: order.id,
               totalPrice: order.total_price,
@@ -232,13 +224,6 @@ const useOrderStore = create(
               delivery_charge: order.delivery_charge, // Include delivery_charge
               userId: order.user_id,
               user: order.user,
-              items: order.order_items.map((i: any) => ({
-                id: i.item.id,
-                quantity: i.quantity,
-                name: i.item.name || "Unknown",
-                price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
-                category: i.menu?.category,
-                stocks: i.menu?.stocks,
               items: order.order_items.map((i: any) => ({
                 id: i.item.id,
                 quantity: i.quantity,
@@ -670,6 +655,7 @@ const useOrderStore = create(
                   name: item.name,
                   price: item.price,
                   offers: item.offers,
+                  category: item.category,
                 },
               })),
             }
