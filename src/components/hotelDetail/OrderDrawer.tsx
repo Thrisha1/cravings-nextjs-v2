@@ -238,10 +238,10 @@ const OrderDrawer = ({
         style={{
           ...styles.border,
         }}
-        className="fixed bottom-0 z-[51] left-1/2 -translate-x-1/2 lg:max-w-[50%] bg-white text-black w-full px-[8%] py-6 rounded-t-[35px] bottom-bar-shadow flex items-center justify-between"
+        className="fixed bottom-0 z-[30] left-1/2 -translate-x-1/2 lg:max-w-[50%] bg-white text-black w-full px-[8%] py-6 rounded-t-[35px] bottom-bar-shadow flex items-center justify-between"
       >
         <>
-          <div className="z-[51]">
+          <div className="z-[31]">
             <div className="flex gap-2 items-center font-black text-xl ">
               <div>PRICE : </div>
               <div style={{ color: styles.accent }}>

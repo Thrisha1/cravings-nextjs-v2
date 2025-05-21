@@ -110,14 +110,14 @@ export function Navbar() {
   const NavLinks = () => (
     <>
       {[
-        {
-          href: `/offers`,
-          label: "Offers",
-        },
-        {
-          href: "/explore",
-          label: "Explore",
-        },
+        // {
+        //   href: `/offers`,
+        //   label: "Offers",
+        // },
+        // {
+        //   href: "/explore",
+        //   label: "Explore",
+        // },
         ...(userData?.role === "partner"
           ? [
               { href: "/admin", label: "Admin" },

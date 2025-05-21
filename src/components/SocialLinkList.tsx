@@ -1,6 +1,6 @@
 import { SocialLinks } from "@/app/hotels/[...id]/page";
-import { ChatBubbleIcon, InstagramLogoIcon } from "@radix-ui/react-icons";
-import { FaGoogle, FaInstagram, FaWhatsapp } from "react-icons/fa";
+// import { ChatBubbleIcon, InstagramLogoIcon } from "@radix-ui/react-icons";
+import { FaInstagram, FaWhatsapp } from "react-icons/fa";
 import React from "react";
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import { MapPin } from "lucide-react";
