@@ -36,7 +36,9 @@ export const getGstAmount = (price: number, gstPercentage: number) => {
   return (price * gstPercentage) / 100;
 };
 
-export const calculateDeliveryDistanceAndCost = async (hotelData : HotelData) => {
+export const calculateDeliveryDistanceAndCost = async (
+  hotelData: HotelData
+) => {
   const { setDeliveryInfo } = useOrderStore.getState();
 
   try {
@@ -494,7 +496,13 @@ const OrderDrawer = ({
 
   return (
     <>
-      <PlaceOrderModal qrGroup={qrGroup || null} qrId={qrId || null} getWhatsappLink={getWhatsappLink} hotelData={hotelData} tableNumber={tableNumber || 0} />
+      <PlaceOrderModal
+        qrGroup={qrGroup || null}
+        qrId={qrId || null}
+        getWhatsappLink={getWhatsappLink}
+        hotelData={hotelData}
+        tableNumber={tableNumber || 0}
+      />
       <Drawer open={open_order_drawer} onOpenChange={setOpenOrderDrawer}>
         <div
           style={{ ...styles.border }}
@@ -507,7 +515,9 @@ const OrderDrawer = ({
               <div>PRICE : </div>
               <div style={{ color: styles.accent }}>
                 {hotelData.currency}
-                {calculateGrandTotal() || 0}
+                {items?.reduce((acc, item) => {
+                  return acc + item.price * item.quantity;
+                }, 0) || 0}
               </div>
             </div>
             <div className="flex gap-2 items-center text-sm text-black/70">
@@ -519,7 +529,6 @@ const OrderDrawer = ({
                 !deliveryInfo.isOutOfRange && (
                   <div className="ml-2">(Delivery)</div>
                 )}
-          
             </div>
           </div>
 
@@ -720,23 +729,22 @@ const OrderDrawer = ({
                 {!order ? (
                   <>
                     {/* {!deliveryInfo?.isOutOfRange || isQrScan ? ( */}
-                      <Link
-                        href={"#"}
-                        onClick={handlePlaceOrder}
-                        // target="_blank"
-                        style={{ backgroundColor: styles.accent }}
-                        className="flex-1 flex items-center justify-center gap-2 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Placing Order...
-                          </>
-                        ) : (
-                          <>Place Order</>
-                        )}
-                      </Link>
-                    
+                    <Link
+                      href={"#"}
+                      onClick={handlePlaceOrder}
+                      // target="_blank"
+                      style={{ backgroundColor: styles.accent }}
+                      className="flex-1 flex items-center justify-center gap-2 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Placing Order...
+                        </>
+                      ) : (
+                        <>Place Order</>
+                      )}
+                    </Link>
                   </>
                 ) : (
                   <div className="w-full text-center text-sm text-gray-500">
