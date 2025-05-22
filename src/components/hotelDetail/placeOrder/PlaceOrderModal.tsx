@@ -23,6 +23,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import Link from "next/link";
+import { getGstAmount } from "../OrderDrawer";
+import { QrGroup } from "@/app/admin/qr-management/page";
 
 const ItemsCard = ({
   items,
@@ -88,6 +91,18 @@ const ItemsCard = ({
   );
 };
 
+const TableNumberCard = ({ tableNumber }: { tableNumber: number }) => {
+  return (
+    <div className="bg-white rounded-lg shadow p-4 mb-4">
+      <h3 className="font-bold text-lg mb-3">Table Information</h3>
+      <div className="flex items-center gap-2">
+        <span className="font-medium">Table Number:</span>
+        <span className="text-lg font-bold">{tableNumber}</span>
+      </div>
+    </div>
+  );
+};
+
 const AddressCard = ({
   address,
   setAddress,
@@ -96,6 +111,7 @@ const AddressCard = ({
   isGeoLoading,
   coords,
   geoError,
+  deliveryInfo,
 }: {
   address: any;
   setAddress: any;
@@ -104,6 +120,7 @@ const AddressCard = ({
   isGeoLoading: any;
   coords: any;
   geoError: any;
+  deliveryInfo: any;
 }) => {
   mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
@@ -160,6 +177,13 @@ const AddressCard = ({
             {geoError}
           </div>
         )}
+
+        {deliveryInfo?.isOutOfRange && (
+          <div className="text-sm text-red-600 p-2 bg-red-50 rounded">
+            Delivery is not available to your location. Please try a different
+            address.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -171,20 +195,34 @@ const BillCard = ({
   gstPercentage,
   deliveryInfo,
   isDelivery,
+  qrGroup,
 }: {
   items: any[];
   currency: any;
   gstPercentage: any;
   deliveryInfo: any;
   isDelivery: any;
+  qrGroup: QrGroup | null;
 }) => {
   const subtotal = items.reduce(
     (acc, item) => acc + item.price * item.quantity,
     0
   );
   const gstAmount = (subtotal * (gstPercentage || 0)) / 100;
-  const deliveryCost = isDelivery && deliveryInfo?.cost ? deliveryInfo.cost : 0;
-  const grandTotal = subtotal + gstAmount + deliveryCost;
+  
+  // Calculate delivery cost or QR group charges
+  let extraCharges = 0;
+  let chargeDescription = null;
+  
+  if (isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange) {
+    extraCharges = deliveryInfo.cost;
+  } else if (qrGroup && qrGroup.extra_charge > 0) {
+    extraCharges = qrGroup.charge_type === "PER_ITEM" 
+      ? items.reduce((acc, item) => acc + (qrGroup.extra_charge * item.quantity), 0)
+      : qrGroup.extra_charge;
+  }
+  
+  const grandTotal = subtotal + gstAmount + extraCharges;
 
   return (
     <div className="bg-white rounded-lg shadow p-4">
@@ -208,7 +246,8 @@ const BillCard = ({
           </div>
         )}
 
-        {isDelivery && deliveryInfo?.cost && (
+        {/* Show delivery charge or QR group charge */}
+        {isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange ? (
           <div className="flex justify-between">
             <div>
               <span>Delivery Charge</span>
@@ -224,7 +263,22 @@ const BillCard = ({
               {deliveryInfo.cost.toFixed(2)}
             </span>
           </div>
-        )}
+        ) : qrGroup && qrGroup.extra_charge > 0 ? (
+          <div className="flex justify-between">
+            <div>
+              <span>{qrGroup.name || "Service Charge"}</span>
+              <p className="text-xs text-gray-500">
+                {qrGroup.charge_type === "PER_ITEM" 
+                  ? `${currency}${qrGroup.extra_charge.toFixed(2)} per item`
+                  : "Fixed charge"}
+              </p>
+            </div>
+            <span>
+              {currency}
+              {extraCharges.toFixed(2)}
+            </span>
+          </div>
+        ) : null}
 
         <div className="border-t pt-2 mt-2 flex justify-between font-bold text-lg">
           <span>Grand Total</span>
@@ -296,7 +350,7 @@ const LoginDrawer = ({
 
   return (
     <Dialog open={showLoginDrawer} onOpenChange={setShowLoginDrawer}>
-      <DialogContent>
+      <DialogContent className="z-[62]">
         <DialogHeader>
           <DialogTitle>Login</DialogTitle>
           <DialogDescription>
@@ -353,7 +407,7 @@ const MapModal = ({
 }: {
   showMapModal: boolean;
   setShowMapModal: (show: boolean) => void;
-  setSelectedLocation: (location: { lng: number; lat: number } | null) => void;
+  setSelectedLocation: (coords: { lng: number; lat: number }) => void;
   setAddress: (address: string) => void;
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -419,6 +473,9 @@ const MapModal = ({
         setSelectedLocation({ lng, lat });
         updateMarker(lng, lat);
         reverseGeocode(lng, lat);
+
+        const setCoords = useLocationStore.getState().setCoords;
+        setCoords({ lat, lng });
       });
 
       // Add geolocate control
@@ -501,11 +558,6 @@ const MapModal = ({
           </div>
 
           <div className="relative flex-1">
-            {/* {isMapLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-100/50 z-10">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-            )} */}
             <div ref={mapContainer} className="h-full w-full" />
           </div>
 
@@ -526,9 +578,15 @@ const MapModal = ({
 const PlaceOrderModal = ({
   hotelData,
   tableNumber,
+  getWhatsappLink,
+  qrId,
+  qrGroup,
 }: {
   hotelData: HotelData;
   tableNumber: number;
+  getWhatsappLink: (orderId: string) => string;
+  qrId: string | null;
+  qrGroup: QrGroup | null;
 }) => {
   const {
     open_place_order_modal,
@@ -539,10 +597,10 @@ const PlaceOrderModal = ({
     increaseQuantity,
     decreaseQuantity,
     removeItem,
-    coordinates,
-    setUserCoordinates,
-    setUserAddress,
-    userAddress,
+    coordinates: selectedLocation,
+    setUserCoordinates: setSelectedLocation,
+    setUserAddress: setAddress,
+    userAddress: address,
     clearOrder,
     deliveryInfo,
     setDeliveryInfo,
@@ -556,69 +614,94 @@ const PlaceOrderModal = ({
     isLoading: isGeoLoading,
   } = useLocationStore();
 
-  const [address, setAddress] = useState(userAddress || "");
-  const [selectedLocation, setSelectedLocation] = useState(coordinates || null);
   const [showMapModal, setShowMapModal] = useState(false);
   const [showLoginDrawer, setShowLoginDrawer] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   const isDelivery = !tableNumber;
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
+  const isQrScan = qrId !== null;
 
   useEffect(() => {
-    setAddress(userAddress || "");
-    setSelectedLocation(coordinates || null);
-  }, [userAddress]);
-
-  useEffect(() => {
-    calculateDeliveryDistanceAndCost(hotelData as unknown as DeliveryHotelData);
-  }, [coordinates]);
+    if (isDelivery && hasDelivery && selectedLocation && !isQrScan) {
+      calculateDeliveryDistanceAndCost(
+        hotelData as unknown as DeliveryHotelData
+      ).then((result) => {
+        if (result) {
+          setDeliveryInfo({
+            cost: result.cost,
+            distance: result.distance,
+            isOutOfRange: result.isOutOfRange,
+            ratePerKm: result.ratePerKm,
+          });
+        }
+      });
+    }
+  }, [selectedLocation, isDelivery, hasDelivery, isQrScan]);
 
   const handlePlaceOrder = async () => {
-    if (isDelivery && !address) {
+    if (isDelivery && !address && !isQrScan) {
       toast.error("Please enter your delivery address");
       return;
     }
 
-    if (isDelivery && hasDelivery && !selectedLocation) {
+    if (isDelivery && hasDelivery && !selectedLocation && !isQrScan) {
       toast.error("Please select your location");
+      return;
+    }
+
+    if (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan) {
+      toast.error("Delivery is not available to your location");
       return;
     }
 
     setIsPlacingOrder(true);
     try {
-      // Update address and coordinates in store
-      setUserAddress(address);
-      if (selectedLocation) {
-        setUserCoordinates(selectedLocation);
+      const subtotal =
+        items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
+      const gstAmount = getGstAmount(
+        subtotal,
+        hotelData?.gst_percentage as number
+      );
+
+      // Prepare extra charges array
+      const extraCharges = [];
+
+      // Add QR group charge if applicable
+      if (isQrScan && qrGroup && qrGroup.extra_charge > 0 && qrGroup.name) {
+        extraCharges.push({
+          name: qrGroup.name,
+          amount: qrGroup.charge_type === "PER_ITEM"
+            ? (items || []).reduce((acc, item) => acc + (qrGroup.extra_charge * item.quantity), 0)
+            : qrGroup.extra_charge,
+          charge_type: qrGroup.charge_type || "FLAT_FEE",
+        });
       }
 
-      // Calculate delivery cost if needed
-      let deliveryCalculationResult = null;
-      if (isDelivery && hasDelivery && selectedLocation) {
-        deliveryCalculationResult = await calculateDeliveryDistanceAndCost(
-          hotelData as unknown as DeliveryHotelData
-        );
-
-        if (deliveryCalculationResult) {
-          setDeliveryInfo({
-            cost: deliveryCalculationResult.cost,
-            distance: deliveryCalculationResult.distance,
-            isOutOfRange: false,
-            ratePerKm: deliveryCalculationResult.ratePerKm,
-          });
-        }
+      // Add delivery charge if applicable
+      if (!isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange) {
+        extraCharges.push({
+          name: "Delivery Charge",
+          amount: deliveryInfo.cost,
+          charge_type: "FLAT_FEE",
+        });
       }
 
-      // Place the order
-      const result = await placeOrder(hotelData);
+      const result = await placeOrder(
+        hotelData,
+        tableNumber,
+        qrId as string,
+        gstAmount,
+        extraCharges.length > 0 ? extraCharges : null
+      );
+
       if (result) {
         toast.success("Order placed successfully!");
-        setOpenPlaceOrderModal(false);
         clearOrder();
       } else {
         toast.error("Failed to place order. Please try again.");
       }
+      setOpenPlaceOrderModal(false);
     } catch (error) {
       console.error("Error placing order:", error);
       toast.error("Failed to place order. Please try again.");
@@ -629,12 +712,17 @@ const PlaceOrderModal = ({
 
   const handleLoginSuccess = () => {
     setShowLoginDrawer(false);
-    // After login, user can proceed to place order
   };
+
+  // Determine if place order button should be disabled
+  const isPlaceOrderDisabled =
+    isPlacingOrder ||
+    (isDelivery && hasDelivery && !selectedLocation && !isQrScan) ||
+    (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan);
 
   return (
     <Dialog open={open_place_order_modal} onOpenChange={setOpenPlaceOrderModal}>
-      <DialogContent className="max-w-md max-h-[100vh] overflow-y-auto z-[60] bg-gray-50">
+      <DialogContent className="w-screen h-screen overflow-y-auto z-[60] bg-gray-50">
         <DialogHeader>
           <div className="flex items-center gap-4">
             <button
@@ -658,8 +746,10 @@ const PlaceOrderModal = ({
               currency={hotelData?.currency || "₹"}
             />
 
-            {/* Address Card (only for delivery) */}
-            {isDelivery && (
+            {/* Show table number for QR scan or address for delivery */}
+            {isQrScan ? (
+              <TableNumberCard tableNumber={tableNumber} />
+            ) : isDelivery ? (
               <AddressCard
                 address={address}
                 setAddress={setAddress}
@@ -668,8 +758,9 @@ const PlaceOrderModal = ({
                 isGeoLoading={isGeoLoading}
                 coords={selectedLocation || coords}
                 geoError={geoError}
+                deliveryInfo={deliveryInfo}
               />
-            )}
+            ) : null}
 
             {/* Bill Card */}
             <BillCard
@@ -677,21 +768,35 @@ const PlaceOrderModal = ({
               currency={hotelData?.currency || "₹"}
               gstPercentage={hotelData?.gst_percentage}
               deliveryInfo={deliveryInfo}
-              isDelivery={isDelivery}
+              isDelivery={isDelivery && !isQrScan}
+              qrGroup={qrGroup}
             />
 
             {/* Login Card (if not logged in) */}
             {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}
 
-            {/* Place Order Button (if logged in) */}
-            {user && (
+            {/* Place Order Button */}
+            {(user && !isPlaceOrderDisabled) ? (
+              <Link className="pt-4" href={getWhatsappLink(orderId as string)} target="_blank">
+                <Button
+                  onClick={handlePlaceOrder}
+                  className="w-full"
+                  disabled={isPlaceOrderDisabled || !user}
+                >
+                  {isPlacingOrder ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Placing Order...
+                    </>
+                  ) : (
+                    "Place Order"
+                  )}
+                </Button>
+              </Link>
+            ) : (
               <Button
-                onClick={handlePlaceOrder}
                 className="w-full"
-                disabled={
-                  isPlacingOrder ||
-                  (isDelivery && hasDelivery && !selectedLocation)
-                }
+                disabled={isPlaceOrderDisabled || !user}
               >
                 {isPlacingOrder ? (
                   <>
@@ -703,16 +808,24 @@ const PlaceOrderModal = ({
                 )}
               </Button>
             )}
+
+            {isDelivery && !isQrScan && deliveryInfo?.isOutOfRange && (
+              <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
+                Delivery is not available to your selected location
+              </div>
+            )}
           </div>
         )}
 
         {/* Map Modal */}
-        <MapModal
-          showMapModal={showMapModal}
-          setShowMapModal={setShowMapModal}
-          setSelectedLocation={setSelectedLocation}
-          setAddress={setAddress}
-        />
+        {!isQrScan && (
+          <MapModal
+            showMapModal={showMapModal}
+            setShowMapModal={setShowMapModal}
+            setSelectedLocation={setSelectedLocation}
+            setAddress={setAddress}
+          />
+        )}
 
         {/* Login Drawer */}
         <LoginDrawer

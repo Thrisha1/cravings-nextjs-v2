@@ -49,7 +49,11 @@ export interface Order {
   type?: "table_order" | "delivery" | "pos";
   deliveryAddress?: string | null;
   gstIncluded?: number;
-  delivery_charge?: number | null; // Added this field
+  delivery_charge?: number | null;
+  delivery_location?: {
+    type: string;
+    coordinates: [number, number];
+  };
   extraCharges?:
     | {
         name: string;
@@ -231,6 +235,7 @@ const useOrderStore = create(
               phone: order.phone,
               deliveryAddress: order.delivery_address,
               partnerId: order.partner_id,
+              delivery_location: order.delivery_location,
               gstIncluded: order.gst_included,
               extraCharges: order.extra_charges || [], // Handle null case
               delivery_charge: order.delivery_charge, // Include delivery_charge
@@ -816,21 +821,21 @@ const useOrderStore = create(
           const hotelOrders = { ...state.hotelOrders };
           if (state.hotelId) {
             hotelOrders[state.hotelId] = {
+              ...hotelOrders[state.hotelId],
               items: [],
               totalPrice: 0,
               order: null,
               orderId: newOrderId,
-              coordinates: null,
             };
           }
 
           return {
+            ...state,
             hotelOrders,
             items: [],
             orderId: newOrderId,
             totalPrice: 0,
             order: null,
-            coordinates: null,
           };
         });
       },

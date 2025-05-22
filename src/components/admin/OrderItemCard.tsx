@@ -2,7 +2,7 @@ import { HotelData } from "@/app/hotels/[...id]/page";
 import { formatDate } from "@/lib/formatDate";
 import { Partner, useAuthStore } from "@/store/authStore";
 import { Order, OrderItem } from "@/store/orderStore";
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "../ui/button";
 import { Edit, Printer, Trash2 } from "lucide-react";
 import KOTTemplate from "./pos/KOTTemplate";
@@ -49,6 +49,9 @@ const OrderItemCard = ({
   const kotRef = React.useRef<HTMLDivElement>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [deliveryLocation, setDeliveryLocation] = React.useState<string | null>(
+    null
+  );
 
   const handlePrintBill = useReactToPrint({
     contentRef: billRef,
@@ -79,6 +82,21 @@ const OrderItemCard = ({
       setIsDeleting(false);
     }
   };
+
+  useEffect(() => {
+    if (order.type === "delivery") {
+      const location = order.delivery_location;
+      if (location) {
+        setDeliveryLocation(
+          `https://www.google.com/maps/place/${order.delivery_location?.coordinates[1]},${order.delivery_location?.coordinates[0]}`
+        );
+      } else {
+        setDeliveryLocation(null);
+      }
+    } else {
+      setDeliveryLocation(null);
+    }
+  }, [order]);
 
   return (
     <div className="border rounded-lg p-4 relative">
@@ -148,9 +166,21 @@ const OrderItemCard = ({
               : "Unknown"}
           </p>
           {order.type === "delivery" && (
-            <p className="text-sm mt-3">
-              Delivery Address: {order.deliveryAddress || "Unknown"}
-            </p>
+            <>
+              <p className="text-sm mt-3">
+                Delivery Address: {order.deliveryAddress || "Unknown"}
+              </p>
+              {deliveryLocation && (
+                <a
+                  href={`${deliveryLocation}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-500 hover:underline mt-1"
+                >
+                  View Location
+                </a>
+              )}
+            </>
           )}
         </div>
       </div>

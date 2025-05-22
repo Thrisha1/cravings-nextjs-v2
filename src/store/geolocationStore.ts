@@ -17,6 +17,7 @@ type LocationStore = {
   refreshLocation: () => Promise<Coords | null>;
   clearLocation: () => void;
   reverseGeocode: (lng: number, lat: number) => Promise<string | null>;
+  setCoords: (coords: Coords) => void;
 };
 
 export const useLocationStore = create<LocationStore>()(
@@ -28,13 +29,22 @@ export const useLocationStore = create<LocationStore>()(
       isLoading: false,
       lastUpdated: null,
 
+      setCoords: (coords: Coords) => {
+        const lat = coords.lat;
+        const lng = coords.lng;
+        const newGeoString = `SRID=4326;POINT(${lng} ${lat})`;
+
+        set({
+          coords,
+          geoString: newGeoString,
+          error: null,
+          isLoading: false,
+          lastUpdated: Date.now(),
+        });
+      },
+
       getLocation: async () => {
         const { coords, lastUpdated } = get();
-
-        const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-        if (coords && lastUpdated && lastUpdated > fiveMinutesAgo) {
-          return coords;
-        }
 
         return get().refreshLocation();
       },

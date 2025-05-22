@@ -494,7 +494,7 @@ const OrderDrawer = ({
 
   return (
     <>
-      <PlaceOrderModal hotelData={hotelData} tableNumber={tableNumber || 0} />
+      <PlaceOrderModal qrGroup={qrGroup || null} qrId={qrId || null} getWhatsappLink={getWhatsappLink} hotelData={hotelData} tableNumber={tableNumber || 0} />
       <Drawer open={open_order_drawer} onOpenChange={setOpenOrderDrawer}>
         <div
           style={{ ...styles.border }}
@@ -519,9 +519,7 @@ const OrderDrawer = ({
                 !deliveryInfo.isOutOfRange && (
                   <div className="ml-2">(Delivery)</div>
                 )}
-              {!isQrScan && deliveryInfo?.isOutOfRange && (
-                <div className="ml-2 text-red-500">(Out of range)</div>
-              )}
+          
             </div>
           </div>
 
@@ -721,7 +719,7 @@ const OrderDrawer = ({
               <>
                 {!order ? (
                   <>
-                    {!deliveryInfo?.isOutOfRange || isQrScan ? (
+                    {/* {!deliveryInfo?.isOutOfRange || isQrScan ? ( */}
                       <Link
                         href={"#"}
                         onClick={handlePlaceOrder}
@@ -738,12 +736,7 @@ const OrderDrawer = ({
                           <>Place Order</>
                         )}
                       </Link>
-                    ) : (
-                      <div className="text-center text-sm text-red-500 p-4">
-                        Cannot place order - delivery not available for your
-                        location
-                      </div>
-                    )}
+                    
                   </>
                 ) : (
                   <div className="w-full text-center text-sm text-gray-500">

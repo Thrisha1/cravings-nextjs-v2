@@ -156,6 +156,7 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     qr_id
     type
     delivery_address
+    delivery_location
     status
     partner_id
     gst_included

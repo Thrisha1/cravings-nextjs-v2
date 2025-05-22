@@ -35,81 +35,97 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export const calculateDeliveryDistanceAndCost = async (
   hotelData: DeliveryHotelData
-) => {
+): Promise<DeliveryInfo | null> => {
   console.log("🗺️ Starting delivery distance calculation...");
+
+  // Validate hotel data
+  if (!hotelData?.geo_location?.coordinates || !hotelData?.delivery_rate) {
+    console.error("❌ Missing required hotel data for delivery calculation");
+    return null;
+  }
+
+  // Validate coordinates format
+  const restaurantCoords = hotelData.geo_location.coordinates;
+  if (
+    !Array.isArray(restaurantCoords) ||
+    restaurantCoords.length !== 2 ||
+    typeof restaurantCoords[0] !== "number" ||
+    typeof restaurantCoords[1] !== "number"
+  ) {
+    console.error("❌ Invalid restaurant coordinates format");
+    return null;
+  }
+
+  // Get and validate user coordinates
+  const userLocationData = useLocationStore.getState();
+  if (
+    !userLocationData.coords ||
+    typeof userLocationData.coords.lng !== "number" ||
+    typeof userLocationData.coords.lat !== "number"
+  ) {
+    console.error("❌ Invalid user location coordinates");
+    return null;
+  }
+
+  const userLocation: [number, number] = [
+    userLocationData.coords.lng,
+    userLocationData.coords.lat,
+  ];
+
+  // Validate Mapbox token
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  if (!mapboxToken) {
+    console.error("❌ Mapbox access token not configured");
+    return null;
+  }
+
   try {
-    // Get delivery data directly from hotelData
-    if (!hotelData?.geo_location?.coordinates || !hotelData?.delivery_rate) {
-      console.error(
-        "❌ Restaurant geo_location or delivery_rate not found in hotelData"
-      );
-      return null;
-    }
-
-    // Get user coordinates from locationStore
-    const userLocationData = useLocationStore.getState();
-    if (
-      !userLocationData.coords ||
-      typeof userLocationData.coords.lng !== "number" ||
-      typeof userLocationData.coords.lat !== "number"
-    ) {
-      console.error("❌ Invalid user location format or coordinates");
-      return null;
-    }
-
-    // Extract coordinates
-    const restaurantCoords = hotelData.geo_location.coordinates; // [lng, lat]
-    const userLocation = [
-      userLocationData.coords.lng,
-      userLocationData.coords.lat,
-    ]; // [lng, lat]
-
-    console.log("📍 Restaurant coordinates:", restaurantCoords);
-    console.log("📍 User coordinates:", userLocation);
-
-    // Calculate distance using Mapbox Directions API
-    const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    if (!mapboxToken) {
-      console.error("❌ Mapbox token not found in environment variables");
-      return null;
-    }
-
+    // Call Mapbox Directions API
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${userLocation.join(
       ","
     )};${restaurantCoords.join(",")}?access_token=${mapboxToken}`;
+
     console.log("🌐 Calling Mapbox API...");
-
     const response = await fetch(url);
-    const data = await response.json();
-    console.log("🗺️ Mapbox API response:", data);
 
-    if (!data.routes || data.routes.length === 0) {
-      console.error("❌ No route found between user and restaurant");
+    if (!response.ok) {
+      console.error(`❌ Mapbox API error: ${response.statusText}`);
       return null;
     }
 
-    // Get distance in kilometers
+    const data = await response.json();
+
+    if (!data.routes || data.routes.length === 0) {
+      console.error("❌ No route found between locations");
+      return null;
+    }
+
+    // Calculate distance and cost
     const distanceInKm = data.routes[0].distance / 1000;
-    const deliveryRate = parseFloat(hotelData.delivery_rate);
-    const deliveryCost = distanceInKm * deliveryRate;
+    const deliveryRate = Number(hotelData.delivery_rate);
+    const maxDeliveryDistance = hotelData.delivery_rules?.delivery_radius || 0;
+    const isOutOfRange = distanceInKm > maxDeliveryDistance;
 
-    console.log("📏 Distance (km):", distanceInKm);
-    console.log("💰 Delivery rate per km:", deliveryRate);
-    console.log("💵 Calculated delivery cost:", deliveryCost);
+    // Calculate cost (0 if out of range)
+    const deliveryCost = isOutOfRange ? 0 : distanceInKm * deliveryRate;
 
-    // Prepare delivery information object
-    const deliveryInfo = {
+    console.log("📏 Delivery details:", {
       distance: distanceInKm,
+      rate: deliveryRate,
       cost: deliveryCost,
-      ratePerKm: deliveryRate,
-      calculatedAt: new Date().toISOString(),
-      restaurantName: hotelData.store_name || hotelData.name,
-      restaurantAddress: hotelData.location,
-    };
+      maxDistance: maxDeliveryDistance,
+      isOutOfRange,
+    });
 
-    return deliveryInfo;
+    // Return delivery information
+    return {
+      distance: parseFloat(distanceInKm.toFixed(2)),
+      cost: parseFloat(deliveryCost.toFixed(2)),
+      ratePerKm: deliveryRate,
+      isOutOfRange,      
+    };
   } catch (error) {
-    console.error("❌ Error calculating delivery distance:", error);
+    console.error("❌ Error calculating delivery:", error instanceof Error ? error.message : error);
     return null;
   }
 };
