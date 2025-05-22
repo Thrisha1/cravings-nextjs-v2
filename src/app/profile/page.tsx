@@ -1371,7 +1371,7 @@ export default function ProfilePage() {
                 deliveryRules={deliveryRules}
                 setDeliveryRules={setDeliveryRules}
                 isEditingDelivery={isEditing.deliveryRate}
-                setIsEditingDelivery={(value) => 
+                setIsEditingDelivery={(value) =>
                   setIsEditing({ ...isEditing, deliveryRate: value })
                 }
                 deliverySaving={isSaving.deliverySettings}
@@ -1604,77 +1604,126 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-2 pt-4">
-                <label htmlFor="gstNo" className="text-lg font-semibold">
-                  GST Settings
-                </label>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">
-                    Enable GST Calculation
-                  </span>
-                  <Switch
-                    checked={gst.enabled}
-                    onCheckedChange={(checked) =>
-                      setGst((prev) => ({ ...prev, enabled: checked }))
-                    }
-                  />
+                <div className="flex justify-between items-center">
+                  <h1 className="text-lg font-semibold">Gst Settings</h1>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600">Enable GST</span>
+                    <Switch
+                      checked={gst.enabled}
+                      onCheckedChange={(checked) => {
+                        setGst((prev) => ({
+                          ...prev,
+                          enabled: checked,
+                          gst_percentage: checked ? prev.gst_percentage : 0,
+                        }));
+                        if (!checked) {
+                          handleSaveGst(null, true);
+                        }
+                      }}
+                      className="data-[state=checked]:bg-black"
+                    />
+                  </div>
                 </div>
-                {gst.enabled && (
-                  <div className="grid gap-2">
-                    <div className="grid grid-cols-2 gap-2">
+
+                <div className="flex gap-2">
+                  {isEditing.gst ? (
+                    <form onSubmit={handleSaveGst} className="space-y-2 w-full">
                       <div>
-                        <label
-                          htmlFor="gstNo"
-                          className="text-sm text-gray-600"
-                        >
-                          GST Number
+                        <label htmlFor="gst_no" className="font-semibold">
+                          Gst No.
                         </label>
                         <Input
-                          id="gstNo"
+                          id="gst_no"
                           type="text"
-                          placeholder="Enter GST Number"
+                          placeholder="Enter your Gst number"
+                          pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
                           value={gst.gst_no}
                           onChange={(e) =>
-                            setGst((prev) => ({
-                              ...prev,
-                              gst_no: e.target.value,
-                            }))
+                            setGst((prev) => {
+                              return { ...prev, gst_no: e.target.value };
+                            })
                           }
+                          className="flex-1"
+                          disabled={!gst.enabled}
                         />
                       </div>
                       <div>
                         <label
-                          htmlFor="gstPercent"
-                          className="text-sm text-gray-600"
+                          htmlFor="gst_percentage"
+                          className="font-semibold"
                         >
-                          GST Percentage (%)
+                          Gst Percentage
                         </label>
                         <Input
-                          id="gstPercent"
+                          id="gst_percentage"
                           type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="Enter GST Percentage"
+                          placeholder="Enter your Gst percentage"
                           value={gst.gst_percentage}
                           onChange={(e) =>
-                            setGst((prev) => ({
-                              ...prev,
-                              gst_percentage: parseFloat(e.target.value) || 0,
-                            }))
+                            setGst((prev) => {
+                              return {
+                                ...prev,
+                                gst_percentage: Number(e.target.value),
+                              };
+                            })
                           }
+                          className="flex-1"
+                          disabled={!gst.enabled}
                         />
                       </div>
+
+                      <Button
+                        disabled={isSaving.gst}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isSaving.gst ? <>Saving...</> : "Save"}
+                      </Button>
+                    </form>
+                  ) : (
+                    <div className="flex justify-between items-center w-full">
+                      <div className="flex flex-col gap-2">
+                        {gst.enabled ? (
+                          <>
+                            <div className="text-gray-700">
+                              {gst.gst_no
+                                ? `GST no: ${gst.gst_no}`
+                                : "No Gst no. set"}
+                            </div>
+                            <div className="text-gray-700">
+                              {gst.gst_percentage
+                                ? `GST percentage: ${gst.gst_percentage}%`
+                                : "No Gst percentage set"}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-gray-700">
+                            GST is currently disabled
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setIsEditing((prev) => ({
+                            ...prev,
+                            gst: true,
+                          }));
+                        }}
+                        variant="ghost"
+                        className="hover:bg-orange-100"
+                        disabled={!gst.enabled}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <Button
-                      onClick={() => handleSaveGst()}
-                      disabled={isSaving.gst}
-                      className="bg-orange-600 hover:bg-orange-700 text-white"
-                    >
-                      {isSaving.gst ? <>Saving...</> : "Save GST Settings"}
-                    </Button>
-                  </div>
-                )}
+                  )}
+                </div>
+                <p className="text-sm text-gray-500">
+                  {gst.enabled
+                    ? "This Gst will be used for your restaurant profile and billing"
+                    : "GST is currently disabled for your restaurant"}
+                </p>
               </div>
-              
+
               <div className="space-y-2 pt-4">
                 <div className="text-lg font-semibold mb-4">
                   QrCode Settings
