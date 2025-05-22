@@ -58,7 +58,7 @@ import {
 import { updateAuthCookie } from "../auth/actions";
 import { DeliveryRules } from "@/store/orderStore";
 import { Label } from "@/components/ui/label";
-
+import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/DeliveryAndGeoLocationSettings";
 
 interface GeoJSONPoint {
   type: "Point";
@@ -120,7 +120,7 @@ export default function ProfilePage() {
     deliveryRate: false,
     instaLink: false,
     gst: false,
-    deliverySettings : false,
+    deliverySettings: false,
   });
   const [placeId, setPlaceId] = useState("");
   const [gst, setGst] = useState({
@@ -201,7 +201,7 @@ export default function ProfilePage() {
       setGeoLocation({
         latitude: userData.geo_location.coordinates[1],
         longitude: userData.geo_location.coordinates[0],
-      })
+      });
     }
   }, [userData]);
 
@@ -353,9 +353,8 @@ export default function ProfilePage() {
       // Using SRID=4326;POINT(longitude latitude) format
       const geographyFormat = {
         type: "Point",
-        coordinates: [lng, lat],  
+        coordinates: [lng, lat],
       } as GeoLocation;
-
 
       setIsSaving((prev) => ({ ...prev, geoLocation: true }));
       toast.loading("Updating location...");
@@ -978,12 +977,12 @@ export default function ProfilePage() {
         id: userData?.id,
         updates: {
           delivery_rate: deliveryRate,
-          delivery_rules : rules
+          delivery_rules: rules,
         },
       });
 
       revalidateTag(userData?.id as string);
-      setState({ delivery_rate: deliveryRate , delivery_rules : rules }); 
+      setState({ delivery_rate: deliveryRate, delivery_rules: rules });
       toast.dismiss();
       toast.success("Delivery settings updated successfully!");
       setIsEditing((prev) => ({ ...prev, deliveryRate: false }));
@@ -1357,230 +1356,27 @@ export default function ProfilePage() {
                   </Link>
                 </p>
               </div>
-              {/* Geo Location Section */}
-              <div className="space-y-4 w-full">
-                <label htmlFor="placeId" className="text-lg font-semibold">
-                  Location
-                </label>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm text-gray-600">Latitude</label>
-                    <Input
-                      type="text"
-                      value={geoLocation.latitude}
-                      onChange={(e) =>
-                        setGeoLocation((prev) => ({
-                          ...prev,
-                          latitude: parseFloat(e.target.value),
-                        }))
-                      }
-                      placeholder="Enter latitude"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-600">Longitude</label>
-                    <Input
-                      type="text"
-                      value={geoLocation.longitude}
-                      onChange={(e) =>
-                        setGeoLocation((prev) => ({
-                          ...prev,
-                          longitude: parseFloat(e.target.value),
-                        }))
-                      }
-                      placeholder="Enter longitude"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleGetCurrentLocation}
-                    variant="outline"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Getting Location..." : "Get Current Location"}
-                  </Button>
-                  <Button
-                    onClick={handleSaveGeoLocation}
-                    disabled={isSaving.geoLocation}
-                    className="bg-orange-600 hover:bg-orange-700 text-white"
-                  >
-                    {isSaving.geoLocation ? "Saving..." : "Save"}
-                  </Button>
-                </div>
-                {error && <p className="text-sm text-red-500">{error}</p>}
-              </div>
 
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Delivery Settings</h3>
-                  {isEditing.deliverySettings ? (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() =>
-                          setIsEditing({
-                            ...isEditing,
-                            deliverySettings: false,
-                          })
-                        }
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleSaveDeliverySettings}
-                        disabled={isSaving.deliverySettings}
-                      >
-                        {isSaving.deliverySettings ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          "Save Changes"
-                        )}
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={() =>
-                        setIsEditing({ ...isEditing, deliverySettings: true })
-                      }
-                      variant="ghost"
-                      className="gap-2"
-                    >
-                      <Pencil className="w-4 h-4" />
-                      Edit
-                    </Button>
-                  )}
-                </div>
-
-                {/* Delivery Rate */}
-                <div className="space-y-2">
-                  <Label>
-                    Delivery Rate ({currency.value})
-                  </Label>
-                  {isEditing.deliverySettings ? (
-                    <Input
-                      id="deliveryRate"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={deliveryRate}
-                      onChange={(e) => setDeliveryRate(Number(e.target.value))}
-                    />
-                  ) : (
-                    <div className="p-3 rounded-md border bg-muted/50">
-                      {deliveryRate ? deliveryRate.toFixed(2) : "Not set"}
-                    </div>
-                  )}
-                </div>
-
-                {/* Delivery Rules */}
-                <div className="grid gap-4 md:grid-cols-2">
-                  {/* Delivery Radius */}
-                  <div className="space-y-2">
-                    <Label >Delivery Radius (km)</Label>
-                    {isEditing.deliverySettings ? (
-                      <Input
-                        id="deliveryRadius"
-                        type="number"
-                        min="1"
-                        value={deliveryRules.delivery_radius}
-                        onChange={(e) =>
-                          setDeliveryRules({
-                            ...deliveryRules,
-                            delivery_radius: Number(e.target.value),
-                          })
-                        }
-                      />
-                    ) : (
-                      <div className="p-3 rounded-md border bg-muted/50">
-                        {deliveryRules.delivery_radius} km
-                      </div>
-                    )}
-                  </div>
-
-                  {/* First KM Free */}
-                  <div className="space-y-2">
-                    <Label>First KM Free</Label>
-                    {isEditing.deliverySettings ? (
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={deliveryRules.first_km_free}
-                        onChange={(e) =>
-                          setDeliveryRules({
-                            ...deliveryRules,
-                            first_km_free: Number(e.target.value),
-                          })
-                        }
-                        placeholder="Enter first free KM"
-                      />
-                    ) : (
-                      <div className="p-3 rounded-md border bg-muted/50">
-                        {deliveryRules.first_km_free} km
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Rate Type */}
-                  <div className="space-y-2">
-                    <Label>Rate Type</Label>
-                    {isEditing.deliverySettings ? (
-                      <Select
-                        value={
-                          deliveryRules.is_fixed_rate ? "fixed" : "variable"
-                        }
-                        onValueChange={(value) =>
-                          setDeliveryRules({
-                            ...deliveryRules,
-                            is_fixed_rate: value === "fixed",
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select rate type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="fixed">Fixed Rate</SelectItem>
-                          <SelectItem value="variable">
-                            Variable (per km)
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <div className="p-3 rounded-md border bg-muted/50">
-                        {deliveryRules.is_fixed_rate
-                          ? "Fixed Rate"
-                          : "Variable (per km)"}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Help Text */}
-                {!isEditing.deliverySettings && (
-                  <p className="text-sm text-muted-foreground">
-                    {deliveryRules.is_fixed_rate
-                      ? `Flat rate of ${currency.value}${deliveryRate.toFixed(
-                          2
-                        )} will be applied for deliveries within ${
-                          deliveryRules.delivery_radius
-                        } km`
-                      : `Variable rate starting from ${
-                          currency.value
-                        }${deliveryRate.toFixed(
-                          2
-                        )} will be applied for deliveries within ${
-                          deliveryRules.delivery_radius
-                        } km${
-                          deliveryRules.first_km_free ? " (first km free)" : ""
-                        }`}
-                  </p>
-                )}
-              </div>
+              <DeliveryAndGeoLocationSettings
+                geoLocation={geoLocation}
+                setGeoLocation={setGeoLocation}
+                geoLoading={isLoading}
+                geoSaving={isSaving.geoLocation}
+                geoError={geoError}
+                handleGetCurrentLocation={handleGetCurrentLocation}
+                handleSaveGeoLocation={handleSaveGeoLocation}
+                currency={currency}
+                deliveryRate={deliveryRate}
+                setDeliveryRate={setDeliveryRate}
+                deliveryRules={deliveryRules}
+                setDeliveryRules={setDeliveryRules}
+                isEditingDelivery={isEditing.deliveryRate}
+                setIsEditingDelivery={(value) => 
+                  setIsEditing({ ...isEditing, deliveryRate: value })
+                }
+                deliverySaving={isSaving.deliverySettings}
+                handleSaveDeliverySettings={handleSaveDeliverySettings}
+              />
 
               <div className="space-y-2 pt-4">
                 <label htmlFor="whatsNum" className="text-lg font-semibold">
@@ -1806,6 +1602,7 @@ export default function ProfilePage() {
                   This Footnote will be used for your restaurant profile
                 </p>
               </div>
+
               <div className="space-y-2 pt-4">
                 <label htmlFor="gstNo" className="text-lg font-semibold">
                   GST Settings
@@ -1877,6 +1674,7 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
+              
               <div className="space-y-2 pt-4">
                 <div className="text-lg font-semibold mb-4">
                   QrCode Settings
