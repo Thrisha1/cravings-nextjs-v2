@@ -209,19 +209,23 @@ const BillCard = ({
     0
   );
   const gstAmount = (subtotal * (gstPercentage || 0)) / 100;
-  
+
   // Calculate delivery cost or QR group charges
   let extraCharges = 0;
   let chargeDescription = null;
-  
+
   if (isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange) {
     extraCharges = deliveryInfo.cost;
   } else if (qrGroup && qrGroup.extra_charge > 0) {
-    extraCharges = qrGroup.charge_type === "PER_ITEM" 
-      ? items.reduce((acc, item) => acc + (qrGroup.extra_charge * item.quantity), 0)
-      : qrGroup.extra_charge;
+    extraCharges =
+      qrGroup.charge_type === "PER_ITEM"
+        ? items.reduce(
+            (acc, item) => acc + qrGroup.extra_charge * item.quantity,
+            0
+          )
+        : qrGroup.extra_charge;
   }
-  
+
   const grandTotal = subtotal + gstAmount + extraCharges;
 
   return (
@@ -268,7 +272,7 @@ const BillCard = ({
             <div>
               <span>{qrGroup.name || "Service Charge"}</span>
               <p className="text-xs text-gray-500">
-                {qrGroup.charge_type === "PER_ITEM" 
+                {qrGroup.charge_type === "PER_ITEM"
                   ? `${currency}${qrGroup.extra_charge.toFixed(2)} per item`
                   : "Fixed charge"}
               </p>
@@ -534,19 +538,22 @@ const MapModal = ({
 
   return (
     <div
-      className={`fixed inset-0 left-0 z-50 h-screen w-screen  ${
-        showMapModal ? "" : "hidden"
+      className={`fixed inset-0 top-0 left-0 z-50 h-screen w-screen ${
+        showMapModal ? "overflow-hidden" : "hidden"
       }`}
     >
       <div
-        className={`fixed inset-0 bg-black/50 w-full h-full  ${
+        className={`fixed inset-0 top-0 bg-black/50 w-full h-full ${
           showMapModal ? "" : "hidden"
         }`}
         onClick={() => setShowMapModal(false)}
       />
 
       <div className="flex items-center justify-center min-h-screen">
-        <div className="relative bg-white rounded-lg max-w-screen-lg w-full h-[90vh] m-4 flex flex-col overflow-hidden">
+        <div
+          className="relative bg-white rounded-lg max-w-screen-lg w-full h-[90vh] m-4 flex flex-col overflow-hidden"
+          onClick={(e) => e.stopPropagation()} // Prevent click propagation to background
+        >
           <div className="flex justify-between items-center p-4 border-b">
             <h2 className="text-xl font-bold">Select Your Location</h2>
             <button
@@ -557,14 +564,14 @@ const MapModal = ({
             </button>
           </div>
 
-          <div className="relative flex-1">
+          <div className="relative flex-1 overflow-hidden">
             <div ref={mapContainer} className="h-full w-full" />
           </div>
 
           <div className="p-4 border-t">
             <button
               onClick={() => setShowMapModal(false)}
-              className="w-full bg-black rounded-lg text-white py-2 px-4 "
+              className="w-full bg-black rounded-lg text-white py-2 px-4"
             >
               Confirm Location
             </button>
@@ -671,9 +678,13 @@ const PlaceOrderModal = ({
       if (isQrScan && qrGroup && qrGroup.extra_charge > 0 && qrGroup.name) {
         extraCharges.push({
           name: qrGroup.name,
-          amount: qrGroup.charge_type === "PER_ITEM"
-            ? (items || []).reduce((acc, item) => acc + (qrGroup.extra_charge * item.quantity), 0)
-            : qrGroup.extra_charge,
+          amount:
+            qrGroup.charge_type === "PER_ITEM"
+              ? (items || []).reduce(
+                  (acc, item) => acc + qrGroup.extra_charge * item.quantity,
+                  0
+                )
+              : qrGroup.extra_charge,
           charge_type: qrGroup.charge_type || "FLAT_FEE",
         });
       }
@@ -776,8 +787,12 @@ const PlaceOrderModal = ({
             {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}
 
             {/* Place Order Button */}
-            {(user && !isPlaceOrderDisabled) ? (
-              <Link className="pt-4" href={getWhatsappLink(orderId as string)} target="_blank">
+            {user && !isPlaceOrderDisabled ? (
+              <Link
+                className="pt-4"
+                href={getWhatsappLink(orderId as string)}
+                target="_blank"
+              >
                 <Button
                   onClick={handlePlaceOrder}
                   className="w-full"

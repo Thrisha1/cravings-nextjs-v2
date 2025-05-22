@@ -383,6 +383,7 @@ export default function ProfilePage() {
       }
 
       // Update local state
+      revalidateTag(userData?.id as string);
       setState({ geo_location: geographyFormat });
       toast.dismiss();
       toast.success("Location updated successfully!");
