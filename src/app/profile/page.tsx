@@ -199,8 +199,8 @@ export default function ProfilePage() {
         is_fixed_rate: userData.delivery_rules?.is_fixed_rate || false,
       });
       setGeoLocation({
-        latitude: userData.geo_location.coordinates[1],
-        longitude: userData.geo_location.coordinates[0],
+        latitude: userData?.geo_location?.coordinates?.[1] || 0,
+        longitude: userData?.geo_location?.coordinates?.[0] || 0,
       });
     }
   }, [userData]);
