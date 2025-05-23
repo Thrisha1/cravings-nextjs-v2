@@ -104,7 +104,7 @@ const TableNumberCard = ({ tableNumber }: { tableNumber: number }) => {
 };
 
 interface AddressCardProps {
-  address: string;
+  address: string | null;
   setAddress: (address: string) => void;
   setShowMapModal: (show: boolean) => void;
   getLocation: () => void;
@@ -131,7 +131,7 @@ const AddressCard = ({
       </div>
 
       <Textarea
-        value={address}
+        value={address || ""}
         onChange={(e) => setAddress(e.target.value)}
         className="min-h-[100px] mb-3"
         placeholder="Enter your delivery address"
@@ -192,7 +192,7 @@ const AddressCard = ({
 interface BillCardProps {
   items: OrderItem[];
   currency: string;
-  gstPercentage: number;
+  gstPercentage?: number;
   deliveryInfo: any;
   isDelivery: boolean;
   qrGroup: QrGroup | null;
