@@ -55,6 +55,7 @@ interface HotelMenuPageProps {
   tableNumber: number;
   socialLinks: SocialLinks;
   qrGroup?: QrGroup | null;
+  qrId?: string | null;
 }
 
 
@@ -67,6 +68,7 @@ const HotelMenuPage = ({
   tableNumber,
   socialLinks,
   qrGroup,
+  qrId,
 }: HotelMenuPageProps) => {
   const styles: Styles = {
     backgroundColor: theme?.colors?.bg || "#F5F5F5",
@@ -282,7 +284,7 @@ const HotelMenuPage = ({
           <OrderDrawer
             qrGroup={qrGroup}
             styles={styles}
-            qrId={pathname.includes("qrScan") ? pathname.split("/")[2] : ""}
+            qrId={qrId || undefined}
             hotelData={hoteldata}
             tableNumber={tableNumber}
           />

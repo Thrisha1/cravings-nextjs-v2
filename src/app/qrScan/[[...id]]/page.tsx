@@ -25,19 +25,79 @@ const page = async ({
 }) => {
   const { id: qrId } = await params;
 
-  const id = isUUID(qrId?.[0] || "") ? qrId?.[0] : qrId?.[1];
+  // Validate and find the correct UUID from the path segments
+  let validQrId: string | null = null;
+  
+  if (qrId && Array.isArray(qrId)) {
+    // Check each segment for a valid UUID
+    for (const segment of qrId) {
+      if (segment && isUUID(segment)) {
+        validQrId = segment;
+        break;
+      }
+    }
+  } else if (qrId && isUUID(qrId)) {
+    validQrId = qrId;
+  }
+
+  if (!validQrId) {
+    // No valid UUID found, return an error page
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50 p-4">
+        <div className="w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+          <div className="flex flex-col space-y-4 text-center">
+            <div className="space-y-2">
+              <AlertTriangle className="mx-auto h-10 w-10 text-red-500" />
+              <h2 className="text-2xl font-bold tracking-tight">
+                Invalid QR Code
+              </h2>
+              <p className="text-muted-foreground">
+                The QR code you scanned is not valid or has expired.
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Please scan a valid QR code or contact staff for assistance.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const { qr_codes } = await fetchFromHasura(GET_QR_TABLE, {
-    id: id,
+    id: validQrId,
   });
 
-  // console.log("🔍 QR Code Data:", {
-  //   qrCode: qr_codes[0],
-  //   hasGroup: !!qr_codes[0].qr_group,
-  //   groupData: qr_codes[0].qr_group,
-  //   tableNumber: qr_codes[0].table_number,
-  //   partnerId: qr_codes[0].partner_id
-  // });
+  // Check if QR code exists
+  if (!qr_codes || qr_codes.length === 0) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50 p-4">
+        <div className="w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+          <div className="flex flex-col space-y-4 text-center">
+            <div className="space-y-2">
+              <AlertTriangle className="mx-auto h-10 w-10 text-red-500" />
+              <h2 className="text-2xl font-bold tracking-tight">
+                QR Code Not Found
+              </h2>
+              <p className="text-muted-foreground">
+                The QR code you scanned could not be found in our system.
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Please scan a valid QR code or contact staff for assistance.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  console.log("🔍 QR Code Data:", {
+    qrCode: qr_codes[0],
+    hasGroup: !!qr_codes[0].qr_group,
+    groupData: qr_codes[0].qr_group,
+    tableNumber: qr_codes[0].table_number,
+  });
   
 
   const tableNumber = qr_codes[0].table_number;
@@ -124,6 +184,7 @@ const page = async ({
           tableNumber={tableNumber}
           theme={theme}
           qrGroup={qr_codes[0].qr_group}
+          qrId={validQrId}
         />
       );
     // }

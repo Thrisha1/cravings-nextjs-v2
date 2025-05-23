@@ -1,5 +1,5 @@
 "use client";
-import useOrderStore from "@/store/orderStore";
+import useOrderStore, { OrderItem } from "@/store/orderStore";
 import React, { useEffect, useRef, useState } from "react";
 import {
   calculateDeliveryDistanceAndCost,
@@ -24,7 +24,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import Link from "next/link";
-import { getGstAmount } from "../OrderDrawer";
+import { getGstAmount, getExtraCharge } from "../OrderDrawer";
 import { QrGroup } from "@/app/admin/qr-management/page";
 
 const ItemsCard = ({
@@ -34,11 +34,11 @@ const ItemsCard = ({
   removeItem,
   currency,
 }: {
-  items: any[];
-  increaseQuantity: any;
-  decreaseQuantity: any;
-  removeItem: any;
-  currency: any;
+  items: OrderItem[];
+  increaseQuantity: (id: string) => void;
+  decreaseQuantity: (id: string) => void;
+  removeItem: (id: string) => void;
+  currency: string;
 }) => {
   return (
     <div className="bg-white rounded-lg shadow p-4 mb-4">
@@ -62,9 +62,9 @@ const ItemsCard = ({
                 <button
                   onClick={() => {
                     if (item.quantity > 1) {
-                      decreaseQuantity(item.id);
+                      decreaseQuantity(item.id as string);
                     } else {
-                      removeItem(item.id);
+                      removeItem(item.id as string);
                     }
                   }}
                   className="w-6 h-6 rounded-full flex items-center justify-center border"
@@ -73,7 +73,7 @@ const ItemsCard = ({
                 </button>
                 <span>{item.quantity}</span>
                 <button
-                  onClick={() => increaseQuantity(item.id)}
+                  onClick={() => increaseQuantity(item.id as string)}
                   className="w-6 h-6 rounded-full flex items-center justify-center border"
                 >
                   +
@@ -103,25 +103,25 @@ const TableNumberCard = ({ tableNumber }: { tableNumber: number }) => {
   );
 };
 
+interface AddressCardProps {
+  address: string;
+  setAddress: (address: string) => void;
+  setShowMapModal: (show: boolean) => void;
+  getLocation: () => void;
+  isGeoLoading: boolean;
+  geoError: string | null;
+  deliveryInfo: any;
+}
+
 const AddressCard = ({
   address,
   setAddress,
   setShowMapModal,
   getLocation,
   isGeoLoading,
-  coords,
   geoError,
   deliveryInfo,
-}: {
-  address: any;
-  setAddress: any;
-  setShowMapModal: any;
-  getLocation: any;
-  isGeoLoading: any;
-  coords: any;
-  geoError: any;
-  deliveryInfo: any;
-}) => {
+}: AddressCardProps) => {
   mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
   return (
@@ -189,6 +189,15 @@ const AddressCard = ({
   );
 };
 
+interface BillCardProps {
+  items: OrderItem[];
+  currency: string;
+  gstPercentage: number;
+  deliveryInfo: any;
+  isDelivery: boolean;
+  qrGroup: QrGroup | null;
+}
+
 const BillCard = ({
   items,
   currency,
@@ -196,50 +205,64 @@ const BillCard = ({
   deliveryInfo,
   isDelivery,
   qrGroup,
-}: {
-  items: any[];
-  currency: any;
-  gstPercentage: any;
-  deliveryInfo: any;
-  isDelivery: any;
-  qrGroup: QrGroup | null;
-}) => {
+}: BillCardProps) => {
   const subtotal = items.reduce(
     (acc, item) => acc + item.price * item.quantity,
     0
   );
-  const gstAmount = (subtotal * (gstPercentage || 0)) / 100;
 
-  // Calculate delivery cost or QR group charges
-  let extraCharges = 0;
-  let chargeDescription = null;
+  // Calculate QR group extra charges using the new function
+  const qrExtraCharges = qrGroup?.extra_charge
+    ? getExtraCharge(
+        items,
+        qrGroup.extra_charge,
+        qrGroup.charge_type || "FLAT_FEE"
+      )
+    : 0;
 
-  if (isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange) {
-    extraCharges = deliveryInfo.cost;
-  } else if (qrGroup && qrGroup.extra_charge > 0) {
-    extraCharges =
-      qrGroup.charge_type === "PER_ITEM"
-        ? items.reduce(
-            (acc, item) => acc + qrGroup.extra_charge * item.quantity,
-            0
-          )
-        : qrGroup.extra_charge;
-  }
+  // Calculate delivery charges
+  const deliveryCharges = 
+    isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
+      ? deliveryInfo.cost
+      : 0;
 
-  const grandTotal = subtotal + gstAmount + extraCharges;
+  // Calculate GST on subtotal + QR charges (before delivery)
+  const taxableAmount = subtotal + qrExtraCharges;
+  const gstAmount = (taxableAmount * (gstPercentage || 0)) / 100;
+
+  const grandTotal = subtotal + qrExtraCharges + gstAmount + deliveryCharges;
 
   return (
     <div className="bg-white rounded-lg shadow p-4">
       <h3 className="font-bold text-lg mb-3">Bill Summary</h3>
       <div className="space-y-2">
         <div className="flex justify-between">
-          <span>Subtotal</span>
+          <span>Items Subtotal</span>
           <span>
             {currency}
             {subtotal.toFixed(2)}
           </span>
         </div>
 
+        {/* QR Group Extra Charges */}
+        {qrGroup && qrExtraCharges > 0 && (
+          <div className="flex justify-between">
+            <div>
+              <span>{qrGroup.name || "Service Charge"}</span>
+              <p className="text-xs text-gray-500">
+                {qrGroup.charge_type === "PER_ITEM"
+                  ? "Per item charge"
+                  : "Fixed charge"}
+              </p>
+            </div>
+            <span>
+              {currency}
+              {qrExtraCharges.toFixed(2)}
+            </span>
+          </div>
+        )}
+
+        {/* GST */}
         {gstPercentage && (
           <div className="flex justify-between">
             <span>GST ({gstPercentage}%)</span>
@@ -250,8 +273,8 @@ const BillCard = ({
           </div>
         )}
 
-        {/* Show delivery charge or QR group charge */}
-        {isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange ? (
+        {/* Delivery charge */}
+        {isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange && (
           <div className="flex justify-between">
             <div>
               <span>Delivery Charge</span>
@@ -267,22 +290,7 @@ const BillCard = ({
               {deliveryInfo.cost.toFixed(2)}
             </span>
           </div>
-        ) : qrGroup && qrGroup.extra_charge > 0 ? (
-          <div className="flex justify-between">
-            <div>
-              <span>{qrGroup.name || "Service Charge"}</span>
-              <p className="text-xs text-gray-500">
-                {qrGroup.charge_type === "PER_ITEM"
-                  ? `${currency}${qrGroup.extra_charge.toFixed(2)} per item`
-                  : "Fixed charge"}
-              </p>
-            </div>
-            <span>
-              {currency}
-              {extraCharges.toFixed(2)}
-            </span>
-          </div>
-        ) : null}
+        )}
 
         <div className="border-t pt-2 mt-2 flex justify-between font-bold text-lg">
           <span>Grand Total</span>
@@ -700,18 +708,20 @@ const PlaceOrderModal = ({
       const extraCharges = [];
 
       // Add QR group charge if applicable
-      if (isQrScan && qrGroup && qrGroup.extra_charge > 0 && qrGroup.name) {
-        extraCharges.push({
-          name: qrGroup.name,
-          amount:
-            qrGroup.charge_type === "PER_ITEM"
-              ? (items || []).reduce(
-                  (acc, item) => acc + qrGroup.extra_charge * item.quantity,
-                  0
-                )
-              : qrGroup.extra_charge,
-          charge_type: qrGroup.charge_type || "FLAT_FEE",
-        });
+      if (isQrScan && qrGroup && qrGroup.name) {
+        const qrChargeAmount = getExtraCharge(
+          items || [],
+          qrGroup.extra_charge,
+          qrGroup.charge_type || "FLAT_FEE"
+        );
+        
+        if (qrChargeAmount > 0) {
+          extraCharges.push({
+            name: qrGroup.name,
+            amount: qrChargeAmount,
+            charge_type: qrGroup.charge_type || "FLAT_FEE",
+          });
+        }
       }
 
       // Add delivery charge if applicable
@@ -795,7 +805,6 @@ const PlaceOrderModal = ({
                 setShowMapModal={setShowMapModal}
                 getLocation={getLocation}
                 isGeoLoading={isGeoLoading}
-                coords={selectedLocation || coords}
                 geoError={geoError}
                 deliveryInfo={deliveryInfo}
               />
@@ -875,7 +884,7 @@ const PlaceOrderModal = ({
         <LoginDrawer
           showLoginDrawer={showLoginDrawer}
           setShowLoginDrawer={setShowLoginDrawer}
-          hotelId={hotelData?.id}
+          hotelId={hotelData?.id || ""}
           onLoginSuccess={handleLoginSuccess}
         />
       </DialogContent>

@@ -176,6 +176,7 @@ const HotelPage = async ({
         auth={auth || null}
         theme={theme}
         tableNumber={0}
+        qrId={null}
       />
     </>
   );

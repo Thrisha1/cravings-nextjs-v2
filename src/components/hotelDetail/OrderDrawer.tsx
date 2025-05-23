@@ -1,21 +1,17 @@
 "use client";
-import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
+import { HotelData } from "@/app/hotels/[...id]/page";
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import HeadingWithAccent from "@/components/HeadingWithAccent";
 import React, { useEffect, useState } from "react";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerTrigger,
 } from "@/components/ui/drawer";
-import { Button } from "../ui/button";
 import useOrderStore, { OrderItem } from "@/store/orderStore";
-import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import {
@@ -29,7 +25,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
-import { QrGroup } from "@/app/admin/qr-management/page";
+import { QrGroup, PricingRule } from "@/app/admin/qr-management/page";
 import PlaceOrderModal from "./placeOrder/PlaceOrderModal";
 
 export const getGstAmount = (price: number, gstPercentage: number) => {
@@ -128,15 +124,38 @@ export const calculateDeliveryDistanceAndCost = async (
 
 export const getExtraCharge = (
   items: OrderItem[],
-  extraCharge: number,
+  extraCharge: PricingRule[] | number,
   chargeType: "PER_ITEM" | "FLAT_FEE"
 ) => {
-  if (!extraCharge || extraCharge <= 0) return 0;
-  if (items.length === 0) return 0;
+  if (!extraCharge || items.length === 0) return 0;
 
+  // Handle backward compatibility for old numeric format
+  if (typeof extraCharge === 'number') {
+    if (extraCharge <= 0) return 0;
+    return chargeType === "PER_ITEM"
+      ? items.reduce((acc, item) => acc + item.quantity, 0) * extraCharge
+      : extraCharge;
+  }
+
+  // Handle new step-based pricing format
+  if (!Array.isArray(extraCharge) || extraCharge.length === 0) return 0;
+
+  // Calculate the subtotal of all items
+  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+
+  // Find the appropriate pricing rule based on the subtotal
+  const applicableRule = extraCharge.find(rule => {
+    const meetsMinimum = subtotal >= rule.min_amount;
+    const meetsMaximum = rule.max_amount === null || subtotal <= rule.max_amount;
+    return meetsMinimum && meetsMaximum;
+  });
+
+  if (!applicableRule || applicableRule.charge <= 0) return 0;
+
+  // Apply the charge based on the charge type
   return chargeType === "PER_ITEM"
-    ? items.reduce((acc, item) => acc + item.quantity, 0) * extraCharge
-    : extraCharge;
+    ? items.reduce((acc, item) => acc + item.quantity, 0) * applicableRule.charge
+    : applicableRule.charge;
 };
 
 const OrderDrawer = ({
@@ -157,16 +176,12 @@ const OrderDrawer = ({
     order,
     items,
     orderId,
-    totalPrice,
-    placeOrder,
     increaseQuantity,
     decreaseQuantity,
     open_drawer_bottom,
     setOpenDrawerBottom,
     removeItem,
-    setOpenAuthModal,
     coordinates,
-    clearOrder,
     open_order_drawer,
     setOpenPlaceOrderModal,
     setOpenOrderDrawer,
@@ -415,53 +430,10 @@ const OrderDrawer = ({
   };
 
   const handlePlaceOrder = async () => {
-    // setIsLoading(true);
     try {
       setOpenPlaceOrderModal(true);
       setOpenOrderDrawer(false);
       setOpenDrawerBottom(false);
-      //   const subtotal =
-      //     items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
-      //   const gstAmount = getGstAmount(
-      //     subtotal,
-      //     hotelData?.gst_percentage as number
-      //   );
-
-      //   // Prepare extra charges array
-      //   const extraCharges = [];
-
-      //   // Add QR group charge if applicable
-      //   if (isQrScan && qrGroup && qrGroup.extra_charge > 0 && qrGroup.name) {
-      //     extraCharges.push({
-      //       name: qrGroup.name,
-      //       amount: qrGroup.extra_charge,
-      //       charge_type: qrGroup.charge_type || "FLAT_FEE",
-      //     });
-      //   }
-
-      //   // Add delivery charge if applicable
-      //   if (!isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange) {
-      //     extraCharges.push({
-      //       name: "Delivery Charge",
-      //       amount: deliveryInfo.cost,
-      //       charge_type: "FLAT_FEE",
-      //     });
-      //   }
-
-      //   const result = await placeOrder(
-      //     hotelData,
-      //     tableNumber,
-      //     qrId,
-      //     gstAmount,
-      //     extraCharges.length > 0 ? extraCharges : null
-      //   );
-
-      //   if (result) {
-      //     toast.success("Order placed successfully!");
-      //     clearOrder();
-      //   } else {
-      //     toast.error("Failed to place order. Please try again.");
-      //   }
     } catch (error) {
       console.error("Error placing order:", error);
       toast.error("Failed to place order. Please try again.");
@@ -471,22 +443,6 @@ const OrderDrawer = ({
   };
 
   const handleViewOrder = () => {
-    const hotelArea = localStorage.getItem(
-      `hotel-${hotelData.id}-whatsapp-area`
-    );
-    const needsAddress = !isQrScan && !userAddress;
-    const needsCoordinates =
-      features?.delivery.enabled &&
-      hotelData?.delivery_rate &&
-      hotelData?.geo_location &&
-      !coordinates;
-    const needsWhatsAppArea = features?.multiwhatsapp.enabled && !hotelArea;
-
-    // if (needsAddress || needsWhatsAppArea || needsCoordinates) {
-    //   setOpenAuthModal(true);
-    //   return;
-    // }
-
     setOpenOrderDrawer(true);
   };
 
@@ -632,63 +588,24 @@ const OrderDrawer = ({
 
           <DrawerFooter className="border-t">
             <div className="space-y-2">
-              {/* {items?.length && (
+              {/* Subtotal (items only) */}
               <div className="flex justify-between items-center text-sm">
-                <span className="font-bold">Subtotal:</span>
-                <span className="font-bold">
+                <span className="font-medium">Items Subtotal:</span>
+                <span className="font-medium">
                   {hotelData.currency}
-                  {items
+                  {(items || [])
                     .reduce((acc, item) => acc + item.price * item.quantity, 0)
                     .toFixed(2)}
                 </span>
               </div>
-            )} */}
-              {/* 
-            {hotelData?.gst_percentage && items?.length && (
-              <div className="flex justify-between items-center text-sm">
-                <span className="font-bold">{`GST (${hotelData.gst_percentage}%):`}</span>
-                <span className="font-bold">
-                  {hotelData.currency}
-                  {getGstAmount(
-                    items.reduce(
-                      (acc, item) => acc + item.price * item.quantity,
-                      0
-                    ),
-                    hotelData.gst_percentage
-                  ).toFixed(2)}
-                </span>
-              </div>
-            )} */}
 
-              {/* {!isQrScan &&
-              deliveryInfo &&
-              items?.length &&
-              (deliveryInfo.isOutOfRange ? null : (
-                <div className="flex justify-between items-center text-sm">
-                  <div>
-                    <span className="font-bold">Delivery Charge:</span>
-                    <div className="text-xs text-gray-500">
-                      {deliveryInfo.distance.toFixed(1)} km ×{" "}
-                      {hotelData.currency}
-                      {deliveryInfo.ratePerKm.toFixed(2)}/km
-                      {hotelData?.delivery_rules?.first_km_free
-                        ? ` (First ${hotelData?.delivery_rules?.first_km_free}km free)`
-                        : ""}
-                    </div>
-                  </div>
-                  <span className="font-bold">
-                    {hotelData.currency}
-                    {deliveryInfo.cost.toFixed(2)}
-                  </span>
-                </div>
-              ))} */}
-
+              {/* QR Group Extra Charges */}
               {qrGroup?.extra_charge && items?.length && (
                 <div className="flex justify-between items-center text-sm">
-                  <span className="font-bold">
+                  <span className="font-medium">
                     {qrGroup.name || "Extra Charge"}:
                   </span>
-                  <span className="font-bold">
+                  <span className="font-medium">
                     {hotelData.currency}
                     {getExtraCharge(
                       items || [],
@@ -699,27 +616,70 @@ const OrderDrawer = ({
                 </div>
               )}
 
-              {/* <div className="flex justify-between items-center mt-4 pt-2 border-t">
-              <span className="font-bold text-lg">Grand Total:</span>
-              <span
-                className="font-bold text-lg"
-                style={{ color: styles.accent }}
-              >
-                {hotelData.currency}
-                {calculateGrandTotal()}
-              </span>
-            </div> */}
+              {/* GST */}
+              {hotelData?.gst_percentage && items?.length && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-medium">GST ({hotelData.gst_percentage}%):</span>
+                  <span className="font-medium">
+                    {hotelData.currency}
+                    {getGstAmount(
+                      (items || []).reduce((acc, item) => acc + item.price * item.quantity, 0) +
+                      (qrGroup?.extra_charge ? getExtraCharge(
+                        items || [],
+                        qrGroup.extra_charge,
+                        qrGroup.charge_type || "FLAT_FEE"
+                      ) : 0),
+                      hotelData.gst_percentage
+                    ).toFixed(2)}
+                  </span>
+                </div>
+              )}
 
-              <div className="flex justify-between items-center py-2">
-                <span className="font-bold text-lg">Sub Total:</span>
+              {/* Delivery Charges (if applicable) */}
+              {!isQrScan &&
+                deliveryInfo &&
+                items?.length &&
+                (deliveryInfo.isOutOfRange ? null : (
+                  <div className="flex justify-between items-center text-sm">
+                    <div>
+                      <span className="font-medium">Delivery Charge:</span>
+                      <div className="text-xs text-gray-500">
+                        {deliveryInfo.distance.toFixed(1)} km × {hotelData.currency}
+                        {deliveryInfo.ratePerKm.toFixed(2)}/km
+                        {hotelData?.delivery_rules?.first_km_free
+                          ? ` (First ${hotelData?.delivery_rules?.first_km_free}km free)`
+                          : ""}
+                      </div>
+                    </div>
+                    <span className="font-medium">
+                      {hotelData.currency}
+                      {deliveryInfo.cost.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+
+              {/* Grand Total */}
+              <div className="flex justify-between items-center py-2 border-t border-gray-200">
+                <span className="font-bold text-lg">Grand Total:</span>
                 <span
                   className="font-bold text-lg"
                   style={{ color: styles.accent }}
                 >
                   {hotelData.currency}
-                  {(items || [])
-                    .reduce((acc, item) => acc + item.price * item.quantity, 0)
-                    .toFixed(2)}
+                  {(() => {
+                    const itemsSubtotal = (items || []).reduce((acc, item) => acc + item.price * item.quantity, 0);
+                    const extraCharges = qrGroup?.extra_charge 
+                      ? getExtraCharge(items || [], qrGroup.extra_charge, qrGroup.charge_type || "FLAT_FEE")
+                      : 0;
+                    const gstAmount = hotelData?.gst_percentage 
+                      ? getGstAmount(itemsSubtotal + extraCharges, hotelData.gst_percentage)
+                      : 0;
+                    const deliveryCharges = !isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange 
+                      ? deliveryInfo.cost 
+                      : 0;
+                    
+                    return (itemsSubtotal + extraCharges + gstAmount + deliveryCharges).toFixed(2);
+                  })()}
                 </span>
               </div>
             </div>
@@ -728,11 +688,9 @@ const OrderDrawer = ({
               <>
                 {!order ? (
                   <>
-                    {/* {!deliveryInfo?.isOutOfRange || isQrScan ? ( */}
                     <Link
                       href={"#"}
                       onClick={handlePlaceOrder}
-                      // target="_blank"
                       style={{ backgroundColor: styles.accent }}
                       className="flex-1 flex items-center justify-center gap-2 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
                     >

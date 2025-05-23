@@ -10,14 +10,11 @@ import {
   userSubscriptionQuery,
 } from "@/api/orders";
 import { toast } from "sonner";
-import {
-  getExtraCharge,
-  getGstAmount,
-} from "@/components/hotelDetail/OrderDrawer";
 import { subscribeToHasura } from "@/lib/hasuraSubscription";
 import { QrGroup } from "@/app/admin/qr-management/page";
 
 export interface OrderItem extends HotelDataMenus {
+  id: string;
   quantity: number;
 }
 
@@ -367,7 +364,11 @@ const useOrderStore = create(
               totalPrice: hotelOrder.totalPrice + item.price,
             };
           } else {
-            const newItem = { ...item, quantity: 1 };
+            const newItem: OrderItem = { 
+              ...item, 
+              id: item.id || '', 
+              quantity: 1 
+            };
             hotelOrders[state.hotelId!] = {
               ...hotelOrder,
               items: [...hotelOrder.items, newItem],
@@ -576,6 +577,14 @@ const useOrderStore = create(
             return null;
           }
 
+          // Validate qrId - must be a valid UUID or null
+          const isValidUUID = (str: string) => {
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            return uuidRegex.test(str);
+          };
+
+          const validQrId = qrId && isValidUUID(qrId) ? qrId : null;
+
           const type = (tableNumber ?? 0) > 0 ? "table_order" : "delivery";
 
           // Prepare extra charges array
@@ -633,7 +642,7 @@ const useOrderStore = create(
             extra_charges: exCharges.length > 0 ? exCharges : null,
             createdAt,
             tableNumber: tableNumber || null,
-            qrId: qrId || null,
+            qrId: validQrId, // Use validated QR ID
             partnerId: hotelData.id,
             userId: userData.id,
             type,
@@ -691,7 +700,7 @@ const useOrderStore = create(
             totalPrice: grandTotal,
             createdAt,
             tableNumber: tableNumber || null,
-            qrId: qrId || null,
+            qrId: validQrId, // Use validated QR ID
             status: "pending",
             partnerId: hotelData.id,
             userId: userData.id,
