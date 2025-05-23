@@ -621,6 +621,7 @@ const PlaceOrderModal = ({
 }) => {
   const {
     open_place_order_modal,
+    setOpenDrawerBottom,
     setOpenPlaceOrderModal,
     items,
     orderId,
@@ -761,7 +762,10 @@ const PlaceOrderModal = ({
         <DialogHeader>
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setOpenPlaceOrderModal(false)}
+              onClick={() => {
+                setOpenPlaceOrderModal(false)
+                setOpenDrawerBottom(true)
+              }}
               className="p-2 rounded-full hover:bg-gray-200"
             >
               <ArrowLeft size={20} />
