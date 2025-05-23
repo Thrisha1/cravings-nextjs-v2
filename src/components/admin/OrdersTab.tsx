@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { revalidateTag } from "@/app/actions/revalidate";
 
+
 const OrdersTab = () => {
   const router = useRouter();
   const { userData, features } = useAuthStore();
@@ -104,6 +105,7 @@ const OrdersTab = () => {
     newStatus: "completed" | "cancelled"
   ) => {
     try {
+      // First update the order status
       // First update the order status
       const response = await fetchFromHasura(
         `mutation UpdateOrderStatus($orderId: uuid!, $status: String!) {
@@ -204,7 +206,7 @@ const OrdersTab = () => {
     const unsubscribe = subscribeOrders((allOrders) => {
       const prevOrders = prevOrdersRef.current;
 
-      // console.log(allOrders , "allOrders");
+      console.log(allOrders , "allOrders");
       
 
       // Count new pending orders
@@ -226,6 +228,7 @@ const OrdersTab = () => {
 
       if (totalNewOrders > 0) {
         soundRef.current?.play();
+
 
         // Show alert dialog
         setNewOrderAlert({
@@ -273,6 +276,11 @@ const OrdersTab = () => {
           <AlertDialogFooter>
             <AlertDialogAction
               onClick={() => {
+                setNewOrderAlert({
+                  show: false,
+                  tableCount: 0,
+                  deliveryCount: 0,
+                });
                 setNewOrderAlert({
                   show: false,
                   tableCount: 0,
@@ -394,3 +402,4 @@ const OrdersTab = () => {
 };
 
 export default OrdersTab;
+

@@ -8,8 +8,10 @@ import {
   Pencil,
   Trash2,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
-import { Partner, useAuthStore } from "@/store/authStore";
+import { GeoLocation, Partner, useAuthStore } from "@/store/authStore";
+import { useLocationStore } from "@/store/geolocationStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -48,8 +50,20 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { HotelData, SocialLinks } from "../hotels/[...id]/page";
 import { getSocialLinks } from "@/lib/getSocialLinks";
-import { FeatureFlags, getFeatures, revertFeatureToString } from "@/lib/getFeatures";
+import {
+  FeatureFlags,
+  getFeatures,
+  revertFeatureToString,
+} from "@/lib/getFeatures";
 import { updateAuthCookie } from "../auth/actions";
+import { DeliveryRules } from "@/store/orderStore";
+import { Label } from "@/components/ui/label";
+import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/DeliveryAndGeoLocationSettings";
+
+interface GeoJSONPoint {
+  type: "Point";
+  coordinates: [number, number];
+}
 
 const Currencies = [
   { label: "INR", value: "₹" },
@@ -65,6 +79,17 @@ const Currencies = [
 
 export default function ProfilePage() {
   const { userData, loading: authLoading, signOut, setState } = useAuthStore();
+  const {
+    coords,
+    geoString,
+    error: geoError,
+    getLocation,
+  } = useLocationStore();
+  const [deliveryRate, setDeliveryRate] = useState(0);
+  const [geoLocation, setGeoLocation] = useState({
+    latitude: 0,
+    longitude: 0,
+  });
   const { claimedOffers } = useClaimedOffersStore();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -78,8 +103,11 @@ export default function ProfilePage() {
     currency: false,
     whatsappNumber: false,
     footNote: false,
+    geoLocation: false,
+    deliveryRate: false,
     instaLink: false,
     gst: false,
+    deliverySettings: false,
   });
   const [isEditing, setIsEditing] = useState({
     upiId: false,
@@ -88,8 +116,11 @@ export default function ProfilePage() {
     whatsappNumber: false,
     currency: false,
     footNote: false,
+    geoLocation: false,
+    deliveryRate: false,
     instaLink: false,
     gst: false,
+    deliverySettings: false,
   });
   const [placeId, setPlaceId] = useState("");
   const [gst, setGst] = useState({
@@ -98,6 +129,11 @@ export default function ProfilePage() {
     enabled: false,
   });
   const [description, setDescription] = useState("");
+  const [deliveryRules, setDeliveryRules] = useState<DeliveryRules>({
+    delivery_radius: 5,
+    first_km_free: 0,
+    is_fixed_rate: false,
+  });
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [whatsappNumbers, setWhatsappNumbers] = useState<
     { number: string; area: string }[]
@@ -118,10 +154,17 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (userData?.role === "partner") {
+      // console.log("Debug - UserData:", {
+      //   delivery_rate: userData.delivery_rate,
+      //   geo_location: userData.geo_location,
+      //   raw_userData: userData
+      // });
+
       setBannerImage(userData.store_banner || null);
       setUpiId(userData.upi_id || "");
       setPlaceId(userData.place_id || "");
       setDescription(userData.description || "");
+      setDeliveryRate(userData.delivery_rate || 0);
       setCurrency(
         Currencies.find(
           (curr) => curr.value === userData.currency
@@ -150,6 +193,15 @@ export default function ProfilePage() {
         enabled: (userData.gst_percentage || 0) > 0 ? true : false,
       });
       setIsShopOpen(userData.is_shop_open);
+      setDeliveryRules({
+        delivery_radius: userData.delivery_rules?.delivery_radius || 5,
+        first_km_free: userData.delivery_rules?.first_km_free || 0,
+        is_fixed_rate: userData.delivery_rules?.is_fixed_rate || false,
+      });
+      setGeoLocation({
+        latitude: userData?.geo_location?.coordinates?.[1] || 0,
+        longitude: userData?.geo_location?.coordinates?.[0] || 0,
+      });
     }
   }, [userData]);
 
@@ -163,6 +215,23 @@ export default function ProfilePage() {
       console.log(feature);
     }
   }, [userData]);
+
+  // Add effect to log state changes
+  useEffect(() => {
+    console.log("Debug - Current state:", {
+      deliveryRate,
+      geoLocation,
+      isEditing: {
+        deliveryRate: isEditing.deliveryRate,
+        geoLocation: isEditing.geoLocation,
+      },
+    });
+  }, [
+    deliveryRate,
+    geoLocation,
+    isEditing.deliveryRate,
+    isEditing.geoLocation,
+  ]);
 
   const profile = {
     name:
@@ -205,6 +274,137 @@ export default function ProfilePage() {
       setError("Failed to delete account. Please try again.");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleGetCurrentLocation = async () => {
+    try {
+      console.log("Fetching location...");
+
+      const newCoords = await getLocation();
+
+      if (newCoords) {
+        console.log("Location received:", newCoords);
+        setGeoLocation({
+          latitude: newCoords.lat,
+          longitude: newCoords.lng,
+        });
+      }
+    } catch (error) {
+      console.error("Error getting location:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to get location"
+      );
+    }
+  };
+
+  // Also add this effect to watch store changes
+  useEffect(() => {
+    console.log("Store changed:", {
+      coords,
+      geoString,
+      error,
+    });
+
+    if (coords && isEditing.geoLocation) {
+      console.log("Updating geoLocation from store:", {
+        lat: coords.lat,
+        lng: coords.lng,
+      });
+
+      setGeoLocation({
+        latitude: coords.lat,
+        longitude: coords.lng,
+      });
+    }
+  }, [coords, geoString, error, isEditing.geoLocation]);
+
+  const handleSaveGeoLocation = async () => {
+    try {
+      const { latitude, longitude } = geoLocation;
+
+      // Validate coordinates are present
+      if (!latitude || !longitude) {
+        toast.error("Please enter both latitude and longitude");
+        return;
+      }
+
+      // Convert to numbers and validate ranges
+      const lat = latitude;
+      const lng = longitude;
+
+      if (isNaN(lat) || isNaN(lng)) {
+        toast.error("Please enter valid numeric coordinates");
+        return;
+      }
+
+      // Validate coordinate ranges
+      if (lat < -90 || lat > 90) {
+        toast.error("Latitude must be between -90 and 90 degrees");
+        return;
+      }
+
+      if (lng < -180 || lng > 180) {
+        toast.error("Longitude must be between -180 and 180 degrees");
+        return;
+      }
+
+      // Create the correct format for geography type
+      // Using SRID=4326;POINT(longitude latitude) format
+      const geographyFormat = {
+        type: "Point",
+        coordinates: [lng, lat],
+      } as GeoLocation;
+
+      setIsSaving((prev) => ({ ...prev, geoLocation: true }));
+      toast.loading("Updating location...");
+
+      // First verify the mutation
+      const mutation = updatePartnerMutation;
+      console.log("Mutation:", mutation); // Debug log
+      console.log("Update data:", {
+        id: userData?.id,
+        updates: {
+          geo_location: geographyFormat,
+        },
+      }); // Debug log
+
+      const response = await fetchFromHasura(mutation, {
+        id: userData?.id,
+        updates: {
+          geo_location: geographyFormat,
+        },
+      });
+
+      console.log("Hasura response:", response); // Debug log
+
+      if (!response) {
+        throw new Error("No response from server");
+      }
+
+      // Update local state
+      revalidateTag(userData?.id as string);
+      setState({ geo_location: geographyFormat });
+      toast.dismiss();
+      toast.success("Location updated successfully!");
+      setIsEditing((prev) => ({ ...prev, geoLocation: false }));
+    } catch (error) {
+      console.error("Error updating location:", error);
+      toast.dismiss();
+
+      if (error instanceof Error) {
+        if (error.message.includes("permission denied")) {
+          toast.error("You don't have permission to update the location");
+        } else if (error.message.includes("invalid input syntax")) {
+          toast.error("Invalid coordinate format. Please check your input");
+        } else {
+          toast.error(`Failed to update location: ${error.message}`);
+        }
+      } else {
+        toast.error("Failed to update location. Please try again.");
+      }
+    } finally {
+      setIsSaving((prev) => ({ ...prev, geoLocation: false }));
     }
   };
 
@@ -748,6 +948,57 @@ export default function ProfilePage() {
       });
     }
   };
+  // (Delivery Rate)
+
+  const handleSaveDeliverySettings = async () => {
+    try {
+      if (!userData) return;
+      toast.loading("Updating delivery settings...");
+
+      setIsSaving((prev) => ({ ...prev, deliveryRate: true }));
+
+      // Validate delivery rate is a positive number
+      const rate = deliveryRate;
+      if (isNaN(rate) || rate < 0) {
+        toast.dismiss();
+        toast.error(
+          "Please enter a valid delivery rate (must be a positive number)"
+        );
+        return;
+      }
+
+      // Prepare delivery rules object with defaults if not set
+      const rules = {
+        delivery_radius: deliveryRules?.delivery_radius || 5, // default 5km
+        first_km_free: deliveryRules?.first_km_free || false,
+        is_fixed_rate: deliveryRules?.is_fixed_rate || false,
+      } as DeliveryRules;
+
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          delivery_rate: deliveryRate,
+          delivery_rules: rules,
+        },
+      });
+
+      revalidateTag(userData?.id as string);
+      setState({ delivery_rate: deliveryRate, delivery_rules: rules });
+      toast.dismiss();
+      toast.success("Delivery settings updated successfully!");
+      setIsEditing((prev) => ({ ...prev, deliveryRate: false }));
+    } catch (error) {
+      console.error("Error updating delivery settings:", error);
+      toast.dismiss();
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update delivery settings"
+      );
+    } finally {
+      setIsSaving((prev) => ({ ...prev, deliveryRate: false }));
+    }
+  };
 
   const handleShopOpenClose = async () => {
     try {
@@ -825,7 +1076,13 @@ export default function ProfilePage() {
               {userData?.role === "partner" && (
                 <>
                   <Link
-                    href={`${userData?.business_type === 'restaurant' ? '/hotels' : '/business'}/${userData?.store_name?.replace(/\s+/g, '-')}/${userData?.id}`}
+                    href={`${
+                      userData?.business_type === "restaurant"
+                        ? "/hotels"
+                        : "/business"
+                    }/${userData?.store_name?.replace(/\s+/g, "-")}/${
+                      userData?.id
+                    }`}
                     className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
                   >
                     <Tag className="sm:size-4 size-8 mr-2" />
@@ -940,7 +1197,6 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="bio" className="text-lg font-semibold">
                   Bio
@@ -995,7 +1251,6 @@ export default function ProfilePage() {
                   This Bio will be used for your restaurant profile
                 </p>
               </div>
-
               {/* <div className="space-y-2 pt-4">
                 <label htmlFor="upiId" className="text-lg font-semibold">
                   UPI ID
@@ -1047,7 +1302,6 @@ export default function ProfilePage() {
                   This UPI ID will be used for receiving payments from customers
                 </p>
               </div> */}
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="placeId" className="text-lg font-semibold">
                   Place ID
@@ -1103,6 +1357,27 @@ export default function ProfilePage() {
                   </Link>
                 </p>
               </div>
+
+              <DeliveryAndGeoLocationSettings
+                geoLocation={geoLocation}
+                setGeoLocation={setGeoLocation}
+                geoLoading={isLoading}
+                geoSaving={isSaving.geoLocation}
+                geoError={geoError}
+                handleGetCurrentLocation={handleGetCurrentLocation}
+                handleSaveGeoLocation={handleSaveGeoLocation}
+                currency={currency}
+                deliveryRate={deliveryRate}
+                setDeliveryRate={setDeliveryRate}
+                deliveryRules={deliveryRules}
+                setDeliveryRules={setDeliveryRules}
+                isEditingDelivery={isEditing.deliveryRate}
+                setIsEditingDelivery={(value) =>
+                  setIsEditing({ ...isEditing, deliveryRate: value })
+                }
+                deliverySaving={isSaving.deliverySettings}
+                handleSaveDeliverySettings={handleSaveDeliverySettings}
+              />
 
               <div className="space-y-2 pt-4">
                 <label htmlFor="whatsNum" className="text-lg font-semibold">
@@ -1232,7 +1507,6 @@ export default function ProfilePage() {
                     : "This Whatsapp Number will be used for receiving messages from customers"}
                 </p>
               </div>
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="instaLink" className="text-lg font-semibold">
                   Instagram Link
@@ -1281,7 +1555,6 @@ export default function ProfilePage() {
                   This Instagram Link will be used for your restaurant profile
                 </p>
               </div>
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="footNote" className="text-lg font-semibold">
                   Footnote
@@ -1329,208 +1602,6 @@ export default function ProfilePage() {
                 <p className="text-sm text-gray-500">
                   This Footnote will be used for your restaurant profile
                 </p>
-              </div>
-
-              <div className="space-y-2 pt-4">
-                <div className="text-lg font-semibold">Price Settings</div>
-
-                {/* show pricing  */}
-                <div className="flex gap-2">
-                  <label htmlFor="show-pricing">Show Pricing : </label>
-                  <Switch
-                    checked={showPricing}
-                    onCheckedChange={handleShowPricingChange}
-                  />
-                </div>
-
-                {/* currency  */}
-                {userData.currency !== "🚫" && (
-                  <div className="flex gap-2 items-center">
-                    <label htmlFor="currency">Currency : </label>
-                    <div className="flex gap-2 flex-1">
-                      {isEditing.currency ? (
-                        <>
-                          <Select
-                            value={currency.label} // Use label as the value for selection
-                            onValueChange={(selectedLabel) => {
-                              const selectedCurrency = Currencies.find(
-                                (curr) => curr.label === selectedLabel
-                              );
-                              if (selectedCurrency) {
-                                setCurrency(selectedCurrency);
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="Select currency" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Currencies.map((curr) => (
-                                <SelectItem key={curr.label} value={curr.label}>
-                                  {curr.value} - {curr.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            onClick={handleSaveCurrency}
-                            disabled={isSaving.currency || !currency}
-                            className="bg-orange-600 hover:bg-orange-700 text-white"
-                          >
-                            {isSaving.currency ? <>Saving...</> : "Save"}
-                          </Button>
-                        </>
-                      ) : (
-                        <div className="flex justify-between items-center w-full">
-                          <span className="text-gray-700">
-                            {currency ? (
-                              <>
-                                {currency.value} - {currency.label}
-                              </>
-                            ) : (
-                              "No currency selected"
-                            )}
-                          </span>
-                          <Button
-                            onClick={() => {
-                              setIsEditing((prev) => ({
-                                ...prev,
-                                currency: true,
-                              }));
-                              setCurrency(currency || Currencies[0]);
-                            }}
-                            variant="ghost"
-                            className="hover:bg-orange-100"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2 pt-4">
-                {features && (
-                  <>
-                    <div className="text-lg font-semibold">
-                      Feature Settings
-                    </div>
-
-                    {features.ordering.access && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium">Ordering</div>
-                          <div className="text-sm text-gray-500">
-                            {features.ordering.enabled ? "Enabled" : "Disabled"}
-                          </div>
-                        </div>
-                        <Switch
-                          checked={features.ordering.enabled}
-                          onCheckedChange={(enabled) => {
-                            const updates = {
-                              ...features,
-                              ordering: {
-                                ...features.ordering,
-                                enabled: enabled,
-                              },
-                            };
-
-                            setFeatures(updates);
-                            setUserFeatures(updates);
-                            handleFeatureEnabledChange(updates);
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {features.delivery.access && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium">Delivery</div>
-                          <div className="text-sm text-gray-500">
-                            {features.delivery.enabled ? "Enabled" : "Disabled"}
-                          </div>
-                        </div>
-                        <Switch
-                          checked={features.delivery.enabled}
-                          onCheckedChange={(enabled) => {
-                            const updates = {
-                              ...features,
-                              delivery: {
-                                ...features.delivery,
-                                enabled: enabled,
-                              },
-                            };
-
-                            setFeatures(updates);
-                            setUserFeatures(updates);
-                            handleFeatureEnabledChange(updates);
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {features.multiwhatsapp.access && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium">
-                            Multiple Whatsapp Numbers
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {features.multiwhatsapp.enabled
-                              ? "Enabled"
-                              : "Disabled"}
-                          </div>
-                        </div>
-                        <Switch
-                          checked={features.multiwhatsapp.enabled}
-                          onCheckedChange={(enabled) => {
-                            const updates = {
-                              ...features,
-                              multiwhatsapp: {
-                                ...features.multiwhatsapp,
-                                enabled: enabled,
-                              },
-                            };
-
-                            setFeatures(updates);
-                            setUserFeatures(updates);
-                            handleFeatureEnabledChange(updates);
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {features.pos.access && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium">POS</div>
-                          <div className="text-sm text-gray-500">
-                            {features.pos.enabled ? "Enabled" : "Disabled"}
-                          </div>
-                        </div>
-                        <Switch
-                          checked={features.pos.enabled}
-                          onCheckedChange={(enabled) => {
-                            const updates = {
-                              ...features,
-                              pos: {
-                                ...features.pos,
-                                enabled: enabled,
-                              },
-                            };
-
-                            setFeatures(updates);
-                            setUserFeatures(updates);
-                            handleFeatureEnabledChange(updates);
-                          }}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
               </div>
 
               <div className="space-y-2 pt-4">
@@ -1666,7 +1737,6 @@ export default function ProfilePage() {
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
               </div>
-
               {getFeatures(userData.feature_flags as string)?.stockmanagement
                 .enabled && (
                 <div className="space-y-2 pt-4">

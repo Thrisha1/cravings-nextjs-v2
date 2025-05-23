@@ -10,7 +10,10 @@ import useOrderStore from "@/store/orderStore";
 import { EditOrderModal } from "@/components/admin/pos/EditOrderModal";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { cancelOrderMutation } from "@/api/orders";
-import { getExtraCharge, getGstAmount } from "@/components/hotelDetail/OrderDrawer";
+import {
+  getExtraCharge,
+  getGstAmount,
+} from "@/components/hotelDetail/OrderDrawer";
 
 const Page = () => {
   const { userData } = useAuthStore();
@@ -23,7 +26,7 @@ const Page = () => {
       const unsubscribe = subscribeUserOrders((orders) => {
         setLoading(false);
       });
-
+      console.log("OrderStore here", unsubscribe);
       return () => {
         unsubscribe();
       };
@@ -59,7 +62,7 @@ const Page = () => {
 
     try {
       await fetchFromHasura(cancelOrderMutation, {
-        orderId
+        orderId,
       });
 
       toast.success("Order cancelled successfully");
@@ -89,14 +92,27 @@ const Page = () => {
       ) : (
         <div className="space-y-6">
           {userOrders.map((order) => {
-            const gstPercentage = (order.partner as Partner)?.gst_percentage || 0;
-            const gstAmount = getGstAmount(order.totalPrice, gstPercentage);
-            const extraChargesTotal = (order.extraCharges || []).reduce(
-              (sum: number, charge: any) => sum + getExtraCharge(order?.items || [] , charge.amount , charge.charge_type) || 0,
+            const gstPercentage =
+              (order.partner as Partner)?.gst_percentage || 0;
+            const foodTotal = (order.items || []).reduce(
+              (sum: number, item: any) => sum + item.price * item.quantity,
               0
-            ) || 0;
+            );
+            const gstAmount = getGstAmount(foodTotal, gstPercentage);
+            const extraChargesTotal =
+              (order.extraCharges || []).reduce(
+                (sum: number, charge: any) =>
+                  sum +
+                    getExtraCharge(
+                      order?.items || [],
+                      charge.amount,
+                      charge.charge_type
+                    ) || 0,
+                0
+              ) || 0;
 
-            const grandTotal = order.totalPrice + extraChargesTotal + gstAmount;
+
+            const grandTotal = foodTotal + extraChargesTotal + gstAmount;
 
             return (
               <div
@@ -110,9 +126,9 @@ const Page = () => {
                       Order #{order.id.split("-")[0]}
                     </h3>
                     <h3 className="text-sm text-gray-500">
-                    Ordered from : {order.partner?.store_name}
-                  </h3>
-                  <p className="text-sm text-gray-500">
+                      Ordered from : {order.partner?.store_name}
+                    </h3>
+                    <p className="text-sm text-gray-500">
                       {format(new Date(order.createdAt), "PPPp")}
                     </p>
                   </div>
@@ -195,22 +211,27 @@ const Page = () => {
                   <div className="border-t pt-3">
                     <h4 className="font-medium mb-2">Extra Charges</h4>
                     <ul className="space-y-2">
-                      {(order?.extraCharges || []).map((charge: any, index: number) => (
-                        <li key={index} className="flex justify-between">
-                          <span>{charge.name}</span>
-                          <span>
-                            {(order.partner as Partner)?.currency || "$"}
-                            {getExtraCharge(order?.items || [] , charge.amount , charge.charge_type).toFixed(2)}
-                          </span>
-                        </li>
-                      ))}
+                      {(order?.extraCharges || []).map(
+                        (charge: any, index: number) => (
+                          <li key={index} className="flex justify-between">
+                            <span>{charge.name}</span>
+                            <span>
+                              {(order.partner as Partner)?.currency || "$"}
+                              {getExtraCharge(
+                                order?.items || [],
+                                charge.amount,
+                                charge.charge_type
+                              ).toFixed(2)}
+                            </span>
+                          </li>
+                        )
+                      )}
                     </ul>
                   </div>
                 )}
 
                 {/* Order Summary */}
                 <div className="border-t pt-3 space-y-2">
-                  
                   {gstPercentage > 0 && (
                     <div className="flex justify-between">
                       <span>GST ({gstPercentage}%):</span>

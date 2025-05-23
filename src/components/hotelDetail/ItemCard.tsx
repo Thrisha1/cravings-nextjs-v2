@@ -109,6 +109,7 @@ const ItemCard = ({
                       : ""
                   }`}
                 />
+               
                 {/* Show unavailable badge if either item is unavailable or out of stock with show_stock */}
                 {(!item.is_available || (isOutOfStock && hasStockFeature)) && (
                   <div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-center text-sm font-semibold py-2 px-3 w-full">
@@ -120,47 +121,45 @@ const ItemCard = ({
           </div>
 
           {/* Add to cart buttons */}
-          {hasOrderingFeature &&
-            item.is_available &&
-            (!hasStockFeature || !isOutOfStock) && (
-              <div className="flex gap-2 items-center justify-end w-full mt-2">
-                <button
-                  onClick={() => {
-                    if (itemQuantity > 1) {
-                      decreaseQuantity(item.id as string);
-                    } else {
-                      removeItem(item.id as string);
-                    }
-                  }}
-                  style={{
-                    backgroundColor: styles.accent,
-                    ...styles.border,
-                    color: "white",
-                  }}
-                  className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
-                >
-                  -
-                </button>
+          {item.is_available && hasOrderingFeature && (!hasStockFeature || !isOutOfStock) && (
+            <div className="flex gap-2 items-center justify-end w-full mt-2">
+              <button
+                onClick={() => {
+                  if (itemQuantity > 1) {
+                    decreaseQuantity(item.id as string);
+                  } else {
+                    removeItem(item.id as string);
+                  }
+                }}
+                style={{
+                  backgroundColor: styles.accent,
+                  ...styles.border,
+                  color: "white",
+                }}
+                className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
+              >
+                -
+              </button>
 
-                <div className="bg-[#e2e2e2] rounded aspect-square h-8 grid place-items-center font-bold text-black/70">
-                  {itemQuantity}
-                </div>
-
-                <button
-                  onClick={() => {
-                    addItem(item);
-                  }}
-                  style={{
-                    backgroundColor: styles.accent,
-                    ...styles.border,
-                    color: "white",
-                  }}
-                  className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
-                >
-                  +
-                </button>
+              <div className="bg-[#e2e2e2] rounded aspect-square h-8 grid place-items-center font-bold text-black/70">
+                {itemQuantity}
               </div>
-            )}
+
+              <button
+                onClick={() => {
+                  addItem(item);
+                }}
+                style={{
+                  backgroundColor: styles.accent,
+                  ...styles.border,
+                  color: "white",
+                }}
+                className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
+              >
+                +
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

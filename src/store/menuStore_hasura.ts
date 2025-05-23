@@ -111,9 +111,7 @@ interface MenuState {
   updatedCategories: (categories: Category[]) => void;
   updateCategoriesAsBatch: (categories: Category[]) => Promise<Category[]>;
   deleteCategoryAndItems: (categoryId: string) => Promise<void>;
-  updateItemsAsBatch: (
-    items: { id: string; priority: number }[]
-  ) => Promise<void>;
+  updateItemsAsBatch: (items: { id: string; priority: number }[]) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -503,12 +501,8 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       throw error;
     }
   },
-  updateItemsAsBatch: async (
-    items: {
-      id: string;
-      priority: number;
-    }[]
-  ) => {
+
+  updateItemsAsBatch: async (items: { id: string; priority: number }[]) => {
     try {
       toast.loading("Updating item priorities...");
       const user = useAuthStore.getState().userData as Partner;

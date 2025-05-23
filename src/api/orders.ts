@@ -29,10 +29,11 @@ export const createOrderMutation = `
                     $userId: uuid,
                     $type: String!,
                     $delivery_address: String,
-                    $phone: String
-                    $status: String
+                    $phone: String,
+                    $status: String,
                     $gst_included: numeric,
                     $extra_charges: jsonb,
+                    $delivery_location: geography
                   ) {
                     insert_orders_one(object: {
                       id: $id
@@ -48,6 +49,7 @@ export const createOrderMutation = `
                       delivery_address: $delivery_address
                       gst_included: $gst_included
                       extra_charges: $extra_charges
+                      delivery_location: $delivery_location
                     }) {
                       id
                       total_price
@@ -154,6 +156,7 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     qr_id
     type
     delivery_address
+    delivery_location
     status
     partner_id
     gst_included
@@ -172,6 +175,10 @@ subscription GetPartnerOrders($partner_id: uuid!) {
       menu {
         category {
           name
+        }
+        stocks {
+          stock_quantity
+          id
         }
         stocks {
           stock_quantity

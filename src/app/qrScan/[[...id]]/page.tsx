@@ -31,7 +31,14 @@ const page = async ({
     id: id,
   });
 
-  console.log(qr_codes);
+  // console.log("🔍 QR Code Data:", {
+  //   qrCode: qr_codes[0],
+  //   hasGroup: !!qr_codes[0].qr_group,
+  //   groupData: qr_codes[0].qr_group,
+  //   tableNumber: qr_codes[0].table_number,
+  //   partnerId: qr_codes[0].partner_id
+  // });
+  
 
   const tableNumber = qr_codes[0].table_number;
 

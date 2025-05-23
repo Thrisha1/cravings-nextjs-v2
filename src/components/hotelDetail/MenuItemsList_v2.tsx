@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import { Styles } from "@/screens/HotelMenuPage_v2";
-import { Category } from "@/store/categoryStore_hasura";
+import { Category, formatDisplayName } from "@/store/categoryStore_hasura";
 import ItemCard from "./ItemCard";
 
 const MenuItemsList = ({
@@ -76,7 +76,7 @@ const MenuItemsList = ({
             className="font-semibold capitalize text-xs text-nowrap rounded-full px-5 py-[10px] snap-start flex-shrink-0"
             key={category.id + index + category.name}
           >
-            {category.name}
+            {formatDisplayName(category.name)}
           </button>
         ))}
       </div>

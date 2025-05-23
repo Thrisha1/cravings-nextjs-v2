@@ -19,12 +19,23 @@ import {
 } from "@/app/auth/actions";
 import { sendRegistrationWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
+import { DeliveryRules } from "./orderStore";
 
 // Interfaces remain the same
 interface BaseUser {
   id: string;
   email: string;
   role: "user" | "partner" | "superadmin";
+}
+export interface GeoLocation {
+  type: "Point"; // likely always "Point" in your case
+  coordinates: [number, number]; // [longitude, latitude]
+  crs?: {
+    type: string;
+    properties: {
+      name: string;
+    };
+  };
 }
 
 export interface User extends BaseUser {
@@ -53,6 +64,9 @@ export interface Partner extends BaseUser {
   phone: string;
   district: string;
   delivery_status: boolean;
+  geo_location: GeoLocation ;
+  delivery_rate: number;
+  delivery_rules: DeliveryRules;
   place_id?: string;
   theme?: string;
   currency: string;
@@ -182,6 +196,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               password: "",
               currency: partner.currency,
               whatsapp_numbers : partner.whatsapp_numbers,
+              geo_location : {
+                type : partner.geo_location?.type,
+                coordinates : partner.geo_location?.coordinates,
+              },
               role: "partner",
             } as Partner,
             features : getFeatures(partner.feature_flags)

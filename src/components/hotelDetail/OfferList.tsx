@@ -45,16 +45,15 @@ const OfferList = ({
           // Stock management logic
           const hasStockFeature = features?.stockmanagement?.enabled;
           const stockInfo = item.stocks?.[0];
-          
-          const isOutOfStock = (((stockInfo?.stock_quantity ?? 0) <= 0) && hasStockFeature);
-
-          const isItemAvailabe = item.is_available && !isOutOfStock;
-
+          const isOutOfStock = ((stockInfo?.stock_quantity ?? 0) <= 0) && hasStockFeature;
+          const isItemAvailable = item.is_available && !isOutOfStock;
+          const itemInCart = items?.find((i) => i.id === item.id);
+          const quantity = itemInCart?.quantity || 0;
 
           return (
             <div key={`offer-${offer.id}`} className="flex flex-col bg-white rounded-3xl relative">
               {/* Out of stock or unavailable overlay */}
-              {(!isItemAvailabe) && (
+              {!isItemAvailable && (
                 <div className="absolute inset-0 bg-black bg-opacity-50 rounded-3xl z-10 flex items-center justify-center">
                   <span className="text-white font-bold text-lg">
                     {!item.is_available ? "Unavailable" : "Out of Stock"}
@@ -72,11 +71,12 @@ const OfferList = ({
               </Link>
 
               {/* Quantity controls - only show if available and not out of stock */}
-              {(isItemAvailabe ) && (
+              {isItemAvailable && (
                 <div className="flex gap-2 items-center justify-center w-full p-3">
                   <button
-                    onClick={() => {
-                      if ((stockInfo?.stock_quantity ?? 0) > 1) {
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (quantity > 1) {
                         decreaseQuantity(item.id as string);
                       } else {
                         removeItem(item.id as string);
@@ -93,13 +93,13 @@ const OfferList = ({
                   </button>
 
                   <div className="bg-[#e2e2e2] rounded aspect-square h-8 grid place-items-center font-bold text-black/70">
-                    {items?.find((i) => i.id === item.id)?.quantity || 0}
+                    {quantity}
                   </div>
 
                   <button
-                    onClick={() => {
-                      
-                      addItem(item as HotelDataMenus);
+                    onClick={(e) => {
+                      e.preventDefault();
+                      addItem(item);
                     }}
                     style={{
                       backgroundColor: styles.accent,
@@ -114,7 +114,7 @@ const OfferList = ({
               )}
 
               {/* Stock information display */}
-              {stockInfo?.show_stock && (
+              {stockInfo?.show_stock && hasStockFeature && (
                 <div className="px-3 pb-2 text-xs text-center">
                   {isOutOfStock ? (
                     <span className="text-red-500 font-semibold">Out of Stock</span>
