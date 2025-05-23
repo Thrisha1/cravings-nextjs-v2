@@ -31,8 +31,13 @@ interface DeliveryAndGeoLocationSettingsProps {
   geoLoading: boolean;
   geoSaving: boolean;
   geoError: string | null;
-  handleGetCurrentLocation: () => void;
-  handleSaveGeoLocation: () => void;
+  handleGetCurrentLocation: () => Promise<
+    { latitude: number; longitude: number } | null | undefined
+  >;
+  handleSaveGeoLocation: (location?: {
+    latitude: number;
+    longitude: number;
+  }) => void;
 
   // Delivery Settings props
   currency: {
@@ -109,7 +114,17 @@ export function DeliveryAndGeoLocationSettings({
 
     // Handle geocoder result
     geocoder.current.on("result", (e: any) => {
+      console.log(e.result, "result");
+
       const [lng, lat] = e.result.center;
+      // Update or create marker
+      if (marker.current) {
+        marker.current.setLngLat([lng, lat]);
+      } else {
+        marker.current = new mapboxgl.Marker()
+          .setLngLat([lng, lat])
+          .addTo(map.current!);
+      }
       setGeoLocation({ latitude: lat, longitude: lng });
     });
 
@@ -177,16 +192,6 @@ export function DeliveryAndGeoLocationSettings({
                 alt="Map preview"
                 className="h-full w-full object-cover"
               />
-              <div className="absolute bottom-5 right-5 flex items-center justify-center bg-black bg-opacity-20">
-                <Button
-                  onClick={() => setShowMapModal(true)}
-                  variant="outline"
-                  className="flex items-center gap-2 bg-white"
-                >
-                  <MapPin className="w-4 h-4" />
-                  Change Location
-                </Button>
-              </div>
             </div>
           ) : (
             <div className="h-full w-full bg-gray-100 flex items-center justify-center">
@@ -204,8 +209,15 @@ export function DeliveryAndGeoLocationSettings({
 
         <div className="flex gap-2">
           <Button
-            onClick={handleGetCurrentLocation}
+            onClick={async () => {
+              const location = await handleGetCurrentLocation();
+              if (location) {
+                setGeoLocation(location);
+                handleSaveGeoLocation(location);
+              }
+            }}
             variant="outline"
+            className="text-xs"
             disabled={geoLoading}
           >
             {geoLoading ? (
@@ -221,18 +233,12 @@ export function DeliveryAndGeoLocationSettings({
             )}
           </Button>
           <Button
-            onClick={handleSaveGeoLocation}
-            disabled={geoSaving}
-            className="bg-orange-600 hover:bg-orange-700 text-white"
+            onClick={() => setShowMapModal(true)}
+            variant="outline"
+            className="flex items-center gap-2 text-xs bg-white"
           >
-            {geoSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Location"
-            )}
+            <MapPin className="w-4 h-4" />
+            Change Location
           </Button>
         </div>
         {geoError && <p className="text-sm text-red-500">{geoError}</p>}
@@ -424,7 +430,14 @@ export function DeliveryAndGeoLocationSettings({
                 </p>
               )}
             </div>
-            <Button onClick={() => setShowMapModal(false)}>Confirm</Button>
+            <Button
+              onClick={() => {
+                setShowMapModal(false);
+                handleSaveGeoLocation();
+              }}
+            >
+              Confirm
+            </Button>
           </div>
         </div>
       </div>

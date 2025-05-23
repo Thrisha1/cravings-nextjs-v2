@@ -289,12 +289,19 @@ export default function ProfilePage() {
           latitude: newCoords.lat,
           longitude: newCoords.lng,
         });
+
+        return {
+          latitude: newCoords.lat,
+          longitude: newCoords.lng,
+        }
       }
     } catch (error) {
       console.error("Error getting location:", error);
       toast.error(
         error instanceof Error ? error.message : "Failed to get location"
       );
+
+      return null;
     }
   };
 
@@ -319,9 +326,14 @@ export default function ProfilePage() {
     }
   }, [coords, geoString, error, isEditing.geoLocation]);
 
-  const handleSaveGeoLocation = async () => {
+  const handleSaveGeoLocation = async (location?: {
+    latitude: number;
+    longitude: number;
+  }) => {
     try {
-      const { latitude, longitude } = geoLocation;
+      const { latitude, longitude } = location || geoLocation;
+
+      console.log("Saving geoLocation:", geoLocation);
 
       // Validate coordinates are present
       if (!latitude || !longitude) {

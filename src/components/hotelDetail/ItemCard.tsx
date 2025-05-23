@@ -7,6 +7,7 @@ import ItemDetailsModal from "./ItemDetailsModal";
 import DescriptionWithTextBreak from "../DescriptionWithTextBreak";
 import useOrderStore, { OrderItem } from "@/store/orderStore";
 import { getFeatures } from "@/lib/getFeatures";
+import HeadingWithAccent from "../HeadingWithAccent";
 
 const ItemCard = ({
   item,
@@ -51,19 +52,26 @@ const ItemCard = ({
       <div
         style={styles.border}
         key={item.id}
-        className={`pt-8 pb-5 rounded-[35px] px-6 flex-1 relative bg-white text-black ${className}`}
+        className={`pt-5 pb-5 rounded-[35px] px-6 flex-1 relative bg-white text-black ${className}`}
       >
         <div className="flex flex-col gap-y-2 justify-between items-start w-full">
           <div
             onClick={() => setIsOpen(true)}
-            className={`flex justify-between w-full`}
+            className={`flex justify-between w-full items-center`}
           >
             <div
               className={`flex flex-col justify-center ${
                 item.image_url ? "w-1/2" : ""
               } ${!item.is_available ? "opacity-25" : ""}`}
             >
-              <div className="capitalize text-xl font-bold">{item.name}</div>
+              <DescriptionWithTextBreak
+                showMore={false}
+                maxChars={35}
+                spanClassName="opacity-100"
+                className="capitalize text-xl font-bold"
+              >
+                {item.name}
+              </DescriptionWithTextBreak>
               {currency !== "🚫" && (
                 <div
                   style={{
@@ -77,12 +85,7 @@ const ItemCard = ({
                     : item.price}
                 </div>
               )}
-              <DescriptionWithTextBreak
-                maxChars={100}
-                className="text-sm opacity-50 mt-1"
-              >
-                {item.description}
-              </DescriptionWithTextBreak>
+
               {/* Show stock information if enabled */}
               {showStock && hasStockFeature && (
                 <div className="text-xs mt-1">
@@ -98,6 +101,7 @@ const ItemCard = ({
                 </div>
               )}
             </div>
+
             {item.image_url.length > 0 && (
               <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden">
                 <Img
@@ -109,7 +113,7 @@ const ItemCard = ({
                       : ""
                   }`}
                 />
-               
+
                 {/* Show unavailable badge if either item is unavailable or out of stock with show_stock */}
                 {(!item.is_available || (isOutOfStock && hasStockFeature)) && (
                   <div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-center text-sm font-semibold py-2 px-3 w-full">
@@ -120,46 +124,55 @@ const ItemCard = ({
             )}
           </div>
 
+          <DescriptionWithTextBreak
+            maxChars={100}
+            className="text-sm opacity-50 mt-1"
+          >
+            {item.description}
+          </DescriptionWithTextBreak>
+
           {/* Add to cart buttons */}
-          {item.is_available && hasOrderingFeature && (!hasStockFeature || !isOutOfStock) && (
-            <div className="flex gap-2 items-center justify-end w-full mt-2">
-              <button
-                onClick={() => {
-                  if (itemQuantity > 1) {
-                    decreaseQuantity(item.id as string);
-                  } else {
-                    removeItem(item.id as string);
-                  }
-                }}
-                style={{
-                  backgroundColor: styles.accent,
-                  ...styles.border,
-                  color: "white",
-                }}
-                className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
-              >
-                -
-              </button>
+          {item.is_available &&
+            hasOrderingFeature &&
+            (!hasStockFeature || !isOutOfStock) && (
+              <div className="flex gap-2 items-center justify-end w-full mt-2">
+                <button
+                  onClick={() => {
+                    if (itemQuantity > 1) {
+                      decreaseQuantity(item.id as string);
+                    } else {
+                      removeItem(item.id as string);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: styles.accent,
+                    ...styles.border,
+                    color: "white",
+                  }}
+                  className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
+                >
+                  -
+                </button>
 
-              <div className="bg-[#e2e2e2] rounded aspect-square h-8 grid place-items-center font-bold text-black/70">
-                {itemQuantity}
+                <div className="bg-[#e2e2e2] rounded aspect-square h-8 grid place-items-center font-bold text-black/70">
+                  {itemQuantity}
+                </div>
+
+                <button
+                  onClick={() => {
+                    addItem(item);
+                  }}
+                  style={{
+                    backgroundColor: styles.accent,
+                    ...styles.border,
+                    color: "white",
+                  }}
+                  className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
+                >
+                  +
+                </button>
               </div>
-
-              <button
-                onClick={() => {
-                  addItem(item);
-                }}
-                style={{
-                  backgroundColor: styles.accent,
-                  ...styles.border,
-                  color: "white",
-                }}
-                className="active:brightness-[120%] active:scale-90 transition-all duration-75 font-medium text-xl rounded-full cursor-pointer z-10 grid place-items-center w-9 aspect-square"
-              >
-                +
-              </button>
-            </div>
-          )}
+            )}
         </div>
       </div>
 

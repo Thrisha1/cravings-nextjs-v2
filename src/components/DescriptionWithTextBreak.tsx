@@ -1,10 +1,13 @@
 "use client";
+import { cn } from "@/lib/utils";
 import React, { useState } from "react";
 
 const DescriptionWithTextBreak = ({
   accent = "blue",
   children,
   className = "",
+  spanClassName = "",
+  showMore = true,
   maxWidth = 300,
   maxChars = 100,
   style = {},
@@ -12,8 +15,10 @@ const DescriptionWithTextBreak = ({
   children: React.ReactNode;
   accent?: string;
   className?: string;
+  spanClassName?: string;
   maxWidth?: number;
   maxChars?: number;
+  showMore?: boolean;
   style?: React.CSSProperties;
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -36,8 +41,8 @@ const DescriptionWithTextBreak = ({
         overflowWrap: "break-word",
         ...style,
       }}>
-        <span className="opacity-70">{displayText}</span>
-        {needsTruncation && (
+        <span className={cn(`opacity-70` , spanClassName)}>{displayText}</span>
+        {(needsTruncation && showMore) && (
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             style={{

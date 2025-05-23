@@ -408,11 +408,13 @@ const MapModal = ({
   setShowMapModal,
   setSelectedLocation,
   setAddress,
+  hotelData,
 }: {
   showMapModal: boolean;
   setShowMapModal: (show: boolean) => void;
   setSelectedLocation: (coords: { lng: number; lat: number }) => void;
   setAddress: (address: string) => void;
+  hotelData: HotelData;
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -481,6 +483,28 @@ const MapModal = ({
         const setCoords = useLocationStore.getState().setCoords;
         setCoords({ lat, lng });
       });
+
+      if (hotelData?.geo_location) {
+        const hotelMarker = new mapboxgl.Marker({
+          color: "#FF0000",
+          scale: 1.5,
+        })
+          .setLngLat([
+            hotelData.geo_location?.coordinates[0],
+            hotelData.geo_location?.coordinates[1],
+          ])
+          .setPopup(
+            new mapboxgl.Popup({  offset: 0 , closeButton : false , closeOnClick : false , closeOnMove : false , altitude : 100 }).setHTML(
+              `<div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden;">
+                <img src="${hotelData?.store_banner}" />
+              </div>`
+            )
+          )
+          .addTo(map.current!);
+        hotelMarker.togglePopup();
+        hotelMarker.getElement().style.cursor = "pointer";
+        hotelMarker.getElement().style.pointerEvents = "none";
+      }
 
       // Add geolocate control
       map.current!.addControl(
@@ -839,6 +863,7 @@ const PlaceOrderModal = ({
             setShowMapModal={setShowMapModal}
             setSelectedLocation={setSelectedLocation}
             setAddress={setAddress}
+            hotelData={hotelData}
           />
         )}
 
