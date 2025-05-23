@@ -48,6 +48,7 @@ export function CategoryManagementModal({
   open,
   onOpenChange,
 }: CategoryManagementModalProps) {
+
   const [localCategories, setLocalCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,7 +56,10 @@ export function CategoryManagementModal({
 
   useEffect(() => {
     if (open) {
-      setLocalCategories([...initialCategories]);
+      setLocalCategories(initialCategories.map(cat => ({
+        ...cat,
+        name: formatDisplayName(cat.name)
+      })));
       setSearchTerm("");
     }
   }, [open, initialCategories]);
@@ -99,14 +103,22 @@ export function CategoryManagementModal({
 
   const handleNameChange = (id: string, newName: string) => {
     setLocalCategories((prev) =>
-      prev.map((cat) => (cat.id === id ? { ...cat, name: formatStorageName(newName) } : cat))
+      prev.map((cat) => (cat.id === id ? { ...cat, name: (newName) } : cat))
     );
   };
 
   const handleSubmit = async () => {
     setIsLoading(true);
+
+    const updatedCategories = localCategories.map((cat) => ({
+      ...cat,
+      name: formatStorageName(cat.name)
+    }));
+
+    console.log("localCategories", updatedCategories)
+
     try {
-      await updateCategoriesAsBatch(localCategories);
+      await updateCategoriesAsBatch(updatedCategories);
       setIsLoading(false);
       onOpenChange(false);
     } catch (err) {
@@ -217,7 +229,7 @@ export function CategoryManagementModal({
                               >
                                 <TableCell>
                                   <Input
-                                    value={formatDisplayName(category.name)}
+                                    value={(category.name)}
                                     onChange={(e) =>
                                       handleNameChange(
                                         category.id,

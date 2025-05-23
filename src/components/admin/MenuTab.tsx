@@ -166,7 +166,7 @@ export function MenuTab() {
       price: item.price.toString(),
       image: item.image,
       description: item.description || "",
-      category: item.category,
+      category: formatDisplayName(item.category),
     });
     setIsEditModalOpen(true);
   };
@@ -315,7 +315,7 @@ export function MenuTab() {
           open={isCategoryEditing}
           categories={Object.entries(groupedItems).map(([category, items]) => ({
             id: items[0].category.id,
-            name: category,
+            name: (category),
             priority: items[0].category.priority,
           }))}
           onOpenChange={setIsCategoryEditing}

@@ -43,7 +43,10 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const categories = await fetchFromHasura(getPartnerCategories, {
         partner_id: addedBy,
-      }).then((res) => res.category);
+      }).then((res) => res.category.map((cat: Category) => ({
+        ...cat,
+        name: formatDisplayName(cat.name)
+      })));
 
       set({ categories });
       return categories as Category[];
@@ -83,7 +86,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       set({
         categories: [
           ...get().categories,
-          { name: (formattedName), id: addedCat.id },
+          { name: formatDisplayName(formattedName), id: addedCat.id },
         ],
       });
 

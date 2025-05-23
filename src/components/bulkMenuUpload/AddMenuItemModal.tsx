@@ -8,7 +8,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
+// import Image from "next/image";
 import { toast } from "sonner";
 import CategoryDropdown from "@/components/ui/CategoryDropdown";
 import { ImageGridModal } from "./ImageGridModal";
