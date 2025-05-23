@@ -12,6 +12,7 @@ import { Dialog, DialogContent } from "./dialog";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
 import { formatDisplayName, useCategoryStore } from "@/store/categoryStore_hasura";
+import { ScrollArea } from "@radix-ui/react-scroll-area";
 
 interface CategoryDropdownProps {
   value: string;
@@ -26,7 +27,7 @@ export const CategoryDropdown = ({
   const [newCategory, setNewCategory] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { userData } = useAuthStore();
-  const { categories, fetchCategories, addCategory  } = useCategoryStore();
+  const { categories, fetchCategories, addCategory } = useCategoryStore();
 
   useEffect(() => {
     if (userData) {
@@ -34,12 +35,12 @@ export const CategoryDropdown = ({
     }
   }, [userData]);
 
-  const handleOnChange = async(value: string) => {
+  const handleOnChange = async (value: string) => {
     if (value === "new-cat") {
       setModalOpen(true);
     } else {
       // console.log("Selected category:", value);
-      
+
       onChange(value);
     }
   };
@@ -48,17 +49,18 @@ export const CategoryDropdown = ({
     <>
       <Select value={value} onValueChange={handleOnChange}>
         <SelectTrigger className="capitalize">
-          <SelectValue  placeholder="Select category" />
+          <SelectValue placeholder="Select category" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem
-            value="new-cat"
-            className=" bg-green-100 font-semibold cursor-pointer "
-          >
-            Create New Category
-          </SelectItem>
-          {categories.length > 0
-            ? categories?.map((category) => (
+          <ScrollArea className="h-48">
+            <SelectItem
+              value="new-cat"
+              className=" bg-green-100 font-semibold cursor-pointer "
+            >
+              Create New Category
+            </SelectItem>
+            {categories.length > 0
+              ? categories?.map((category) => (
                 <SelectItem
                   className="capitalize"
                   key={`${category.id}`}
@@ -67,7 +69,8 @@ export const CategoryDropdown = ({
                   {formatDisplayName(category.name)}
                 </SelectItem>
               ))
-            : null}
+              : null}
+          </ScrollArea>
         </SelectContent>
       </Select>
 
