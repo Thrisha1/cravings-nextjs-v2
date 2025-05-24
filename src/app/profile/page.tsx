@@ -131,9 +131,9 @@ export default function ProfilePage() {
   const [description, setDescription] = useState("");
   const [deliveryRules, setDeliveryRules] = useState<DeliveryRules>({
     delivery_radius: 5,
-    first_km_range : {
-      km : 0,
-      rate : 0
+    first_km_range: {
+      km: 0,
+      rate: 0,
     },
     is_fixed_rate: false,
   });
@@ -299,7 +299,7 @@ export default function ProfilePage() {
         return {
           latitude: newCoords.lat,
           longitude: newCoords.lng,
-        }
+        };
       }
     } catch (error) {
       console.error("Error getting location:", error);
@@ -988,9 +988,9 @@ export default function ProfilePage() {
       // Prepare delivery rules object with defaults if not set
       const rules = {
         delivery_radius: deliveryRules?.delivery_radius || 5, // default 5km
-        first_km_range : {
-          km : deliveryRules?.first_km_range?.km || 0,
-          rate : deliveryRules?.first_km_range?.rate || 0
+        first_km_range: {
+          km: deliveryRules?.first_km_range?.km || 0,
+          rate: deliveryRules?.first_km_range?.rate || 0,
         },
         is_fixed_rate: deliveryRules?.is_fixed_rate || false,
       } as DeliveryRules;
@@ -1623,6 +1623,128 @@ export default function ProfilePage() {
                 <p className="text-sm text-gray-500">
                   This Footnote will be used for your restaurant profile
                 </p>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                {features && (
+                  <>
+                    <div className="text-lg font-semibold">
+                      Feature Settings
+                    </div>
+
+                    {features.ordering.access && (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">Ordering</div>
+                          <div className="text-sm text-gray-500">
+                            {features.ordering.enabled ? "Enabled" : "Disabled"}
+                          </div>
+                        </div>
+                        <Switch
+                          checked={features.ordering.enabled}
+                          onCheckedChange={(enabled) => {
+                            const updates = {
+                              ...features,
+                              ordering: {
+                                ...features.ordering,
+                                enabled: enabled,
+                              },
+                            };
+
+                            setFeatures(updates);
+                            setUserFeatures(updates);
+                            handleFeatureEnabledChange(updates);
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {features.delivery.access && (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">Delivery</div>
+                          <div className="text-sm text-gray-500">
+                            {features.delivery.enabled ? "Enabled" : "Disabled"}
+                          </div>
+                        </div>
+                        <Switch
+                          checked={features.delivery.enabled}
+                          onCheckedChange={(enabled) => {
+                            const updates = {
+                              ...features,
+                              delivery: {
+                                ...features.delivery,
+                                enabled: enabled,
+                              },
+                            };
+
+                            setFeatures(updates);
+                            setUserFeatures(updates);
+                            handleFeatureEnabledChange(updates);
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {features.multiwhatsapp.access && (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">
+                            Multiple Whatsapp Numbers
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {features.multiwhatsapp.enabled
+                              ? "Enabled"
+                              : "Disabled"}
+                          </div>
+                        </div>
+                        <Switch
+                          checked={features.multiwhatsapp.enabled}
+                          onCheckedChange={(enabled) => {
+                            const updates = {
+                              ...features,
+                              multiwhatsapp: {
+                                ...features.multiwhatsapp,
+                                enabled: enabled,
+                              },
+                            };
+
+                            setFeatures(updates);
+                            setUserFeatures(updates);
+                            handleFeatureEnabledChange(updates);
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {features.pos.access && (
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">POS</div>
+                          <div className="text-sm text-gray-500">
+                            {features.pos.enabled ? "Enabled" : "Disabled"}
+                          </div>
+                        </div>
+                        <Switch
+                          checked={features.pos.enabled}
+                          onCheckedChange={(enabled) => {
+                            const updates = {
+                              ...features,
+                              pos: {
+                                ...features.pos,
+                                enabled: enabled,
+                              },
+                            };
+
+                            setFeatures(updates);
+                            setUserFeatures(updates);
+                            handleFeatureEnabledChange(updates);
+                          }}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               <div className="space-y-2 pt-4">
