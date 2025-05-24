@@ -757,7 +757,7 @@ const PlaceOrderModal = ({
 
   return (
     <Dialog open={open_place_order_modal} onOpenChange={setOpenPlaceOrderModal}>
-      <DialogContent className="w-screen h-screen overflow-y-auto z-[60] bg-gray-50">
+      <DialogContent className="w-screen h-[100dvh] overflow-y-auto z-[60] bg-gray-50">
         <DialogHeader>
           <div className="flex items-center gap-4">
             <button
