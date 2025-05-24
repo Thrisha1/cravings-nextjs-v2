@@ -12,6 +12,8 @@ import {
 import { toast } from "sonner";
 import { subscribeToHasura } from "@/lib/hasuraSubscription";
 import { QrGroup } from "@/app/admin/qr-management/page";
+import { revalidateTag } from "@/app/actions/revalidate";
+import { usePOSStore } from "./posStore";
 
 export interface OrderItem extends HotelDataMenus {
   id: string;
@@ -20,10 +22,10 @@ export interface OrderItem extends HotelDataMenus {
 
 export interface DeliveryRules {
   delivery_radius: number;
-  first_km_range : {
-    km : number;
-    rate : number;
-  }
+  first_km_range: {
+    km: number;
+    rate: number;
+  };
   is_fixed_rate: boolean;
 }
 
@@ -87,7 +89,7 @@ interface OrderState {
   hotelOrders: Record<string, HotelOrderState>;
   userAddress: string | null;
   open_auth_modal: boolean;
-  open_drawer_bottom : boolean;
+  open_drawer_bottom: boolean;
   order: Order | null;
   items: OrderItem[] | null;
   orderId: string | null;
@@ -137,6 +139,12 @@ interface OrderState {
   setDeliveryInfo: (info: DeliveryInfo | null) => void;
   setDeliveryCost: (cost: number | null) => void;
   setOpenDrawerBottom: (open: boolean) => void;
+  updateOrderStatus: (
+    orders: Order[],
+    orderId: string,
+    newStatus: "completed" | "cancelled" | "pending",
+    setOrders: (orders: Order[]) => void
+  ) => Promise<void>;
 }
 
 const useOrderStore = create(
@@ -158,15 +166,77 @@ const useOrderStore = create(
       coordinates: null,
       open_drawer_bottom: false,
       open_place_order_modal: false,
+
+
+      updateOrderStatus: async (
+          orders : Order[],
+          orderId: string,
+          newStatus: "completed" | "cancelled" | "pending",
+          setOrders: (orders: Order[]) => void
+        ) => {
+
+        const userData = useAuthStore.getState().userData;
+
+          try {
+            // First update the order status
+            // First update the order status
+            const response = await fetchFromHasura(
+              `mutation UpdateOrderStatus($orderId: uuid!, $status: String!) {
+                update_orders_by_pk(pk_columns: {id: $orderId}, _set: {status: $status}) {
+                  id
+                  status
+                }
+              }`,
+              { orderId, status: newStatus }
+            );
+      
+            if (response.errors) throw new Error(response.errors[0].message);
+      
+            if (newStatus === "completed") {
+              const order = orders.find((o) => o.id === orderId);
+              if (order) {
+                for (const item of order.items) {
+                  if (item.stocks?.[0]?.id) {
+                    await fetchFromHasura(
+                      `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
+                        update_stocks_by_pk(
+                          pk_columns: {id: $stockId},
+                          _inc: {stock_quantity: $quantity}
+                        ) {
+                          id
+                          stock_quantity
+                        }
+                      }`,
+                      {
+                        stockId: item.stocks?.[0]?.id,
+                        quantity: -item.quantity,
+                      }
+                    );
+                  }
+                }
+      
+                revalidateTag(userData?.id as string);
+              }
+            }
+
+            const updatedOrders = orders.map((order) =>
+              order.id === orderId ? { ...order, status: newStatus } : order
+            );
+      
+            setOrders(updatedOrders);
+            toast.success(`Order marked as ${newStatus}`);
+          } catch (error) {
+            console.error(error);
+            toast.error(`Failed to update order status`);
+          }
+        },
+
       setOpenPlaceOrderModal: (open) => set({ open_place_order_modal: open }),
 
       setOpenDrawerBottom: (open) => set({ open_drawer_bottom: open }),
 
       setUserCoordinates: (coords) => {
-
-        
         set({ coordinates: coords });
-        
       },
 
       subscribeUserOrders: (callback) => {
@@ -367,10 +437,10 @@ const useOrderStore = create(
               totalPrice: hotelOrder.totalPrice + item.price,
             };
           } else {
-            const newItem: OrderItem = { 
-              ...item, 
-              id: item.id || '', 
-              quantity: 1 
+            const newItem: OrderItem = {
+              ...item,
+              id: item.id || "",
+              quantity: 1,
             };
             hotelOrders[state.hotelId!] = {
               ...hotelOrder,
@@ -582,7 +652,8 @@ const useOrderStore = create(
 
           // Validate qrId - must be a valid UUID or null
           const isValidUUID = (str: string) => {
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            const uuidRegex =
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
             return uuidRegex.test(str);
           };
 
@@ -759,12 +830,13 @@ const useOrderStore = create(
                 qr_id
                 type
                 delivery_address
+                delivery_location
                 status
                 partner_id
-                user_id
                 gst_included
                 extra_charges
-                delivery_charge
+                phone
+                user_id
                 user {
                   full_name
                   phone
@@ -773,12 +845,18 @@ const useOrderStore = create(
                 order_items {
                   id
                   quantity
+                  item
                   menu {
-                    id
-                    name
-                    price
                     category {
                       name
+                    }
+                    stocks {
+                      stock_quantity
+                      id
+                    }
+                    stocks {
+                      stock_quantity
+                      id
                     }
                   }
                 }
@@ -793,6 +871,8 @@ const useOrderStore = create(
             );
           }
 
+          console.log("Fetched orders:", response);
+
           return response.orders.map((order: any) => ({
             id: order.id,
             totalPrice: order.total_price,
@@ -801,19 +881,22 @@ const useOrderStore = create(
             qrId: order.qr_id,
             status: order.status,
             type: order.type,
+            phone: order.phone,
             deliveryAddress: order.delivery_address,
             partnerId: order.partner_id,
-            userId: order.user_id,
+            delivery_location: order.delivery_location,
             gstIncluded: order.gst_included,
-            extraCharges: order.extra_charges || [],
-            delivery_charge: order.delivery_charge,
+            extraCharges: order.extra_charges || [], // Handle null case
+            delivery_charge: order.delivery_charge, // Include delivery_charge
+            userId: order.user_id,
             user: order.user,
-            items: order.order_items.map((item: any) => ({
-              id: item.id,
-              quantity: item.quantity,
-              name: item.menu?.name || "Unknown",
-              price: item.menu?.price || 0,
-              category: item.menu?.category,
+            items: order.order_items.map((i: any) => ({
+              id: i.item.id,
+              quantity: i.quantity,
+              name: i.item.name || "Unknown",
+              price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
+              category: i.menu?.category,
+              stocks: i.menu?.stocks,
             })),
           }));
         } catch (error) {

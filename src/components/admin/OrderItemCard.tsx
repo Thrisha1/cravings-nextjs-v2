@@ -35,10 +35,7 @@ const OrderItemCard = ({
   gstPercentage: number;
   gstAmount: number;
   grantTotal: number;
-  updateOrderStatus: (
-    orderId: string,
-    newStatus: "completed" | "cancelled"
-  ) => Promise<void>;
+  updateOrderStatus: (status: "completed" | "cancelled" | "pending") => void;
   setOrder: (order: Order) => void;
   setEditOrderModalOpen: (open: boolean) => void;
   deleteOrder: (orderId: string) => Promise<boolean>;
@@ -285,14 +282,14 @@ const OrderItemCard = ({
               <Button
                 size="sm"
                 variant="destructive"
-                onClick={() => updateOrderStatus(order.id, "cancelled")}
+                onClick={() => updateOrderStatus("cancelled")}
               >
                 Cancel Order
               </Button>
               <Button
                 className="bg-green-600 text-white"
                 size="sm"
-                onClick={() => updateOrderStatus(order.id, "completed")}
+                onClick={() => updateOrderStatus("completed")}
               >
                 Mark Completed
               </Button>
@@ -305,6 +302,7 @@ const OrderItemCard = ({
       <div className="hidden">
         <KOTTemplate ref={kotRef} order={order} />
         <BillTemplate
+          key={`${order.id}-bill`}
           ref={billRef}
           order={order}
           userData={userData as Partner}

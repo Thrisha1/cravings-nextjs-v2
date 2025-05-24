@@ -17,13 +17,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { revalidateTag } from "@/app/actions/revalidate";
-
+import { update } from "firebase/database";
 
 const OrdersTab = () => {
   const router = useRouter();
   const { userData, features } = useAuthStore();
   const prevOrdersRef = useRef<Order[]>([]);
-  const { subscribeOrders, partnerOrders, deleteOrder } = useOrderStore();
+  const { subscribeOrders, partnerOrders, deleteOrder, updateOrderStatus } = useOrderStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [showOnlyPending, setShowOnlyPending] = useState<boolean>(true);
@@ -78,61 +78,35 @@ const OrdersTab = () => {
       setSortOrder("oldest");
     }
   }, []);
-  const updateOrderStatus = async (
+
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      const success = await deleteOrder(orderId);
+      if (success) {
+        setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
+        toast.success("Order deleted successfully");
+        return true;
+      } else {
+        toast.error("Failed to delete order");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      toast.error("Failed to delete order");
+      return false;
+    }
+  };
+
+  const handleUpdateOrderStatus = async (
     orderId: string,
-    newStatus: "completed" | "cancelled"
+    status: "pending" | "completed" | "cancelled"
   ) => {
     try {
-      // First update the order status
-      // First update the order status
-      const response = await fetchFromHasura(
-        `mutation UpdateOrderStatus($orderId: uuid!, $status: String!) {
-          update_orders_by_pk(pk_columns: {id: $orderId}, _set: {status: $status}) {
-            id
-            status
-          }
-        }`,
-        { orderId, status: newStatus }
-      );
-
-      if (response.errors) throw new Error(response.errors[0].message);
-
-      if (newStatus === "completed") {
-        const order = orders.find((o) => o.id === orderId);
-        if (order) {
-          for (const item of order.items) {
-            if (item.stocks?.[0]?.id) {
-              await fetchFromHasura(
-                `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
-                  update_stocks_by_pk(
-                    pk_columns: {id: $stockId},
-                    _inc: {stock_quantity: $quantity}
-                  ) {
-                    id
-                    stock_quantity
-                  }
-                }`,
-                {
-                  stockId: item.stocks?.[0]?.id,
-                  quantity: -item.quantity,
-                }
-              );
-            }
-          }
-
-          revalidateTag(userData?.id as string);
-        }
-      }
-
-      setOrders((prev) =>
-        prev.map((order) =>
-          order.id === orderId ? { ...order, status: newStatus } : order
-        )
-      );
-      toast.success(`Order marked as ${newStatus}`);
+      await updateOrderStatus(orders, orderId, status, setOrders);
+      toast.success("Order status updated successfully");
     } catch (error) {
-      console.error(error);
-      toast.error(`Failed to update order status`);
+      console.error("Error updating order status:", error);
+      toast.error("Failed to update order status");
     }
   };
 
@@ -184,9 +158,6 @@ const OrdersTab = () => {
     const unsubscribe = subscribeOrders((allOrders) => {
       const prevOrders = prevOrdersRef.current;
 
-      console.log(allOrders , "allOrders");
-      
-
       // Count new pending orders
       const newTableOrders = allOrders.filter(
         (order) =>
@@ -206,7 +177,6 @@ const OrdersTab = () => {
 
       if (totalNewOrders > 0) {
         soundRef.current?.play();
-
 
         // Show alert dialog
         setNewOrderAlert({
@@ -259,11 +229,6 @@ const OrdersTab = () => {
                   tableCount: 0,
                   deliveryCount: 0,
                 });
-                setNewOrderAlert({
-                  show: false,
-                  tableCount: 0,
-                  deliveryCount: 0,
-                });
                 // Switch to the tab with most new orders
                 if (newOrderAlert.tableCount > newOrderAlert.deliveryCount) {
                   setActiveTab("table");
@@ -281,17 +246,14 @@ const OrdersTab = () => {
       <TodaysEarnings orders={orders} />
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
         <h2 className="text-2xl font-bold mb-5 sm:mb-0">Orders Management</h2>
-        <div className="flex gap-2  flex-wrap justify-center">
+        <div className="flex gap-2 flex-wrap justify-center">
           {features?.pos.enabled && (
-            <Button size="sm" onClick={handleCreateNewOrder}>
+            <Button variant={"outline"} size="sm" onClick={handleCreateNewOrder}>
               Create New Order
             </Button>
           )}
-          <Button size="sm" onClick={togglePendingFilter}>
-            {showOnlyPending ? "Show All Orders" : "Show Only Pending"}
-          </Button>
-          <Button size="sm" variant="outline" onClick={toggleSortOrder}>
-            {sortOrder === "newest" ? "Show Oldest First" : "Show Newest First"}
+          <Button size="sm" onClick={() => router.push("/admin/orders/all")}>
+            Show All Orders
           </Button>
         </div>
       </div>
@@ -327,13 +289,11 @@ const OrdersTab = () => {
             <div className="space-y-4">
               {sortedOrders.length === 0 ? (
                 <p className="text-gray-500">
-                  No {activeTab === "table" ? "table orders" : "deliveries"}{" "}
-                  found
+                  No {activeTab === "table" ? "table orders" : "deliveries"} found
                 </p>
               ) : (
                 sortedOrders.map((order, index) => {
-                  const gstPercentage =
-                    (userData as Partner)?.gst_percentage || 0;
+                  const gstPercentage = (userData as Partner)?.gst_percentage || 0;
 
                   const foodSubtotal = order.items.reduce((sum, item) => {
                     return sum + item.price * item.quantity;
@@ -347,7 +307,7 @@ const OrdersTab = () => {
 
                   return (
                     <OrderItemCard
-                      deleteOrder={deleteOrder}
+                      deleteOrder={handleDeleteOrder}
                       key={order.id + "-" + index}
                       grantTotal={grandTotal}
                       gstAmount={gstAmount}
@@ -355,7 +315,9 @@ const OrdersTab = () => {
                       order={order}
                       setEditOrderModalOpen={setEditOrderModalOpen}
                       setOrder={setOrder}
-                      updateOrderStatus={updateOrderStatus}
+                      updateOrderStatus={(status) => {
+                        handleUpdateOrderStatus(order.id, status);
+                      }}
                     />
                   );
                 })
@@ -371,4 +333,3 @@ const OrdersTab = () => {
 };
 
 export default OrdersTab;
-
