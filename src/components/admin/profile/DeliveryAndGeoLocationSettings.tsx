@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DeliveryRules } from "@/store/orderStore";
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
@@ -45,16 +46,8 @@ interface DeliveryAndGeoLocationSettingsProps {
   };
   deliveryRate: number;
   setDeliveryRate: (value: number) => void;
-  deliveryRules: {
-    delivery_radius: number;
-    first_km_free: number;
-    is_fixed_rate: boolean;
-  };
-  setDeliveryRules: (rules: {
-    delivery_radius: number;
-    first_km_free: number;
-    is_fixed_rate: boolean;
-  }) => void;
+  deliveryRules: DeliveryRules;
+  setDeliveryRules: (rules: DeliveryRules) => void;
   isEditingDelivery: boolean;
   setIsEditingDelivery: (value: boolean) => void;
   deliverySaving: boolean;
@@ -284,7 +277,10 @@ export function DeliveryAndGeoLocationSettings({
 
         {/* Delivery Rate */}
         <div className="space-y-2">
-          <Label>Delivery Rate ({currency.value})</Label>
+          <Label>
+            Delivery Rate {deliveryRules.is_fixed_rate ? "" : "(Per Km)"} (
+            {currency.value})
+          </Label>
           {isEditingDelivery ? (
             <Input
               type="number"
@@ -324,30 +320,6 @@ export function DeliveryAndGeoLocationSettings({
             )}
           </div>
 
-          {/* First KM Free */}
-          <div className="space-y-2">
-            <Label>First KM Free</Label>
-            {isEditingDelivery ? (
-              <Input
-                type="number"
-                min="0"
-                step="0.1"
-                value={deliveryRules.first_km_free}
-                onChange={(e) =>
-                  setDeliveryRules({
-                    ...deliveryRules,
-                    first_km_free: Number(e.target.value),
-                  })
-                }
-                placeholder="Enter first free KM"
-              />
-            ) : (
-              <div className="p-3 rounded-md border bg-muted/50">
-                {deliveryRules.first_km_free} km
-              </div>
-            )}
-          </div>
-
           {/* Rate Type */}
           <div className="space-y-2">
             <Label>Rate Type</Label>
@@ -377,6 +349,62 @@ export function DeliveryAndGeoLocationSettings({
               </div>
             )}
           </div>
+
+          {/* First KM Range and Amount */}
+          {!deliveryRules.is_fixed_rate && (
+            <div className="grid grid-cols-2 gap-4 w-full">
+              <div className="space-y-2">
+                <Label>First KM Range</Label>
+                {isEditingDelivery ? (
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={deliveryRules.first_km_range.km}
+                    onChange={(e) =>
+                      setDeliveryRules({
+                        ...deliveryRules,
+                        first_km_range: {
+                          ...deliveryRules.first_km_range,
+                          km: Number(e.target.value),
+                        },
+                      })
+                    }
+                    placeholder="Enter KM range"
+                  />
+                ) : (
+                  <div className="p-3 rounded-md border bg-muted/50">
+                    {deliveryRules.first_km_range.km} km
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Amount ({currency.value})</Label>
+                {isEditingDelivery ? (
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={deliveryRules.first_km_range.rate}
+                    onChange={(e) =>
+                      setDeliveryRules({
+                        ...deliveryRules,
+                        first_km_range: {
+                          ...deliveryRules.first_km_range,
+                          rate: Number(e.target.value),
+                        },
+                      })
+                    }
+                    placeholder="Enter amount"
+                  />
+                ) : (
+                  <div className="p-3 rounded-md border bg-muted/50">
+                    {deliveryRules.first_km_range.rate.toFixed(2)}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Help Text */}
@@ -388,13 +416,21 @@ export function DeliveryAndGeoLocationSettings({
                 )} will be applied for deliveries within ${
                   deliveryRules.delivery_radius
                 } km`
-              : `Variable rate starting from ${
+              : deliveryRules.first_km_range.km > 0
+              ? `First ${
+                  deliveryRules.first_km_range.km
+                } km will be charged at ${
                   currency.value
-                }${deliveryRate.toFixed(
-                  2
-                )} will be applied for deliveries within ${
+                }${deliveryRules.first_km_range.rate.toFixed(2)}, then ${
+                  currency.value
+                }${deliveryRate.toFixed(2)} per km for deliveries within ${
                   deliveryRules.delivery_radius
-                } km${deliveryRules.first_km_free ? " (first km free)" : ""}`}
+                } km`
+              : `${currency.value}${deliveryRate.toFixed(
+                  2
+                )} per km will be applied for deliveries within ${
+                  deliveryRules.delivery_radius
+                } km`}
           </p>
         )}
       </div>

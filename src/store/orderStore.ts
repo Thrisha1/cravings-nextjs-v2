@@ -20,7 +20,10 @@ export interface OrderItem extends HotelDataMenus {
 
 export interface DeliveryRules {
   delivery_radius: number;
-  first_km_free: number;
+  first_km_range : {
+    km : number;
+    rate : number;
+  }
   is_fixed_rate: boolean;
 }
 

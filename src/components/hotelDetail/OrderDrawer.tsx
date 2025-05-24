@@ -81,10 +81,11 @@ export const calculateDeliveryDistanceAndCost = async (
 
     if (!data.routes || data.routes.length === 0) return;
 
-    const distanceInKm = data.routes[0].distance / 1000;
+    const exactDistance = data.routes[0].distance / 1000;
+    const distanceInKm = Math.ceil(exactDistance);
     const deliveryRate = parseFloat(restaurantData.delivery_rate);
 
-    const { delivery_radius, first_km_free, is_fixed_rate } =
+    const { delivery_radius, first_km_range, is_fixed_rate } =
       hotelData?.delivery_rules || {};
 
     if (delivery_radius && distanceInKm > delivery_radius) {
@@ -102,14 +103,27 @@ export const calculateDeliveryDistanceAndCost = async (
     if (is_fixed_rate) {
       calculatedCost = deliveryRate;
     } else {
-      calculatedCost = distanceInKm * deliveryRate;
-    }
-
-    if (distanceInKm <= first_km_free) {
-      calculatedCost = 0;
+      if (first_km_range?.km > 0) {
+        if (distanceInKm <= first_km_range.km) {
+          calculatedCost = first_km_range.rate;
+        } else {
+          const remainingDistance = distanceInKm - first_km_range.km;
+          calculatedCost =
+            first_km_range.rate + remainingDistance * deliveryRate;
+        }
+      } else {
+        calculatedCost = distanceInKm * deliveryRate;
+      }
     }
 
     calculatedCost = Math.max(0, calculatedCost);
+
+    console.log({
+      distance: distanceInKm,
+      cost: calculatedCost,
+      ratePerKm: deliveryRate,
+      isOutOfRange: false,
+    });
 
     setDeliveryInfo({
       distance: distanceInKm,
@@ -130,7 +144,7 @@ export const getExtraCharge = (
   if (!extraCharge || items.length === 0) return 0;
 
   // Handle backward compatibility for old numeric format
-  if (typeof extraCharge === 'number') {
+  if (typeof extraCharge === "number") {
     if (extraCharge <= 0) return 0;
     return chargeType === "PER_ITEM"
       ? items.reduce((acc, item) => acc + item.quantity, 0) * extraCharge
@@ -141,12 +155,16 @@ export const getExtraCharge = (
   if (!Array.isArray(extraCharge) || extraCharge.length === 0) return 0;
 
   // Calculate the subtotal of all items
-  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const subtotal = items.reduce(
+    (acc, item) => acc + item.price * item.quantity,
+    0
+  );
 
   // Find the appropriate pricing rule based on the subtotal
-  const applicableRule = extraCharge.find(rule => {
+  const applicableRule = extraCharge.find((rule) => {
     const meetsMinimum = subtotal >= rule.min_amount;
-    const meetsMaximum = rule.max_amount === null || subtotal <= rule.max_amount;
+    const meetsMaximum =
+      rule.max_amount === null || subtotal <= rule.max_amount;
     return meetsMinimum && meetsMaximum;
   });
 
@@ -154,7 +172,8 @@ export const getExtraCharge = (
 
   // Apply the charge based on the charge type
   return chargeType === "PER_ITEM"
-    ? items.reduce((acc, item) => acc + item.quantity, 0) * applicableRule.charge
+    ? items.reduce((acc, item) => acc + item.quantity, 0) *
+        applicableRule.charge
     : applicableRule.charge;
 };
 
@@ -198,102 +217,10 @@ const OrderDrawer = ({
   }, [pathname, qrId]);
 
   useEffect(() => {
-    if (items?.length && !isQrScan) {
-      calculateDeliveryDistanceAndCost();
-    }
-  }, [items]);
-
-  useEffect(() => {
     if (hotelData) {
       setFeatures(getFeatures(hotelData?.feature_flags as string));
     }
   }, [hotelData]);
-
-  const calculateDeliveryDistanceAndCost = async () => {
-    try {
-      const restaurantDataStr = localStorage.getItem(
-        `restaurant-${hotelData.id}-delivery-data`
-      );
-      if (!restaurantDataStr) return;
-
-      const restaurantData = JSON.parse(restaurantDataStr);
-      if (
-        !restaurantData?.geo_location?.coordinates ||
-        !restaurantData?.delivery_rate
-      ) {
-        return;
-      }
-
-      const userCoordsStr = localStorage.getItem("user-location-store");
-      if (!userCoordsStr) return;
-
-      const userLocationData = JSON.parse(userCoordsStr);
-      if (
-        !userLocationData.state?.coords ||
-        typeof userLocationData.state.coords.lng !== "number" ||
-        typeof userLocationData.state.coords.lat !== "number"
-      ) {
-        return;
-      }
-
-      const restaurantCoords = restaurantData.geo_location.coordinates;
-      const userLocation = [
-        userLocationData.state.coords.lng,
-        userLocationData.state.coords.lat,
-      ];
-
-      const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-      if (!mapboxToken) return;
-
-      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${userLocation.join(
-        ","
-      )};${restaurantCoords.join(",")}?access_token=${mapboxToken}`;
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (!data.routes || data.routes.length === 0) return;
-
-      const distanceInKm = data.routes[0].distance / 1000;
-      const deliveryRate = parseFloat(restaurantData.delivery_rate);
-
-      const { delivery_radius, first_km_free, is_fixed_rate } =
-        hotelData.delivery_rules || {};
-
-      if (delivery_radius && distanceInKm > delivery_radius) {
-        setDeliveryInfo({
-          distance: distanceInKm,
-          cost: 0,
-          ratePerKm: deliveryRate,
-          isOutOfRange: true,
-        });
-        return;
-      }
-
-      let calculatedCost = 0;
-
-      if (is_fixed_rate) {
-        calculatedCost = deliveryRate;
-      } else {
-        calculatedCost = distanceInKm * deliveryRate;
-      }
-
-      if (distanceInKm <= first_km_free) {
-        calculatedCost = 0;
-      }
-
-      calculatedCost = Math.max(0, calculatedCost);
-
-      setDeliveryInfo({
-        distance: distanceInKm,
-        cost: calculatedCost,
-        ratePerKm: deliveryRate,
-        isOutOfRange: false,
-      });
-    } catch (error) {
-      console.error("Error calculating delivery distance:", error);
-    }
-  };
 
   const calculateGrandTotal = () => {
     const baseTotal =
@@ -489,7 +416,7 @@ const OrderDrawer = ({
           </div>
 
           <div
-            onClick={handleViewOrder}
+            onClick={handlePlaceOrder}
             style={{ color: styles.accent }}
             className="font-black relative"
           >
@@ -619,16 +546,23 @@ const OrderDrawer = ({
               {/* GST */}
               {hotelData?.gst_percentage && items?.length && (
                 <div className="flex justify-between items-center text-sm">
-                  <span className="font-medium">GST ({hotelData.gst_percentage}%):</span>
+                  <span className="font-medium">
+                    GST ({hotelData.gst_percentage}%):
+                  </span>
                   <span className="font-medium">
                     {hotelData.currency}
                     {getGstAmount(
-                      (items || []).reduce((acc, item) => acc + item.price * item.quantity, 0) +
-                      (qrGroup?.extra_charge ? getExtraCharge(
-                        items || [],
-                        qrGroup.extra_charge,
-                        qrGroup.charge_type || "FLAT_FEE"
-                      ) : 0),
+                      (items || []).reduce(
+                        (acc, item) => acc + item.price * item.quantity,
+                        0
+                      ) +
+                        (qrGroup?.extra_charge
+                          ? getExtraCharge(
+                              items || [],
+                              qrGroup.extra_charge,
+                              qrGroup.charge_type || "FLAT_FEE"
+                            )
+                          : 0),
                       hotelData.gst_percentage
                     ).toFixed(2)}
                   </span>
@@ -644,11 +578,9 @@ const OrderDrawer = ({
                     <div>
                       <span className="font-medium">Delivery Charge:</span>
                       <div className="text-xs text-gray-500">
-                        {deliveryInfo.distance.toFixed(1)} km × {hotelData.currency}
+                        {deliveryInfo.distance.toFixed(1)} km ×{" "}
+                        {hotelData.currency}
                         {deliveryInfo.ratePerKm.toFixed(2)}/km
-                        {hotelData?.delivery_rules?.first_km_free
-                          ? ` (First ${hotelData?.delivery_rules?.first_km_free}km free)`
-                          : ""}
                       </div>
                     </div>
                     <span className="font-medium">
@@ -667,18 +599,36 @@ const OrderDrawer = ({
                 >
                   {hotelData.currency}
                   {(() => {
-                    const itemsSubtotal = (items || []).reduce((acc, item) => acc + item.price * item.quantity, 0);
-                    const extraCharges = qrGroup?.extra_charge 
-                      ? getExtraCharge(items || [], qrGroup.extra_charge, qrGroup.charge_type || "FLAT_FEE")
+                    const itemsSubtotal = (items || []).reduce(
+                      (acc, item) => acc + item.price * item.quantity,
+                      0
+                    );
+                    const extraCharges = qrGroup?.extra_charge
+                      ? getExtraCharge(
+                          items || [],
+                          qrGroup.extra_charge,
+                          qrGroup.charge_type || "FLAT_FEE"
+                        )
                       : 0;
-                    const gstAmount = hotelData?.gst_percentage 
-                      ? getGstAmount(itemsSubtotal + extraCharges, hotelData.gst_percentage)
+                    const gstAmount = hotelData?.gst_percentage
+                      ? getGstAmount(
+                          itemsSubtotal + extraCharges,
+                          hotelData.gst_percentage
+                        )
                       : 0;
-                    const deliveryCharges = !isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange 
-                      ? deliveryInfo.cost 
-                      : 0;
-                    
-                    return (itemsSubtotal + extraCharges + gstAmount + deliveryCharges).toFixed(2);
+                    const deliveryCharges =
+                      !isQrScan &&
+                      deliveryInfo?.cost &&
+                      !deliveryInfo?.isOutOfRange
+                        ? deliveryInfo.cost
+                        : 0;
+
+                    return (
+                      itemsSubtotal +
+                      extraCharges +
+                      gstAmount +
+                      deliveryCharges
+                    ).toFixed(2);
                   })()}
                 </span>
               </div>

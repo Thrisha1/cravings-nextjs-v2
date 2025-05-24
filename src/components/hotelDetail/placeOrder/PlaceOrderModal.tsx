@@ -1,10 +1,6 @@
 "use client";
 import useOrderStore, { OrderItem } from "@/store/orderStore";
 import React, { useEffect, useRef, useState } from "react";
-import {
-  calculateDeliveryDistanceAndCost,
-  DeliveryHotelData,
-} from "../AuthModal";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 import { Loader2, ArrowLeft, MapPin, LocateFixed, X } from "lucide-react";
@@ -24,7 +20,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import Link from "next/link";
-import { getGstAmount, getExtraCharge } from "../OrderDrawer";
+import {
+  getGstAmount,
+  getExtraCharge,
+  calculateDeliveryDistanceAndCost,
+} from "../OrderDrawer";
 import { QrGroup } from "@/app/admin/qr-management/page";
 
 const ItemsCard = ({
@@ -221,7 +221,7 @@ const BillCard = ({
     : 0;
 
   // Calculate delivery charges
-  const deliveryCharges = 
+  const deliveryCharges =
     isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
       ? deliveryInfo.cost
       : 0;
@@ -278,12 +278,6 @@ const BillCard = ({
           <div className="flex justify-between">
             <div>
               <span>Delivery Charge</span>
-              {deliveryInfo.distance && (
-                <p className="text-xs text-gray-500">
-                  {deliveryInfo.distance.toFixed(1)} km × {currency}
-                  {deliveryInfo.ratePerKm.toFixed(2)}/km
-                </p>
-              )}
             </div>
             <span>
               {currency}
@@ -502,7 +496,13 @@ const MapModal = ({
             hotelData.geo_location?.coordinates[1],
           ])
           .setPopup(
-            new mapboxgl.Popup({  offset: 0 , closeButton : false , closeOnClick : false , closeOnMove : false , altitude : 100 }).setHTML(
+            new mapboxgl.Popup({
+              offset: 0,
+              closeButton: false,
+              closeOnClick: false,
+              closeOnMove: false,
+              altitude: 100,
+            }).setHTML(
               `<div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden;">
                 <img src="${hotelData?.store_banner}" />
               </div>`
@@ -664,18 +664,7 @@ const PlaceOrderModal = ({
 
   useEffect(() => {
     if (isDelivery && hasDelivery && selectedLocation && !isQrScan) {
-      calculateDeliveryDistanceAndCost(
-        hotelData as unknown as DeliveryHotelData
-      ).then((result) => {
-        if (result) {
-          setDeliveryInfo({
-            cost: result.cost,
-            distance: result.distance,
-            isOutOfRange: result.isOutOfRange,
-            ratePerKm: result.ratePerKm,
-          });
-        }
-      });
+      calculateDeliveryDistanceAndCost(hotelData as HotelData);
     }
   }, [selectedLocation, isDelivery, hasDelivery, isQrScan]);
 
@@ -714,7 +703,7 @@ const PlaceOrderModal = ({
           qrGroup.extra_charge,
           qrGroup.charge_type || "FLAT_FEE"
         );
-        
+
         if (qrChargeAmount > 0) {
           extraCharges.push({
             name: qrGroup.name,
@@ -773,8 +762,8 @@ const PlaceOrderModal = ({
           <div className="flex items-center gap-4">
             <button
               onClick={() => {
-                setOpenPlaceOrderModal(false)
-                setOpenDrawerBottom(true)
+                setOpenPlaceOrderModal(false);
+                setOpenDrawerBottom(true);
               }}
               className="p-2 rounded-full hover:bg-gray-200"
             >

@@ -18,7 +18,6 @@ import useOrderStore from "@/store/orderStore";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import SocialLinkList from "@/components/SocialLinkList";
-import AuthModal from "@/components/hotelDetail/AuthModal";
 import { getFeatures } from "@/lib/getFeatures";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import ShopClosedModalWarning from "@/components/admin/ShopClosedModalWarning";
@@ -175,12 +174,6 @@ const HotelMenuPage = ({
       }}
       className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 lg:px-[20%] `}
     >
-      {/* Auth Modal */}
-      <AuthModal
-        hoteldata={hoteldata}
-        styles={styles}
-        tableNumber={tableNumber}
-      />
 
       {/* shop closed modal */}
       <ShopClosedModalWarning
