@@ -14,7 +14,7 @@ interface BillTemplateProps {
   extraCharges?: Array<{
     name: string;
     amount: number;
-    charge_type? : string;
+    charge_type?: string;
     id?: string;
   }>;
 }
@@ -27,16 +27,32 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
     const gstPercentage = userData?.gst_percentage || 0;
 
     // Calculate amounts
-    const foodSubtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const foodSubtotal = order.items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
 
     const chargesSubtotal = extraCharges.reduce(
-      (sum, charge) => sum + getExtraCharge(order?.items || [], charge.amount || 0 , charge.charge_type as QrGroup['charge_type']),
+      (sum, charge) =>
+        sum +
+        getExtraCharge(
+          order?.items || [],
+          charge.amount || 0,
+          charge.charge_type as QrGroup["charge_type"]
+        ),
       0
     );
 
     const subtotal = foodSubtotal + chargesSubtotal;
     const gstAmount = getGstAmount(foodSubtotal, gstPercentage);
     const grandTotal = subtotal + gstAmount;
+
+    // Determine order type and display text
+    const getOrderTypeText = () => {
+      if (order.tableNumber === 0) return "Delivery";
+      if (!order.tableNumber) return "Takeaway";
+      return `Table ${order.tableNumber}`;
+    };
 
     return (
       <div
@@ -68,8 +84,8 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
             <span> {new Date(order.createdAt).toLocaleDateString()}</span>
           </div>
           <div>
-            <span className="font-medium">Table:</span>
-            <span> {order.tableNumber || "Takeaway"}</span>
+            <span className="font-medium">Type:</span>
+            <span> {getOrderTypeText()}</span>
           </div>
           <div className="text-right">
             <span className="font-medium">Time:</span>
@@ -82,6 +98,40 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
             </span>
           </div>
         </div>
+
+        {/* Delivery Information */}
+        {order.tableNumber === 0 && (
+          <>
+            <div className="border-t border-dashed border-gray-400 my-2"></div>
+            <div className="text-sm">
+              <div className="font-medium mb-1">Delivery Details:</div>
+              {order.deliveryAddress && (
+                <div className="mb-1">
+                  <div className="font-semibold">Address:</div>
+                  <div className="text-xs">{order.deliveryAddress}</div>
+                </div>
+              )}
+              {order.phone && (
+                <div>
+                  <div className="font-semibold">Phone:</div>
+                  <div>{order.phone}</div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Takeaway Phone */}
+        {!order.tableNumber && order.phone && (
+          <>
+            <div className="border-t border-dashed border-gray-400 my-2"></div>
+            <div className="text-sm">
+              <div className="font-medium">Customer Phone:</div>
+              <div>{order.phone}</div>
+            </div>
+          </>
+        )}
+
         <div className="border-b border-black my-2"></div>
 
         {/* Order Items */}
@@ -111,7 +161,11 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
                   <span>{charge.name}</span>
                   <span>
                     {currency}
-                    {getExtraCharge(order?.items || [], charge.amount || 0 , charge.charge_type as QrGroup['charge_type']).toFixed(2)}
+                    {getExtraCharge(
+                      order?.items || [],
+                      charge.amount || 0,
+                      charge.charge_type as QrGroup["charge_type"]
+                    ).toFixed(2)}
                   </span>
                 </li>
               ))}

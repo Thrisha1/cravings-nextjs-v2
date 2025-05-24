@@ -34,6 +34,7 @@ export const createOrderMutation = `
                     $gst_included: numeric,
                     $extra_charges: jsonb,
                     $delivery_location: geography
+                    
                   ) {
                     insert_orders_one(object: {
                       id: $id

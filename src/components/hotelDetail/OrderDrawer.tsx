@@ -276,7 +276,7 @@ const OrderDrawer = ({
     const gstAmount = hotelData?.gst_percentage
       ? getGstAmount(baseTotal, hotelData.gst_percentage)
       : 0;
-    const qrCharge = (qrGroup?.extra_charge && (tableNumber !== 0))
+    const qrCharge = (qrGroup?.extra_charge)
       ? getExtraCharge(
           items || [],
           qrGroup.extra_charge,
@@ -337,7 +337,7 @@ const OrderDrawer = ({
     }
     
     ${
-      (qrGroup?.extra_charge && tableNumber !== 0)
+      (qrGroup?.extra_charge)
         ? `*${qrGroup.name}:* ${hotelData.currency}${qrCharge.toFixed(2)}`
         : ""
     }

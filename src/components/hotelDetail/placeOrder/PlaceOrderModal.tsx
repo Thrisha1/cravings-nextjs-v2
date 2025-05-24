@@ -215,7 +215,7 @@ const BillCard = ({
   );
 
   // Calculate QR group extra charges using the new function
-  const qrExtraCharges = (qrGroup?.extra_charge && (tableNumber !== 0))
+  const qrExtraCharges = (qrGroup?.extra_charge)
     ? getExtraCharge(
         items,
         qrGroup.extra_charge,

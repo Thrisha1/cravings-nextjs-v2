@@ -33,6 +33,8 @@ interface POSState {
   extraCharges: ExtraCharge[];
   totalAmount: number;
   userPhone: string | null;
+  deliveryAddress?: string;
+  setDeliveryAddress: (address: string) => void;
   setUserPhone: (phone: string | null) => void;
   tableNumbers: number[];
   tableNumber: number;
@@ -70,6 +72,21 @@ export const usePOSStore = create<POSState>((set, get) => ({
   tableNumbers: [],
   postCheckoutModalOpen: false,
   editOrderModalOpen: false,
+  deliveryAddress: "",
+
+  setDeliveryAddress: (address: string) => {
+    set({ deliveryAddress: address });
+    const order = get().order;
+    if (order) {
+      set({
+        order: {
+          ...order,
+          deliveryAddress: address,
+        },
+      });
+    }
+    
+  },
 
   setPostCheckoutModalOpen: (open) => {
     set({ postCheckoutModalOpen: open });
@@ -256,10 +273,11 @@ export const usePOSStore = create<POSState>((set, get) => ({
         tableNumber: get().tableNumber,
         status: "completed" as "completed",
         partnerId: userId,
-        type: "table_order",
+        type: "pos",
         phone: get().userPhone,
         extra_charges: extraCharges,
         gst_included: gstPercentage,
+        delivery_address: get().deliveryAddress || "",
       };
 
       const orderResponse = await fetchFromHasura(
