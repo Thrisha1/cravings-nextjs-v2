@@ -1,24 +1,11 @@
 "use client";
 import { Partner, useAuthStore } from "@/store/authStore";
-import useOrderStore, { Order, OrderItem } from "@/store/orderStore";
+import useOrderStore, { Order } from "@/store/orderStore";
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
-import { Loader2, Printer, Edit } from "lucide-react";
-import { fetchFromHasura } from "@/lib/hasuraClient";
-import { HotelData } from "@/app/hotels/[...id]/page";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { formatDate } from "@/lib/formatDate";
-import { Howl } from "howler";
-import { useRouter } from "next/navigation";
-import { useReactToPrint } from "react-to-print";
-import BillTemplate from "./pos/BillTemplate";
-import KOTTemplate from "./pos/KOTTemplate";
-import { EditOrderModal } from "./pos/EditOrderModal";
-import { usePOSStore } from "@/store/posStore";
-import { getExtraCharge, getGstAmount } from "../hotelDetail/OrderDrawer";
-import OrderItemCard from "./OrderItemCard";
-import { QrGroup } from "@/app/admin/qr-management/page";
+import { Loader2 } from "lucide-react";
+import { fetchFromHasura } from "@/lib/hasuraClient";import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";import { Howl } from "howler";import { useRouter } from "next/navigation";import { EditOrderModal } from "./pos/EditOrderModal";import { usePOSStore } from "@/store/posStore";import { getGstAmount } from "../hotelDetail/OrderDrawer";import OrderItemCard from "./OrderItemCard";
 import TodaysEarnings from "./orders/TodaysEarnings";
 import {
   AlertDialog,
@@ -49,16 +36,7 @@ const OrdersTab = () => {
     tableCount: 0,
     deliveryCount: 0,
   });
-  const prevPendingOrdersCount = useRef({ table: 0, delivery: 0 });
-  const soundRef = useRef<Howl | null>(null);
-  const billRef = useRef<HTMLDivElement>(null);
-  const kotRef = useRef<HTMLDivElement>(null);
-  const {
-    order,
-    setOrder,
-    editOrderModalOpen: isOpen,
-    setEditOrderModalOpen,
-  } = usePOSStore();
+    const soundRef = useRef<Howl | null>(null);  const {    setOrder,    setEditOrderModalOpen,  } = usePOSStore();
 
   useEffect(() => {
     soundRef.current = new Howl({
@@ -364,16 +342,7 @@ const OrdersTab = () => {
                   const gstAmount = getGstAmount(foodSubtotal, gstPercentage);
                   const totalPriceWithGst = foodSubtotal + gstAmount;
 
-                  const extraChargesTotal = (order?.extraCharges ?? []).reduce(
-                    (acc, charge) =>
-                      acc +
-                        getExtraCharge(
-                          order?.items || [],
-                          charge.amount,
-                          charge.charge_type as QrGroup["charge_type"]
-                        ) || 0,
-                    0
-                  );
+                                    const extraChargesTotal = (order?.extraCharges ?? []).reduce(                    (acc, charge) => acc + charge.amount,                    0                  );
                   const grandTotal = totalPriceWithGst + extraChargesTotal;
 
                   return (

@@ -8,8 +8,7 @@ import { Edit, Printer, Trash2 } from "lucide-react";
 import KOTTemplate from "./pos/KOTTemplate";
 import BillTemplate from "./pos/BillTemplate";
 import { useReactToPrint } from "react-to-print";
-import { getExtraCharge } from "../hotelDetail/OrderDrawer";
-import { QrGroup } from "@/app/admin/qr-management/page";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -141,13 +140,12 @@ const OrderItemCard = ({
 
         <div className="flex items-center gap-2">
           <span
-            className={`px-2 py-1 rounded text-xs ${
-              order.status === "completed"
+            className={`px-2 py-1 rounded text-xs ${order.status === "completed"
                 ? "bg-green-100 text-green-800"
                 : order.status === "cancelled"
-                ? "bg-red-100 text-red-800"
-                : "bg-yellow-100 text-yellow-800"
-            }`}
+                  ? "bg-red-100 text-red-800"
+                  : "bg-yellow-100 text-yellow-800"
+              }`}
           >
             {order.status}
           </span>
@@ -219,14 +217,7 @@ const OrderItemCard = ({
               {order?.extraCharges?.map((charge, index) => (
                 <div key={index} className="flex justify-between text-sm">
                   <span>{charge.name}</span>
-                  <span>
-                    {(userData as HotelData)?.currency}
-                    {getExtraCharge(
-                      order?.items || [],
-                      charge.amount,
-                      charge.charge_type as QrGroup["charge_type"]
-                    ).toFixed(2)}
-                  </span>
+                  <span>                    {(userData as HotelData)?.currency}                    {charge.amount.toFixed(2)}                  </span>
                 </div>
               ))}
             </div>
