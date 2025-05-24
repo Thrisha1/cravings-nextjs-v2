@@ -96,7 +96,6 @@ export function Navbar() {
     "/hotels/[id]/reviews",
     "/hotels/[id]/menu/[mId]/reviews/new",
     "/hotels/[id]/menu/[mId]/reviews",
-    "/qrScan/[...id]",
   ];
 
   // Check if current path matches any hidden path pattern

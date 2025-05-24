@@ -213,7 +213,7 @@ const OrderDrawer = ({
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
 
   useEffect(() => {
-    setIsQrScan(pathname.includes("qrScan") && !!qrId);
+    setIsQrScan((pathname.includes("qrScan") && !!qrId) && !(tableNumber === 0));
   }, [pathname, qrId]);
 
   useEffect(() => {
@@ -276,7 +276,7 @@ const OrderDrawer = ({
     const gstAmount = hotelData?.gst_percentage
       ? getGstAmount(baseTotal, hotelData.gst_percentage)
       : 0;
-    const qrCharge = qrGroup?.extra_charge
+    const qrCharge = (qrGroup?.extra_charge && (tableNumber !== 0))
       ? getExtraCharge(
           items || [],
           qrGroup.extra_charge,
@@ -337,7 +337,7 @@ const OrderDrawer = ({
     }
     
     ${
-      qrGroup?.extra_charge
+      (qrGroup?.extra_charge && tableNumber !== 0)
         ? `*${qrGroup.name}:* ${hotelData.currency}${qrCharge.toFixed(2)}`
         : ""
     }

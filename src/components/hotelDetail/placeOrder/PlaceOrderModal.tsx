@@ -26,6 +26,7 @@ import {
   calculateDeliveryDistanceAndCost,
 } from "../OrderDrawer";
 import { QrGroup } from "@/app/admin/qr-management/page";
+import { table } from "console";
 
 const ItemsCard = ({
   items,
@@ -196,6 +197,7 @@ interface BillCardProps {
   deliveryInfo: any;
   isDelivery: boolean;
   qrGroup: QrGroup | null;
+  tableNumber?: number;
 }
 
 const BillCard = ({
@@ -204,6 +206,7 @@ const BillCard = ({
   gstPercentage,
   deliveryInfo,
   isDelivery,
+  tableNumber,
   qrGroup,
 }: BillCardProps) => {
   const subtotal = items.reduce(
@@ -212,7 +215,7 @@ const BillCard = ({
   );
 
   // Calculate QR group extra charges using the new function
-  const qrExtraCharges = qrGroup?.extra_charge
+  const qrExtraCharges = (qrGroup?.extra_charge && (tableNumber !== 0))
     ? getExtraCharge(
         items,
         qrGroup.extra_charge,
@@ -660,7 +663,7 @@ const PlaceOrderModal = ({
 
   const isDelivery = !tableNumber;
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
-  const isQrScan = qrId !== null;
+  const isQrScan = (qrId !== null) && (tableNumber !== 0);
 
   useEffect(() => {
     if (isDelivery && hasDelivery && selectedLocation && !isQrScan) {
@@ -807,6 +810,7 @@ const PlaceOrderModal = ({
               deliveryInfo={deliveryInfo}
               isDelivery={isDelivery && !isQrScan}
               qrGroup={qrGroup}
+              tableNumber={tableNumber}
             />
 
             {/* Login Card (if not logged in) */}
