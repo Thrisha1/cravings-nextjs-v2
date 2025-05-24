@@ -97,19 +97,19 @@ const QrManagementPage = () => {
         }
       `;
       const data = await fetchFromHasura(query, { partner_id: userData?.id });
-      
+
       // Transform the data to handle both old numeric format and new JSON format
       const transformedGroups = data.qr_groups.map((group: HasuraQrGroup) => ({
         ...group,
-        extra_charge: Array.isArray(group.extra_charge) 
-          ? group.extra_charge 
+        extra_charge: Array.isArray(group.extra_charge)
+          ? group.extra_charge
           : typeof group.extra_charge === 'number'
             ? [{ min_amount: 0, max_amount: null, charge: group.extra_charge }]
             : typeof group.extra_charge === 'object' && group.extra_charge?.rules
               ? group.extra_charge.rules
               : [{ min_amount: 0, max_amount: null, charge: 0 }]
       }));
-      
+
       setQrGroups(transformedGroups);
     } catch (error) {
       console.error("Error fetching QR groups:", error);
@@ -134,14 +134,14 @@ const QrManagementPage = () => {
         }
       `;
       const data = await fetchFromHasura(query, { partner_id: userData?.id });
-      
+
       // Transform QR codes data as well
       const transformedQrCodes = data.qr_codes.map((qr: HasuraQrCode) => ({
         ...qr,
         qr_group: qr.qr_group ? {
           ...qr.qr_group,
-          extra_charge: Array.isArray(qr.qr_group.extra_charge) 
-            ? qr.qr_group.extra_charge 
+          extra_charge: Array.isArray(qr.qr_group.extra_charge)
+            ? qr.qr_group.extra_charge
             : typeof qr.qr_group.extra_charge === 'number'
               ? [{ min_amount: 0, max_amount: null, charge: qr.qr_group.extra_charge }]
               : typeof qr.qr_group.extra_charge === 'object' && qr.qr_group.extra_charge?.rules
@@ -149,7 +149,7 @@ const QrManagementPage = () => {
                 : [{ min_amount: 0, max_amount: null, charge: 0 }]
         } : null
       }));
-      
+
       setQrCodes(transformedQrCodes);
       setLoading(false);
     } catch (error) {
@@ -166,7 +166,7 @@ const QrManagementPage = () => {
   const addNewPricingRule = () => {
     const lastRule = newPricingRules[newPricingRules.length - 1];
     const newMinAmount = lastRule.max_amount ? lastRule.max_amount + 1 : 1000;
-    
+
     setNewPricingRules([
       ...newPricingRules,
       { min_amount: newMinAmount, max_amount: null, charge: 0 }
@@ -188,10 +188,10 @@ const QrManagementPage = () => {
 
   const addEditPricingRule = () => {
     if (!editingGroup) return;
-    
+
     const lastRule = editingGroup.extra_charge[editingGroup.extra_charge.length - 1];
     const newMinAmount = lastRule.max_amount ? lastRule.max_amount + 1 : 1000;
-    
+
     setEditingGroup({
       ...editingGroup,
       extra_charge: [
@@ -203,7 +203,7 @@ const QrManagementPage = () => {
 
   const updateEditPricingRule = (index: number, field: keyof PricingRule, value: number | null) => {
     if (!editingGroup) return;
-    
+
     const updatedRules = [...editingGroup.extra_charge];
     updatedRules[index] = { ...updatedRules[index], [field]: value };
     setEditingGroup({ ...editingGroup, extra_charge: updatedRules });
@@ -211,7 +211,7 @@ const QrManagementPage = () => {
 
   const removeEditPricingRule = (index: number) => {
     if (!editingGroup || editingGroup.extra_charge.length <= 1) return;
-    
+
     const updatedRules = editingGroup.extra_charge.filter((_, i) => i !== index);
     setEditingGroup({ ...editingGroup, extra_charge: updatedRules });
   };
@@ -234,7 +234,7 @@ const QrManagementPage = () => {
 
       // Validate pricing rules
       const sortedRules = [...newPricingRules].sort((a, b) => a.min_amount - b.min_amount);
-      
+
       const mutation = `
         mutation AddQrGroup($name: String!, $extra_charge: jsonb!, $partner_id: uuid!, $charge_type: String!) {
           insert_qr_groups_one(object: {
@@ -382,11 +382,11 @@ const QrManagementPage = () => {
         prevCodes.map((qr) =>
           qr.id === qrCodeId
             ? {
-                ...qr,
-                qr_group: newGroupId
-                  ? qrGroups.find((g) => g.id === newGroupId) || null
-                  : null,
-              }
+              ...qr,
+              qr_group: newGroupId
+                ? qrGroups.find((g) => g.id === newGroupId) || null
+                : null,
+            }
             : qr
         )
       );
@@ -452,7 +452,7 @@ const QrManagementPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   {/* Pricing Rules Section */}
                   <div className="col-span-4">
                     <div className="flex items-center justify-between mb-3">
@@ -468,7 +468,7 @@ const QrManagementPage = () => {
                         Add Rule
                       </Button>
                     </div>
-                    
+
                     <div className="space-y-3 border rounded-lg p-4">
                       {newPricingRules.map((rule, index) => (
                         <div key={index} className="grid grid-cols-12 gap-2 items-center">
@@ -542,12 +542,12 @@ const QrManagementPage = () => {
               qrGroups.map((group) => (
                 <TableRow key={group.id}>
                   <TableCell>{group.name}</TableCell>
-                  <TableCell className="max-w-48">
+                  <TableCell className="min-w-48">
                     <div className="space-y-1">
                       {formatPricingRulesDisplay(group.extra_charge)}
                     </div>
                   </TableCell>
-                  <TableCell className="w-[32px] text-nowrap">
+                  <TableCell className="min-w-[32px] text-nowrap">
                     {group.charge_type === 'PER_ITEM' ? 'Per Item' : 'Flat Fee'}
                   </TableCell>
                   <TableCell className="w-[29px]">
@@ -590,42 +590,44 @@ const QrManagementPage = () => {
               <DialogTitle>Edit QR Group</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editGroupName" className="text-right">
-                  Group Name
-                </Label>
-                <Input
-                  id="editGroupName"
-                  value={editingGroup.name}
-                  onChange={(e) =>
-                    setEditingGroup({ ...editingGroup, name: e.target.value })
-                  }
-                  className="col-span-3"
-                />
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex items-center gap-4">
+                  <Label htmlFor="editGroupName" className="text-right">
+                    Group Name
+                  </Label>
+                  <Input
+                    id="editGroupName"
+                    value={editingGroup.name}
+                    onChange={(e) =>
+                      setEditingGroup({ ...editingGroup, name: e.target.value })
+                    }
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="flex items-center gap-4">
+                  <Label htmlFor="editChargeType" className="text-right">
+                    Charge Type
+                  </Label>
+                  <Select
+                    value={editingGroup.charge_type}
+                    onValueChange={(value: 'PER_ITEM' | 'FLAT_FEE') =>
+                      setEditingGroup({
+                        ...editingGroup,
+                        charge_type: value
+                      })
+                    }
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select charge type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="FLAT_FEE">Flat Fee</SelectItem>
+                      <SelectItem value="PER_ITEM">Per Item</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="editChargeType" className="text-right">
-                  Charge Type
-                </Label>
-                <Select
-                  value={editingGroup.charge_type}
-                  onValueChange={(value: 'PER_ITEM' | 'FLAT_FEE') =>
-                    setEditingGroup({
-                      ...editingGroup,
-                      charge_type: value
-                    })
-                  }
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select charge type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="FLAT_FEE">Flat Fee</SelectItem>
-                    <SelectItem value="PER_ITEM">Per Item</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
+
               {/* Edit Pricing Rules Section */}
               <div className="col-span-4">
                 <div className="flex items-center justify-between mb-3">
@@ -641,10 +643,10 @@ const QrManagementPage = () => {
                     Add Rule
                   </Button>
                 </div>
-                
+
                 <div className="space-y-3 border rounded-lg p-4">
                   {editingGroup.extra_charge.map((rule, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                    <div key={index} className="flex gap-2 items-center">
                       <div className="col-span-3">
                         <Label className="text-xs">Min Amount ($)</Label>
                         <Input
@@ -720,7 +722,7 @@ const QrManagementPage = () => {
                   <TableCell>
                     {qrCode.qr_group?.name || "No Group Assigned"}
                   </TableCell>
-                  <TableCell className="max-w-48">
+                  <TableCell className="min-w-48">
                     {qrCode.qr_group?.extra_charge ? (
                       <div className="space-y-1">
                         {formatPricingRulesDisplay(qrCode.qr_group.extra_charge)}
@@ -728,10 +730,10 @@ const QrManagementPage = () => {
                     ) : '-'}
                   </TableCell>
                   <TableCell>
-                    {qrCode.qr_group?.charge_type === 'PER_ITEM' 
-                      ? 'Per Item' 
-                      : qrCode.qr_group?.charge_type === 'FLAT_FEE' 
-                        ? 'Flat Fee' 
+                    {qrCode.qr_group?.charge_type === 'PER_ITEM'
+                      ? 'Per Item'
+                      : qrCode.qr_group?.charge_type === 'FLAT_FEE'
+                        ? 'Flat Fee'
                         : '-'}
                   </TableCell>
                   <TableCell>
