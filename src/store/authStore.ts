@@ -26,6 +26,7 @@ interface BaseUser {
   id: string;
   email: string;
   role: "user" | "partner" | "superadmin" | "captain";
+  role: "user" | "partner" | "superadmin" | "captain";
 }
 export interface GeoLocation {
   type: "Point"; // likely always "Point" in your case
