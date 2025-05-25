@@ -109,7 +109,7 @@ export const POSCart = () => {
   };
 
   const handleSkipTable = () => {
-    setTableNumber(0);
+    setTableNumber(null);
     setIsTableModalOpen(false);
     setIsPhoneModalOpen(true);
   };

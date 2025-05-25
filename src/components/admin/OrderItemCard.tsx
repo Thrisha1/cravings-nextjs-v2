@@ -137,12 +137,13 @@ const OrderItemCard = ({
 
         <div className="flex items-center gap-2">
           <span
-            className={`px-2 py-1 rounded text-xs ${order.status === "completed"
+            className={`px-2 py-1 rounded text-xs ${
+              order.status === "completed"
                 ? "bg-green-100 text-green-800"
                 : order.status === "cancelled"
-                  ? "bg-red-100 text-red-800"
-                  : "bg-yellow-100 text-yellow-800"
-              }`}
+                ? "bg-red-100 text-red-800"
+                : "bg-yellow-100 text-yellow-800"
+            }`}
           >
             {order.status}
           </span>
@@ -197,7 +198,7 @@ const OrderItemCard = ({
                 </div>
                 <span>
                   {(userData as HotelData)?.currency}
-                  {(item.price * item.quantity).toFixed(2)}
+                  {(item.price * item.quantity || 0)?.toFixed(2)}
                 </span>
               </div>
             ))
@@ -214,7 +215,11 @@ const OrderItemCard = ({
               {order?.extraCharges?.map((charge, index) => (
                 <div key={index} className="flex justify-between text-sm">
                   <span>{charge.name}</span>
-                  <span>                    {(userData as HotelData)?.currency}                    {charge.amount.toFixed(2)}                  </span>
+                  <span>
+                    {" "}
+                    {(userData as HotelData)?.currency}{" "}
+                    {charge?.amount?.toFixed(2)}{" "}
+                  </span>
                 </div>
               ))}
             </div>
@@ -228,7 +233,7 @@ const OrderItemCard = ({
               <span>GST ({gstPercentage}%):</span>
               <span>
                 {(userData as HotelData)?.currency}
-                {gstAmount.toFixed(2)}
+                {gstAmount?.toFixed(2)}
               </span>
             </div>
           )}
@@ -237,7 +242,7 @@ const OrderItemCard = ({
             <span>Grand Total:</span>
             <span>
               {(userData as HotelData)?.currency}
-              {grantTotal.toFixed(2)}
+              {grantTotal?.toFixed(2)}
             </span>
           </div>
         </div>

@@ -49,10 +49,17 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
 
     // Determine order type and display text
     const getOrderTypeText = () => {
-      if (order.tableNumber === 0) return "Delivery";
+      if (
+        order.tableNumber === 0 ||
+        order.type === "delivery"
+      )
+        return "Delivery";
       if (!order.tableNumber) return "Takeaway";
       return `Table ${order.tableNumber}`;
     };
+
+    console.log("Rendering BillTemplate with order:", order);
+    
 
     return (
       <div
@@ -100,34 +107,48 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
         </div>
 
         {/* Delivery Information */}
-        {order.tableNumber === 0 && (
+        {(order.tableNumber === 0 ||
+          order.deliveryAddress !== "" ||
+          order.type == "delivery") && (
           <>
-            <div className="border-t border-dashed border-gray-400 my-2"></div>
+            <div className="border-t border-black my-2"></div>
             <div className="text-sm">
-              <div className="font-medium mb-1">Delivery Details:</div>
-              {order.deliveryAddress && (
-                <div className="mb-1">
-                  <div className="font-semibold">Address:</div>
+              <div className="font-bold text-sm uppercase mb-1">
+                Order Details:
+              </div>
+              {order.deliveryAddress !== "" && (
+                <div className="mb-1 flex gap-2">
+                  <div className="font-medium">Address:</div>
                   <div className="text-xs">{order.deliveryAddress}</div>
                 </div>
               )}
-              {order.phone && (
-                <div>
-                  <div className="font-semibold">Phone:</div>
-                  <div>{order.phone}</div>
-                </div>
+              {!order.tableNumber && order.delivery_location && (
+                <>
+                  <div className="text-sm flex gap-2">
+                    <div className="font-medium">Delivery Location:</div>
+                    <br />
+                    <div className="text-xs">
+                      <img
+                        alt="QR Code for Delivery Location"
+                        className="w-16 h-16"
+                        src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(
+                          `https://www.google.com/maps/place/${order.delivery_location?.coordinates[1]},${order.delivery_location?.coordinates[0]}`
+                        )}`}
+                      />
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </>
         )}
 
         {/* Takeaway Phone */}
-        {!order.tableNumber && order.phone && (
+        {order.phone && (
           <>
-            <div className="border-t border-dashed border-gray-400 my-2"></div>
-            <div className="text-sm">
+            <div className="text-sm flex gap-2">
               <div className="font-medium">Customer Phone:</div>
-              <div>{order.phone}</div>
+              <div className="text-xs">{order.phone}</div>
             </div>
           </>
         )}

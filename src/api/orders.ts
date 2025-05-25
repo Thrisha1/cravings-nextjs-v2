@@ -147,7 +147,7 @@ export const getOrderByIdQuery = `
 export const subscriptionQuery = `
 subscription GetPartnerOrders($partner_id: uuid!) {
   orders(
-    where: { partner_id: { _eq: $partner_id } , status: { _eq: "pending" } }
+    where: { partner_id: { _eq: $partner_id }, _or: [{ status: { _eq: "pending" } }, { type: { _eq: "pos" } }] }
     order_by: { created_at: desc }
   ) {
     id

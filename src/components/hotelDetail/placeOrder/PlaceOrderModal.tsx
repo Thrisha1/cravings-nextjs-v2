@@ -215,7 +215,7 @@ const BillCard = ({
   );
 
   // Calculate QR group extra charges using the new function
-  const qrExtraCharges = (qrGroup?.extra_charge)
+  const qrExtraCharges = qrGroup?.extra_charge
     ? getExtraCharge(
         items,
         qrGroup.extra_charge,
@@ -663,7 +663,28 @@ const PlaceOrderModal = ({
 
   const isDelivery = !tableNumber;
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
-  const isQrScan = (qrId !== null) && (tableNumber !== 0);
+  const isQrScan = qrId !== null && tableNumber !== 0;
+
+  useEffect(() => {
+    const checkGeolocationPermission = async () => {
+      try {
+        const permissionStatus = await navigator.permissions.query({
+          name: "geolocation",
+        });
+
+        if (permissionStatus.state === "denied") {
+          useLocationStore.setState({
+            error: "Location permission is denied. Please enable it in your browser settings.",
+            isLoading: false,
+          });
+        }
+      } catch (error) {
+        console.error("Error checking geolocation permission:", error);
+      }
+    };
+
+    checkGeolocationPermission();
+  }, []);
 
   useEffect(() => {
     if (isDelivery && hasDelivery && selectedLocation && !isQrScan) {

@@ -14,6 +14,7 @@ import { subscribeToHasura } from "@/lib/hasuraSubscription";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { usePOSStore } from "./posStore";
+import { v4 as uuidv4 } from 'uuid';
 
 export interface OrderItem extends HotelDataMenus {
   id: string;
@@ -387,7 +388,7 @@ const useOrderStore = create(
 
       genOrderId: () => {
         const state = get();
-        const orderId = crypto.randomUUID();
+        const orderId = uuidv4();
 
         if (state.hotelId) {
           set((state) => {
@@ -676,7 +677,7 @@ const useOrderStore = create(
                 name: charge.name,
                 amount: charge.amount,
                 charge_type: charge.charge_type || "FLAT_FEE",
-                id: crypto.randomUUID(),
+                id:uuidv4(),
               });
             });
           }
@@ -687,7 +688,7 @@ const useOrderStore = create(
               name: "Delivery Charge",
               amount: deliveryCharge,
               charge_type: "FLAT_FEE",
-              id: crypto.randomUUID(),
+              id: uuidv4(),
             });
           }
 
@@ -710,7 +711,7 @@ const useOrderStore = create(
 
           // Create order in database
           const orderResponse = await fetchFromHasura(createOrderMutation, {
-            id: crypto.randomUUID(), // Generate new ID for each order
+            id: uuidv4(), // Generate new ID for each order
             totalPrice: grandTotal,
             gst_included: gstIncluded,
             extra_charges: exCharges.length > 0 ? exCharges : null,
@@ -910,7 +911,7 @@ const useOrderStore = create(
         const state = get();
         if (!state.hotelId) return;
 
-        const newOrderId = crypto.randomUUID();
+        const newOrderId = uuidv4();
 
         set((state) => {
           const hotelOrders = { ...state.hotelOrders };

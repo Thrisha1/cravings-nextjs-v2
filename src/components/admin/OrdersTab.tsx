@@ -5,7 +5,14 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { fetchFromHasura } from "@/lib/hasuraClient";import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";import { Howl } from "howler";import { useRouter } from "next/navigation";import { EditOrderModal } from "./pos/EditOrderModal";import { usePOSStore } from "@/store/posStore";import { getGstAmount } from "../hotelDetail/OrderDrawer";import OrderItemCard from "./OrderItemCard";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Howl } from "howler";
+import { useRouter } from "next/navigation";
+import { EditOrderModal } from "./pos/EditOrderModal";
+import { usePOSStore } from "@/store/posStore";
+import { getGstAmount } from "../hotelDetail/OrderDrawer";
+import OrderItemCard from "./OrderItemCard";
 import TodaysEarnings from "./orders/TodaysEarnings";
 import {
   AlertDialog,
@@ -23,20 +30,27 @@ const OrdersTab = () => {
   const router = useRouter();
   const { userData, features } = useAuthStore();
   const prevOrdersRef = useRef<Order[]>([]);
-  const { subscribeOrders, partnerOrders, deleteOrder, updateOrderStatus } = useOrderStore();
+  const { subscribeOrders, partnerOrders, deleteOrder, updateOrderStatus } =
+    useOrderStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showOnlyPending, setShowOnlyPending] = useState<boolean>(true);
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest");
-  const [activeTab, setActiveTab] = useState<"table" | "delivery">("delivery");
-  const [newOrders, setNewOrders] = useState({ table: false, delivery: false });
+  const [activeTab, setActiveTab] = useState<"table" | "delivery" | "pos">(
+    "delivery"
+  );
+  const [newOrders, setNewOrders] = useState({
+    table: false,
+    delivery: false,
+    pos: false,
+  });
   const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
   const [newOrderAlert, setNewOrderAlert] = useState({
     show: false,
     tableCount: 0,
     deliveryCount: 0,
+    posCount: 0,
   });
-    const soundRef = useRef<Howl | null>(null);  const {    setOrder,    setEditOrderModalOpen,  } = usePOSStore();
+  const soundRef = useRef<Howl | null>(null);
+  const { setOrder, setEditOrderModalOpen } = usePOSStore();
 
   useEffect(() => {
     soundRef.current = new Howl({
@@ -57,33 +71,13 @@ const OrdersTab = () => {
     }
   }, [partnerOrders]);
 
-  useEffect(() => {
-    const storedFilter = localStorage.getItem("ordersFilter");
-    const orderFilter = localStorage.getItem("ordersSortOrder");
-    const storedTab = localStorage.getItem("ordersActiveTab");
-
-    if (storedTab === "delivery") {
-      setActiveTab("delivery");
-    }
-
-    if (storedFilter === "all") {
-      setShowOnlyPending(false);
-    } else {
-      setShowOnlyPending(true);
-    }
-
-    if (orderFilter === "newest") {
-      setSortOrder("newest");
-    } else {
-      setSortOrder("oldest");
-    }
-  }, []);
-
   const handleDeleteOrder = async (orderId: string) => {
     try {
       const success = await deleteOrder(orderId);
       if (success) {
-        setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
+        setOrders((prevOrders) =>
+          prevOrders.filter((order) => order.id !== orderId)
+        );
         toast.success("Order deleted successfully");
         return true;
       } else {
@@ -110,22 +104,8 @@ const OrdersTab = () => {
     }
   };
 
-  const togglePendingFilter = () => {
-    const newValue = !showOnlyPending;
-    setShowOnlyPending(newValue);
-    localStorage.setItem("ordersFilter", newValue ? "pending" : "all");
-  };
-
-  const toggleSortOrder = () => {
-    setSortOrder(sortOrder === "newest" ? "oldest" : "newest");
-    localStorage.setItem(
-      "ordersSortOrder",
-      sortOrder === "newest" ? "oldest" : "newest"
-    );
-  };
-
   const handleTabChange = (value: string) => {
-    if (value === "table" || value === "delivery") {
+    if (value === "table" || value === "delivery" || value === "pos") {
       setActiveTab(value);
       setNewOrders((prev) => ({ ...prev, [value]: false }));
       localStorage.setItem("ordersActiveTab", value);
@@ -133,24 +113,15 @@ const OrdersTab = () => {
   };
 
   useEffect(() => {
-    const filteredByTypeOrders = orders.filter((order) =>
-      activeTab === "table"
-        ? order.type === "table_order"
-        : order.type === "delivery"
-    );
-
-    const filteredOrders = showOnlyPending
-      ? filteredByTypeOrders.filter((order) => order.status === "pending")
-      : filteredByTypeOrders;
-
-    const sortedOrders = [...filteredOrders].sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+    const filteredByTypeOrders = orders.filter((order) => {
+      if (activeTab === "table") return order.type === "table_order";
+      if (activeTab === "delivery") return order.type === "delivery";
+      if (activeTab === "pos") return order.type === "pos";
+      return false;
     });
 
-    setSortedOrders(sortedOrders);
-  }, [orders, activeTab, showOnlyPending, sortOrder]);
+    setSortedOrders(filteredByTypeOrders);
+  }, [orders, activeTab]);
 
   useEffect(() => {
     if (!userData?.id) return;
@@ -173,7 +144,15 @@ const OrdersTab = () => {
           !prevOrders.some((prevOrder) => prevOrder.id === order.id)
       );
 
-      const totalNewOrders = newTableOrders.length + newDeliveryOrders.length;
+      const newPOSOrders = allOrders.filter(
+        (order) =>
+          order.status === "pending" &&
+          order.type === "pos" &&
+          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      );
+
+      const totalNewOrders =
+        newTableOrders.length + newDeliveryOrders.length + newPOSOrders.length;
 
       if (totalNewOrders > 0) {
         soundRef.current?.play();
@@ -183,12 +162,14 @@ const OrdersTab = () => {
           show: true,
           tableCount: newTableOrders.length,
           deliveryCount: newDeliveryOrders.length,
+          posCount: newPOSOrders.length,
         });
 
         // Update new order indicators
         setNewOrders({
           table: newTableOrders.length > 0,
           delivery: newDeliveryOrders.length > 0,
+          pos: newPOSOrders.length > 0,
         });
       }
 
@@ -217,8 +198,9 @@ const OrdersTab = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>New Orders Received!</AlertDialogTitle>
             <AlertDialogDescription>
-              You have {newOrderAlert.tableCount} new table order(s) and{" "}
-              {newOrderAlert.deliveryCount} new delivery order(s).
+              You have {newOrderAlert.tableCount} new table order(s),{" "}
+              {newOrderAlert.deliveryCount} new delivery order(s), and{" "}
+              {newOrderAlert.posCount} new POS order(s).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -228,12 +210,20 @@ const OrdersTab = () => {
                   show: false,
                   tableCount: 0,
                   deliveryCount: 0,
+                  posCount: 0,
                 });
                 // Switch to the tab with most new orders
-                if (newOrderAlert.tableCount > newOrderAlert.deliveryCount) {
+                const maxCount = Math.max(
+                  newOrderAlert.tableCount,
+                  newOrderAlert.deliveryCount,
+                  newOrderAlert.posCount
+                );
+                if (newOrderAlert.tableCount === maxCount) {
                   setActiveTab("table");
-                } else if (newOrderAlert.deliveryCount > 0) {
+                } else if (newOrderAlert.deliveryCount === maxCount) {
                   setActiveTab("delivery");
+                } else {
+                  setActiveTab("pos");
                 }
               }}
             >
@@ -248,7 +238,11 @@ const OrdersTab = () => {
         <h2 className="text-2xl font-bold mb-5 sm:mb-0">Orders Management</h2>
         <div className="flex gap-2 flex-wrap justify-center">
           {features?.pos.enabled && (
-            <Button variant={"outline"} size="sm" onClick={handleCreateNewOrder}>
+            <Button
+              variant={"outline"}
+              size="sm"
+              onClick={handleCreateNewOrder}
+            >
               Create New Order
             </Button>
           )}
@@ -259,17 +253,21 @@ const OrdersTab = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-2 mb-6 relative">
-          <TabsTrigger value="delivery" className="relative">
-            Deliveries
-            {newOrders.delivery && (
-              <span className="absolute -top-1 -right-1 h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="table" className="relative">
+        <TabsList
+          className={`grid w-full grid-flow-col  mb-6 relative justify-stretch `}
+        >
+          {features?.delivery.enabled && (
+            <TabsTrigger value="delivery" className="relative w-full">
+              Deliveries
+              {newOrders.delivery && (
+                <span className="absolute -top-1 -right-1 h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+              )}
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="table" className="relative w-full">
             Table Orders
             {newOrders.table && (
               <span className="absolute -top-1 -right-1 h-3 w-3">
@@ -278,6 +276,17 @@ const OrdersTab = () => {
               </span>
             )}
           </TabsTrigger>
+          {features?.pos.enabled && (
+            <TabsTrigger value="pos" className="relative w-full">
+              POS Orders
+              {newOrders.pos && (
+                <span className="absolute -top-1 -right-1 h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+              )}
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {loading ? (
@@ -285,45 +294,101 @@ const OrdersTab = () => {
             <Loader2 className="animate-spin h-8 w-8" />
           </div>
         ) : (
-          <TabsContent value={activeTab}>
-            <div className="space-y-4">
-              {sortedOrders.length === 0 ? (
-                <p className="text-gray-500">
-                  No {activeTab === "table" ? "table orders" : "deliveries"} found
-                </p>
-              ) : (
-                sortedOrders.map((order, index) => {
-                  const gstPercentage = (userData as Partner)?.gst_percentage || 0;
-
-                  const foodSubtotal = order.items.reduce((sum, item) => {
-                    return sum + item.price * item.quantity;
-                  }, 0);
-
-                  const gstAmount = getGstAmount(foodSubtotal, gstPercentage);
-                  const totalPriceWithGst = foodSubtotal + gstAmount;
-
-                                    const extraChargesTotal = (order?.extraCharges ?? []).reduce(                    (acc, charge) => acc + charge.amount,                    0                  );
-                  const grandTotal = totalPriceWithGst + extraChargesTotal;
-
-                  return (
+          <>
+            <TabsContent value="delivery">
+              <div className="space-y-4">
+                {sortedOrders.length === 0 ? (
+                  <p className="text-gray-500">No deliveries found</p>
+                ) : (
+                  sortedOrders.map((order, index) => (
                     <OrderItemCard
-                      deleteOrder={handleDeleteOrder}
-                      key={order.id + "-" + index}
-                      grantTotal={grandTotal}
-                      gstAmount={gstAmount}
-                      gstPercentage={gstPercentage}
+                      gstAmount={getGstAmount(
+                        order.items.reduce((sum, item) => {
+                          return sum + item.price * item.quantity;
+                        }, 0),
+                        (userData as Partner)?.gst_percentage || 0
+                      )}
+                      grantTotal={order.totalPrice || 0}
+                      key={`delivery-${order.id}-${index}`}
                       order={order}
-                      setEditOrderModalOpen={setEditOrderModalOpen}
-                      setOrder={setOrder}
+                      deleteOrder={handleDeleteOrder}
                       updateOrderStatus={(status) => {
                         handleUpdateOrderStatus(order.id, status);
                       }}
+                      setOrder={setOrder}
+                      setEditOrderModalOpen={setEditOrderModalOpen}
+                      gstPercentage={(userData as Partner)?.gst_percentage || 0}
                     />
-                  );
-                })
-              )}
-            </div>
-          </TabsContent>
+                  ))
+                )}
+              </div>
+            </TabsContent>
+            <TabsContent value="table">
+              <div className="space-y-4">
+                {sortedOrders.length === 0 ? (
+                  <p className="text-gray-500">No table orders found</p>
+                ) : (
+                  sortedOrders.map((order, index) => (
+                    <OrderItemCard
+                      key={`table-${order.id}-${index}`}
+                      gstAmount={getGstAmount(
+                        order.items.reduce((sum, item) => {
+                          return sum + item.price * item.quantity;
+                        }, 0),
+                        (userData as Partner)?.gst_percentage || 0
+                      )}
+                      grantTotal={order.totalPrice || 0}
+                      order={order}
+                      deleteOrder={handleDeleteOrder}
+                      updateOrderStatus={(status) => {
+                        handleUpdateOrderStatus(order.id, status);
+                      }}
+                      setOrder={setOrder}
+                      setEditOrderModalOpen={setEditOrderModalOpen}
+                      gstPercentage={(userData as Partner)?.gst_percentage || 0}
+                    />
+                  ))
+                )}
+              </div>
+            </TabsContent>
+            <TabsContent value="pos">
+              <div className="space-y-4">
+                {sortedOrders.length === 0 ? (
+                  <p className="text-gray-500">No POS orders found</p>
+                ) : (
+                  sortedOrders.map((order, index) => {
+                    const gstPercentage =
+                      (userData as Partner)?.gst_percentage || 0;
+                    const foodSubtotal = order.items.reduce((sum, item) => {
+                      return sum + item.price * item.quantity;
+                    }, 0);
+                    const gstAmount = getGstAmount(foodSubtotal, gstPercentage);
+                    const totalPriceWithGst = foodSubtotal + gstAmount;
+                    const extraChargesTotal = (
+                      order?.extraCharges ?? []
+                    ).reduce((acc, charge) => acc + charge.amount, 0);
+                    const grandTotal = totalPriceWithGst + extraChargesTotal;
+
+                    return (
+                      <OrderItemCard
+                        key={`pos-${order.id}-${index}`}
+                        order={order}
+                        deleteOrder={handleDeleteOrder}
+                        updateOrderStatus={(status) => {
+                          handleUpdateOrderStatus(order.id, status);
+                        }}
+                        setOrder={setOrder}
+                        setEditOrderModalOpen={setEditOrderModalOpen}
+                        gstPercentage={gstPercentage}
+                        gstAmount={gstAmount}
+                        grantTotal={grandTotal}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            </TabsContent>
+          </>
         )}
       </Tabs>
 

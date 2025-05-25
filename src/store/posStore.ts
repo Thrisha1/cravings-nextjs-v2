@@ -13,6 +13,7 @@ import {
 } from "@/api/orders";
 import { deleteBillMutation } from "@/api/pos";
 import { Order, OrderItem } from "./orderStore";
+import { v4 as uuidv4 } from "uuid";
 
 interface CartItem extends MenuItem {
   quantity: number;
@@ -31,14 +32,14 @@ interface POSState {
   loading: boolean;
   cartItems: CartItem[];
   extraCharges: ExtraCharge[];
-  totalAmount: number;
+  totalAmount: number ;
   userPhone: string | null;
   deliveryAddress?: string;
   setDeliveryAddress: (address: string) => void;
   setUserPhone: (phone: string | null) => void;
   tableNumbers: number[];
-  tableNumber: number;
-  setTableNumber: (tableNumber: number) => void;
+  tableNumber: number | null;
+  setTableNumber: (tableNumber: number | null) => void;
   addToCart: (item: MenuItem) => void;
   removeFromCart: (itemId: string) => void;
   increaseQuantity: (itemId: string) => void;
@@ -68,7 +69,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   totalAmount: 0,
   order: null,
   userPhone: null,
-  tableNumber: 0,
+  tableNumber: null,
   tableNumbers: [],
   postCheckoutModalOpen: false,
   editOrderModalOpen: false,
@@ -120,7 +121,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
     }
   },
 
-  setTableNumber: (tableNumber: number) => {
+  setTableNumber: (tableNumber: number | null) => {
     set({ tableNumber });
   },
 
@@ -196,7 +197,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   addExtraCharge: (charge: Omit<ExtraCharge, "id">) => {
     const newCharge = {
       ...charge,
-      id: crypto.randomUUID(),
+      id: uuidv4(),
     };
     set((state) => ({
       extraCharges: [...state.extraCharges, newCharge],
@@ -265,7 +266,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         ) +
         getGstAmount(foodSubtotal, gstPercentage);
 
-      const orderId = crypto.randomUUID();
+      const orderId = uuidv4(); 
       const newOrder = {
         id: orderId,
         totalPrice: grandTotal,
@@ -317,6 +318,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
           ...newOrder,
           items: cartItems,
           extraCharges: extraCharges,
+          deliveryAddress: get().deliveryAddress || "", 
         } as unknown as Order,
       });
       set({ postCheckoutModalOpen: true });

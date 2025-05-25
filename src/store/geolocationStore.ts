@@ -44,7 +44,8 @@ export const useLocationStore = create<LocationStore>()(
       },
 
       getLocation: async () => {
-        const { coords, lastUpdated } = get();
+        
+        
 
         return get().refreshLocation();
       },

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: "Cravings",
   description: "Find the best food deals in your area",
   icons: ["/icon-64x64.png", "/icon-192x192.png", "/icon-512x512.png"],
-  metadataBase: new URL("http://cravings.vercel.app"),
+  metadataBase: new URL("https://cravings.live"),
   openGraph: {
     title: "Cravings",
     description: "Find the best food deals in your area",

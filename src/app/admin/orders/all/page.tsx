@@ -17,7 +17,7 @@ const OrdersPage = () => {
   const { setEditOrderModalOpen, setOrder } = usePOSStore();
   const { userData } = useAuthStore();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"delivery" | "table">("delivery");
+  const [activeTab, setActiveTab] = useState<"delivery" | "table" | "pos">("delivery");
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
@@ -71,11 +71,12 @@ const OrdersPage = () => {
     let result = [...orders];
 
     // Filter by tab
-    result = result.filter((order) =>
-      activeTab === "delivery"
-        ? order.type === "delivery"
-        : order.type === "table_order"
-    );
+    result = result.filter((order) => {
+      if (activeTab === "delivery") return order.type === "delivery";
+      if (activeTab === "table") return order.type === "table_order";
+      if (activeTab === "pos") return order.type === "pos";
+      return false;
+    });
 
     // Filter by status
     if (filter !== "all") {
@@ -176,11 +177,12 @@ const OrdersPage = () => {
 
       <Tabs
         value={activeTab}
-        onValueChange={(value) => setActiveTab(value as "delivery" | "table")}
+        onValueChange={(value) => setActiveTab(value as "delivery" | "table" | "pos")}
       >
-        <TabsList className="grid w-full grid-cols-2 mb-6">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="delivery">Delivery Orders</TabsTrigger>
           <TabsTrigger value="table">Table Orders</TabsTrigger>
+          <TabsTrigger value="pos">POS Orders</TabsTrigger>
         </TabsList>
 
         {loading ? (
@@ -234,6 +236,47 @@ const OrdersPage = () => {
               <div className="space-y-4">
                 {filteredOrders.length === 0 ? (
                   <p className="text-gray-500">No table orders found matching your criteria</p>
+                ) : (
+                  filteredOrders.map((order) => {
+                    const grandTotal = order.totalPrice || 0;
+                    const foodTotal = order.items.reduce(
+                      (total, item) => total + (item.price || 0) * item.quantity,
+                      0
+                    );
+                    const gstPercentage = (userData as Partner)?.gst_percentage || 0;
+                    const gstAmount = order.gstIncluded
+                      ? (foodTotal * gstPercentage) / 100
+                      : 0;
+
+                    return (
+                      <OrderItemCard
+                        key={order.id}
+                        order={order}
+                        grantTotal={grandTotal}
+                        gstAmount={gstAmount}
+                        gstPercentage={gstPercentage}
+                        deleteOrder={handleDeleteOrder}
+                        setEditOrderModalOpen={setEditOrderModalOpen}
+                        setOrder={setOrder}
+                        updateOrderStatus={(status) => {
+                          updateOrderStatus(
+                            orders,
+                            order.id,
+                            status,
+                            setOrders
+                          );
+                        }}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="pos">
+              <div className="space-y-4">
+                {filteredOrders.length === 0 ? (
+                  <p className="text-gray-500">No POS orders found matching your criteria</p>
                 ) : (
                   filteredOrders.map((order) => {
                     const grandTotal = order.totalPrice || 0;
