@@ -2,7 +2,7 @@ import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { useAuthStore } from "./authStore";
+import { useAuthStore, Captain } from "./authStore";
 import {
   createOrderItemsMutation,
   createOrderMutation,
@@ -43,6 +43,7 @@ export interface Order {
   type?: "table_order" | "delivery" | "pos";
   deliveryAddress?: string | null;
   gstIncluded?: number;
+  orderedby?: string;
   extraCharges?:
     | {
         name: string;
@@ -162,50 +163,138 @@ const useOrderStore = create(
       },
 
       subscribeOrders: (callback) => {
-        const partnerId = useAuthStore.getState().userData?.id;
+        const userData = useAuthStore.getState().userData;
+        console.log("Setting up subscription with user data:", {
+          userId: userData?.id,
+          role: userData?.role,
+          partnerId: userData?.role === "captain" ? (userData as Captain).partner_id : userData?.id
+        });
+
+        const partnerId = userData?.role === "captain" 
+          ? (userData as Captain).partner_id 
+          : userData?.id;
+
+        if (!partnerId) {
+          console.error("No partner ID available for subscription");
+          return () => {};
+        }
+
+        if (!userData?.role) {
+          console.error("No user role available for subscription");
+          return () => {};
+        }
+
+        console.log("Setting up subscription with partner ID:", {
+          partnerId,
+          role: userData.role,
+          isCaptain: userData.role === "captain"
+        });
 
         const unsubscribe = subscribeToHasura({
           query: subscriptionQuery,
           variables: { partner_id: partnerId },
           onNext: (data) => {
-            console.log(data);
+            console.log("Subscription data received:", {
+              hasData: !!data?.data,
+              hasOrders: !!data?.data?.orders,
+              totalOrders: data?.data?.orders?.length ?? 0,
+              partnerId,
+              timestamp: new Date().toISOString(),
+              dataKeys: data?.data ? Object.keys(data.data) : []
+            });
 
-            const allOrders = data.data?.orders.map((order: any) => ({
-              id: order.id,
-              totalPrice: order.total_price,
-              createdAt: order.created_at,
-              tableNumber: order.table_number,
-              qrId: order.qr_id,
-              status: order.status,
-              type: order.type,
-              phone: order.phone,
-              deliveryAddress: order.delivery_address,
-              partnerId: order.partner_id,
-              gstIncluded: order.gst_included,
-              extraCharges: order.extra_charges,
-              userId: order.user_id,
-              user: order.user,
-              items: order.order_items.map((i: any) => ({
-                id: i.item.id,
-                quantity: i.quantity,
-                name: i.item.name || "Unknown",
-                price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
-                category: i.menu?.category,
-                stocks: i.menu?.stocks,
-              })),
-            }));
-
-            if (allOrders) {
-              set({ partnerOrders: allOrders });
-              if (callback) callback(allOrders);
+            if (!data?.data?.orders) {
+              console.log("No orders data in subscription response", {
+                data: data?.data,
+                timestamp: new Date().toISOString()
+              });
+              if (callback) callback([]);
+              return;
             }
+
+            const allOrders = data.data.orders.map((order: any) => {
+              console.log("Processing order:", {
+                id: order.id,
+                partnerId: order.partner_id,
+                orderedby: order.orderedby,
+                hasItems: !!order.order_items,
+                itemsCount: order.order_items?.length,
+                firstItem: order.order_items?.[0] ? {
+                  hasMenu: !!order.order_items[0].menu,
+                  menuId: order.order_items[0].menu?.id,
+                  menuName: order.order_items[0].menu?.name
+                } : null,
+                created_at: order.created_at
+              });
+
+              if (!order.created_at) {
+                console.error("Order missing created_at:", order);
+                return null;
+              }
+
+              return {
+                id: order.id,
+                totalPrice: order.total_price,
+                createdAt: order.created_at,
+                tableNumber: order.table_number,
+                qrId: order.qr_id,
+                status: order.status,
+                type: order.type,
+                phone: order.phone,
+                deliveryAddress: order.delivery_address,
+                partnerId: order.partner_id,
+                gstIncluded: order.gst_included,
+                extraCharges: order.extra_charges,
+                userId: order.user_id,
+                orderedby: order.orderedby,
+                user: order.user,
+                items: order.order_items?.map((i: any) => ({
+                  id: i.menu?.id,
+                  quantity: i.quantity,
+                  name: i.menu?.name || "Unknown",
+                  price: i.menu?.offers?.[0]?.offer_price || i.menu?.price || 0,
+                  category: i.menu?.category?.name,
+                  description: i.menu?.description || "",
+                  image_url: i.menu?.image_url || "",
+                  is_top: i.menu?.is_top || false,
+                  is_available: i.menu?.is_available || false,
+                  priority: i.menu?.priority || 0,
+                  offers: i.menu?.offers || []
+                })) || []
+              };
+            }).filter((order: any): order is NonNullable<typeof order> => order !== null);
+
+            console.log("Setting partner orders:", {
+              totalOrders: allOrders.length,
+              orders: allOrders.map((o: Order) => ({
+                id: o.id,
+                partnerId: o.partnerId,
+                orderedby: o.orderedby,
+                itemsCount: o.items.length
+              })),
+              timestamp: new Date().toISOString()
+            });
+
+            set({ partnerOrders: allOrders });
+            if (callback) callback(allOrders);
           },
           onError: (error) => {
-            console.error("Subscription error:", error);
+            console.error("Subscription error:", {
+              error,
+              message: error instanceof Error ? error.message : String(error),
+              timestamp: new Date().toISOString()
+            });
+            if (callback) callback([]);
           },
         });
 
-        return unsubscribe;
+        return () => {
+          console.log("Cleaning up subscription", {
+            partnerId,
+            timestamp: new Date().toISOString()
+          });
+          unsubscribe();
+        };
       },
 
       setHotelId: (id: string) => {

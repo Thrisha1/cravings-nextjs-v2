@@ -8,7 +8,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/login', '/signup', '/superlogin', '/hotels', '/partner'];
+  const publicRoutes = ['/login', '/signup', '/superlogin', '/hotels', '/partner','/captainlogin'];
   if (publicRoutes.includes(pathname)) {
     return NextResponse.next();
   }
@@ -42,6 +42,10 @@ export async function middleware(request: NextRequest) {
     superadmin: {
       allowed: ['/superadmin', '/admin', '/profile'],
       redirect: '/superLogin'
+    },
+    captain:{
+      allowed:['/captain', '/captain/pos'],
+      redirect:'/captainlogin'
     }
   };
 

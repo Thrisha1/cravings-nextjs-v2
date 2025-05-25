@@ -8,6 +8,8 @@ import {
   Pencil,
   Trash2,
   ArrowRight,
+  Plus,
+  X,
 } from "lucide-react";
 import { Partner, useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
@@ -50,6 +52,14 @@ import { HotelData, SocialLinks } from "../hotels/[...id]/page";
 import { getSocialLinks } from "@/lib/getSocialLinks";
 import { FeatureFlags, getFeatures, revertFeatureToString } from "@/lib/getFeatures";
 import { updateAuthCookie } from "../auth/actions";
+import { createCaptainMutation, getCaptainsQuery, deleteCaptainMutation } from "@/api/captains";
+
+interface Captain {
+  id: string;
+  email: string;
+  partner_id: string;
+  role: string;
+}
 
 const Currencies = [
   { label: "INR", value: "₹" },
@@ -113,6 +123,13 @@ export default function ProfilePage() {
   const [userFeatures, setUserFeatures] = useState<FeatureFlags | null>(null);
   const [footNote, setFootNote] = useState<string>("");
   const [instaLink, setInstaLink] = useState<string>("");
+  const [captainEmail, setCaptainEmail] = useState("");
+  const [captainPassword, setCaptainPassword] = useState("");
+  const [isCreatingCaptain, setIsCreatingCaptain] = useState(false);
+  const [captainError, setCaptainError] = useState<string | null>(null);
+  const [captains, setCaptains] = useState<Captain[]>([]);
+  const [isDeletingCaptain, setIsDeletingCaptain] = useState<string | null>(null);
+  const [showCaptainForm, setShowCaptainForm] = useState(false);
 
   const isLoading = authLoading;
 
@@ -163,6 +180,12 @@ export default function ProfilePage() {
       console.log(feature);
     }
   }, [userData]);
+
+  useEffect(() => {
+    if (userData?.role === "partner" && features?.captainordering.enabled) {
+      fetchCaptains();
+    }
+  }, [userData, features?.captainordering.enabled]);
 
   const profile = {
     name:
@@ -779,6 +802,110 @@ export default function ProfilePage() {
       toast.error(
         error instanceof Error ? error.message : "Failed to update shop status"
       );
+    }
+  };
+
+  const handleCreateCaptain = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userData) return;
+
+    setIsCreatingCaptain(true);
+    setCaptainError(null);
+
+    try {
+      if (!captainEmail || !captainPassword) {
+        throw new Error("Please fill in all fields");
+      }
+
+      if (captainPassword.length < 6) {
+        throw new Error("Password must be at least 6 characters long");
+      }
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(captainEmail)) {
+        throw new Error("Please enter a valid email address");
+      }
+
+      console.log("Creating captain account with data:", {
+        email: captainEmail,
+        partner_id: userData.id,
+        role: "captain"
+      });
+
+      const result = await fetchFromHasura(createCaptainMutation, {
+        email: captainEmail,
+        password: captainPassword,
+        partner_id: userData.id,
+        role: "captain"
+      });
+
+      console.log("Captain creation result:", result);
+
+      if (!result?.insert_captain_one) {
+        throw new Error("Failed to create captain account - no response from server");
+      }
+
+      // Verify the captain was created
+      const verifyCaptain = await fetchFromHasura(`
+        query VerifyCaptain($partner_id: uuid!) {
+          captain(where: {partner_id: {_eq: $partner_id}}) {
+            id
+            email
+            partner_id
+            role
+          }
+        }
+      `, {
+        partner_id: userData.id
+      }) as { captain: Captain[] };
+
+      console.log("Verification query result:", verifyCaptain);
+
+      if (!verifyCaptain?.captain?.some((c: Captain) => c.email === captainEmail)) {
+        throw new Error("Captain account creation verification failed");
+      }
+
+      toast.success("Captain account created successfully!");
+      setCaptainEmail("");
+      setCaptainPassword("");
+      setShowCaptainForm(false);
+      fetchCaptains();
+    } catch (error) {
+      console.error("Error creating captain account:", error);
+      setCaptainError(error instanceof Error ? error.message : "Failed to create captain account");
+      toast.error(error instanceof Error ? error.message : "Failed to create captain account");
+    } finally {
+      setIsCreatingCaptain(false);
+    }
+  };
+
+  const fetchCaptains = async () => {
+    if (!userData) return;
+    try {
+      const result = await fetchFromHasura(getCaptainsQuery, {
+        partner_id: userData.id
+      }) as { captain: Captain[] };
+      setCaptains(result.captain || []);
+    } catch (error) {
+      console.error("Error fetching captains:", error);
+      toast.error("Failed to fetch captain accounts");
+    }
+  };
+
+  const handleDeleteCaptain = async (captainId: string) => {
+    setIsDeletingCaptain(captainId);
+    try {
+      await fetchFromHasura(deleteCaptainMutation, {
+        id: captainId
+      });
+      toast.success("Captain account deleted successfully");
+      fetchCaptains();
+    } catch (error) {
+      console.error("Error deleting captain:", error);
+      toast.error("Failed to delete captain account");
+    } finally {
+      setIsDeletingCaptain(null);
     }
   };
 
@@ -1527,6 +1654,133 @@ export default function ProfilePage() {
                             handleFeatureEnabledChange(updates);
                           }}
                         />
+                      </div>
+                    )}
+
+                    {features.captainordering.access && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <div className="font-medium">Captain Ordering</div>
+                            <div className="text-sm text-gray-500">
+                              {features.captainordering.enabled ? "Enabled" : "Disabled"}
+                            </div>
+                          </div>
+                          <Switch
+                            checked={features.captainordering.enabled}
+                            onCheckedChange={(enabled) => {
+                              const updates = {
+                                ...features,
+                                captainordering: {
+                                  ...features.captainordering,
+                                  enabled: enabled,
+                                },
+                              };
+
+                              setFeatures(updates);
+                              setUserFeatures(updates);
+                              handleFeatureEnabledChange(updates);
+                            }}
+                          />
+                        </div>
+
+                        {features.captainordering.enabled && (
+                          <div className="space-y-2">
+                            {captains.map((captain) => (
+                              <div key={captain.id} className="flex items-center justify-between p-3 bg-white border rounded-lg">
+                                <div className="flex-1">
+                                  <div className="font-medium">{captain.email}</div>
+                                  <div className="text-sm text-gray-500">Captain Account</div>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteCaptain(captain.id)}
+                                  disabled={isDeletingCaptain === captain.id}
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  {isDeletingCaptain === captain.id ? (
+                                    <div className="animate-spin h-4 w-4 border-2 border-red-500 border-t-transparent rounded-full" />
+                                  ) : (
+                                    <X className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            ))}
+
+                            {!showCaptainForm ? (
+                              <Button
+                                onClick={() => setShowCaptainForm(true)}
+                                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Captain Account
+                              </Button>
+                            ) : (
+                              <div className="p-4 bg-white border rounded-lg space-y-4">
+                                <div className="flex justify-between items-center">
+                                  <h3 className="font-medium">Create Captain Account</h3>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setShowCaptainForm(false)}
+                                    className="text-gray-500 hover:text-gray-700"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                                <form onSubmit={handleCreateCaptain} className="space-y-4">
+                                  <div className="space-y-2">
+                                    <label htmlFor="captainEmail" className="text-sm font-medium">
+                                      Email
+                                    </label>
+                                    <Input
+                                      id="captainEmail"
+                                      type="email"
+                                      placeholder="Enter captain email"
+                                      value={captainEmail}
+                                      onChange={(e) => setCaptainEmail(e.target.value)}
+                                      required
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label htmlFor="captainPassword" className="text-sm font-medium">
+                                      Password
+                                    </label>
+                                    <Input
+                                      id="captainPassword"
+                                      type="password"
+                                      placeholder="Enter captain password"
+                                      value={captainPassword}
+                                      onChange={(e) => setCaptainPassword(e.target.value)}
+                                      required
+                                    />
+                                  </div>
+                                  {captainError && (
+                                    <p className="text-sm text-red-500">{captainError}</p>
+                                  )}
+                                  <div className="flex gap-2">
+                                    <Button
+                                      type="submit"
+                                      disabled={isCreatingCaptain}
+                                      className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                                    >
+                                      {isCreatingCaptain ? "Creating..." : "Create Account"}
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      onClick={() => setShowCaptainForm(false)}
+                                      className="flex-1"
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </form>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </>

@@ -24,7 +24,7 @@ import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
 interface BaseUser {
   id: string;
   email: string;
-  role: "user" | "partner" | "superadmin";
+  role: "user" | "partner" | "superadmin" | "captain";
 }
 
 export interface User extends BaseUser {
@@ -70,9 +70,17 @@ export interface SuperAdmin extends BaseUser {
   password: string;
 }
 
-export type AuthUser = User | Partner | SuperAdmin;
+export interface Captain extends BaseUser {
+  role: "captain";
+  partner_id: string;
+  password: string;
+  currency?: string;
+  gst_percentage?: number;
+}
 
+export type AuthUser = User | Partner | SuperAdmin | Captain;
 
+ 
 interface AuthState {
   userData: AuthUser | null;
   features: FeatureFlags | null;
@@ -104,9 +112,10 @@ interface AuthState {
   signInWithPhone: (phone: string, partnerId?: string) => Promise<User | null>;
   signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
   signInSuperAdminWithEmail: (email: string, password: string) => Promise<void>;
+  signInCaptainWithEmail: (email: string, password: string) => Promise<void>;
   fetchUser: () => Promise<void>;
   isLoggedIn: () => boolean;
-  setState: (udpatedUser: Partial<User> | Partial<Partner>) => void;
+  setState: (updates: Partial<AuthUser>) => void;
 }
 
 // Cookie management functions
@@ -198,6 +207,52 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               role: "superadmin",
             } as SuperAdmin,
           });
+        }
+      } else if (role === "captain") {
+        // First get captain data
+        const response = await fetchFromHasura(`
+          query GetCaptainById($id: uuid!) {
+            captain_by_pk(id: $id) {
+              id
+              email
+              partner_id
+              role
+            }
+          }
+        `, { id });
+
+        if (response?.captain_by_pk) {
+          const captain = response.captain_by_pk;
+          
+          // Fetch partner data
+          const partnerResponse = await fetchFromHasura(`
+            query GetPartnerData($partner_id: uuid!) {
+              partners_by_pk(id: $partner_id) {
+                currency
+                gst_percentage
+              }
+            }
+          `, { partner_id: captain.partner_id });
+
+          if (partnerResponse?.partners_by_pk) {
+            set({
+              userData: {
+                ...captain,
+                currency: partnerResponse.partners_by_pk.currency || "$",
+                gst_percentage: partnerResponse.partners_by_pk.gst_percentage || 0
+              },
+              loading: false
+            });
+          } else {
+            set({
+              userData: {
+                ...captain,
+                currency: "$",
+                gst_percentage: 0
+              },
+              loading: false
+            });
+          }
         }
       }
     } catch (error) {
@@ -349,13 +404,43 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  setState: (udpatedUser: Partial<User> | Partial<Partner>) => {
-    set({
-      userData: {
-        ...get().userData,
-        ...udpatedUser,
-      } as AuthUser,
-    });
+  signInCaptainWithEmail: async (email: string, password: string) => {
+    try {
+      const response = await fetchFromHasura(`
+        query LoginCaptain($email: String!, $password: String!) {
+          captain(where: {email: {_eq: $email}, password: {_eq: $password}}) {
+            id
+            email
+            partner_id
+            role
+            password
+          }
+        }
+      `, { email, password });
+
+      if (!response?.captain?.[0]) {
+        throw new Error("Invalid email or password");
+      }
+
+      const captain = response.captain[0];
+      await setAuthCookie({ 
+        id: captain.id, 
+        role: "captain",
+        feature_flags: "",
+        status: "active"
+      });
+      set({ userData: { ...captain, role: "captain" } as Captain });
+    } catch (error) {
+      console.error("Captain login failed:", error);
+      throw error;
+    }
+  },
+
+  setState: (updates: Partial<AuthUser>) => {
+    set((state: AuthState) => ({
+      ...state,
+      userData: state.userData ? { ...state.userData, ...updates } as AuthUser : null,
+    }));
   },
 
   createPartner: async (

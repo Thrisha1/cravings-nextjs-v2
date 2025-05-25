@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { MenuItem } from "./menuStore_hasura";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { Partner, useAuthStore } from "./authStore";
+import { Partner, Captain, useAuthStore } from "./authStore";
 import {
   getExtraCharge,
   getGstAmount,
@@ -57,6 +57,8 @@ interface POSState {
   addExtraCharge: (charge: Omit<ExtraCharge, "id">) => void;
   removeExtraCharge: (chargeId: string) => void;
   calculateTotalWithCharges: () => number;
+  isCaptainOrder: boolean;
+  setIsCaptainOrder: (isCaptain: boolean) => void;
 }
 
 export const usePOSStore = create<POSState>((set, get) => ({
@@ -70,6 +72,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   tableNumbers: [],
   postCheckoutModalOpen: false,
   editOrderModalOpen: false,
+  isCaptainOrder: false,
 
   setPostCheckoutModalOpen: (open) => {
     set({ postCheckoutModalOpen: open });
@@ -78,24 +81,60 @@ export const usePOSStore = create<POSState>((set, get) => ({
     }
   },
   setEditOrderModalOpen: (open) => set({ editOrderModalOpen: open }),
+  setIsCaptainOrder: (isCaptain) => set({ isCaptainOrder: isCaptain }),
   getPartnerTables: async () => {
     try {
+      const userData = useAuthStore.getState().userData;
+      if (!userData || userData.role !== "captain") {
+        console.error("User is not a captain:", userData);
+        return;
+      }
+
+      const partnerId = (userData as Captain).partner_id;
+      console.log("Fetching tables for partner ID:", partnerId, "from captain:", userData);
+
       const response = await fetchFromHasura(
         `
-        query MyQuery($partner_id: uuid!) {
-          qr_codes(where: {partner_id: {_eq: $partner_id}}, order_by: {table_number: asc}) {
+        query GetPartnerTables($partner_id: uuid!) {
+          qr_codes(where: {partner_id: {_eq: $partner_id}}) {
+            id
+            qr_number
             table_number
+            partner_id
+            no_of_scans
           }
         }
       `,
         {
-          partner_id: useAuthStore.getState().userData?.id,
+          partner_id: partnerId,
         }
       );
 
-      const tableNumbers = response.qr_codes.map(
-        (table: { table_number: number }) => table.table_number
-      );
+      console.log("All QR codes for partner:", response.qr_codes);
+      
+      if (!response.qr_codes || !Array.isArray(response.qr_codes)) {
+        console.error("Invalid response format:", response);
+        return;
+      }
+
+      // Get all table numbers, including 0
+      const tableNumbers = response.qr_codes
+        .filter((qr: any) => qr.table_number !== null && qr.table_number !== undefined)
+        .map((qr: any) => Number(qr.table_number))
+        .sort((a: number, b: number) => a - b); // Sort numerically
+
+      console.log("Extracted table numbers:", tableNumbers);
+      
+      if (tableNumbers.length === 0) {
+        console.warn("No table numbers found in qr_codes for partner:", partnerId);
+        // Log all QR codes that might have null table numbers
+        response.qr_codes.forEach((qr: any) => {
+          if (qr.table_number === null || qr.table_number === undefined) {
+            console.log("QR code with null/undefined table number:", qr);
+          }
+        });
+      }
+
       set({ tableNumbers });
     } catch (error) {
       console.error("Error fetching partner tables:", error);
@@ -224,13 +263,43 @@ export const usePOSStore = create<POSState>((set, get) => ({
   checkout: async () => {
     try {
       set({ loading: true });
-      const { cartItems, extraCharges } = get();
-      const userId = useAuthStore.getState().userData?.id;
-      const hotelData = useAuthStore.getState().userData as Partner;
-      const gstPercentage = hotelData?.gst_percentage || 0;
-
-      if (!userId) {
-        throw new Error("User ID is not available");
+      const { cartItems, extraCharges, isCaptainOrder } = get();
+      const userData = useAuthStore.getState().userData;
+      console.log("User Data:", {
+        id: userData?.id,
+        role: userData?.role,
+        partner_id: (userData as Captain)?.partner_id,
+        raw: userData
+      });
+      
+      const userId = userData?.id;
+      
+      // Get partner ID based on user type
+      let partnerId: string;
+      let gstPercentage: number;
+      if (userData?.role === "captain") {
+        const captainData = userData as Captain;
+        partnerId = captainData.partner_id;
+        console.log("Captain Data:", {
+          id: captainData.id,
+          partner_id: captainData.partner_id,
+          role: captainData.role
+        });
+        gstPercentage = captainData.gst_percentage || 0;
+      } else {
+        const partnerData = userData as Partner;
+        partnerId = partnerData.id;
+        console.log("Partner Data:", {
+          id: partnerData.id,
+          role: partnerData.role
+        });
+        gstPercentage = partnerData.gst_percentage || 0;
+      }
+      
+      console.log("Final partnerId being used:", partnerId);
+      
+      if (!userId || !partnerId) {
+        throw new Error("User ID or Partner ID is not available");
       }
 
       // Calculate amounts
@@ -249,17 +318,31 @@ export const usePOSStore = create<POSState>((set, get) => ({
         getGstAmount(foodSubtotal, gstPercentage);
 
       const orderId = crypto.randomUUID();
+      
+      // Ensure we're using the correct partner ID
+      const finalPartnerId = userData?.role === "captain" 
+        ? (userData as Captain).partner_id 
+        : (userData as Partner).id;
+
+      console.log("Order creation details:", {
+        captainId: userData?.id,
+        partnerId: finalPartnerId,
+        role: userData?.role,
+        isCaptainOrder
+      });
+
       const newOrder = {
         id: orderId,
         totalPrice: grandTotal,
         createdAt: new Date().toISOString(),
         tableNumber: get().tableNumber,
         status: "completed" as "completed",
-        partnerId: userId,
+        partnerId: finalPartnerId, // Use the explicitly determined partner ID
         type: "table_order",
         phone: get().userPhone,
         extra_charges: extraCharges,
         gst_included: gstPercentage,
+        orderedby: isCaptainOrder ? "captain" : "admin"
       };
 
       const orderResponse = await fetchFromHasura(
@@ -268,6 +351,15 @@ export const usePOSStore = create<POSState>((set, get) => ({
       );
 
       if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
+        console.error("Order creation failed:", {
+          errors: orderResponse.errors,
+          sentData: newOrder,
+          userData: {
+            id: userData?.id,
+            role: userData?.role,
+            partner_id: (userData as Captain)?.partner_id
+          }
+        });
         throw new Error(
           orderResponse.errors?.[0]?.message || "Failed to create order"
         );

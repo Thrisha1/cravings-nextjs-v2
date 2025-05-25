@@ -45,7 +45,8 @@ const FeatureFlagManagement = () => {
     delivery: "Enables ordering feature in Hotel Details page.",
     multiwhatsapp: "Enables multiple WhatsApp numbers for a partner.",
     pos: "Enables POS feature for a partner.",
-    stockmanagement: "Enables stock management feature for a partner."
+    stockmanagement: "Enables stock management feature for a partner.",
+    captainordering: "Enables captain account creation and management for partners. Partners can create and manage captain accounts for taking orders."
   };
 
   const getAllPartners = async () => {
@@ -64,20 +65,32 @@ const FeatureFlagManagement = () => {
       if (res) {
         const partnersWithFeatureFlags = res.partners.map(
           (partner: Partner) => {
-            // Ensure all features are present in the featureFlag object
+            // Get base feature flags
             const featureFlag = getFeatures(partner.feature_flags || "");
             
-            // Add stockmanagement if it's missing
-            if (!featureFlag.stockmanagement) {
-              featureFlag.stockmanagement = {
-                access: false,
-                enabled: false
-              };
-            }
+            // Ensure all features are present and properly initialized
+            const defaultFeatures = {
+              ordering: { access: false, enabled: false },
+              delivery: { access: false, enabled: false },
+              multiwhatsapp: { access: false, enabled: false },
+              pos: { access: false, enabled: false },
+              stockmanagement: { access: false, enabled: false },
+              captainordering: { access: false, enabled: false }
+            };
+
+            // Merge existing flags with defaults
+            const mergedFeatureFlag = {
+              ...defaultFeatures,
+              ...featureFlag,
+              // Ensure captainordering is present
+              captainordering: featureFlag.captainordering || { access: false, enabled: false }
+            };
+            
+            console.log("Merged feature flags for", partner.store_name, ":", mergedFeatureFlag);
             
             return {
               ...partner,
-              featureFlag
+              featureFlag: mergedFeatureFlag
             };
           }
         );
@@ -209,115 +222,118 @@ const FeatureFlagManagement = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredPartners.map((partner) => (
-          <Card key={partner.id}>
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-center">
-                <CardTitle>{partner.store_name}</CardTitle>
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedPartner(partner)}
+        {filteredPartners.map((partner) => {
+          console.log("Rendering partner card for", partner.store_name, "with features:", partner.featureFlag);
+          return (
+            <Card key={partner.id}>
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-center">
+                  <CardTitle>{partner.store_name}</CardTitle>
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedPartner(partner)}
+                      >
+                        <Menu className="h-4 w-4" />
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent className="w-full md:w-[500px] overflow-y-auto">
+                      {selectedPartner && (
+                        <>
+                          <SheetHeader className="mb-6 sticky top-0 bg-background z-10 pb-4">
+                            <SheetTitle>{selectedPartner.store_name}</SheetTitle>
+                          </SheetHeader>
+                          <div className="space-y-6 pr-4">
+                            {Object.entries(selectedPartner.featureFlag).map(([feature, config]) => (
+                              <div key={feature} className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium capitalize">
+                                      {feature}
+                                    </span>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-4 w-4">
+                                          <Info className="h-3 w-3" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle className="capitalize">
+                                            {feature} Feature
+                                          </AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            {allFeatures[feature as keyof typeof allFeatures]}
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogAction>Close</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                  <Badge variant={config.enabled ? "default" : "secondary"}>
+                                    {config.enabled ? "Enabled" : "Disabled"}
+                                  </Badge>
+                                </div>
+                                <div className="space-y-3 pl-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm">Access</span>
+                                    <Checkbox
+                                      checked={config.access}
+                                      onCheckedChange={(checked) =>
+                                        updateFeatureFlag(
+                                          selectedPartner.id,
+                                          feature as keyof FeatureFlags,
+                                          "access",
+                                          checked as boolean
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-sm">Enabled</span>
+                                    <Checkbox
+                                      checked={config.enabled}
+                                      disabled={!config.access}
+                                      onCheckedChange={(checked) =>
+                                        updateFeatureFlag(
+                                          selectedPartner.id,
+                                          feature as keyof FeatureFlags,
+                                          "enabled",
+                                          checked as boolean
+                                        )
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </SheetContent>
+                  </Sheet>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(partner.featureFlag).map(([feature, config]) => (
+                    <Badge
+                      key={feature}
+                      variant={config.enabled ? "default" : "outline"}
+                      className="capitalize"
                     >
-                      <Menu className="h-4 w-4" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent className="w-full md:w-[500px]">
-                    {selectedPartner && (
-                      <>
-                        <SheetHeader className="mb-6">
-                          <SheetTitle>{selectedPartner.store_name}</SheetTitle>
-                        </SheetHeader>
-                        <div className="space-y-6">
-                          {Object.entries(selectedPartner.featureFlag).map(([feature, config]) => (
-                            <div key={feature} className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium capitalize">
-                                    {feature}
-                                  </span>
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-4 w-4">
-                                        <Info className="h-3 w-3" />
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle className="capitalize">
-                                          {feature} Feature
-                                        </AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          {allFeatures[feature as keyof typeof allFeatures]}
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogAction>Close</AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </div>
-                                <Badge variant={config.enabled ? "default" : "secondary"}>
-                                  {config.enabled ? "Enabled" : "Disabled"}
-                                </Badge>
-                              </div>
-                              <div className="space-y-3 pl-2">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm">Access</span>
-                                  <Checkbox
-                                    checked={config.access}
-                                    onCheckedChange={(checked) =>
-                                      updateFeatureFlag(
-                                        selectedPartner.id,
-                                        feature as keyof FeatureFlags,
-                                        "access",
-                                        checked as boolean
-                                      )
-                                    }
-                                  />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm">Enabled</span>
-                                  <Checkbox
-                                    checked={config.enabled}
-                                    disabled={!config.access}
-                                    onCheckedChange={(checked) =>
-                                      updateFeatureFlag(
-                                        selectedPartner.id,
-                                        feature as keyof FeatureFlags,
-                                        "enabled",
-                                        checked as boolean
-                                      )
-                                    }
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </SheetContent>
-                </Sheet>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(partner.featureFlag).map(([feature, config]) => (
-                  <Badge
-                    key={feature}
-                    variant={config.enabled ? "default" : "outline"}
-                    className="capitalize"
-                  >
-                    {feature}: {config.enabled ? "ON" : "OFF"}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                      {feature}: {config.enabled ? "ON" : "OFF"}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

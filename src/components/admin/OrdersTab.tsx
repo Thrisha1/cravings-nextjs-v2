@@ -370,6 +370,7 @@ const OrdersTab = () => {
 
                   return (
                     <OrderItemCard
+                    
                       deleteOrder={deleteOrder}
                       key={order.id + "-" + index}
                       grantTotal={grandTotal}
