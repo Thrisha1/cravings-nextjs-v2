@@ -83,8 +83,9 @@ const CaptainOrdersTab = () => {
     const fetchInitialOrders = async () => {
       if (captainData?.partner_id) {
         try {
-          const response = await fetchFromHasura(
-            `query GetCaptainOrders($partner_id: uuid!) {
+          // First get the orders
+          const ordersResponse = await fetchFromHasura(
+            `query GetOrders($partner_id: uuid!) {
               orders(where: {partner_id: {_eq: $partner_id}, orderedby: {_eq: "captain"}}) {
                 id
                 status
@@ -92,6 +93,7 @@ const CaptainOrdersTab = () => {
                 total_price
                 partner_id
                 orderedby
+                captain_id
                 extra_charges
                 order_items {
                   id
@@ -111,44 +113,71 @@ const CaptainOrdersTab = () => {
               partner_id: captainData.partner_id
             }
           );
-          
-          if (response.orders) {
-            type DbOrder = {
-              id: string;
-              status: string;
-              created_at: string;
-              total_price: number;
-              partner_id: string;
-              orderedby: string;
-              extra_charges: any;
-              order_items: Array<{
-                id: string;
-                quantity: number;
-                menu: {
-                  id: string;
-                  name: string;
-                  price: number;
-                  category: {
-                    name: string;
-                  };
-                };
-              }>;
-            };
-            
-            const mappedOrders = response.orders.map((order: DbOrder) => ({
+
+          if (!ordersResponse.orders) {
+            setOrders([]);
+            setLoading(false);
+            return;
+          }
+
+          // Get unique captain IDs
+          const captainIds = [...new Set(ordersResponse.orders
+            .map((order: any) => order.captain_id)
+            .filter((id: string | null) => id !== null))];
+
+          // Then get the captains
+          const captainsResponse = await fetchFromHasura(
+            `query GetCaptains($captain_ids: [uuid!]!) {
+              captain(where: {id: {_in: $captain_ids}}) {
+                id
+                name
+                email
+              }
+            }`,
+            {
+              captain_ids: captainIds
+            }
+          );
+
+          // Create a map of captain data
+          const captainMap = new Map(
+            captainsResponse.captain.map((captain: any) => [captain.id, captain])
+          );
+
+          // Map the orders with captain data
+          const processedOrders = ordersResponse.orders.map((order: any) => {
+            // If this is the current captain's order, use their data
+            const currentCaptain = captainData as Captain;
+            const isCurrentCaptainOrder = order.captain_id === currentCaptain.id;
+            const orderCaptain = isCurrentCaptainOrder ? {
+              id: currentCaptain.id,
+              name: currentCaptain.name,
+              email: currentCaptain.email
+            } : order.captain_id ? captainMap.get(order.captain_id) : null;
+
+            return {
               ...order,
               createdAt: order.created_at,
               extraCharges: order.extra_charges,
-              items: order.order_items.map(item => ({
+              items: order.order_items.map((item: any) => ({
                 id: item.menu.id,
                 name: item.menu.name,
                 price: item.menu.price,
                 quantity: item.quantity,
                 category: item.menu.category.name
-              }))
-            }));
-            setOrders(mappedOrders);
-          }
+              })),
+              captain: orderCaptain,
+              captain_id: order.captain_id
+            };
+          });
+
+          console.log("Mapped orders with captain data:", processedOrders.map((order: Order) => ({
+            id: order.id,
+            captain_id: order.captain_id,
+            captain: order.captain
+          })));
+
+          setOrders(processedOrders);
         } catch (error) {
           console.error("Error fetching orders:", error);
           toast.error("Failed to load orders");
@@ -250,7 +279,9 @@ const CaptainOrdersTab = () => {
             partnerId: order.partner_id,
             orderedby: order.orderedby,
             extraCharges: order.extra_charges,
-            items: order.items || []
+            items: order.items || [],
+            captain: order.captain,
+            captain_id: order.captain_id
           };
           return mappedOrder;
         })
@@ -369,14 +400,7 @@ const CaptainOrdersTab = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-[calc(100vh-200px)]">
-      {/* Debug info */}
-      <div className="p-2 bg-gray-100 text-xs">
-        <p>Debug Info:</p>
-        <p>Loading: {loading.toString()}</p>
-        <p>Total Orders: {orders.length}</p>
-        <p>Sorted Orders: {sortedOrders.length}</p>
-        <p>Sort Order: {sortOrder}</p>
-      </div>
+      
       {/* Fixed Header */}
       <div className="flex-none p-4 border-b">
         <div className="flex justify-end gap-2">

@@ -53,7 +53,6 @@ export const EditCaptainOrderModal = () => {
         image_url?: string;
         is_top?: boolean;
         is_available?: boolean;
-        created_at?: string;
         priority?: number;
       };
     }>
@@ -148,7 +147,6 @@ export const EditCaptainOrderModal = () => {
                 image_url
                 is_top
                 is_available
-                created_at
                 priority
               }
             }
@@ -174,7 +172,6 @@ export const EditCaptainOrderModal = () => {
               image_url: item.menu.image_url,
               is_top: item.menu.is_top,
               is_available: item.menu.is_available,
-              created_at: item.menu.created_at,
               priority: item.menu.priority
             },
           }))
@@ -276,7 +273,7 @@ export const EditCaptainOrderModal = () => {
         id: order.id,
         totalPrice: finalTotal,
         phone: phone || "",
-        table_number: tableNumber || null
+        tableNumber: tableNumber || null
       });
 
       // Update order items
@@ -310,7 +307,7 @@ export const EditCaptainOrderModal = () => {
           description: item.menu.description || "",
           is_top: item.menu.is_top || false,
           is_available: item.menu.is_available || false,
-          created_at: item.menu.created_at || new Date().toISOString(),
+          created_at: new Date().toISOString(),
           priority: item.menu.priority || 0,
           offers: [{
             offer_price: item.menu.price,
@@ -353,8 +350,8 @@ export const EditCaptainOrderModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[100vh] flex flex-col md:max-h-[80vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl w-[95vw] h-[90vh] md:h-[80vh] flex flex-col p-4 md:p-6">
+        <DialogHeader className="flex-none">
           <DialogTitle>Edit Order #{order?.id?.split("-")[0] || ""}</DialogTitle>
           <DialogDescription>
             {tableNumber ? `Table ${tableNumber}` : ""}
@@ -367,16 +364,16 @@ export const EditCaptainOrderModal = () => {
         </DialogHeader>
 
         {loading ? (
-          <div className="flex justify-center py-8">
+          <div className="flex-1 flex justify-center items-center">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : (
-          <div className="space-y-6 max-h-[500px] overflow-y-auto">
+          <div className="flex-1 flex flex-col gap-4 overflow-hidden">
             {/* Order Details */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 flex-none">
               {userData?.role !== "user" && (
                 <>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label className="block text-sm font-medium">
                       Table Number
                     </label>
@@ -387,24 +384,26 @@ export const EditCaptainOrderModal = () => {
                         setTableNumber(Number(e.target.value) || null)
                       }
                       placeholder="Table number"
+                      className="h-9"
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label className="block text-sm font-medium">Phone</label>
                     <Input
                       type="tel"
                       value={phone || ""}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="Customer phone"
+                      className="h-9"
                     />
                   </div>
                 </>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="block text-sm font-medium">Total</label>
-                <div className="flex items-center h-10 px-3 py-2 rounded-md border bg-background text-sm">
+                <div className="flex items-center h-9 px-3 rounded-md border bg-background text-sm">
                   {currency}
                   {totalPrice.toFixed(2)}
                   {gstPercentage > 0 && (
@@ -417,138 +416,142 @@ export const EditCaptainOrderModal = () => {
               </div>
             </div>
 
-            {/* Add New Item */}
-            <div>
-              <h3 className="font-medium mb-2">Add New Item</h3>
-              <div className="space-y-3">
-                <Input
-                  placeholder="Search menu items..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+            {/* Scrollable Content */}
+            <div className="flex-1 flex flex-col gap-4 overflow-y-auto min-h-0">
+              {/* Add New Item */}
+              <div className="flex-none">
+                <h3 className="font-medium mb-2">Add New Item</h3>
+                <div className="space-y-3">
+                  <Input
+                    placeholder="Search menu items..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-9"
+                  />
 
-                {searchQuery && (
-                  <div className="border rounded-lg max-h-60 overflow-y-auto">
-                    {filteredMenuItems.length === 0 ? (
-                      <div className="p-3 text-center text-muted-foreground">
-                        No items found
-                      </div>
-                    ) : (
-                      <div className="divide-y">
-                        {filteredMenuItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className="p-3 flex justify-between items-center hover:bg-accent cursor-pointer"
-                            onClick={() => {
-                              setNewItemId(item.id!);
-                              setSearchQuery("");
-                            }}
-                          >
-                            <div>
-                              <div className="font-medium">{item.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {currency}
-                                {item.price.toFixed(2)}
+                  {searchQuery && (
+                    <div className="border rounded-lg max-h-48 overflow-y-auto">
+                      {filteredMenuItems.length === 0 ? (
+                        <div className="p-3 text-center text-muted-foreground">
+                          No items found
+                        </div>
+                      ) : (
+                        <div className="divide-y">
+                          {filteredMenuItems.map((item) => (
+                            <div
+                              key={item.id}
+                              className="p-2.5 flex justify-between items-center hover:bg-accent cursor-pointer"
+                              onClick={() => {
+                                setNewItemId(item.id!);
+                                setSearchQuery("");
+                              }}
+                            >
+                              <div>
+                                <div className="font-medium text-sm">{item.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {currency}
+                                  {item.price.toFixed(2)}
+                                </div>
                               </div>
+                              <Plus className="h-4 w-4" />
                             </div>
-                            <Plus className="h-4 w-4" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {newItemId && (
-                  <div className="flex gap-2">
-                    <div className="flex-1 border rounded-lg p-3">
-                      {menuItems.find((item) => item.id === newItemId)?.name} -{" "}
-                      {currency}
-                      {menuItems
-                        .find((item) => item.id === newItemId)
-                        ?.price.toFixed(2)}
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <Button onClick={handleAddItem}>Add to Order</Button>
-                  </div>
-                )}
-              </div>
-            </div>
+                  )}
 
-            {/* Current Items */}
-            <div>
-              <h3 className="font-medium mb-2">Current Items</h3>
-              <div className="border rounded-lg overflow-hidden">
-                {items.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    No items in this order
-                  </div>
-                ) : (
-                  <div className="divide-y">
-                    {items.map((item, index) => (
-                      <div
-                        key={index}
-                        className="p-3 flex justify-between items-center"
-                      >
-                        <div className="flex-1">
-                          <div className="font-medium">{item.menu.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {currency}
-                            {item.menu.price.toFixed(2)} each
+                  {newItemId && (
+                    <div className="flex gap-2">
+                      <div className="flex-1 border rounded-lg p-2.5 text-sm">
+                        {menuItems.find((item) => item.id === newItemId)?.name} -{" "}
+                        {currency}
+                        {menuItems
+                          .find((item) => item.id === newItemId)
+                          ?.price.toFixed(2)}
+                      </div>
+                      <Button onClick={handleAddItem} size="sm">Add</Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Current Items */}
+              <div className="flex-none">
+                <h3 className="font-medium mb-2">Current Items</h3>
+                <div className="border rounded-lg overflow-hidden">
+                  {items.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                      No items in this order
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {items.map((item, index) => (
+                        <div
+                          key={index}
+                          className="p-2.5 flex justify-between items-center"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">{item.menu.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {currency}
+                              {item.menu.price.toFixed(2)} each
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 ml-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() =>
+                                handleQuantityChange(index, item.quantity - 1)
+                              }
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </Button>
+
+                            <span className="w-6 text-center text-sm">
+                              {item.quantity}
+                            </span>
+
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() =>
+                                handleQuantityChange(index, item.quantity + 1)
+                              }
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive"
+                              onClick={() => handleRemoveItem(index)}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() =>
-                              handleQuantityChange(index, item.quantity - 1)
-                            }
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-
-                          <span className="w-8 text-center">
-                            {item.quantity}
-                          </span>
-
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() =>
-                              handleQuantityChange(index, item.quantity + 1)
-                            }
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive"
-                            onClick={() => handleRemoveItem(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={onClose}>
+            <div className="flex justify-end gap-2 pt-2 flex-none">
+              <Button variant="outline" onClick={onClose} size="sm">
                 Cancel
               </Button>
-              <Button onClick={handleUpdateOrder} disabled={updating}>
+              <Button onClick={handleUpdateOrder} disabled={updating} size="sm">
                 {updating ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                     Updating...
                   </>
                 ) : (

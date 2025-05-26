@@ -30,8 +30,8 @@ const OrderItemCard = ({
   gstAmount,
   gstPercentage,
 }: OrderItemCardProps) => {
-  const { userData} = useAuthStore();
-    const captainData = userData as Captain;
+  const { userData } = useAuthStore();
+  const captainData = userData as Captain | null;
 //   const billRef = useRef<HTMLDivElement>(null);
 //   const kotRef = useRef<HTMLDivElement>(null);
 
@@ -42,6 +42,16 @@ const OrderItemCard = ({
 //   const handlePrintKOT = useReactToPrint({
 //     content: () => kotRef.current,
 //   });
+
+  // Add console logging for captain orders
+  if (order.orderedby === "captain") {
+    console.log("Captain order details:", {
+      orderCaptain: order.captain,
+      userDataCaptain: captainData,
+      orderId: order.id,
+      captainId: order.captain_id
+    });
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -75,9 +85,20 @@ const OrderItemCard = ({
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4">
           <div className="flex-1">
             <div className="font-medium text-base sm:text-lg">
-              {order.type === "table_order" ? `Table ${order.tableNumber}` : "Delivery Order"}
+              {order.orderedby === "captain" 
+                ? `Order #${order.id.split('-')[0].toUpperCase()}`
+                : order.type === "delivery" 
+                  ? "Delivery Order" 
+                  : order.type === "table_order" 
+                    ? "Table Order" 
+                    : "POS Order"}
             </div>
-            <div className="text-xs sm:text-sm text-gray-500">
+            {order.orderedby === "captain" && (
+              <div className="text-sm text-gray-600 mt-1">
+                Captain: {order.captain?.name || "Unknown Captain"}
+              </div>
+            )}
+            <div className="text-xs sm:text-sm text-gray-500 mt-1">
               {(() => {
                 try {
                   if (!order.createdAt) {

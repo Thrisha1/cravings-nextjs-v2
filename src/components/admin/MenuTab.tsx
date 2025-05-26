@@ -30,7 +30,7 @@ import {
   Draggable,
   DropResult,
 } from "@hello-pangea/dnd";
-
+import { formatDisplayName } from "@/store/categoryStore_hasura";
 export function MenuTab() {
   const {
     items: menu,
@@ -166,7 +166,7 @@ export function MenuTab() {
       price: item.price.toString(),
       image: item.image,
       description: item.description || "",
-      category: item.category,
+      category: formatDisplayName(item.category),
     });
     setIsEditModalOpen(true);
   };
@@ -315,7 +315,7 @@ export function MenuTab() {
           open={isCategoryEditing}
           categories={Object.entries(groupedItems).map(([category, items]) => ({
             id: items[0].category.id,
-            name: category,
+            name: (category),
             priority: items[0].category.priority,
           }))}
           onOpenChange={setIsCategoryEditing}
@@ -337,7 +337,7 @@ export function MenuTab() {
                   <AccordionItem value={category} key={category + index}>
                     <AccordionTrigger className="flex items-center gap-2 group max-w-fit">
                       <h1 className="text-xl lg:text-3xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent flex items-center gap-2">
-                        <div className="left-marker">▶</div> {category}
+                        <div className="left-marker">▶</div> {formatDisplayName(category)}
                       </h1>
                     </AccordionTrigger>
                     <AccordionContent>

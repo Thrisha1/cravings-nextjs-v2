@@ -10,8 +10,10 @@ import {
   ArrowRight,
   Plus,
   X,
+  Loader2,
 } from "lucide-react";
-import { Partner, useAuthStore } from "@/store/authStore";
+import { GeoLocation, Partner, useAuthStore } from "@/store/authStore";
+import { useLocationStore } from "@/store/geolocationStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -50,15 +52,51 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { HotelData, SocialLinks } from "../hotels/[...id]/page";
 import { getSocialLinks } from "@/lib/getSocialLinks";
-import { FeatureFlags, getFeatures, revertFeatureToString } from "@/lib/getFeatures";
+import {
+  FeatureFlags,
+  getFeatures,
+  revertFeatureToString,
+} from "@/lib/getFeatures";
 import { updateAuthCookie } from "../auth/actions";
 import { createCaptainMutation, getCaptainsQuery, deleteCaptainMutation } from "@/api/captains";
+import { subscriptionQuery } from "@/api/orders";
+import { DeliveryRules, Order } from "@/store/orderStore";
+import { Label } from "@/components/ui/label";
+import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/DeliveryAndGeoLocationSettings";
+import useOrderStore from "@/store/orderStore";
 
 interface Captain {
   id: string;
   email: string;
+  name: string;
   partner_id: string;
   role: string;
+}
+
+interface CaptainOrder {
+  id: string;
+  status: string;
+  created_at: string;
+  total_price: number;
+  table_number: number;
+  phone: string;
+  order_items: Array<{
+    id: string;
+    quantity: number;
+    menu: {
+      id: string;
+      name: string;
+      price: number;
+      category: {
+        name: string;
+      };
+    };
+  }>;
+}
+
+interface GeoJSONPoint {
+  type: "Point";
+  coordinates: [number, number];
 }
 
 const Currencies = [
@@ -75,6 +113,17 @@ const Currencies = [
 
 export default function ProfilePage() {
   const { userData, loading: authLoading, signOut, setState } = useAuthStore();
+  const {
+    coords,
+    geoString,
+    error: geoError,
+    getLocation,
+  } = useLocationStore();
+  const [deliveryRate, setDeliveryRate] = useState(0);
+  const [geoLocation, setGeoLocation] = useState({
+    latitude: 0,
+    longitude: 0,
+  });
   const { claimedOffers } = useClaimedOffersStore();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -88,8 +137,11 @@ export default function ProfilePage() {
     currency: false,
     whatsappNumber: false,
     footNote: false,
+    geoLocation: false,
+    deliveryRate: false,
     instaLink: false,
     gst: false,
+    deliverySettings: false,
   });
   const [isEditing, setIsEditing] = useState({
     upiId: false,
@@ -98,8 +150,11 @@ export default function ProfilePage() {
     whatsappNumber: false,
     currency: false,
     footNote: false,
+    geoLocation: false,
+    deliveryRate: false,
     instaLink: false,
     gst: false,
+    deliverySettings: false,
   });
   const [placeId, setPlaceId] = useState("");
   const [gst, setGst] = useState({
@@ -108,6 +163,14 @@ export default function ProfilePage() {
     enabled: false,
   });
   const [description, setDescription] = useState("");
+  const [deliveryRules, setDeliveryRules] = useState<DeliveryRules>({
+    delivery_radius: 5,
+    first_km_range: {
+      km: 0,
+      rate: 0,
+    },
+    is_fixed_rate: false,
+  });
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [whatsappNumbers, setWhatsappNumbers] = useState<
     { number: string; area: string }[]
@@ -123,6 +186,7 @@ export default function ProfilePage() {
   const [userFeatures, setUserFeatures] = useState<FeatureFlags | null>(null);
   const [footNote, setFootNote] = useState<string>("");
   const [instaLink, setInstaLink] = useState<string>("");
+  const [captainName, setCaptainName] = useState("");
   const [captainEmail, setCaptainEmail] = useState("");
   const [captainPassword, setCaptainPassword] = useState("");
   const [isCreatingCaptain, setIsCreatingCaptain] = useState(false);
@@ -130,15 +194,25 @@ export default function ProfilePage() {
   const [captains, setCaptains] = useState<Captain[]>([]);
   const [isDeletingCaptain, setIsDeletingCaptain] = useState<string | null>(null);
   const [showCaptainForm, setShowCaptainForm] = useState(false);
+  const [captainOrders, setCaptainOrders] = useState<CaptainOrder[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  const { subscribeOrders } = useOrderStore();
 
   const isLoading = authLoading;
 
   useEffect(() => {
     if (userData?.role === "partner") {
+      // console.log("Debug - UserData:", {
+      //   delivery_rate: userData.delivery_rate,
+      //   geo_location: userData.geo_location,
+      //   raw_userData: userData
+      // });
+
       setBannerImage(userData.store_banner || null);
       setUpiId(userData.upi_id || "");
       setPlaceId(userData.place_id || "");
       setDescription(userData.description || "");
+      setDeliveryRate(userData.delivery_rate || 0);
       setCurrency(
         Currencies.find(
           (curr) => curr.value === userData.currency
@@ -167,6 +241,18 @@ export default function ProfilePage() {
         enabled: (userData.gst_percentage || 0) > 0 ? true : false,
       });
       setIsShopOpen(userData.is_shop_open);
+      setDeliveryRules({
+        delivery_radius: userData.delivery_rules?.delivery_radius || 5,
+        first_km_range: {
+          km: userData.delivery_rules?.first_km_range?.km || 0,
+          rate: userData.delivery_rules?.first_km_range?.rate || 0,
+        },
+        is_fixed_rate: userData.delivery_rules?.is_fixed_rate || false,
+      });
+      setGeoLocation({
+        latitude: userData?.geo_location?.coordinates?.[1] || 0,
+        longitude: userData?.geo_location?.coordinates?.[0] || 0,
+      });
     }
   }, [userData]);
 
@@ -186,6 +272,122 @@ export default function ProfilePage() {
       fetchCaptains();
     }
   }, [userData, features?.captainordering.enabled]);
+
+  // Add effect to log state changes
+  useEffect(() => {
+    console.log("Debug - Current state:", {
+      deliveryRate,
+      geoLocation,
+      isEditing: {
+        deliveryRate: isEditing.deliveryRate,
+        geoLocation: isEditing.geoLocation,
+      },
+    });
+  }, [
+    deliveryRate,
+    geoLocation,
+    isEditing.deliveryRate,
+    isEditing.geoLocation,
+  ]);
+
+  // Add effect to fetch captain orders
+  useEffect(() => {
+    if (userData?.role === "partner" && features?.captainordering.enabled) {
+      const fetchCaptainOrders = async () => {
+        try {
+          const response = await fetchFromHasura(`
+            query GetCaptainOrders($partner_id: uuid!) {
+              orders(where: {partner_id: {_eq: $partner_id}, orderedby: {_eq: "captain"}}, order_by: {created_at: desc}) {
+                id
+                status
+                created_at
+                total_price
+                table_number
+                phone
+                order_items {
+                  id
+                  quantity
+                  menu {
+                    id
+                    name
+                    price
+                    category {
+                      name
+                    }
+                  }
+                }
+              }
+            }
+          `, {
+            partner_id: userData.id
+          });
+
+          if (response.orders) {
+            setCaptainOrders(response.orders);
+          }
+        } catch (error) {
+          console.error("Error fetching captain orders:", error);
+          toast.error("Failed to load captain orders");
+        } finally {
+          setLoadingOrders(false);
+        }
+      };
+
+      fetchCaptainOrders();
+
+      // Subscribe to new orders
+      const unsubscribe = subscribeOrders((orders: Order[]) => {
+        const captainOrders = orders
+          .filter(order => order.orderedby === "captain")
+          .map(order => ({
+            id: order.id,
+            status: order.status,
+            created_at: order.createdAt,
+            total_price: order.totalPrice,
+            table_number: order.tableNumber || 0,
+            phone: order.phone || "",
+            order_items: order.items.map(item => ({
+              id: item.id,
+              quantity: item.quantity,
+              menu: {
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                category: {
+                  name: typeof item.category === 'string' ? item.category : (item.category as any)?.name || ""
+                }
+              }
+            }))
+          }));
+        setCaptainOrders(captainOrders);
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    }
+  }, [userData, features?.captainordering.enabled, subscribeOrders]);
+
+  // Also add this effect to watch store changes
+  useEffect(() => {
+    console.log("Store changed:", {
+      coords,
+      geoString,
+      error,
+    });
+
+    if (coords && isEditing.geoLocation) {
+      console.log("Updating geoLocation from store:", {
+        lat: coords.lat,
+        lng: coords.lng,
+      });
+
+      setGeoLocation({
+        latitude: coords.lat,
+        longitude: coords.lng,
+      });
+    }
+  }, [coords, geoString, error, isEditing.geoLocation]);
 
   const profile = {
     name:
@@ -228,6 +430,149 @@ export default function ProfilePage() {
       setError("Failed to delete account. Please try again.");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleGetCurrentLocation = async () => {
+    try {
+      console.log("Fetching location...");
+
+      const newCoords = await getLocation();
+
+      if (newCoords) {
+        console.log("Location received:", newCoords);
+        setGeoLocation({
+          latitude: newCoords.lat,
+          longitude: newCoords.lng,
+        });
+
+        return {
+          latitude: newCoords.lat,
+          longitude: newCoords.lng,
+        };
+      }
+    } catch (error) {
+      console.error("Error getting location:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to get location"
+      );
+
+      return null;
+    }
+  };
+
+  // Also add this effect to watch store changes
+  useEffect(() => {
+    console.log("Store changed:", {
+      coords,
+      geoString,
+      error,
+    });
+
+    if (coords && isEditing.geoLocation) {
+      console.log("Updating geoLocation from store:", {
+        lat: coords.lat,
+        lng: coords.lng,
+      });
+
+      setGeoLocation({
+        latitude: coords.lat,
+        longitude: coords.lng,
+      });
+    }
+  }, [coords, geoString, error, isEditing.geoLocation]);
+
+  const handleSaveGeoLocation = async (location?: {
+    latitude: number;
+    longitude: number;
+  }) => {
+    try {
+      const { latitude, longitude } = location || geoLocation;
+
+      console.log("Saving geoLocation:", geoLocation);
+
+      // Validate coordinates are present
+      if (!latitude || !longitude) {
+        toast.error("Please enter both latitude and longitude");
+        return;
+      }
+
+      // Convert to numbers and validate ranges
+      const lat = latitude;
+      const lng = longitude;
+
+      if (isNaN(lat) || isNaN(lng)) {
+        toast.error("Please enter valid numeric coordinates");
+        return;
+      }
+
+      // Validate coordinate ranges
+      if (lat < -90 || lat > 90) {
+        toast.error("Latitude must be between -90 and 90 degrees");
+        return;
+      }
+
+      if (lng < -180 || lng > 180) {
+        toast.error("Longitude must be between -180 and 180 degrees");
+        return;
+      }
+
+      // Create the correct format for geography type
+      // Using SRID=4326;POINT(longitude latitude) format
+      const geographyFormat = {
+        type: "Point",
+        coordinates: [lng, lat],
+      } as GeoLocation;
+
+      setIsSaving((prev) => ({ ...prev, geoLocation: true }));
+      toast.loading("Updating location...");
+
+      // First verify the mutation
+      const mutation = updatePartnerMutation;
+      console.log("Mutation:", mutation); // Debug log
+      console.log("Update data:", {
+        id: userData?.id,
+        updates: {
+          geo_location: geographyFormat,
+        },
+      }); // Debug log
+
+      const response = await fetchFromHasura(mutation, {
+        id: userData?.id,
+        updates: {
+          geo_location: geographyFormat,
+        },
+      });
+
+      console.log("Hasura response:", response); // Debug log
+
+      if (!response) {
+        throw new Error("No response from server");
+      }
+
+      // Update local state
+      revalidateTag(userData?.id as string);
+      setState({ geo_location: geographyFormat });
+      toast.dismiss();
+      toast.success("Location updated successfully!");
+      setIsEditing((prev) => ({ ...prev, geoLocation: false }));
+    } catch (error) {
+      console.error("Error updating location:", error);
+      toast.dismiss();
+
+      if (error instanceof Error) {
+        if (error.message.includes("permission denied")) {
+          toast.error("You don't have permission to update the location");
+        } else if (error.message.includes("invalid input syntax")) {
+          toast.error("Invalid coordinate format. Please check your input");
+        } else {
+          toast.error(`Failed to update location: ${error.message}`);
+        }
+      } else {
+        toast.error("Failed to update location. Please try again.");
+      }
+    } finally {
+      setIsSaving((prev) => ({ ...prev, geoLocation: false }));
     }
   };
 
@@ -771,6 +1116,60 @@ export default function ProfilePage() {
       });
     }
   };
+  // (Delivery Rate)
+
+  const handleSaveDeliverySettings = async () => {
+    try {
+      if (!userData) return;
+      toast.loading("Updating delivery settings...");
+
+      setIsSaving((prev) => ({ ...prev, deliveryRate: true }));
+
+      // Validate delivery rate is a positive number
+      const rate = deliveryRate;
+      if (isNaN(rate) || rate < 0) {
+        toast.dismiss();
+        toast.error(
+          "Please enter a valid delivery rate (must be a positive number)"
+        );
+        return;
+      }
+
+      // Prepare delivery rules object with defaults if not set
+      const rules = {
+        delivery_radius: deliveryRules?.delivery_radius || 5, // default 5km
+        first_km_range: {
+          km: deliveryRules?.first_km_range?.km || 0,
+          rate: deliveryRules?.first_km_range?.rate || 0,
+        },
+        is_fixed_rate: deliveryRules?.is_fixed_rate || false,
+      } as DeliveryRules;
+
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          delivery_rate: deliveryRate,
+          delivery_rules: rules,
+        },
+      });
+
+      revalidateTag(userData?.id as string);
+      setState({ delivery_rate: deliveryRate, delivery_rules: rules });
+      toast.dismiss();
+      toast.success("Delivery settings updated successfully!");
+      setIsEditing((prev) => ({ ...prev, deliveryRate: false }));
+    } catch (error) {
+      console.error("Error updating delivery settings:", error);
+      toast.dismiss();
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update delivery settings"
+      );
+    } finally {
+      setIsSaving((prev) => ({ ...prev, deliveryRate: false }));
+    }
+  };
 
   const handleShopOpenClose = async () => {
     try {
@@ -813,7 +1212,7 @@ export default function ProfilePage() {
     setCaptainError(null);
 
     try {
-      if (!captainEmail || !captainPassword) {
+      if (!captainName || !captainEmail || !captainPassword) {
         throw new Error("Please fill in all fields");
       }
 
@@ -827,13 +1226,47 @@ export default function ProfilePage() {
         throw new Error("Please enter a valid email address");
       }
 
+      // Check if email already exists
+      const checkEmail = await fetchFromHasura(`
+        query CheckCaptainEmail($email: String!) {
+          captain(where: {email: {_eq: $email}}) {
+            id
+            email
+          }
+        }
+      `, {
+        email: captainEmail
+      });
+
+      if (checkEmail?.captain?.length > 0) {
+        throw new Error("This email is already registered. Please use a different email address.");
+      }
+
+      // Check if name already exists
+      const checkName = await fetchFromHasura(`
+        query CheckCaptainName($name: String!) {
+          captain(where: {name: {_eq: $name}}) {
+            id
+            name
+          }
+        }
+      `, {
+        name: captainName
+      });
+
+      if (checkName?.captain?.length > 0) {
+        throw new Error("This name is already taken. Please use a different name.");
+      }
+
       console.log("Creating captain account with data:", {
+        name: captainName,
         email: captainEmail,
         partner_id: userData.id,
         role: "captain"
       });
 
       const result = await fetchFromHasura(createCaptainMutation, {
+        name: captainName,
         email: captainEmail,
         password: captainPassword,
         partner_id: userData.id,
@@ -843,6 +1276,15 @@ export default function ProfilePage() {
       console.log("Captain creation result:", result);
 
       if (!result?.insert_captain_one) {
+        if (result?.errors?.[0]?.message?.includes("unique constraint")) {
+          if (result?.errors?.[0]?.message?.includes("name")) {
+            throw new Error("This name is already taken. Please use a different name.");
+          }
+          if (result?.errors?.[0]?.message?.includes("email")) {
+            throw new Error("This email is already registered. Please use a different email address.");
+          }
+          throw new Error("A unique constraint violation occurred. Please try again.");
+        }
         throw new Error("Failed to create captain account - no response from server");
       }
 
@@ -852,6 +1294,7 @@ export default function ProfilePage() {
           captain(where: {partner_id: {_eq: $partner_id}}) {
             id
             email
+            name
             partner_id
             role
           }
@@ -867,14 +1310,16 @@ export default function ProfilePage() {
       }
 
       toast.success("Captain account created successfully!");
+      setCaptainName("");
       setCaptainEmail("");
       setCaptainPassword("");
       setShowCaptainForm(false);
       fetchCaptains();
     } catch (error) {
       console.error("Error creating captain account:", error);
-      setCaptainError(error instanceof Error ? error.message : "Failed to create captain account");
-      toast.error(error instanceof Error ? error.message : "Failed to create captain account");
+      const errorMessage = error instanceof Error ? error.message : "Failed to create captain account";
+      setCaptainError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsCreatingCaptain(false);
     }
@@ -952,7 +1397,13 @@ export default function ProfilePage() {
               {userData?.role === "partner" && (
                 <>
                   <Link
-                    href={`${userData?.business_type === 'restaurant' ? '/hotels' : '/business'}/${userData?.store_name?.replace(/\s+/g, '-')}/${userData?.id}`}
+                    href={`${
+                      userData?.business_type === "restaurant"
+                        ? "/hotels"
+                        : "/business"
+                    }/${userData?.store_name?.replace(/\s+/g, "-")}/${
+                      userData?.id
+                    }`}
                     className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
                   >
                     <Tag className="sm:size-4 size-8 mr-2" />
@@ -1067,7 +1518,6 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="bio" className="text-lg font-semibold">
                   Bio
@@ -1122,7 +1572,6 @@ export default function ProfilePage() {
                   This Bio will be used for your restaurant profile
                 </p>
               </div>
-
               {/* <div className="space-y-2 pt-4">
                 <label htmlFor="upiId" className="text-lg font-semibold">
                   UPI ID
@@ -1174,7 +1623,6 @@ export default function ProfilePage() {
                   This UPI ID will be used for receiving payments from customers
                 </p>
               </div> */}
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="placeId" className="text-lg font-semibold">
                   Place ID
@@ -1230,6 +1678,27 @@ export default function ProfilePage() {
                   </Link>
                 </p>
               </div>
+
+              <DeliveryAndGeoLocationSettings
+                geoLocation={geoLocation}
+                setGeoLocation={setGeoLocation}
+                geoLoading={isLoading}
+                geoSaving={isSaving.geoLocation}
+                geoError={geoError}
+                handleGetCurrentLocation={handleGetCurrentLocation}
+                handleSaveGeoLocation={handleSaveGeoLocation}
+                currency={currency}
+                deliveryRate={deliveryRate}
+                setDeliveryRate={setDeliveryRate}
+                deliveryRules={deliveryRules}
+                setDeliveryRules={setDeliveryRules}
+                isEditingDelivery={isEditing.deliveryRate}
+                setIsEditingDelivery={(value) =>
+                  setIsEditing({ ...isEditing, deliveryRate: value })
+                }
+                deliverySaving={isSaving.deliverySettings}
+                handleSaveDeliverySettings={handleSaveDeliverySettings}
+              />
 
               <div className="space-y-2 pt-4">
                 <label htmlFor="whatsNum" className="text-lg font-semibold">
@@ -1359,7 +1828,6 @@ export default function ProfilePage() {
                     : "This Whatsapp Number will be used for receiving messages from customers"}
                 </p>
               </div>
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="instaLink" className="text-lg font-semibold">
                   Instagram Link
@@ -1408,7 +1876,6 @@ export default function ProfilePage() {
                   This Instagram Link will be used for your restaurant profile
                 </p>
               </div>
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="footNote" className="text-lg font-semibold">
                   Footnote
@@ -1456,86 +1923,6 @@ export default function ProfilePage() {
                 <p className="text-sm text-gray-500">
                   This Footnote will be used for your restaurant profile
                 </p>
-              </div>
-
-              <div className="space-y-2 pt-4">
-                <div className="text-lg font-semibold">Price Settings</div>
-
-                {/* show pricing  */}
-                <div className="flex gap-2">
-                  <label htmlFor="show-pricing">Show Pricing : </label>
-                  <Switch
-                    checked={showPricing}
-                    onCheckedChange={handleShowPricingChange}
-                  />
-                </div>
-
-                {/* currency  */}
-                {userData.currency !== "🚫" && (
-                  <div className="flex gap-2 items-center">
-                    <label htmlFor="currency">Currency : </label>
-                    <div className="flex gap-2 flex-1">
-                      {isEditing.currency ? (
-                        <>
-                          <Select
-                            value={currency.label} // Use label as the value for selection
-                            onValueChange={(selectedLabel) => {
-                              const selectedCurrency = Currencies.find(
-                                (curr) => curr.label === selectedLabel
-                              );
-                              if (selectedCurrency) {
-                                setCurrency(selectedCurrency);
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="Select currency" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Currencies.map((curr) => (
-                                <SelectItem key={curr.label} value={curr.label}>
-                                  {curr.value} - {curr.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            onClick={handleSaveCurrency}
-                            disabled={isSaving.currency || !currency}
-                            className="bg-orange-600 hover:bg-orange-700 text-white"
-                          >
-                            {isSaving.currency ? <>Saving...</> : "Save"}
-                          </Button>
-                        </>
-                      ) : (
-                        <div className="flex justify-between items-center w-full">
-                          <span className="text-gray-700">
-                            {currency ? (
-                              <>
-                                {currency.value} - {currency.label}
-                              </>
-                            ) : (
-                              "No currency selected"
-                            )}
-                          </span>
-                          <Button
-                            onClick={() => {
-                              setIsEditing((prev) => ({
-                                ...prev,
-                                currency: true,
-                              }));
-                              setCurrency(currency || Currencies[0]);
-                            }}
-                            variant="ghost"
-                            className="hover:bg-orange-100"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="space-y-2 pt-4">
@@ -1686,27 +2073,29 @@ export default function ProfilePage() {
 
                         {features.captainordering.enabled && (
                           <div className="space-y-2">
-                            {captains.map((captain) => (
-                              <div key={captain.id} className="flex items-center justify-between p-3 bg-white border rounded-lg">
-                                <div className="flex-1">
-                                  <div className="font-medium">{captain.email}</div>
-                                  <div className="text-sm text-gray-500">Captain Account</div>
+                            <div className="h-[140px] overflow-y-auto border rounded-lg bg-gray-50 p-2 space-y-2">
+                              {captains.map((captain) => (
+                                <div key={captain.id} className="flex items-center justify-between p-2 bg-white border rounded-lg">
+                                  <div className="flex-1">
+                                    <div className="font-medium text-sm">{captain.name || "Unnamed Captain"}</div>
+                                    <div className="text-xs text-gray-500">{captain.email}</div>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDeleteCaptain(captain.id)}
+                                    disabled={isDeletingCaptain === captain.id}
+                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8"
+                                  >
+                                    {isDeletingCaptain === captain.id ? (
+                                      <div className="animate-spin h-3 w-3 border-2 border-red-500 border-t-transparent rounded-full" />
+                                    ) : (
+                                      <X className="h-3 w-3" />
+                                    )}
+                                  </Button>
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleDeleteCaptain(captain.id)}
-                                  disabled={isDeletingCaptain === captain.id}
-                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  {isDeletingCaptain === captain.id ? (
-                                    <div className="animate-spin h-4 w-4 border-2 border-red-500 border-t-transparent rounded-full" />
-                                  ) : (
-                                    <X className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
 
                             {!showCaptainForm ? (
                               <Button
@@ -1730,6 +2119,19 @@ export default function ProfilePage() {
                                   </Button>
                                 </div>
                                 <form onSubmit={handleCreateCaptain} className="space-y-4">
+                                  <div className="space-y-2">
+                                    <label htmlFor="captainName" className="text-sm font-medium">
+                                      Name
+                                    </label>
+                                    <Input
+                                      id="captainName"
+                                      type="text"
+                                      placeholder="Enter captain name"
+                                      value={captainName}
+                                      onChange={(e) => setCaptainName(e.target.value)}
+                                      required
+                                    />
+                                  </div>
                                   <div className="space-y-2">
                                     <label htmlFor="captainEmail" className="text-sm font-medium">
                                       Email
@@ -1920,7 +2322,6 @@ export default function ProfilePage() {
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
               </div>
-
               {getFeatures(userData.feature_flags as string)?.stockmanagement
                 .enabled && (
                 <div className="space-y-2 pt-4">
@@ -1997,6 +2398,52 @@ export default function ProfilePage() {
               {error && <p className="text-red-600">{error}</p>}
             </CardContent>
           </Card>
+        )}
+
+        {features?.captainordering?.enabled && (
+          <div className="space-y-4 mt-4">
+            <div className="text-lg font-semibold">Captain Orders</div>
+            <div className="h-[300px] overflow-y-auto border rounded-lg bg-gray-50 p-2 space-y-2">
+              {loadingOrders ? (
+                <div className="flex justify-center items-center h-full">
+                  <Loader2 className="animate-spin h-6 w-6" />
+                </div>
+              ) : captainOrders.length === 0 ? (
+                <div className="text-center text-gray-500 py-4">No orders from captains yet</div>
+              ) : (
+                captainOrders.map((order) => (
+                  <div key={order.id} className="bg-white border rounded-lg p-3 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium">Order #{order.id.slice(0, 8)}</div>
+                        <div className="text-sm text-gray-500">
+                          {new Date(order.created_at).toLocaleString()}
+                        </div>
+                      </div>
+                      <Badge className={order.status === "completed" ? "bg-green-500" : "bg-orange-500"}>
+                        {order.status}
+                      </Badge>
+                    </div>
+                    <div className="text-sm">
+                      {order.table_number ? `Table ${order.table_number}` : "No table"} • {order.phone || "No phone"}
+                    </div>
+                    <div className="space-y-1">
+                      {order.order_items.map((item) => (
+                        <div key={item.id} className="flex justify-between text-sm">
+                          <span>{item.quantity}x {item.menu.name}</span>
+                          <span>₹{(item.quantity * item.menu.price).toFixed(0)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t">
+                      <span className="font-medium">Total</span>
+                      <span className="font-medium">₹{order.total_price.toFixed(0)}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>

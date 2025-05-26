@@ -2,14 +2,13 @@ import { HotelData } from "@/app/hotels/[...id]/page";
 import { formatDate } from "@/lib/formatDate";
 import { Partner, useAuthStore } from "@/store/authStore";
 import { Order, OrderItem } from "@/store/orderStore";
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "../ui/button";
 import { Edit, Printer, Trash2 } from "lucide-react";
 import KOTTemplate from "./pos/KOTTemplate";
 import BillTemplate from "./pos/BillTemplate";
 import { useReactToPrint } from "react-to-print";
-import { getExtraCharge } from "../hotelDetail/OrderDrawer";
-import { QrGroup } from "@/app/admin/qr-management/page";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,10 +35,7 @@ const OrderItemCard = ({
   gstPercentage: number;
   gstAmount: number;
   grantTotal: number;
-  updateOrderStatus: (
-    orderId: string,
-    newStatus: "completed" | "cancelled"
-  ) => Promise<void>;
+  updateOrderStatus: (status: "completed" | "cancelled" | "pending") => void;
   setOrder: (order: Order) => void;
   setEditOrderModalOpen: (open: boolean) => void;
   deleteOrder: (orderId: string) => Promise<boolean>;
@@ -49,6 +45,9 @@ const OrderItemCard = ({
   const kotRef = React.useRef<HTMLDivElement>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [deliveryLocation, setDeliveryLocation] = React.useState<string | null>(
+    null
+  );
 
   const handlePrintBill = useReactToPrint({
     contentRef: billRef,
@@ -79,6 +78,24 @@ const OrderItemCard = ({
       setIsDeleting(false);
     }
   };
+
+  useEffect(() => {
+    if (order.type === "delivery") {
+      const location = order.delivery_location;
+      if (location) {
+        setDeliveryLocation(
+          `https://www.google.com/maps/place/${order.delivery_location?.coordinates[1]},${order.delivery_location?.coordinates[0]}`
+        );
+      } else {
+        setDeliveryLocation(null);
+      }
+    } else {
+      setDeliveryLocation(null);
+    }
+  }, [order]);
+
+  // Add debug logging for captain orders
+  
 
   return (
     <div className="border rounded-lg p-4 relative">
@@ -117,8 +134,29 @@ const OrderItemCard = ({
 
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="font-medium">Order #{order.id.slice(0, 8)}</h3>
+          <h3 className="font-medium">
+            {order.orderedby === "captain" 
+              ? `Order #${order.id.split('-')[0].toUpperCase()}`
+              : order.type === "delivery" 
+                ? "Delivery Order" 
+                : order.type === "table_order"
+                  ? "Table Order"
+                  : "POS Order"
+            }
+          </h3>
           <p className="text-sm text-gray-500">{formatDate(order.createdAt)}</p>
+          {order.orderedby === "captain" && (
+            <div className="mt-1 space-y-1">
+              <p className="text-sm text-gray-600 font-medium">
+                Captain: {order.captain?.name || "Unknown Captain"}
+              </p>
+              {order.tableNumber && (
+                <p className="text-sm text-gray-600">
+                  Table: {order.tableNumber}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -148,9 +186,21 @@ const OrderItemCard = ({
               : "Unknown"}
           </p>
           {order.type === "delivery" && (
-            <p className="text-sm mt-3">
-              Delivery Address: {order.deliveryAddress || "Unknown"}
-            </p>
+            <>
+              <p className="text-sm mt-3">
+                Delivery Address: {order.deliveryAddress || "Unknown"}
+              </p>
+              {deliveryLocation && (
+                <a
+                  href={`${deliveryLocation}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-500 hover:underline mt-1"
+                >
+                  View Location
+                </a>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -159,12 +209,12 @@ const OrderItemCard = ({
         <h4 className="font-medium mb-2">Order Items</h4>
         <div className="space-y-2">
           {order.items?.length > 0 ? (
-            order.items.map((item: OrderItem) => (
-              <div key={item.id} className="flex justify-between text-sm">
+            order.items.map((item: OrderItem, index: number) => (
+              <div key={`${order.id}-${item.id}-${index}`} className="flex justify-between text-sm">
                 <div>
                   <span className="font-medium">{item.name}</span>
                   <span className="text-gray-500 ml-2">x{item.quantity}</span>
-                  {item.category && (
+                  {item.category?.name && (
                     <span className="text-gray-400 text-xs ml-2 capitalize">
                       ({item.category.name.trim()})
                     </span>
@@ -172,7 +222,7 @@ const OrderItemCard = ({
                 </div>
                 <span>
                   {(userData as HotelData)?.currency}
-                  {(item.price * item.quantity).toFixed(2)}
+                  {(item.price * item.quantity || 0)?.toFixed(2)}
                 </span>
               </div>
             ))
@@ -190,12 +240,9 @@ const OrderItemCard = ({
                 <div key={index} className="flex justify-between text-sm">
                   <span>{charge.name}</span>
                   <span>
-                    {(userData as HotelData)?.currency}
-                    {getExtraCharge(
-                      order?.items || [],
-                      charge.amount,
-                      charge.charge_type as QrGroup["charge_type"]
-                    ).toFixed(2)}
+                    {" "}
+                    {(userData as HotelData)?.currency}{" "}
+                    {charge?.amount?.toFixed(2)}{" "}
                   </span>
                 </div>
               ))}
@@ -210,7 +257,7 @@ const OrderItemCard = ({
               <span>GST ({gstPercentage}%):</span>
               <span>
                 {(userData as HotelData)?.currency}
-                {gstAmount.toFixed(2)}
+                {gstAmount?.toFixed(2)}
               </span>
             </div>
           )}
@@ -219,7 +266,7 @@ const OrderItemCard = ({
             <span>Grand Total:</span>
             <span>
               {(userData as HotelData)?.currency}
-              {grantTotal.toFixed(2)}
+              {grantTotal?.toFixed(2)}
             </span>
           </div>
         </div>
@@ -264,14 +311,14 @@ const OrderItemCard = ({
               <Button
                 size="sm"
                 variant="destructive"
-                onClick={() => updateOrderStatus(order.id, "cancelled")}
+                onClick={() => updateOrderStatus("cancelled")}
               >
                 Cancel Order
               </Button>
               <Button
                 className="bg-green-600 text-white"
                 size="sm"
-                onClick={() => updateOrderStatus(order.id, "completed")}
+                onClick={() => updateOrderStatus("completed")}
               >
                 Mark Completed
               </Button>
@@ -284,6 +331,7 @@ const OrderItemCard = ({
       <div className="hidden">
         <KOTTemplate ref={kotRef} order={order} />
         <BillTemplate
+          key={`${order.id}-bill`}
           ref={billRef}
           order={order}
           userData={userData as Partner}

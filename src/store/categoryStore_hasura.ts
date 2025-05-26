@@ -13,6 +13,18 @@ export interface Category {
   priority?: number;
 }
 
+// Helper function to format category name for display
+export const formatDisplayName = (name: string): string => {
+  return name.split('_').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
+};
+
+// Helper function to format category name for storage
+export const formatStorageName = (name: string): string => {
+  return name.toLowerCase().trim().replace(/ /g, "_");
+};
+
 interface CategoryState {
   categories: Category[];
   fetchCategories: (addedBy: string) => Promise<Category[] | void>;
@@ -31,7 +43,10 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const categories = await fetchFromHasura(getPartnerCategories, {
         partner_id: addedBy,
-      }).then((res) => res.category);
+      }).then((res) => res.category.map((cat: Category) => ({
+        ...cat,
+        name: formatDisplayName(cat.name)
+      })));
 
       set({ categories });
       return categories as Category[];
@@ -49,9 +64,11 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       if (!cat) throw new Error("Category name is required");
 
       const userData = useAuthStore.getState().userData;
+      
+      const formattedName = formatStorageName(cat);
 
       const category = await fetchFromHasura(getCategory, {
-        name: cat.toLowerCase().trim(),
+        name: formattedName,
         partner_id: userData?.id,
       }).then((res) => res.category[0]);
 
@@ -61,7 +78,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const addedCat = await fetchFromHasura(addCategory, {
         category: {
-          name: cat?.toLowerCase().trim(),
+          name: formattedName,
           partner_id: userData?.id,
         },
       }).then((res) => res.insert_category.returning[0]);
@@ -69,7 +86,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       set({
         categories: [
           ...get().categories,
-          { name: cat.toLowerCase().trim(), id: addedCat.id },
+          { name: formatDisplayName(formattedName), id: addedCat.id },
         ],
       });
 
@@ -86,7 +103,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const updatedCat = {
         id: cat.id,
-        name: cat.name.toLowerCase().trim(),
+        name: (cat.name),
         priority: cat.priority,
       };
 
@@ -99,7 +116,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
           category.id === updatedCategory.id
             ? {
                 ...category,
-                name: updatedCategory.name,
+                name: (updatedCategory.name),
                 priority: updatedCategory.priority,
               }
             : category

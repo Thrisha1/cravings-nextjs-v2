@@ -18,10 +18,11 @@ import useOrderStore from "@/store/orderStore";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import SocialLinkList from "@/components/SocialLinkList";
-import AuthModal from "@/components/hotelDetail/AuthModal";
 import { getFeatures } from "@/lib/getFeatures";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import ShopClosedModalWarning from "@/components/admin/ShopClosedModalWarning";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import { usePartnerStore } from "@/store/usePartnerStore";
 
 export type MenuItem = {
   description: string;
@@ -53,6 +54,7 @@ interface HotelMenuPageProps {
   tableNumber: number;
   socialLinks: SocialLinks;
   qrGroup?: QrGroup | null;
+  qrId?: string | null;
 }
 
 
@@ -65,6 +67,7 @@ const HotelMenuPage = ({
   tableNumber,
   socialLinks,
   qrGroup,
+  qrId,
 }: HotelMenuPageProps) => {
   const styles: Styles = {
     backgroundColor: theme?.colors?.bg || "#F5F5F5",
@@ -78,15 +81,49 @@ const HotelMenuPage = ({
   };
 
   const { setHotelId, genOrderId } = useOrderStore();
-
+  
   const pathname = usePathname();
 
   useEffect(() => {
     if (hoteldata) {
+      console.log("🏪 HotelMenuPage: Initializing with hoteldata:", {
+        geo_location: hoteldata.geo_location,
+        delivery_rate: hoteldata.delivery_rate,
+        store_name: hoteldata.store_name,
+      });
+
       setHotelId(hoteldata.id);
       genOrderId();
+
+      // Save restaurant delivery data to local storage
+      if (hoteldata.geo_location && hoteldata.delivery_rate) {
+        const restaurantDeliveryData = {
+          geo_location: hoteldata.geo_location,
+          delivery_rate: hoteldata.delivery_rate,
+          store_name: hoteldata.store_name,
+          location: hoteldata.location,
+        };
+        
+        try {
+          localStorage.setItem(`restaurant-${hoteldata.id}-delivery-data`, JSON.stringify(restaurantDeliveryData));
+          // Verify the data was saved
+          const savedData = localStorage.getItem(`restaurant-${hoteldata.id}-delivery-data`);
+          // console.log("✅ HotelMenuPage: Saved restaurant delivery data to local storage:", {
+          //   saved: savedData ? JSON.parse(savedData) : null,
+          //   key: `restaurant-${hoteldata.id}-delivery-data`
+          // });
+        } catch (error) {
+          console.error("❌ HotelMenuPage: Failed to save restaurant delivery data:", error);
+        }
+      } else {
+        console.warn("⚠️ HotelMenuPage: Restaurant delivery data missing:", { 
+          geo_location: hoteldata.geo_location, 
+          delivery_rate: hoteldata.delivery_rate,
+          hotelId: hoteldata.id
+        });
+      }
     }
-  }, []);
+  }, [hoteldata]);
 
   const getCategories = () => {
     const uniqueCategoriesMap = new Map<string, Category>();
@@ -137,12 +174,6 @@ const HotelMenuPage = ({
       }}
       className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 lg:px-[20%] `}
     >
-      {/* Auth Modal */}
-      <AuthModal
-        hoteldata={hoteldata}
-        styles={styles}
-        tableNumber={tableNumber}
-      />
 
       {/* shop closed modal */}
       <ShopClosedModalWarning
@@ -246,7 +277,7 @@ const HotelMenuPage = ({
           <OrderDrawer
             qrGroup={qrGroup}
             styles={styles}
-            qrId={pathname.includes("qrScan") ? pathname.split("/")[2] : ""}
+            qrId={qrId || undefined}
             hotelData={hoteldata}
             tableNumber={tableNumber}
           />

@@ -57,7 +57,7 @@ export default function CaptainDashboard() {
 
         {/* Orders Management */}
         <Card className="flex-1 flex flex-col min-h-0">
-          <CardHeader className="flex-none p-3 sm:p-6">
+          <CardHeader className="flex-none p-3 sm:p-3">
             <CardTitle className="text-lg sm:text-xl">All Orders</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-0">

@@ -33,7 +33,9 @@ export const createOrderMutation = `
     $status: String,
     $gst_included: numeric,
     $extra_charges: jsonb,
-    $orderedby: String
+    $orderedby: String,
+    $delivery_location: geography,
+    $captain_id: uuid
   ) {
     insert_orders_one(object: {
       id: $id
@@ -50,6 +52,8 @@ export const createOrderMutation = `
       gst_included: $gst_included
       extra_charges: $extra_charges
       orderedby: $orderedby
+      delivery_location: $delivery_location
+      captain_id: $captain_id
     }) {
       id
       total_price
@@ -128,6 +132,13 @@ export const getOrderByIdQuery = `
       status
       phone
       partner_id
+      order_number
+      captain {
+        id
+        full_name
+        phone
+        email
+      }
       order_items {
         id
         quantity
@@ -151,7 +162,10 @@ subscription GetPartnerOrders($partner_id: uuid!) {
   orders(
     where: { 
       partner_id: { _eq: $partner_id },
-      orderedby: { _eq: "captain" }
+      _or: [
+        { orderedby: { _is_null: true } },
+        { orderedby: { _eq: "captain" } }
+      ]
     }
     order_by: { created_at: desc }
   ) {
@@ -162,6 +176,7 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     qr_id
     type
     delivery_address
+    delivery_location
     status
     partner_id
     gst_included
@@ -169,8 +184,9 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     phone
     user_id
     orderedby
+    captain_id
     user {
-      full_name
+      name
       phone
       email
     }
@@ -191,6 +207,10 @@ subscription GetPartnerOrders($partner_id: uuid!) {
         is_top
         is_available
         priority
+        stocks {
+          stock_quantity
+          id
+        }
       }
     }
   }
@@ -241,4 +261,15 @@ subscription GetUserOrders($user_id: uuid!) {
     }
   }
 }
+`;
+
+// Add a new query to fetch captains
+export const getCaptainsQuery = `
+  query GetCaptains($captain_ids: [uuid!]!) {
+    captain(where: {id: {_in: $captain_ids}}) {
+      id
+      name
+      email
+    }
+  }
 `;

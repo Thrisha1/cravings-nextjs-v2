@@ -10,15 +10,24 @@ import {
   userSubscriptionQuery,
 } from "@/api/orders";
 import { toast } from "sonner";
-import {
-  getExtraCharge,
-  getGstAmount,
-} from "@/components/hotelDetail/OrderDrawer";
 import { subscribeToHasura } from "@/lib/hasuraSubscription";
 import { QrGroup } from "@/app/admin/qr-management/page";
+import { revalidateTag } from "@/app/actions/revalidate";
+import { usePOSStore } from "./posStore";
+import { v4 as uuidv4 } from 'uuid';
 
 export interface OrderItem extends HotelDataMenus {
+  id: string;
   quantity: number;
+}
+
+export interface DeliveryRules {
+  delivery_radius: number;
+  first_km_range: {
+    km: number;
+    rate: number;
+  };
+  is_fixed_rate: boolean;
 }
 
 export interface Order {
@@ -39,11 +48,26 @@ export interface Order {
   userId?: string;
   user?: {
     phone?: string;
+    name?: string;
+    email?: string;
   };
   type?: "table_order" | "delivery" | "pos";
   deliveryAddress?: string | null;
   gstIncluded?: number;
   orderedby?: string;
+  delivery_charge?: number | null;
+  delivery_location?: {
+    type: string;
+    coordinates: [number, number];
+  };
+  order_number?: string;
+  captain_id?: string;
+  captain?: {
+    id: string;
+    name: string;
+    phone: string;
+    email: string;
+  };
   extraCharges?:
     | {
         name: string;
@@ -54,11 +78,22 @@ export interface Order {
     | null;
 }
 
+export interface DeliveryInfo {
+  distance: number;
+  cost: number;
+  ratePerKm: number;
+  isOutOfRange: boolean;
+}
+
 interface HotelOrderState {
   items: OrderItem[];
   totalPrice: number;
   order: Order | null;
   orderId: string | null;
+  coordinates: {
+    lat: number;
+    lng: number;
+  } | null;
 }
 
 interface OrderState {
@@ -66,11 +101,20 @@ interface OrderState {
   hotelOrders: Record<string, HotelOrderState>;
   userAddress: string | null;
   open_auth_modal: boolean;
+  open_drawer_bottom: boolean;
   order: Order | null;
   items: OrderItem[] | null;
   orderId: string | null;
   totalPrice: number | null;
   open_order_drawer: boolean;
+  coordinates: {
+    lat: number;
+    lng: number;
+  } | null;
+  deliveryInfo: DeliveryInfo | null;
+  deliveryCost: number | null;
+  open_place_order_modal: boolean;
+  setOpenPlaceOrderModal: (open: boolean) => void;
 
   setHotelId: (id: string) => void;
   addItem: (item: HotelDataMenus) => void;
@@ -83,23 +127,36 @@ interface OrderState {
     tableNumber?: number,
     qrId?: string,
     gstIncluded?: number,
-    extraCharges?: {
-      name: string | undefined;
-      amount: number | undefined;
-      charge_type?: string;
-    }
+    extraCharges?:
+      | {
+          name: string;
+          amount: number;
+          charge_type?: string;
+        }[]
+      | null,
+    deliveryCharge?: number
   ) => Promise<Order | null>;
   getCurrentOrder: () => HotelOrderState;
   fetchOrderOfPartner: (partnerId: string) => Promise<Order[] | null>;
   setOpenAuthModal: (open: boolean) => void;
   genOrderId: () => string;
   setUserAddress: (address: string) => void;
+  setUserCoordinates: (coords: { lat: number; lng: number }) => void;
   subscribeOrders: (callback?: (orders: Order[]) => void) => () => void;
   partnerOrders: Order[];
   userOrders: Order[];
   subscribeUserOrders: (callback?: (orders: Order[]) => void) => () => void;
   deleteOrder: (orderId: string) => Promise<boolean>;
   setOpenOrderDrawer: (open: boolean) => void;
+  setDeliveryInfo: (info: DeliveryInfo | null) => void;
+  setDeliveryCost: (cost: number | null) => void;
+  setOpenDrawerBottom: (open: boolean) => void;
+  updateOrderStatus: (
+    orders: Order[],
+    orderId: string,
+    newStatus: "completed" | "cancelled" | "pending",
+    setOrders: (orders: Order[]) => void
+  ) => Promise<void>;
 }
 
 const useOrderStore = create(
@@ -116,6 +173,83 @@ const useOrderStore = create(
       totalPrice: 0,
       userOrders: [],
       open_order_drawer: false,
+      deliveryInfo: null,
+      deliveryCost: null,
+      coordinates: null,
+      open_drawer_bottom: false,
+      open_place_order_modal: false,
+
+
+      updateOrderStatus: async (
+          orders : Order[],
+          orderId: string,
+          newStatus: "completed" | "cancelled" | "pending",
+          setOrders: (orders: Order[]) => void
+        ) => {
+
+        const userData = useAuthStore.getState().userData;
+
+          try {
+            // First update the order status
+            // First update the order status
+            const response = await fetchFromHasura(
+              `mutation UpdateOrderStatus($orderId: uuid!, $status: String!) {
+                update_orders_by_pk(pk_columns: {id: $orderId}, _set: {status: $status}) {
+                  id
+                  status
+                }
+              }`,
+              { orderId, status: newStatus }
+            );
+      
+            if (response.errors) throw new Error(response.errors[0].message);
+      
+            if (newStatus === "completed") {
+              const order = orders.find((o) => o.id === orderId);
+              if (order) {
+                for (const item of order.items) {
+                  if (item.stocks?.[0]?.id) {
+                    await fetchFromHasura(
+                      `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
+                        update_stocks_by_pk(
+                          pk_columns: {id: $stockId},
+                          _inc: {stock_quantity: $quantity}
+                        ) {
+                          id
+                          stock_quantity
+                        }
+                      }`,
+                      {
+                        stockId: item.stocks?.[0]?.id,
+                        quantity: -item.quantity,
+                      }
+                    );
+                  }
+                }
+      
+                revalidateTag(userData?.id as string);
+              }
+            }
+
+            const updatedOrders = orders.map((order) =>
+              order.id === orderId ? { ...order, status: newStatus } : order
+            );
+      
+            setOrders(updatedOrders);
+            toast.success(`Order marked as ${newStatus}`);
+          } catch (error) {
+            console.error(error);
+            toast.error(`Failed to update order status`);
+          }
+        },
+
+      setOpenPlaceOrderModal: (open) => set({ open_place_order_modal: open }),
+
+      setOpenDrawerBottom: (open) => set({ open_drawer_bottom: open }),
+
+      setUserCoordinates: (coords) => {
+        set({ coordinates: coords });
+      },
 
       subscribeUserOrders: (callback) => {
         const userId = useAuthStore.getState().userData?.id;
@@ -138,7 +272,8 @@ const useOrderStore = create(
               partner: order.partner,
               userId: order.user_id,
               gstIncluded: order.gst_included,
-              extraCharges: order.extra_charges,
+              extraCharges: order.extra_charges || [], // Handle null case
+              delivery_charge: order.delivery_charge, // Include delivery_charge
               user: order.user,
               items: order.order_items.map((i: any) => ({
                 id: i.item.id,
@@ -167,8 +302,39 @@ const useOrderStore = create(
         console.log("Setting up subscription with user data:", {
           userId: userData?.id,
           role: userData?.role,
-          partnerId: userData?.role === "captain" ? (userData as Captain).partner_id : userData?.id
+          partnerId: userData?.role === "captain" ? (userData as Captain).partner_id : userData?.id,
+          hasUserData: !!userData,
+          timestamp: new Date().toISOString()
         });
+
+        // If user data is not available yet, set up a retry mechanism
+        if (!userData?.id || !userData?.role) {
+          console.log("User data not available yet, will retry subscription setup");
+          const retryInterval = setInterval(() => {
+            const retryUserData = useAuthStore.getState().userData;
+            console.log("Retrying subscription setup:", {
+              hasUserData: !!retryUserData,
+              userId: retryUserData?.id,
+              role: retryUserData?.role,
+              timestamp: new Date().toISOString()
+            });
+            if (retryUserData?.id && retryUserData?.role) {
+              clearInterval(retryInterval);
+              console.log("User data now available, retrying subscription setup");
+              // Recursively call subscribeOrders with the new user data
+              const unsubscribe = useOrderStore.getState().subscribeOrders(callback);
+              return () => {
+                clearInterval(retryInterval);
+                unsubscribe();
+              };
+            }
+          }, 1000); // Check every second
+
+          // Return cleanup function
+          return () => {
+            clearInterval(retryInterval);
+          };
+        }
 
         const partnerId = userData?.role === "captain" 
           ? (userData as Captain).partner_id 
@@ -179,57 +345,63 @@ const useOrderStore = create(
           return () => {};
         }
 
-        if (!userData?.role) {
-          console.error("No user role available for subscription");
-          return () => {};
-        }
-
         console.log("Setting up subscription with partner ID:", {
           partnerId,
           role: userData.role,
-          isCaptain: userData.role === "captain"
+          isCaptain: userData.role === "captain",
+          timestamp: new Date().toISOString()
         });
 
+        let subscriptionActive = true;
         const unsubscribe = subscribeToHasura({
           query: subscriptionQuery,
-          variables: { partner_id: partnerId },
+          variables: { 
+            partner_id: partnerId
+          },
           onNext: (data) => {
-            console.log("Subscription data received:", {
-              hasData: !!data?.data,
+            if (!subscriptionActive) {
+              console.log("Subscription no longer active, ignoring data");
+              return;
+            }
+
+            console.log("Subscription callback triggered:", {
+              hasData: !!data,
               hasOrders: !!data?.data?.orders,
-              totalOrders: data?.data?.orders?.length ?? 0,
-              partnerId,
-              timestamp: new Date().toISOString(),
-              dataKeys: data?.data ? Object.keys(data.data) : []
+              ordersCount: data?.data?.orders?.length ?? 0,
+              timestamp: new Date().toISOString()
+            });
+
+            // Log captain orders specifically
+            const captainOrders = data?.data?.orders?.filter((order: any) => order.orderedby === "captain") || [];
+            console.log("Captain orders in subscription:", {
+              count: captainOrders.length,
+              orders: captainOrders.map((order: any) => ({
+                id: order.id,
+                captainId: order.captain_id,
+                captain: order.captain,
+                hasCaptain: !!order.captain,
+                captainName: order.captain?.name
+              }))
             });
 
             if (!data?.data?.orders) {
-              console.log("No orders data in subscription response", {
-                data: data?.data,
-                timestamp: new Date().toISOString()
-              });
+              console.log("No orders data in subscription response");
               if (callback) callback([]);
               return;
             }
 
             const allOrders = data.data.orders.map((order: any) => {
-              console.log("Processing order:", {
-                id: order.id,
-                partnerId: order.partner_id,
-                orderedby: order.orderedby,
-                hasItems: !!order.order_items,
-                itemsCount: order.order_items?.length,
-                firstItem: order.order_items?.[0] ? {
-                  hasMenu: !!order.order_items[0].menu,
-                  menuId: order.order_items[0].menu?.id,
-                  menuName: order.order_items[0].menu?.name
-                } : null,
-                created_at: order.created_at
-              });
-
-              if (!order.created_at) {
-                console.error("Order missing created_at:", order);
-                return null;
+              // Add detailed logging for captain orders
+              if (order.orderedby === "captain") {
+                console.log("Processing captain order:", {
+                  orderId: order.id,
+                  orderedby: order.orderedby,
+                  captainId: order.captain_id,
+                  captain: order.captain,
+                  hasCaptain: !!order.captain,
+                  captainName: order.captain?.name,
+                  rawOrder: order
+                });
               }
 
               return {
@@ -247,6 +419,8 @@ const useOrderStore = create(
                 extraCharges: order.extra_charges,
                 userId: order.user_id,
                 orderedby: order.orderedby,
+                captain_id: order.captain_id,
+                captain: order.captain,
                 user: order.user,
                 items: order.order_items?.map((i: any) => ({
                   id: i.menu?.id,
@@ -266,11 +440,12 @@ const useOrderStore = create(
 
             console.log("Setting partner orders:", {
               totalOrders: allOrders.length,
-              orders: allOrders.map((o: Order) => ({
+              captainOrders: allOrders.filter((o: Order) => o.orderedby === "captain").map((o: Order) => ({
                 id: o.id,
-                partnerId: o.partnerId,
-                orderedby: o.orderedby,
-                itemsCount: o.items.length
+                captainId: o.captain_id,
+                captain: o.captain,
+                hasCaptain: !!o.captain,
+                captainName: o.captain?.name
               })),
               timestamp: new Date().toISOString()
             });
@@ -279,11 +454,31 @@ const useOrderStore = create(
             if (callback) callback(allOrders);
           },
           onError: (error) => {
-            console.error("Subscription error:", {
+            console.error("Subscription error in order store:", {
               error,
               message: error instanceof Error ? error.message : String(error),
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              userData: {
+                id: userData?.id,
+                role: userData?.role,
+                partnerId: userData?.role === "captain" ? (userData as Captain).partner_id : userData?.id
+              }
             });
+
+            // If we get a connection error, try to resubscribe after a delay
+            if (error.message.includes('connection') || error.message.includes('network')) {
+              console.log("Connection error detected, will attempt to resubscribe");
+              setTimeout(() => {
+                if (subscriptionActive) {
+                  console.log("Attempting to resubscribe...");
+                  const newUnsubscribe = useOrderStore.getState().subscribeOrders(callback);
+                  unsubscribe();
+                  return newUnsubscribe;
+                }
+              }, 5000); // Wait 5 seconds before retrying
+            }
+
+            // Always call callback with empty array to prevent UI from breaking
             if (callback) callback([]);
           },
         });
@@ -293,6 +488,7 @@ const useOrderStore = create(
             partnerId,
             timestamp: new Date().toISOString()
           });
+          subscriptionActive = false;
           unsubscribe();
         };
       },
@@ -306,6 +502,7 @@ const useOrderStore = create(
               totalPrice: 0,
               order: null,
               orderId: null,
+              coordinates: null,
             };
           }
           return {
@@ -322,7 +519,13 @@ const useOrderStore = create(
       getCurrentOrder: () => {
         const state = get();
         if (!state.hotelId) {
-          return { items: [], totalPrice: 0, order: null, orderId: null };
+          return {
+            items: [],
+            totalPrice: 0,
+            order: null,
+            orderId: null,
+            coordinates: null,
+          };
         }
         return (
           state.hotelOrders[state.hotelId] || {
@@ -330,6 +533,7 @@ const useOrderStore = create(
             totalPrice: 0,
             order: null,
             orderId: null,
+            coordinates: null,
           }
         );
       },
@@ -342,7 +546,7 @@ const useOrderStore = create(
 
       genOrderId: () => {
         const state = get();
-        const orderId = crypto.randomUUID();
+        const orderId = uuidv4();
 
         if (state.hotelId) {
           set((state) => {
@@ -392,7 +596,11 @@ const useOrderStore = create(
               totalPrice: hotelOrder.totalPrice + item.price,
             };
           } else {
-            const newItem = { ...item, quantity: 1 };
+            const newItem: OrderItem = {
+              ...item,
+              id: item.id || "",
+              quantity: 1,
+            };
             hotelOrders[state.hotelId!] = {
               ...hotelOrder,
               items: [...hotelOrder.items, newItem],
@@ -567,11 +775,21 @@ const useOrderStore = create(
         tableNumber,
         qrId,
         gstIncluded,
-        extraCharges
+        extraCharges?:
+          | {
+              name: string;
+              amount: number;
+              charge_type?: string;
+            }[]
+          | null,
+        deliveryCharge?: number
       ) => {
         try {
           const state = get();
-          if (!state.hotelId) return null;
+          if (!state.hotelId) {
+            toast.error("No hotel selected");
+            return null;
+          }
 
           const currentOrder = state.hotelOrders[state.hotelId] || {
             items: [],
@@ -586,47 +804,93 @@ const useOrderStore = create(
           }
 
           const userData = useAuthStore.getState().userData;
-          if (!userData?.id && userData?.role !== "user") {
+          if (!userData?.id || userData?.role !== "user") {
             toast.error("Please login as user to place order");
             return null;
           }
 
+          // Validate qrId - must be a valid UUID or null
+          const isValidUUID = (str: string) => {
+            const uuidRegex =
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            return uuidRegex.test(str);
+          };
+
+          const validQrId = qrId && isValidUUID(qrId) ? qrId : null;
+
           const type = (tableNumber ?? 0) > 0 ? "table_order" : "delivery";
 
-          const exCharges = [];
+          // Prepare extra charges array
+          const exCharges: {
+            name: string;
+            amount: number;
+            charge_type?: string;
+            id?: string;
+          }[] = [];
 
-          if (extraCharges?.name && extraCharges?.amount) {
-            exCharges.push({
-              ...extraCharges,
-              id: crypto.randomUUID(),
+          // Add any provided extra charges
+          if (extraCharges && extraCharges.length > 0) {
+            extraCharges.forEach((charge) => {
+              exCharges.push({
+                name: charge.name,
+                amount: charge.amount,
+                charge_type: charge.charge_type || "FLAT_FEE",
+                id:uuidv4(),
+              });
             });
           }
 
-          const grandTotal =
-            currentOrder.totalPrice +
-            getExtraCharge(
-              currentOrder?.items,
-              extraCharges?.amount ?? 0,
-              (extraCharges?.charge_type ?? "FLAT_FEE") as
-                | "PER_ITEM"
-                | "FLAT_FEE"
-            ) +
-            (gstIncluded || 0);
+          // Add delivery charge if applicable
+          if (type === "delivery" && deliveryCharge && deliveryCharge > 0) {
+            exCharges.push({
+              name: "Delivery Charge",
+              amount: deliveryCharge,
+              charge_type: "FLAT_FEE",
+              id: uuidv4(),
+            });
+          }
+
+          // Calculate subtotal from items
+          const subtotal = currentOrder.items.reduce(
+            (sum, item) => sum + item.price * item.quantity,
+            0
+          );
+
+          // Calculate total extra charges
+          const totalExtraCharges = exCharges.reduce(
+            (sum, charge) => sum + charge.amount,
+            0
+          );
+
+          // Calculate grand total
+          const grandTotal = subtotal + (gstIncluded || 0) + totalExtraCharges;
 
           const createdAt = new Date().toISOString();
+
+          // Create order in database
           const orderResponse = await fetchFromHasura(createOrderMutation, {
-            id: currentOrder.orderId,
+            id: uuidv4(), // Generate new ID for each order
             totalPrice: grandTotal,
             gst_included: gstIncluded,
-            extra_charges: exCharges || null,
+            extra_charges: exCharges.length > 0 ? exCharges : null,
             createdAt,
             tableNumber: tableNumber || null,
-            qrId: qrId || null,
+            qrId: validQrId, // Use validated QR ID
             partnerId: hotelData.id,
             userId: userData.id,
             type,
             status: "pending",
-            delivery_address: tableNumber ? null : get().userAddress,
+            delivery_address: type === "delivery" ? state.userAddress : null,
+            delivery_location:
+              type === "delivery"
+                ? {
+                    type: "Point",
+                    coordinates: [
+                      state.coordinates?.lng || 0,
+                      state.coordinates?.lat || 0,
+                    ],
+                  }
+                : null,
           });
 
           if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
@@ -636,6 +900,8 @@ const useOrderStore = create(
           }
 
           const orderId = orderResponse.insert_orders_one.id;
+
+          // Create order items
           const itemsResponse = await fetchFromHasura(
             createOrderItemsMutation,
             {
@@ -648,6 +914,7 @@ const useOrderStore = create(
                   name: item.name,
                   price: item.price,
                   offers: item.offers,
+                  category: item.category,
                 },
               })),
             }
@@ -659,41 +926,47 @@ const useOrderStore = create(
             );
           }
 
+          // Prepare new order object
           const newOrder: Order = {
             id: orderId,
             items: currentOrder.items,
-            totalPrice: currentOrder.totalPrice,
+            totalPrice: grandTotal,
             createdAt,
             tableNumber: tableNumber || null,
-            qrId: qrId || null,
+            qrId: validQrId, // Use validated QR ID
             status: "pending",
             partnerId: hotelData.id,
             userId: userData.id,
             user: {
-              phone: userData?.role === "user" ? userData.phone : "N/A",
+              phone: userData.phone || "N/A",
             },
+            gstIncluded,
+            extraCharges: exCharges,
           };
 
-          set((state) => {
-            const hotelOrders = { ...state.hotelOrders };
-            hotelOrders[state.hotelId!] = {
-              items: [],
-              totalPrice: 0,
-              order: newOrder,
-              orderId: null,
-            };
-            return {
-              hotelOrders,
-              order: newOrder,
-              items: [],
-              orderId: null,
-              totalPrice: 0,
-            };
-          });
+          // Update state
+          set((state) => ({
+            ...state,
+            hotelOrders: {
+              ...state.hotelOrders,
+              [state.hotelId!]: {
+                items: [],
+                totalPrice: 0,
+                order: newOrder,
+                orderId: null,
+                coordinates: null,
+              },
+            },
+            order: newOrder,
+            items: [],
+            orderId: null,
+            totalPrice: 0,
+          }));
 
           toast.success("Order placed successfully!");
           return newOrder;
         } catch (error) {
+          console.error("Order placement error:", error);
           toast.error(
             error instanceof Error ? error.message : "Failed to place order"
           );
@@ -703,7 +976,8 @@ const useOrderStore = create(
 
       fetchOrderOfPartner: async (partnerId: string) => {
         try {
-          const response = await fetchFromHasura(
+          // First fetch the orders
+          const ordersResponse = await fetchFromHasura(
             `query GetPartnerOrders($partnerId: uuid!) {
               orders(
                 where: { partner_id: { _eq: $partnerId } }
@@ -716,9 +990,15 @@ const useOrderStore = create(
                 qr_id
                 type
                 delivery_address
+                delivery_location
                 status
                 partner_id
+                gst_included
+                extra_charges
+                phone
                 user_id
+                orderedby
+                captain_id
                 user {
                   full_name
                   phone
@@ -727,12 +1007,24 @@ const useOrderStore = create(
                 order_items {
                   id
                   quantity
+                  item
                   menu {
                     id
                     name
                     price
                     category {
+                      id
                       name
+                      priority
+                    }
+                    description
+                    image_url
+                    is_top
+                    is_available
+                    priority
+                    stocks {
+                      stock_quantity
+                      id
                     }
                   }
                 }
@@ -741,13 +1033,46 @@ const useOrderStore = create(
             { partnerId }
           );
 
-          if (response.errors) {
+          if (ordersResponse.errors) {
             throw new Error(
-              response.errors[0]?.message || "Failed to fetch orders"
+              ordersResponse.errors[0]?.message || "Failed to fetch orders"
             );
           }
 
-          return response.orders.map((order: any) => ({
+          // Get unique captain IDs from orders
+          const captainIds = ordersResponse.orders
+            .filter((order: any) => order.captain_id)
+            .map((order: any) => order.captain_id);
+
+          // If there are captain orders, fetch captain details
+          let captainMap: Record<string, any> = {};
+          if (captainIds.length > 0) {
+            const captainsResponse = await fetchFromHasura(
+              `query GetCaptains($captainIds: [uuid!]!) {
+                captain(where: {id: {_in: $captainIds}}) {
+                  id
+                  name
+                  email
+                }
+              }`,
+              { captainIds }
+            );
+
+            if (captainsResponse.errors) {
+              console.error("Error fetching captains:", captainsResponse.errors);
+            } else {
+              // Create a map of captain data by ID
+              captainMap = captainsResponse.captain.reduce((acc: any, captain: any) => {
+                acc[captain.id] = captain;
+                return acc;
+              }, {});
+            }
+          }
+
+          console.log("Fetched orders:", ordersResponse);
+          console.log("Captain map:", captainMap);
+
+          return ordersResponse.orders.map((order: any) => ({
             id: order.id,
             totalPrice: order.total_price,
             createdAt: order.created_at,
@@ -755,16 +1080,25 @@ const useOrderStore = create(
             qrId: order.qr_id,
             status: order.status,
             type: order.type,
+            phone: order.phone,
             deliveryAddress: order.delivery_address,
             partnerId: order.partner_id,
+            delivery_location: order.delivery_location,
+            gstIncluded: order.gst_included,
+            extraCharges: order.extra_charges || [], // Handle null case
+            delivery_charge: order.delivery_charge, // Include delivery_charge
             userId: order.user_id,
             user: order.user,
-            items: order.order_items.map((item: any) => ({
-              id: item.id,
-              quantity: item.quantity,
-              name: item.menu?.name || "Unknown",
-              price: item.menu?.price || 0,
-              category: item.menu?.category,
+            orderedby: order.orderedby,
+            captain_id: order.captain_id,
+            captain: order.captain_id ? captainMap[order.captain_id] : null,
+            items: order.order_items.map((i: any) => ({
+              id: i.item.id,
+              quantity: i.quantity,
+              name: i.item.name || "Unknown",
+              price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
+              category: i.menu?.category,
+              stocks: i.menu?.stocks,
             })),
           }));
         } catch (error) {
@@ -778,12 +1112,13 @@ const useOrderStore = create(
         const state = get();
         if (!state.hotelId) return;
 
-        const newOrderId = crypto.randomUUID();
+        const newOrderId = uuidv4();
 
         set((state) => {
           const hotelOrders = { ...state.hotelOrders };
           if (state.hotelId) {
             hotelOrders[state.hotelId] = {
+              ...hotelOrders[state.hotelId],
               items: [],
               totalPrice: 0,
               order: null,
@@ -792,6 +1127,7 @@ const useOrderStore = create(
           }
 
           return {
+            ...state,
             hotelOrders,
             items: [],
             orderId: newOrderId,
@@ -802,6 +1138,11 @@ const useOrderStore = create(
       },
 
       setOpenOrderDrawer: (open: boolean) => set({ open_order_drawer: open }),
+
+      setDeliveryInfo: (info: DeliveryInfo | null) =>
+        set({ deliveryInfo: info }),
+
+      setDeliveryCost: (cost: number | null) => set({ deliveryCost: cost }),
     }),
     {
       name: "order-storage",

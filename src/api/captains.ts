@@ -1,13 +1,15 @@
 export const createCaptainMutation = `
-  mutation CreateCaptain($email: String!, $password: String!, $partner_id: uuid!, $role: String!) {
+  mutation CreateCaptain($email: String!, $password: String!, $partner_id: uuid!, $role: String!, $name: String!) {
     insert_captain_one(object: {
       email: $email,
       password: $password,
       partner_id: $partner_id,
-      role: $role
+      role: $role,
+      name: $name
     }) {
       id
       email
+      name
       partner_id
       role
     }
@@ -19,6 +21,7 @@ export const getCaptainsQuery = `
     captain(where: {partner_id: {_eq: $partner_id}}) {
       id
       email
+      name
       partner_id
       role
     }
