@@ -36,6 +36,7 @@ const OrderItemCard = ({
   gstAmount: number;
   grantTotal: number;
   updateOrderStatus: (status: "completed" | "cancelled" | "pending") => void;
+  updateOrderStatus: (status: "completed" | "cancelled" | "pending") => void;
   setOrder: (order: Order) => void;
   setEditOrderModalOpen: (open: boolean) => void;
   deleteOrder: (orderId: string) => Promise<boolean>;
@@ -314,6 +315,7 @@ const OrderItemCard = ({
               <Button
                 size="sm"
                 variant="destructive"
+                onClick={() => updateOrderStatus("cancelled")}
                 onClick={() => updateOrderStatus("cancelled")}
               >
                 Cancel Order

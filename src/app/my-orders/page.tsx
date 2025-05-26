@@ -34,6 +34,7 @@ const Page = () => {
       const unsubscribe = subscribeUserOrders((orders) => {
         setLoading(false);
       });
+
       return () => {
         unsubscribe();
       };
@@ -137,7 +138,10 @@ const Page = () => {
                     <h3 className="font-medium">
                       Store : {order.partner?.store_name}
                     </h3>
-                    <p className="text-xs opacity-70">
+                    <h3 className="text-sm text-gray-500">
+                      Ordered from : {order.partner?.store_name}
+                    </h3>
+                    <p className="text-sm text-gray-500">
                       {format(new Date(order.createdAt), "PPPp")}
                     </p>
                   </div>

@@ -36,6 +36,9 @@ export const createOrderMutation = `
     $orderedby: String,
     $delivery_location: geography,
     $captain_id: uuid
+    $orderedby: String,
+    $delivery_location: geography,
+    $captain_id: uuid
   ) {
     insert_orders_one(object: {
       id: $id
@@ -189,7 +192,7 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     orderedby
     captain_id
     user {
-      full_name
+      name
       phone
       email
     }

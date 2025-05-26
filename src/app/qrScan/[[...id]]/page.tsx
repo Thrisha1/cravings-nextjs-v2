@@ -27,7 +27,7 @@ const page = async ({
 
   // Validate and find the correct UUID from the path segments
   let validQrId: string | null = null;
-
+  
   if (qrId && Array.isArray(qrId)) {
     // Check each segment for a valid UUID
     for (const segment of qrId) {
@@ -98,6 +98,7 @@ const page = async ({
     groupData: qr_codes[0].qr_group,
     tableNumber: qr_codes[0].table_number,
   });
+  
 
   const tableNumber = qr_codes[0].table_number;
 
@@ -212,18 +213,18 @@ const page = async ({
     }
 
     // if (isOrderingEnabled || isDeliveryEnabled) {
-    return (
-      <HotelMenuPage
-        socialLinks={socialLinks}
-        auth={auth}
-        hoteldata={hotelDataWithOfferPrice as HotelData}
-        offers={filteredOffers}
-        tableNumber={tableNumber}
-        theme={theme}
-        qrGroup={qr_codes[0].qr_group}
-        qrId={validQrId}
-      />
-    );
+      return (
+        <HotelMenuPage
+          socialLinks={socialLinks}
+          auth={auth}
+          hoteldata={hotelDataWithOfferPrice as HotelData}
+          offers={filteredOffers}
+          tableNumber={tableNumber}
+          theme={theme}
+          qrGroup={qr_codes[0].qr_group}
+          qrId={validQrId}
+        />
+      );
     // }
 
     // return (
