@@ -96,7 +96,7 @@ const Page = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {userOrders.map((order) => {
+          {userOrders.map((order, index) => {
             const gstPercentage =
               (order.partner as Partner)?.gst_percentage || 0;
             const foodTotal = (order.items || []).reduce(
@@ -118,6 +118,10 @@ const Page = () => {
 
             const grandTotal = foodTotal + extraChargesTotal + gstAmount;
             const statusDisplay = getStatusDisplay(order);
+
+            if (index == 0) {
+              console.log("Order Data:", order);
+            }
 
             return (
               <div
@@ -154,17 +158,17 @@ const Page = () => {
                 </div>
 
                 <div className="mb-3">
-                  {/* {order.tableNumber && (
+                  {order.tableNumber && (
                     <p className="text-sm">
                       <span className="font-medium">Table:</span>{" "}
                       {order.tableNumber}
                     </p>
-                  )} */}
-                  {/* {order.phone && (
+                  )}
+                  {order.phone && (
                     <p className="text-sm">
                       <span className="font-medium">Phone:</span> {order.phone}
                     </p>
-                  )} */}
+                  )}
                   {order.deliveryAddress && (
                     <p className="text-sm">
                       <span className="font-medium">Delivery Address:</span>{" "}
@@ -172,8 +176,24 @@ const Page = () => {
                     </p>
                   )}
 
+                  {order.delivery_location && (
+                    <p className="text-sm">
+                      {/* <span className="font-medium">Delivery Location:</span>{" "} */}
+                      <a
+                        className="text-blue-500 hover:underline"
+                        href={`https://www.google.com/maps?q=${order.delivery_location.coordinates[1]},${order.delivery_location.coordinates[0]}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View Location
+                      </a>
+                    </p>
+                  )}
+
                   {order.notes && (
-                    <p className="text-sm text-orange-500 mt-2">Notes : {order.notes}</p>
+                    <p className="text-sm text-orange-500 mt-2">
+                      Notes : {order.notes}
+                    </p>
                   )}
                 </div>
 
@@ -235,6 +255,30 @@ const Page = () => {
                       {grandTotal.toFixed(2)}
                     </span>
                   </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-2 mt-4">
+                  {order.status === "pending" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditOrder(order)}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleCancelOrder(order.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             );

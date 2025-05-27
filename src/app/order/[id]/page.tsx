@@ -56,8 +56,6 @@ const GET_ORDER_QUERY = `
   }
 `;
 
-
-
 const OrderPage = () => {
   const params = useParams();
   const orderId = params.id as string;
@@ -86,6 +84,7 @@ const OrderPage = () => {
             phone: order?.phone,
             notes: order?.notes,
             deliveryAddress: order?.delivery_address,
+            delivery_location: order?.delivery_location,
             partnerId: order?.partner_id,
             partner: order?.partner,
             userId: order?.user_id,
@@ -191,14 +190,33 @@ const OrderPage = () => {
                       </div>
                     )}
                     {order?.type === "delivery" && (
-                      <>
-                        <div>
-                          <p className="text-sm text-gray-500">
-                            Delivery Address
-                          </p>
-                          <p>{order?.deliveryAddress || "N/A"}</p>
-                        </div>
-                      </>
+                      <div>
+                        <p className="text-sm text-gray-500">
+                          Delivery Address
+                        </p>
+                        <p>{order?.deliveryAddress || "N/A"}</p>
+                        {order.delivery_location &&
+                          (order.delivery_location?.coordinates?.length ?? 0) >
+                            0 && (
+                            <div className="mt-2">
+                              <a
+                                href={`https://www.google.com/maps?q=${order.delivery_location.coordinates[1]},${order.delivery_location.coordinates[0]}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block"
+                              >
+                                <img
+                                  src={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+ff0000(${order.delivery_location.coordinates[0]},${order.delivery_location.coordinates[1]})/${order.delivery_location.coordinates[0]},${order.delivery_location.coordinates[1]},16/600x300?access_token=${process.env.NEXT_PUBLIC_MAPBOX_TOKEN}`}
+                                  alt="Delivery location"
+                                  className="w-full h-auto rounded-md border border-gray-200"
+                                />
+                              </a>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Click on map to view in Google Maps
+                              </p>
+                            </div>
+                          )}
+                      </div>
                     )}
                     <div>
                       <p className="text-sm text-gray-500">Customer Phone</p>

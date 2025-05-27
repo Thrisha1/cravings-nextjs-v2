@@ -205,6 +205,7 @@ subscription GetUserOrders($user_id: uuid!) {
     qr_id
     type
     delivery_address
+    delivery_location
     notes
     status
     status_history
