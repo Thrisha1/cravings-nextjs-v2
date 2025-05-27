@@ -1,3 +1,4 @@
+- "!include public_captain.yaml"
 - "!include public_category.yaml"
 - "!include public_common_offers.yaml"
 - "!include public_followers.yaml"

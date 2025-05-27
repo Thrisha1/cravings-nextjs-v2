@@ -1,14 +1,13 @@
 import { HotelData } from "@/app/hotels/[...id]/page";
 import { formatDate } from "@/lib/formatDate";
 import { Partner, useAuthStore } from "@/store/authStore";
-import { Order, OrderItem } from "@/store/orderStore";
-import React, { useEffect } from "react";
+import useOrderStore, { Order, OrderItem } from "@/store/orderStore";
+import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { Edit, Printer, Trash2 } from "lucide-react";
 import KOTTemplate from "./pos/KOTTemplate";
 import BillTemplate from "./pos/BillTemplate";
 import { useReactToPrint } from "react-to-print";
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,9 +19,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import StatusHistoryTimeline from "../StatusHistoryTimeline";
+import {
+  defaultStatusHistory,
+  OrderStatusHistoryTypes,
+  setStatusHistory,
+  toStatusDisplayFormat,
+} from "@/lib/statusHistory";
+import AddNoteComponent from "./AddNoteComponent";
 
 const OrderItemCard = ({
-  order,
+  order: initialOrder,
   gstPercentage,
   gstAmount,
   grantTotal,
@@ -40,6 +47,7 @@ const OrderItemCard = ({
   setEditOrderModalOpen: (open: boolean) => void;
   deleteOrder: (orderId: string) => Promise<boolean>;
 }) => {
+  const [localOrder, setLocalOrder] = useState<Order>(initialOrder);
   const { userData } = useAuthStore();
   const billRef = React.useRef<HTMLDivElement>(null);
   const kotRef = React.useRef<HTMLDivElement>(null);
@@ -48,6 +56,12 @@ const OrderItemCard = ({
   const [deliveryLocation, setDeliveryLocation] = React.useState<string | null>(
     null
   );
+  const { updateOrderStatusHistory } = useOrderStore();
+
+  // Sync localOrder with prop changes
+  useEffect(() => {
+    setLocalOrder(initialOrder);
+  }, [initialOrder]);
 
   const handlePrintBill = useReactToPrint({
     contentRef: billRef,
@@ -61,7 +75,7 @@ const OrderItemCard = ({
     setIsDeleting(true);
     try {
       toast.loading("Deleting order...");
-      const success = await deleteOrder(order.id);
+      const success = await deleteOrder(localOrder.id);
       if (success) {
         toast.dismiss();
         toast.success("Order deleted successfully");
@@ -80,11 +94,11 @@ const OrderItemCard = ({
   };
 
   useEffect(() => {
-    if (order.type === "delivery") {
-      const location = order.delivery_location;
+    if (localOrder.type === "delivery") {
+      const location = localOrder.delivery_location;
       if (location) {
         setDeliveryLocation(
-          `https://www.google.com/maps/place/${order.delivery_location?.coordinates[1]},${order.delivery_location?.coordinates[0]}`
+          `https://www.google.com/maps/place/${localOrder.delivery_location?.coordinates[1]},${localOrder.delivery_location?.coordinates[0]}`
         );
       } else {
         setDeliveryLocation(null);
@@ -92,11 +106,48 @@ const OrderItemCard = ({
     } else {
       setDeliveryLocation(null);
     }
-  }, [order]);
+  }, [localOrder]);
+
+  // Get the current status from status history
+  const statusHistory = localOrder.status_history || defaultStatusHistory;
+  const displayStatus = toStatusDisplayFormat(statusHistory);
+  const isAccepted = displayStatus.accepted?.isCompleted;
+  const isDispatched = displayStatus.dispatched?.isCompleted;
+
+  // Optimistic update for status history
+  const optimisticUpdateStatus = async (
+    status: OrderStatusHistoryTypes,
+    callback?: (orders: Order[]) => void
+  ) => {
+    // Create optimistic update
+    const optimisticHistory = setStatusHistory(statusHistory, status, {
+      isCompleted: true,
+      completedAt: new Date().toISOString(),
+    });
+
+    const optimisticOrder = {
+      ...localOrder,
+      status_history: optimisticHistory,
+    };
+
+    setLocalOrder(optimisticOrder);
+    if (callback) callback([optimisticOrder]);
+
+    try {
+      // Perform actual update
+      await updateOrderStatusHistory(localOrder.id, status, [localOrder]);
+    } catch (error) {
+      console.error("Error updating status:", error);
+      // Revert on error
+      setLocalOrder(initialOrder);
+      if (callback) callback([initialOrder]);
+      toast.error("Failed to update order status");
+    }
+  };
 
   return (
     <div className="border rounded-lg p-4 relative">
-      {order.status === "pending" && (
+      {localOrder.status === "pending" && (
         <span className="absolute -top-1 -left-1 h-3 w-3">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
@@ -131,40 +182,42 @@ const OrderItemCard = ({
 
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="font-medium">Order #{order.id.slice(0, 8)}</h3>
-          <p className="text-sm text-gray-500">{formatDate(order.createdAt)}</p>
+          <h3 className="font-medium">Order #{localOrder.id.slice(0, 8)}</h3>
+          <p className="text-sm text-gray-500">
+            {formatDate(localOrder.createdAt)}
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
           <span
             className={`px-2 py-1 rounded text-xs ${
-              order.status === "completed"
+              localOrder.status === "completed"
                 ? "bg-green-100 text-green-800"
-                : order.status === "cancelled"
+                : localOrder.status === "cancelled"
                 ? "bg-red-100 text-red-800"
                 : "bg-yellow-100 text-yellow-800"
             }`}
           >
-            {order.status}
+            {localOrder.status}
           </span>
         </div>
       </div>
 
       <div className="mt-2 flex justify-between">
         <div>
-          {order.type === "table_order" && (
-            <p className="text-sm">Table: {order.tableNumber || "N/A"}</p>
+          {localOrder.type === "table_order" && (
+            <p className="text-sm">Table: {localOrder.tableNumber || "N/A"}</p>
           )}
           <p className="text-sm">
             Customer:{" "}
-            {order.user?.phone || order.phone
-              ? `+91${order.user?.phone || order.phone}`
+            {localOrder.user?.phone || localOrder.phone
+              ? `+91${localOrder.user?.phone || localOrder.phone}`
               : "Unknown"}
           </p>
-          {order.type === "delivery" && (
+          {localOrder.type === "delivery" && (
             <>
               <p className="text-sm mt-3">
-                Delivery Address: {order.deliveryAddress || "Unknown"}
+                Delivery Address: {localOrder.deliveryAddress || "Unknown"}
               </p>
               {deliveryLocation && (
                 <a
@@ -176,16 +229,30 @@ const OrderItemCard = ({
                   View Location
                 </a>
               )}
+              <br />
+              <AddNoteComponent setOrder={setLocalOrder} order={localOrder} />
+              {localOrder.notes && (
+                <p className="text-sm mt-2">
+                  <span className="font-medium text-orange-500">Note:{" "}</span>
+                  {localOrder.notes}
+                </p>
+              )}
             </>
           )}
         </div>
       </div>
 
+      {localOrder?.type !== "pos" && (
+        <StatusHistoryTimeline
+          status_history={localOrder?.status_history || defaultStatusHistory}
+        />
+      )}
+
       <div className="mt-4 border-t pt-4">
         <h4 className="font-medium mb-2">Order Items</h4>
         <div className="space-y-2">
-          {order.items?.length > 0 ? (
-            order.items.map((item: OrderItem) => (
+          {localOrder.items?.length > 0 ? (
+            localOrder.items.map((item: OrderItem) => (
               <div key={item.id} className="flex justify-between text-sm">
                 <div>
                   <span className="font-medium">{item.name}</span>
@@ -208,11 +275,11 @@ const OrderItemCard = ({
         </div>
 
         {/* Extra Charges Section */}
-        {(order?.extraCharges ?? []).length > 0 && (
+        {(localOrder?.extraCharges ?? []).length > 0 && (
           <div className="mt-4">
             <h4 className="font-medium mb-2">Extra charges</h4>
             <div className="space-y-2">
-              {order?.extraCharges?.map((charge, index) => (
+              {localOrder?.extraCharges?.map((charge, index) => (
                 <div key={index} className="flex justify-between text-sm">
                   <span>{charge.name}</span>
                   <span>
@@ -258,12 +325,12 @@ const OrderItemCard = ({
               Print Bill
             </Button>
 
-            {order.status === "pending" && (
+            {localOrder.status === "pending" && (
               <>
                 <Button
                   size="sm"
                   onClick={() => {
-                    setOrder(order);
+                    setOrder(localOrder);
                     setEditOrderModalOpen(true);
                   }}
                 >
@@ -282,21 +349,92 @@ const OrderItemCard = ({
             )}
           </div>
 
-          {order.status === "pending" && (
+          {localOrder.status === "pending" && (
             <div className="flex gap-2 flex-wrap">
+              {!isAccepted && (
+                <Button
+                  size="sm"
+                  className="bg-green-600 text-white"
+                  onClick={async () => {
+                    await optimisticUpdateStatus("accepted", (orders) => {
+                      setOrder(orders[0]);
+                    });
+                  }}
+                >
+                  Accept Order
+                </Button>
+              )}
+
+              {isAccepted && !isDispatched && (
+                <Button
+                  size="sm"
+                  className="bg-blue-600 text-white"
+                  onClick={async () => {
+                    await optimisticUpdateStatus("dispatched", (orders) => {
+                      setOrder(orders[0]);
+                    });
+                  }}
+                >
+                  Dispatch Order
+                </Button>
+              )}
+
+              {isDispatched && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      // Rollback to accepted status
+                      const updatedHistory = setStatusHistory(
+                        statusHistory,
+                        "dispatched",
+                        { isCompleted: false, completedAt: null }
+                      );
+                      const updatedOrder = {
+                        ...localOrder,
+                        status_history: updatedHistory,
+                      };
+                      setLocalOrder(updatedOrder);
+                      setOrder(updatedOrder);
+
+                      try {
+                        await updateOrderStatusHistory(
+                          localOrder.id,
+                          "accepted",
+                          [localOrder]
+                        );
+                      } catch (error) {
+                        console.error("Error rolling back status:", error);
+                        setLocalOrder(initialOrder);
+                        setOrder(initialOrder);
+                        toast.error("Failed to update order status");
+                      }
+                    }}
+                  >
+                    Cancel Dispatch
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-purple-600 text-white"
+                    onClick={async () => {
+                      // First update status history to completed
+                      await optimisticUpdateStatus("completed", (orders) => {
+                        setOrder(orders[0]);
+                      });
+                    }}
+                  >
+                    Mark as Delivered
+                  </Button>
+                </>
+              )}
+
               <Button
                 size="sm"
                 variant="destructive"
                 onClick={() => updateOrderStatus("cancelled")}
               >
                 Cancel Order
-              </Button>
-              <Button
-                className="bg-green-600 text-white"
-                size="sm"
-                onClick={() => updateOrderStatus("completed")}
-              >
-                Mark Completed
               </Button>
             </div>
           )}
@@ -305,13 +443,13 @@ const OrderItemCard = ({
 
       {/* Hidden elements for printing */}
       <div className="hidden">
-        <KOTTemplate ref={kotRef} order={order} />
+        <KOTTemplate ref={kotRef} order={localOrder} />
         <BillTemplate
-          key={`${order.id}-bill`}
+          key={`${localOrder.id}-bill-${new Date().getTime()}`}
           ref={billRef}
-          order={order}
+          order={localOrder}
           userData={userData as Partner}
-          extraCharges={order.extraCharges || []}
+          extraCharges={localOrder.extraCharges || []}
         />
       </div>
     </div>

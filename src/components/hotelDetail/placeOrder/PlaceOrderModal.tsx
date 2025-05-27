@@ -22,11 +22,11 @@ import {
 import Link from "next/link";
 import {
   getGstAmount,
-  getExtraCharge,
   calculateDeliveryDistanceAndCost,
 } from "../OrderDrawer";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import { table } from "console";
+import { getExtraCharge } from "@/lib/getExtraCharge";
 
 const ItemsCard = ({
   items,
@@ -430,7 +430,7 @@ const MapModal = ({
   const initializeMap = async () => {
     if (!mapContainer.current || map.current) return;
 
-    console.log("Initializing Mapbox...");
+
 
     // Try to get user location first
     const defaultCenter = [77.5946, 12.9716];

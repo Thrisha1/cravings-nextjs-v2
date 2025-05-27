@@ -1,8 +1,8 @@
 import { QrGroup } from "@/app/admin/qr-management/page";
 import {
-  getExtraCharge,
   getGstAmount,
 } from "@/components/hotelDetail/OrderDrawer";
+import { getExtraCharge } from "@/lib/getExtraCharge";
 import { Partner } from "@/store/authStore";
 import { Order } from "@/store/orderStore";
 import React from "react";
@@ -58,9 +58,6 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
       return `Table ${order.tableNumber}`;
     };
 
-    console.log("Rendering BillTemplate with order:", order);
-    
-
     return (
       <div
         ref={ref}
@@ -82,13 +79,13 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
 
         {/* Order Info */}
         <div className="grid grid-cols-2 gap-2 text-sm mb-2">
-          <div>
+          <div className="flex items-center gap-2">
             <span className="font-medium">Order #:</span>
             <span> {order.id.slice(0, 8)}</span>
           </div>
           <div className="text-right">
             <span className="font-medium">Date:</span>
-            <span> {new Date(order.createdAt).toLocaleDateString()}</span>
+            <span> {new Date(order.createdAt).toLocaleDateString("en-GB")}</span>
           </div>
           <div>
             <span className="font-medium">Type:</span>

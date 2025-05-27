@@ -34,7 +34,6 @@ export const createOrderMutation = `
                     $gst_included: numeric,
                     $extra_charges: jsonb,
                     $delivery_location: geography
-                    
                   ) {
                     insert_orders_one(object: {
                       id: $id
@@ -154,11 +153,13 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     total_price
     created_at
     table_number
+    notes
     qr_id
     type
     delivery_address
     delivery_location
     status
+    status_history
     partner_id
     gst_included
     extra_charges
@@ -204,7 +205,9 @@ subscription GetUserOrders($user_id: uuid!) {
     qr_id
     type
     delivery_address
+    notes
     status
+    status_history
     partner_id
     partner {
       gst_percentage

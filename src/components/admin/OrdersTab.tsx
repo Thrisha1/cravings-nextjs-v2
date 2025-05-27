@@ -30,8 +30,13 @@ const OrdersTab = () => {
   const router = useRouter();
   const { userData, features } = useAuthStore();
   const prevOrdersRef = useRef<Order[]>([]);
-  const { subscribeOrders, partnerOrders, deleteOrder, updateOrderStatus } =
-    useOrderStore();
+  const {
+    subscribeOrders,
+    partnerOrders,
+    deleteOrder,
+    updateOrderStatus,
+    updateOrderStatusHistory,
+  } = useOrderStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"table" | "delivery" | "pos">(

@@ -209,7 +209,7 @@ const OrdersPage = () => {
 
                     return (
                       <OrderItemCard
-                        key={order.id}
+                        key={`delivery-${order.id}-${order.createdAt}`}
                         order={order}
                         grantTotal={grandTotal}
                         gstAmount={gstAmount}
@@ -250,7 +250,7 @@ const OrdersPage = () => {
 
                     return (
                       <OrderItemCard
-                        key={order.id}
+                        key={`table-${order.id}-${order.createdAt}`}
                         order={order}
                         grantTotal={grandTotal}
                         gstAmount={gstAmount}
@@ -291,7 +291,7 @@ const OrdersPage = () => {
 
                     return (
                       <OrderItemCard
-                        key={order.id}
+                        key={`pos-${order.id}-${order.createdAt}`}
                         order={order}
                         grantTotal={grandTotal}
                         gstAmount={gstAmount}
