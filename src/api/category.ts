@@ -30,7 +30,6 @@ export const getCategory = `
           }
         ]
       }
-      limit: 1
     ) {
       id
       name
