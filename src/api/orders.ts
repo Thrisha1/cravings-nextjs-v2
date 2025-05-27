@@ -135,7 +135,7 @@ export const getOrderByIdQuery = `
       order_number
       captain {
         id
-        full_name
+        name
         phone
         email
       }
@@ -186,7 +186,7 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     orderedby
     captain_id
     user {
-      name
+      full_name
       phone
       email
     }

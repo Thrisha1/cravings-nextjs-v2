@@ -411,7 +411,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         tableNumber: get().tableNumber || null,
         qrId: null,
         partnerId,
-        userId: isCaptainOrder ? null : userId,
+        userId: null,
         type: "pos",
         status: "completed" as "completed",
         delivery_address: get().deliveryAddress || null,

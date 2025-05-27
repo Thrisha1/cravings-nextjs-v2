@@ -1338,17 +1338,40 @@ export default function ProfilePage() {
     }
   };
 
-  const handleDeleteCaptain = async (captainId: string) => {
-    setIsDeletingCaptain(captainId);
+  const handleDeleteCaptain = async (id: string) => {
+    setIsDeletingCaptain(id);
     try {
-      await fetchFromHasura(deleteCaptainMutation, {
-        id: captainId
+      // First, update any orders that reference this captain
+      const updateOrdersMutation = `
+        mutation UpdateOrdersWithCaptain($captain_id: uuid!) {
+          update_orders(
+            where: { captain_id: { _eq: $captain_id } }
+            _set: { 
+              captain_id: null,
+              orderedby: null
+            }
+          ) {
+            affected_rows
+          }
+        }
+      `;
+
+      // Update orders to remove captain reference
+      await fetchFromHasura(updateOrdersMutation, {
+        captain_id: id
       });
-      toast.success("Captain account deleted successfully");
-      fetchCaptains();
+
+      // Now delete the captain using the imported mutation
+      await fetchFromHasura(deleteCaptainMutation, {
+        id
+      });
+
+      // Refresh the captains list
+      await fetchCaptains();
+      toast.success("Captain deleted successfully");
     } catch (error) {
       console.error("Error deleting captain:", error);
-      toast.error("Failed to delete captain account");
+      toast.error("Failed to delete captain");
     } finally {
       setIsDeletingCaptain(null);
     }
@@ -2400,51 +2423,7 @@ export default function ProfilePage() {
           </Card>
         )}
 
-        {features?.captainordering?.enabled && (
-          <div className="space-y-4 mt-4">
-            <div className="text-lg font-semibold">Captain Orders</div>
-            <div className="h-[300px] overflow-y-auto border rounded-lg bg-gray-50 p-2 space-y-2">
-              {loadingOrders ? (
-                <div className="flex justify-center items-center h-full">
-                  <Loader2 className="animate-spin h-6 w-6" />
-                </div>
-              ) : captainOrders.length === 0 ? (
-                <div className="text-center text-gray-500 py-4">No orders from captains yet</div>
-              ) : (
-                captainOrders.map((order) => (
-                  <div key={order.id} className="bg-white border rounded-lg p-3 space-y-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-medium">Order #{order.id.slice(0, 8)}</div>
-                        <div className="text-sm text-gray-500">
-                          {new Date(order.created_at).toLocaleString()}
-                        </div>
-                      </div>
-                      <Badge className={order.status === "completed" ? "bg-green-500" : "bg-orange-500"}>
-                        {order.status}
-                      </Badge>
-                    </div>
-                    <div className="text-sm">
-                      {order.table_number ? `Table ${order.table_number}` : "No table"} • {order.phone || "No phone"}
-                    </div>
-                    <div className="space-y-1">
-                      {order.order_items.map((item) => (
-                        <div key={item.id} className="flex justify-between text-sm">
-                          <span>{item.quantity}x {item.menu.name}</span>
-                          <span>₹{(item.quantity * item.menu.price).toFixed(0)}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t">
-                      <span className="font-medium">Total</span>
-                      <span className="font-medium">₹{order.total_price.toFixed(0)}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
+        
       </div>
     </div>
   );
