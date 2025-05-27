@@ -280,7 +280,7 @@ const BillCard = ({
         )}
 
         {/* Delivery charge */}
-        {isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange && (
+        {(isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange) && (
           <div className="flex justify-between">
             <div>
               <span>Delivery Charge</span>
