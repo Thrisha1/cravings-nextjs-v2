@@ -15,9 +15,10 @@ export interface Category {
 
 // Helper function to format category name for display
 export const formatDisplayName = (name: string): string => {
-  return name.split('_').map(word => 
-    word.charAt(0).toUpperCase() + word.slice(1)
-  ).join(' ');
+  return name
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 };
 
 // Helper function to format category name for storage
@@ -43,10 +44,12 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const categories = await fetchFromHasura(getPartnerCategories, {
         partner_id: addedBy,
-      }).then((res) => res.category.map((cat: Category) => ({
-        ...cat,
-        name: formatDisplayName(cat.name)
-      })));
+      }).then((res) =>
+        res.category.map((cat: Category) => ({
+          ...cat,
+          name: formatDisplayName(cat.name),
+        }))
+      );
 
       set({ categories });
       return categories as Category[];
@@ -64,16 +67,22 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       if (!cat) throw new Error("Category name is required");
 
       const userData = useAuthStore.getState().userData;
-      
+
       const formattedName = formatStorageName(cat);
 
-      const category = await fetchFromHasura(getCategory, {
-        name: formattedName,
+      const existingCategories =  await fetchFromHasura(getCategory, {
+        name: cat,
+        name_with_space: formattedName.replace(/_/g, " "),
+        name_with_underscore: formattedName.replace(/ /g, "_"),
         partner_id: userData?.id,
       }).then((res) => res.category[0]);
 
-      if (category) {
-        return category;
+      console.log("Existing categories:", existingCategories);
+
+      const existingCategory = existingCategories[0];
+
+      if (existingCategory) {
+        return existingCategory as Category;
       }
 
       const addedCat = await fetchFromHasura(addCategory, {
@@ -103,7 +112,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const updatedCat = {
         id: cat.id,
-        name: (cat.name),
+        name: cat.name,
         priority: cat.priority,
       };
 
@@ -116,7 +125,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
           category.id === updatedCategory.id
             ? {
                 ...category,
-                name: (updatedCategory.name),
+                name: updatedCategory.name,
                 priority: updatedCategory.priority,
               }
             : category
@@ -126,7 +135,6 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       // to update categorys of menu items
       revalidateTag(user?.id as string);
       updatedCategories(get().categories);
-
     } catch (error) {
       console.error(error);
     }
