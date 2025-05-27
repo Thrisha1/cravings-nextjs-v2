@@ -112,6 +112,7 @@ interface AddressCardProps {
   isGeoLoading: boolean;
   geoError: string | null;
   deliveryInfo: any;
+  hasLocation: boolean;
 }
 
 const AddressCard = ({
@@ -122,6 +123,7 @@ const AddressCard = ({
   isGeoLoading,
   geoError,
   deliveryInfo,
+  hasLocation,
 }: AddressCardProps) => {
   mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
@@ -133,9 +135,9 @@ const AddressCard = ({
 
       <Textarea
         value={address || ""}
-        onChange={(e) => setAddress(e.target.value)}
-        className="min-h-[100px] mb-3"
-        placeholder="Enter your delivery address"
+        readOnly
+        className="min-h-[100px] mb-3 bg-gray-100"
+        placeholder="Select your location to see the address"
       />
 
       <div className="space-y-2">
@@ -148,8 +150,9 @@ const AddressCard = ({
           type="button"
           onClick={getLocation}
           className="w-full"
-          variant="outline"
+          variant={hasLocation ? "outline" : "outline"}
           disabled={isGeoLoading}
+          style={!hasLocation ? { borderColor: '#ef4444', color: '#ef4444' } : {}}
         >
           {isGeoLoading ? (
             <>
@@ -430,8 +433,6 @@ const MapModal = ({
   const initializeMap = async () => {
     if (!mapContainer.current || map.current) return;
 
-
-
     // Try to get user location first
     const defaultCenter = [77.5946, 12.9716];
     let initialCenter = defaultCenter;
@@ -664,6 +665,7 @@ const PlaceOrderModal = ({
   const isDelivery = !tableNumber;
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
   const isQrScan = qrId !== null && tableNumber !== 0;
+  const hasLocation = !!selectedLocation || !!address;
 
   useEffect(() => {
     const checkGeolocationPermission = async () => {
@@ -820,6 +822,7 @@ const PlaceOrderModal = ({
                 isGeoLoading={isGeoLoading}
                 geoError={geoError}
                 deliveryInfo={deliveryInfo}
+                hasLocation={hasLocation}
               />
             ) : null}
 
