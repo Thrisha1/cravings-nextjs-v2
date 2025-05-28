@@ -2086,124 +2086,20 @@ export default function ProfilePage() {
                                   enabled: enabled,
                                 },
                               };
-
                               setFeatures(updates);
                               setUserFeatures(updates);
                               handleFeatureEnabledChange(updates);
                             }}
                           />
                         </div>
-
                         {features.captainordering.enabled && (
-                          <div className="space-y-2">
-                            <div className="h-[140px] overflow-y-auto border rounded-lg bg-gray-50 p-2 space-y-2">
-                              {captains.map((captain) => (
-                                <div key={captain.id} className="flex items-center justify-between p-2 bg-white border rounded-lg">
-                                  <div className="flex-1">
-                                    <div className="font-medium text-sm">{captain.name || "Unnamed Captain"}</div>
-                                    <div className="text-xs text-gray-500">{captain.email}</div>
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleDeleteCaptain(captain.id)}
-                                    disabled={isDeletingCaptain === captain.id}
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8"
-                                  >
-                                    {isDeletingCaptain === captain.id ? (
-                                      <div className="animate-spin h-3 w-3 border-2 border-red-500 border-t-transparent rounded-full" />
-                                    ) : (
-                                      <X className="h-3 w-3" />
-                                    )}
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-
-                            {!showCaptainForm ? (
-                              <Button
-                                onClick={() => setShowCaptainForm(true)}
-                                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Captain Account
-                              </Button>
-                            ) : (
-                              <div className="p-4 bg-white border rounded-lg space-y-4">
-                                <div className="flex justify-between items-center">
-                                  <h3 className="font-medium">Create Captain Account</h3>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setShowCaptainForm(false)}
-                                    className="text-gray-500 hover:text-gray-700"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                                <form onSubmit={handleCreateCaptain} className="space-y-4">
-                                  <div className="space-y-2">
-                                    <label htmlFor="captainName" className="text-sm font-medium">
-                                      Name
-                                    </label>
-                                    <Input
-                                      id="captainName"
-                                      type="text"
-                                      placeholder="Enter captain name"
-                                      value={captainName}
-                                      onChange={(e) => setCaptainName(e.target.value)}
-                                      required
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <label htmlFor="captainEmail" className="text-sm font-medium">
-                                      Email
-                                    </label>
-                                    <Input
-                                      id="captainEmail"
-                                      type="email"
-                                      placeholder="Enter captain email"
-                                      value={captainEmail}
-                                      onChange={(e) => setCaptainEmail(e.target.value)}
-                                      required
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <label htmlFor="captainPassword" className="text-sm font-medium">
-                                      Password
-                                    </label>
-                                    <Input
-                                      id="captainPassword"
-                                      type="password"
-                                      placeholder="Enter captain password"
-                                      value={captainPassword}
-                                      onChange={(e) => setCaptainPassword(e.target.value)}
-                                      required
-                                    />
-                                  </div>
-                                  {captainError && (
-                                    <p className="text-sm text-red-500">{captainError}</p>
-                                  )}
-                                  <div className="flex gap-2">
-                                    <Button
-                                      type="submit"
-                                      disabled={isCreatingCaptain}
-                                      className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
-                                    >
-                                      {isCreatingCaptain ? "Creating..." : "Create Account"}
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      onClick={() => setShowCaptainForm(false)}
-                                      className="flex-1"
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                </form>
-                              </div>
-                            )}
+                          <div className="pt-2">
+                            <Button
+                              className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                              onClick={() => router.push("/admin/captain-management")}
+                            >
+                              Manage Captain Accounts
+                            </Button>
                           </div>
                         )}
                       </div>
