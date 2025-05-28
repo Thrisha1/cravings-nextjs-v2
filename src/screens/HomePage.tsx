@@ -234,7 +234,7 @@ export default function HomePage() {
                 Smart Self-Ordering System
               </h3>
               <ul className="space-y-3">
-                {["Contactless ordering", "Real-time order tracking", "Customizable options", "Integrated payments"].map((item, i) => (
+                {["Contactless ordering", "Real-time order tracking", "Customizable options"].map((item, i) => (
                   <li key={i} className="flex items-center gap-2 text-gray-600">
                     <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
                     <span>{item}</span>
