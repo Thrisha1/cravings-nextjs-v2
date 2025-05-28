@@ -48,14 +48,13 @@ const OrderItemCard = ({
   const [deliveryLocation, setDeliveryLocation] = React.useState<string | null>(
     null
   );
+  const { updateOrderStatusHistory } = useOrderStore();
+  const router = useRouter();
 
-  const handlePrintBill = useReactToPrint({
-    contentRef: billRef,
-  });
-
-  const handlePrintKOT = useReactToPrint({
-    contentRef: kotRef,
-  });
+  // Sync localOrder with prop changes
+  useEffect(() => {
+    setLocalOrder(initialOrder);
+  }, [initialOrder]);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -273,14 +272,18 @@ const OrderItemCard = ({
 
         <div className="mt-4 flex gap-2 items-center justify-between flex-wrap">
           <div className="flex gap-2 flex-wrap">
-            <Button size="sm" variant="outline" onClick={handlePrintKOT}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print KOT
-            </Button>
-            <Button size="sm" variant="outline" onClick={handlePrintBill}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print Bill
-            </Button>
+            <Link href={`/kot/${localOrder.id}`} target="_blank" passHref>
+              <Button size="sm" variant="outline">
+                <Printer className="h-4 w-4 mr-2" />
+                Print KOT
+              </Button>
+            </Link>
+            <Link target="_blank" href={`/bill/${localOrder.id}`} passHref>
+              <Button size="sm" variant="outline">
+                <Printer className="h-4 w-4 mr-2" />
+                Print Bill
+              </Button>
+            </Link>
 
             {order.status === "pending" && (
               <>
