@@ -87,7 +87,7 @@ export default function HomePage() {
                   Start Your Free Trial
                 </Button>
                 <Button
-                  onClick={() => navigate.push("/offers")}
+                  onClick={() => window.open("https://wa.me/918590115462?text=Hi!%20I'm%20interested%20in%20partnering%20with%20Cravings.%20Can%20you%20share%20the%20details", "_blank")}
                   variant="outline"
                   className="bg-white hover:bg-gray-50 text-orange-600 border border-orange-600 px-8 py-6 text-lg rounded-full transition-all duration-300 flex items-center gap-2"
                 >
@@ -562,7 +562,7 @@ export default function HomePage() {
               Start Your Free Trial
             </Button>
             <Button
-              onClick={() => navigate.push("/offers")}
+              onClick={() => window.open("https://wa.me/918590115462?text=Hi!%20I'm%20interested%20in%20partnering%20with%20Cravings.%20Can%20you%20share%20the%20details", "_blank")}
               variant="outline"
               className="bg-transparent hover:bg-orange-500 text-white border border-white px-8 py-6 text-lg rounded-full transition-all duration-300"
             >
