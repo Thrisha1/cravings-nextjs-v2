@@ -1,1 +1,1 @@
-cravingss
+cravings
