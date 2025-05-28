@@ -426,13 +426,13 @@ export default function HomePage() {
                     </>
                   ) : (
                     <>
-                      <span className="text-4xl font-bold text-gray-900">$12</span>
+                      <span className="text-4xl font-bold text-gray-900">$15</span>
                       <span className="ml-1 text-lg text-gray-500">/month</span>
                     </>
                   )}
                 </div>
                 <p className="mt-2 text-sm text-gray-500">
-                  {isIndianPricing ? 'or ₹5000/year (Save 17%)' : 'or $120/year (Save 17%)'}
+                  {isIndianPricing ? 'or ₹5000/year (Save 17%)' : 'or $150/year (Save 17%)'}
                 </p>
               </div>
               <div className="p-6 space-y-4">
