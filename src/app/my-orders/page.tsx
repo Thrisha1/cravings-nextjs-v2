@@ -1,7 +1,14 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Edit, Trash2 } from "lucide-react";
+import {
+  Loader2,
+  Edit,
+  Trash2,
+  SquareArrowUpRight,
+  SquareArrowOutDownRight,
+  ExternalLink,
+} from "lucide-react";
 import { format } from "date-fns";
 import { Partner, useAuthStore } from "@/store/authStore";
 import { usePOSStore } from "@/store/posStore";
@@ -10,10 +17,11 @@ import useOrderStore from "@/store/orderStore";
 import { EditOrderModal } from "@/components/admin/pos/EditOrderModal";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { cancelOrderMutation } from "@/api/orders";
-import {
-  getExtraCharge,
-  getGstAmount,
-} from "@/components/hotelDetail/OrderDrawer";
+import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
+import { toStatusDisplayFormat } from "@/lib/statusHistory";
+import Link from "next/link";
+import { getExtraCharge } from "@/lib/getExtraCharge";
+import { getStatusDisplay } from "@/lib/getStatusDisplay";
 
 const Page = () => {
   const { userData } = useAuthStore();
@@ -26,7 +34,6 @@ const Page = () => {
       const unsubscribe = subscribeUserOrders((orders) => {
         setLoading(false);
       });
-      console.log("OrderStore here", unsubscribe);
       return () => {
         unsubscribe();
       };
@@ -64,7 +71,6 @@ const Page = () => {
       await fetchFromHasura(cancelOrderMutation, {
         orderId,
       });
-
       toast.success("Order cancelled successfully");
     } catch (error) {
       console.error("Error cancelling order:", error);
@@ -72,7 +78,6 @@ const Page = () => {
     }
   };
 
-  // Calculate GST amount
   const calculateGst = (amount: number, gstPercentage: number) => {
     return (amount * gstPercentage) / 100;
   };
@@ -91,7 +96,7 @@ const Page = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {userOrders.map((order) => {
+          {userOrders.map((order, index) => {
             const gstPercentage =
               (order.partner as Partner)?.gst_percentage || 0;
             const foodTotal = (order.items || []).reduce(
@@ -111,8 +116,12 @@ const Page = () => {
                 0
               ) || 0;
 
-
             const grandTotal = foodTotal + extraChargesTotal + gstAmount;
+            const statusDisplay = getStatusDisplay(order);
+
+            if (index == 0) {
+              console.log("Order Data:", order);
+            }
 
             return (
               <div
@@ -122,50 +131,29 @@ const Page = () => {
               >
                 <div className="flex justify-between items-start mb-2">
                   <div>
+                    <h3 className="font-medium text-xs text-gray-500">
+                      Order Id : #{order.id.split("-")[0]}
+                    </h3>
                     <h3 className="font-medium">
-                      Order #{order.id.split("-")[0]}
+                      Store : {order.partner?.store_name}
                     </h3>
-                    <h3 className="text-sm text-gray-500">
-                      Ordered from : {order.partner?.store_name}
-                    </h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs opacity-70">
                       {format(new Date(order.createdAt), "PPPp")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        order.status === "pending"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : order.status === "completed"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
+                    <Link
+                      href={`/order/${order.id}`}
+                      className={`px-2 py-1 rounded-full font-medium text-xs bg-blue-500 text-white flex items-center gap-1`}
                     >
-                      {order.status.charAt(0).toUpperCase() +
-                        order.status.slice(1)}
+                      <ExternalLink className="inline mr-1 w-5 h-5" />
+                      <span>Track</span>
+                    </Link>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs ${statusDisplay.className}`}
+                    >
+                      {statusDisplay.text}
                     </span>
-                    {order.status === "pending" && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditOrder(order)}
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-red-600 border-red-200 hover:bg-red-50"
-                          onClick={() => handleCancelOrder(order.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Cancel
-                        </Button>
-                      </>
-                    )}
                   </div>
                 </div>
 
@@ -183,8 +171,28 @@ const Page = () => {
                   )}
                   {order.deliveryAddress && (
                     <p className="text-sm">
-                      <span className="font-medium">Address:</span>{" "}
+                      <span className="font-medium">Delivery Address:</span>{" "}
                       {order.deliveryAddress}
+                    </p>
+                  )}
+
+                  {order.delivery_location && (
+                    <p className="text-sm">
+                      {/* <span className="font-medium">Delivery Location:</span>{" "} */}
+                      <a
+                        className="text-blue-500 hover:underline"
+                        href={`https://www.google.com/maps?q=${order.delivery_location.coordinates[1]},${order.delivery_location.coordinates[0]}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View Location
+                      </a>
+                    </p>
+                  )}
+
+                  {order.notes && (
+                    <p className="text-sm text-orange-500 mt-2">
+                      Notes : {order.notes}
                     </p>
                   )}
                 </div>
@@ -206,7 +214,6 @@ const Page = () => {
                   </ul>
                 </div>
 
-                {/* Extra Charges Section */}
                 {(order?.extraCharges || []).length > 0 && (
                   <div className="border-t pt-3">
                     <h4 className="font-medium mb-2">Extra Charges</h4>
@@ -230,7 +237,6 @@ const Page = () => {
                   </div>
                 )}
 
-                {/* Order Summary */}
                 <div className="border-t pt-3 space-y-2">
                   {gstPercentage > 0 && (
                     <div className="flex justify-between">
@@ -249,6 +255,30 @@ const Page = () => {
                       {grandTotal.toFixed(2)}
                     </span>
                   </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-2 mt-4">
+                  {order.status === "pending" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditOrder(order)}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleCancelOrder(order.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             );

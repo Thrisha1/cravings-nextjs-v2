@@ -54,7 +54,7 @@ export default function RootLayout({
       </head>
       <body className={`antialiased`}>
         <AuthInitializer />
-        <Toaster richColors />
+        <Toaster richColors closeButton />
         {/* <Snow /> */}
         {/* <Navbar /> */}
         {/* <RateUsModal /> */}

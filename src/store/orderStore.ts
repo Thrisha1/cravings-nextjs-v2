@@ -14,7 +14,15 @@ import { subscribeToHasura } from "@/lib/hasuraSubscription";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { usePOSStore } from "./posStore";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
+import {
+  defaultStatusHistory,
+  OrderStatusDisplay,
+  OrderStatusHistoryTypes,
+  OrderStatusStorage,
+  setStatusHistory,
+  toStatusDisplayFormat,
+} from "@/lib/statusHistory";
 
 export interface OrderItem extends HotelDataMenus {
   id: string;
@@ -35,10 +43,12 @@ export interface Order {
   items: OrderItem[];
   totalPrice: number;
   createdAt: string;
+  notes?: string | null;
   tableNumber?: number | null;
   qrId?: string | null;
   status: "pending" | "completed" | "cancelled";
   partnerId: string;
+  status_history?: OrderStatusStorage;
   partner?: {
     gst_percentage?: number;
     currency?: string;
@@ -68,14 +78,12 @@ export interface Order {
     phone?: string;
     email: string;
   };
-  extraCharges?:
-    | {
-        name: string;
-        amount: number;
-        charge_type?: string;
-        id?: string;
-      }[]
-    | null;
+  extraCharges?: {
+    name: string;
+    amount: number;
+    charge_type?: string;
+    id?: string;
+  }[] | null;
 }
 
 export interface DeliveryInfo {
@@ -115,7 +123,6 @@ interface OrderState {
   deliveryCost: number | null;
   open_place_order_modal: boolean;
   setOpenPlaceOrderModal: (open: boolean) => void;
-
   setHotelId: (id: string) => void;
   addItem: (item: HotelDataMenus) => void;
   removeItem: (itemId: string) => void;
@@ -127,13 +134,11 @@ interface OrderState {
     tableNumber?: number,
     qrId?: string,
     gstIncluded?: number,
-    extraCharges?:
-      | {
-          name: string;
-          amount: number;
-          charge_type?: string;
-        }[]
-      | null,
+    extraCharges?: {
+      name: string;
+      amount: number;
+      charge_type?: string;
+    }[] | null,
     deliveryCharge?: number
   ) => Promise<Order | null>;
   getCurrentOrder: () => HotelOrderState;
@@ -157,6 +162,11 @@ interface OrderState {
     newStatus: "completed" | "cancelled" | "pending",
     setOrders: (orders: Order[]) => void
   ) => Promise<void>;
+  updateOrderStatusHistory: (
+    orderId: string,
+    status: OrderStatusHistoryTypes,
+    orders: Order[]
+  ) => Promise<void>;
 }
 
 const useOrderStore = create(
@@ -179,38 +189,111 @@ const useOrderStore = create(
       open_drawer_bottom: false,
       open_place_order_modal: false,
 
+      updateOrderStatusHistory: async (
+        orderId: string,
+        status: OrderStatusHistoryTypes,
+        orders: Order[]
+      ) => {
+        try {
+          const order = orders.find((o) => o.id === orderId);
+          if (!order) {
+            throw new Error("Order not found");
+          }
+
+          const currentStatusHistory =
+            order.status_history || defaultStatusHistory;
+
+          const updatedStatusHistory = setStatusHistory(
+            currentStatusHistory,
+            status,
+            { isCompleted: true }
+          );
+
+          const defaultQuery = `mutation UpdateOrderStatusHistory($orderId: uuid!, $statusHistory: json!) {
+              update_orders_by_pk(
+                pk_columns: {id: $orderId},
+                _set: {status_history: $statusHistory}
+              ) {
+                id
+                status_history
+              }
+            }`;
+
+          const updateStatusAndStatusHistoryQuery = `mutation UpdateOrderStatusHistory($orderId: uuid!, $statusHistory: json!) {
+              update_orders_by_pk(
+                pk_columns: {id: $orderId},
+                _set: {status_history: $statusHistory , status: "completed"}
+              ) {
+                id
+                status_history
+                status
+              }
+            }`;
+
+          const response = await fetchFromHasura(
+            status === "completed"
+              ? updateStatusAndStatusHistoryQuery
+              : defaultQuery,
+            {
+              orderId,
+              statusHistory: updatedStatusHistory,
+            }
+          );
+
+          if (response.errors) {
+            throw new Error(
+              response.errors[0]?.message || "Failed to update status history"
+            );
+          }
+
+          const updatedOrders = orders.map((o) =>
+            o.id === orderId
+              ? {
+                  ...o,
+                  status_history: updatedStatusHistory,
+                }
+              : o
+          );
+
+          toast.success(`Order status updated`);
+        } catch (error) {
+          console.error(error);
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Failed to update order status history"
+          );
+        }
+      },
 
       updateOrderStatus: async (
-          orders : Order[],
-          orderId: string,
-          newStatus: "completed" | "cancelled" | "pending",
-          setOrders: (orders: Order[]) => void
-        ) => {
-
+        orders: Order[],
+        orderId: string,
+        newStatus: "completed" | "cancelled" | "pending",
+        setOrders: (orders: Order[]) => void
+      ) => {
         const userData = useAuthStore.getState().userData;
 
-          try {
-            // First update the order status
-            // First update the order status
-            const response = await fetchFromHasura(
-              `mutation UpdateOrderStatus($orderId: uuid!, $status: String!) {
+        try {
+          const response = await fetchFromHasura(
+            `mutation UpdateOrderStatus($orderId: uuid!, $status: String!) {
                 update_orders_by_pk(pk_columns: {id: $orderId}, _set: {status: $status}) {
                   id
                   status
                 }
               }`,
-              { orderId, status: newStatus }
-            );
-      
-            if (response.errors) throw new Error(response.errors[0].message);
-      
-            if (newStatus === "completed") {
-              const order = orders.find((o) => o.id === orderId);
-              if (order) {
-                for (const item of order.items) {
-                  if (item.stocks?.[0]?.id) {
-                    await fetchFromHasura(
-                      `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
+            { orderId, status: newStatus }
+          );
+
+          if (response.errors) throw new Error(response.errors[0].message);
+
+          if (newStatus === "completed") {
+            const order = orders.find((o) => o.id === orderId);
+            if (order) {
+              for (const item of order.items) {
+                if (item.stocks?.[0]?.id) {
+                  await fetchFromHasura(
+                    `mutation DecreaseStockQuantity($stockId: uuid!, $quantity: numeric!) {
                         update_stocks_by_pk(
                           pk_columns: {id: $stockId},
                           _inc: {stock_quantity: $quantity}
@@ -219,29 +302,28 @@ const useOrderStore = create(
                           stock_quantity
                         }
                       }`,
-                      {
-                        stockId: item.stocks?.[0]?.id,
-                        quantity: -item.quantity,
-                      }
-                    );
-                  }
+                    {
+                      stockId: item.stocks?.[0]?.id,
+                      quantity: -item.quantity,
+                    }
+                  );
                 }
-      
-                revalidateTag(userData?.id as string);
               }
+              revalidateTag(userData?.id as string);
             }
-
-            const updatedOrders = orders.map((order) =>
-              order.id === orderId ? { ...order, status: newStatus } : order
-            );
-      
-            setOrders(updatedOrders);
-            toast.success(`Order marked as ${newStatus}`);
-          } catch (error) {
-            console.error(error);
-            toast.error(`Failed to update order status`);
           }
-        },
+
+          const updatedOrders = orders.map((order) =>
+            order.id === orderId ? { ...order, status: newStatus } : order
+          );
+
+          setOrders(updatedOrders);
+          toast.success(`Order marked as ${newStatus}`);
+        } catch (error) {
+          console.error(error);
+          toast.error(`Failed to update order status`);
+        }
+      },
 
       setOpenPlaceOrderModal: (open) => set({ open_place_order_modal: open }),
 
@@ -265,11 +347,14 @@ const useOrderStore = create(
               tableNumber: order.table_number,
               qrId: order.qr_id,
               status: order.status,
+              status_history: order.status_history,
               type: order.type,
               phone: order.phone,
               deliveryAddress: order.delivery_address,
+              delivery_location: order.delivery_location,
               partnerId: order.partner_id,
               partner: order.partner,
+              notes: order.notes || null,
               userId: order.user_id,
               gstIncluded: order.gst_included,
               extraCharges: order.extra_charges || [], // Handle null case
@@ -566,12 +651,6 @@ const useOrderStore = create(
       },
 
       addItem: (item) => {
-        // const user = useAuthStore.getState().userData;
-        // if (!user) {
-        //   set({ open_auth_modal: true });
-        //   return;
-        // }
-
         const state = get();
         if (!state.hotelId) return;
 
@@ -650,7 +729,6 @@ const useOrderStore = create(
 
       deleteOrder: async (orderId: string) => {
         try {
-          // First delete the order items
           const deleteItemsResponse = await fetchFromHasura(
             `mutation DeleteOrderItems($orderId: uuid!) {
               delete_order_items(where: {order_id: {_eq: $orderId}}) {
@@ -667,7 +745,6 @@ const useOrderStore = create(
             );
           }
 
-          // Then delete the order itself
           const deleteOrderResponse = await fetchFromHasura(
             `mutation DeleteOrder($orderId: uuid!) {
               delete_orders_by_pk(id: $orderId) {
@@ -683,18 +760,13 @@ const useOrderStore = create(
             );
           }
 
-          // Update the local state if needed
           set((state) => {
-            // Remove from partnerOrders if present
             const partnerOrders = state.partnerOrders.filter(
               (order) => order.id !== orderId
             );
-
-            // Remove from userOrders if present
             const userOrders = state.userOrders.filter(
               (order) => order.id !== orderId
             );
-
             return { partnerOrders, userOrders };
           });
 
@@ -775,14 +847,8 @@ const useOrderStore = create(
         tableNumber,
         qrId,
         gstIncluded,
-        extraCharges?:
-          | {
-              name: string;
-              amount: number;
-              charge_type?: string;
-            }[]
-          | null,
-        deliveryCharge?: number
+        extraCharges,
+        deliveryCharge
       ) => {
         try {
           const state = get();
@@ -809,7 +875,8 @@ const useOrderStore = create(
             return null;
           }
 
-          // Validate qrId - must be a valid UUID or null
+    
+
           const isValidUUID = (str: string) => {
             const uuidRegex =
               /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -817,7 +884,6 @@ const useOrderStore = create(
           };
 
           const validQrId = qrId && isValidUUID(qrId) ? qrId : null;
-
           const type = (tableNumber ?? 0) > 0 ? "table_order" : "delivery";
 
           // Prepare extra charges array
@@ -835,7 +901,7 @@ const useOrderStore = create(
                 name: charge.name,
                 amount: charge.amount,
                 charge_type: charge.charge_type || "FLAT_FEE",
-                id:uuidv4(),
+                id: uuidv4(),
               });
             });
           }
@@ -991,8 +1057,13 @@ const useOrderStore = create(
                 type
                 delivery_address
                 delivery_location
+                delivery_location
                 status
+                status_history
                 partner_id
+                gst_included
+                extra_charges
+                phone
                 gst_included
                 extra_charges
                 phone
@@ -1008,12 +1079,12 @@ const useOrderStore = create(
                   id
                   quantity
                   item
+                  item
                   menu {
                     id
                     name
                     price
                     category {
-                      id
                       name
                       priority
                     }
@@ -1085,8 +1156,9 @@ const useOrderStore = create(
             partnerId: order.partner_id,
             delivery_location: order.delivery_location,
             gstIncluded: order.gst_included,
-            extraCharges: order.extra_charges || [], // Handle null case
-            delivery_charge: order.delivery_charge, // Include delivery_charge
+            extraCharges: order.extra_charges || [],
+            delivery_charge: order.delivery_charge,
+            status_history: order.status_history,
             userId: order.user_id,
             user: order.user,
             orderedby: order.orderedby,

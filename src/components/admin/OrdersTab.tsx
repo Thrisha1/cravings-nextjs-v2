@@ -30,8 +30,13 @@ const OrdersTab = () => {
   const router = useRouter();
   const { userData, features } = useAuthStore();
   const prevOrdersRef = useRef<Order[]>([]);
-  const { subscribeOrders, partnerOrders, deleteOrder, updateOrderStatus } =
-    useOrderStore();
+  const {
+    subscribeOrders,
+    partnerOrders,
+    deleteOrder,
+    updateOrderStatus,
+    updateOrderStatusHistory,
+  } = useOrderStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"table" | "delivery" | "pos">(
@@ -126,26 +131,26 @@ const OrdersTab = () => {
   useEffect(() => {
     if (!userData?.id) return;
 
-    const unsubscribe = subscribeOrders((allOrders) => {
+    const unsubscribe = subscribeOrders((allOrders: Order[]) => {
       const prevOrders = prevOrdersRef.current;
 
       // Count new pending orders
       const newTableOrders = allOrders.filter(
-        (order) =>
+        (order: Order) =>
           order.status === "pending" &&
           order.type === "table_order" &&
           !prevOrders.some((prevOrder) => prevOrder.id === order.id)
       );
 
       const newDeliveryOrders = allOrders.filter(
-        (order) =>
+        (order: Order) =>
           order.status === "pending" &&
           order.type === "delivery" &&
           !prevOrders.some((prevOrder) => prevOrder.id === order.id)
       );
 
       const newPOSOrders = allOrders.filter(
-        (order) =>
+        (order: Order) =>
           order.status === "pending" &&
           order.type === "pos" &&
           !prevOrders.some((prevOrder) => prevOrder.id === order.id)
@@ -371,7 +376,6 @@ const OrdersTab = () => {
 
                     return (
                       <OrderItemCard
-                    
                         key={`pos-${order.id}-${index}`}
                         order={order}
                         deleteOrder={handleDeleteOrder}

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Pen, Plus, Search, Upload, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +15,6 @@ import Link from "next/link";
 import { AddMenuItemModal } from "../bulkMenuUpload/AddMenuItemModal";
 import { EditMenuItemModal } from "./EditMenuItemModal";
 import { CategoryManagementModal } from "./CategoryManagementModal";
-import Image from "next/image";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
 import { toast } from "sonner";
@@ -420,7 +419,7 @@ export function MenuTab() {
                                       </CardHeader>
                                       <CardContent className="relative">
                                         <p className="text-2xl font-bold">
-                                          {(userData as Partner)?.currency || "₹"}{item.price.toFixed(3)}
+                                          {(userData as Partner)?.currency || "₹"}{userData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09" ? item.price.toFixed(3) : item.price}
                                         </p>
                                         {item.description && (
                                           <p className="text-gray-600 mt-2">

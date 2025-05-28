@@ -260,3 +260,38 @@ button[data-state="open"] h1 .left-marker {
   from { transform: translateY(-50%) rotate(0deg) !important; }
   to { transform: translateY(-50%) rotate(360deg) !important; }
 }
+
+@media print {
+ 
+  body * {
+    visibility: hidden;
+  }
+  
+  #printable-content, #printable-content * {
+    visibility: visible;
+  }
+
+  /* Force content to stay on one page */
+  #printable-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto; 
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Remove default margins */
+  @page {
+    size: auto;
+    margin: 0;
+  }
+
+  @page :first{
+    break-after: avoid;
+  }
+}

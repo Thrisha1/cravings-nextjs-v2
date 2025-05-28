@@ -173,11 +173,14 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     total_price
     created_at
     table_number
+    notes
     qr_id
     type
     delivery_address
     delivery_location
+    delivery_location
     status
+    status_history
     partner_id
     gst_included
     extra_charges
@@ -211,6 +214,15 @@ subscription GetPartnerOrders($partner_id: uuid!) {
           stock_quantity
           id
         }
+        description
+        image_url
+        is_top
+        is_available
+        priority
+        stocks {
+          stock_quantity
+          id
+        }
       }
     }
   }
@@ -230,7 +242,10 @@ subscription GetUserOrders($user_id: uuid!) {
     qr_id
     type
     delivery_address
+    delivery_location
+    notes
     status
+    status_history
     partner_id
     partner {
       gst_percentage

@@ -3,7 +3,6 @@ import { MenuItem } from "./menuStore_hasura";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { Partner, Captain, useAuthStore } from "./authStore";
 import {
-  getExtraCharge,
   getGstAmount,
 } from "@/components/hotelDetail/OrderDrawer";
 import {
@@ -14,6 +13,7 @@ import {
 import { deleteBillMutation } from "@/api/pos";
 import { Order, OrderItem } from "./orderStore";
 import { v4 as uuidv4 } from "uuid";
+import { getExtraCharge } from "@/lib/getExtraCharge";
 
 interface CartItem extends MenuItem {
   quantity: number;

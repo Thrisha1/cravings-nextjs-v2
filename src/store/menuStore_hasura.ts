@@ -169,6 +169,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         item.category.name.trim().toLowerCase()
       );
 
+      console.log("Category added:", category);
+      
+
       const category_id = category?.id;
 
       if (!category_id) throw new Error("Category ID not found");

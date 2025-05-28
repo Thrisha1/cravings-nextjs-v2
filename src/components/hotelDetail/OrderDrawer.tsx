@@ -14,6 +14,7 @@ import {
 import useOrderStore, { OrderItem } from "@/store/orderStore";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -25,8 +26,10 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
-import { QrGroup, PricingRule } from "@/app/admin/qr-management/page";
+import { QrGroup, PricingRule, PricingRule } from "@/app/admin/qr-management/page";
 import PlaceOrderModal from "./placeOrder/PlaceOrderModal";
+import PlaceOrderModal from "./placeOrder/PlaceOrderModal";
+import { getExtraCharge } from "@/lib/getExtraCharge";
 
 export const getGstAmount = (price: number, gstPercentage: number) => {
   return (price * gstPercentage) / 100;
@@ -177,6 +180,7 @@ export const getExtraCharge = (
     : applicableRule.charge;
 };
 
+
 const OrderDrawer = ({
   styles,
   hotelData,
@@ -199,11 +203,17 @@ const OrderDrawer = ({
     decreaseQuantity,
     open_drawer_bottom,
     setOpenDrawerBottom,
+    open_drawer_bottom,
+    setOpenDrawerBottom,
     removeItem,
+    coordinates,
     coordinates,
     open_order_drawer,
     setOpenPlaceOrderModal,
+    setOpenPlaceOrderModal,
     setOpenOrderDrawer,
+    deliveryInfo,
+    setDeliveryInfo,
     deliveryInfo,
     setDeliveryInfo,
   } = useOrderStore();
@@ -215,14 +225,22 @@ const OrderDrawer = ({
   useEffect(() => {
     setIsQrScan((pathname.includes("qrScan") && !!qrId) && !(tableNumber === 0));
   }, [pathname, qrId]);
+  const [features, setFeatures] = useState<FeatureFlags | null>(null);
+
+  useEffect(() => {
+    setIsQrScan((pathname.includes("qrScan") && !!qrId) && !(tableNumber === 0));
+  }, [pathname, qrId]);
 
   useEffect(() => {
     if (hotelData) {
+      setFeatures(getFeatures(hotelData?.feature_flags as string));
       setFeatures(getFeatures(hotelData?.feature_flags as string));
     }
   }, [hotelData]);
 
   const calculateGrandTotal = () => {
+    const baseTotal =
+      items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
     const baseTotal =
       items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
     let grandTotal = baseTotal;
@@ -247,10 +265,27 @@ const OrderDrawer = ({
         qrGroup.charge_type || "FLAT_FEE"
       );
     }
+    // if (
+    //   !isQrScan &&
+    //   deliveryInfo?.cost &&
+    //   items?.length &&
+    //   !deliveryInfo?.isOutOfRange
+    // ) {
+    //   grandTotal += deliveryInfo.cost;
+    // }
+
+    if (qrGroup?.extra_charge) {
+      grandTotal += getExtraCharge(
+        items || [],
+        qrGroup.extra_charge,
+        qrGroup.charge_type || "FLAT_FEE"
+      );
+    }
 
     return grandTotal.toFixed(2);
   };
 
+  const getWhatsappLink = () => {
   const getWhatsappLink = () => {
     const savedAddress = userAddress || "N/A";
     const selectedWhatsAppNumber = localStorage?.getItem(
@@ -307,16 +342,97 @@ const OrderDrawer = ({
     
     *📋 Order Items:*
       ${items
+    let locationLink = "";
+    const userLocationData = localStorage.getItem("user-location-store");
+    if (userLocationData) {
+      try {
+        const location = JSON.parse(userLocationData);
+        if (location.state?.coords) {
+          const { lat, lng } = location.state.coords;
+          locationLink = `\n*📍 Location:* https://www.google.com/maps?q=${lat},${lng}`;
+        }
+      } catch (error) {
+        console.error("Error parsing location data:", error);
+      }
+    }
+
+    const baseTotal =
+      items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
+    const gstAmount = hotelData?.gst_percentage
+      ? getGstAmount(baseTotal, hotelData.gst_percentage)
+      : 0;
+    const qrCharge = (qrGroup?.extra_charge)
+      ? getExtraCharge(
+          items || [],
+          qrGroup.extra_charge,
+          qrGroup.charge_type || "FLAT_FEE"
+        )
+      : 0;
+    const deliveryCharge =
+      !isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
+        ? deliveryInfo.cost
+        : 0;
+    const grandTotal = baseTotal + gstAmount + qrCharge + deliveryCharge;
+
+    const whatsappMsg = `
+    *🍽️ Order Details 🍽️*
+    
+    *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
+    ${
+      (tableNumber ?? 0) > 0
+        ? `*Table:* ${tableNumber}`
+        : "*Order Type:* Delivery"
+    }
+    ${
+      (tableNumber ?? 0) > 0
+        ? ""
+        : `*Delivery Address:* ${savedAddress}${locationLink}`
+    }
+    *Time:* ${new Date().toLocaleTimeString()}
+    
+    *📋 Order Items:*
+      ${items
         ?.map(
           (item, index) =>
             `${index + 1}. ${item.name} (${item.category.name})
+       ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
        ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
               2
             )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(
               2
             )}`
+            )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(
+              2
+            )}`
         )
         .join("\n\n")}
+    
+    *Subtotal:* ${hotelData.currency}${baseTotal.toFixed(2)}
+    
+    ${
+      hotelData?.gst_percentage
+        ? `*GST (${hotelData.gst_percentage}%):* ${
+            hotelData.currency
+          }${gstAmount.toFixed(2)}`
+        : ""
+    }
+    
+    ${
+      !isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
+        ? `*Delivery Charge:* ${hotelData.currency}${deliveryInfo.cost.toFixed(
+            2
+          )}`
+        : ""
+    }
+    
+    ${
+      (qrGroup?.extra_charge)
+        ? `*${qrGroup.name}:* ${hotelData.currency}${qrCharge.toFixed(2)}`
+        : ""
+    }
+    
+    *Total Price:* ${hotelData.currency}${grandTotal.toFixed(2)}
+    `;
     
     *Subtotal:* ${hotelData.currency}${baseTotal.toFixed(2)}
     
@@ -352,11 +468,16 @@ const OrderDrawer = ({
       "8590115462";
 
     return `https://api.whatsapp.com/send?phone=+91${number}&text=${encodeURIComponent(
+    return `https://api.whatsapp.com/send?phone=+91${number}&text=${encodeURIComponent(
       whatsappMsg
     )}`;
   };
 
   const handlePlaceOrder = async () => {
+    try {
+      setOpenPlaceOrderModal(true);
+      setOpenOrderDrawer(false);
+      setOpenDrawerBottom(false);
     try {
       setOpenPlaceOrderModal(true);
       setOpenOrderDrawer(false);
@@ -372,6 +493,10 @@ const OrderDrawer = ({
   const handleViewOrder = () => {
     setOpenOrderDrawer(true);
   };
+
+  useEffect(() => {
+    setOpenDrawerBottom(items?.length ? true : false);
+  }, [items]);
 
   useEffect(() => {
     setOpenDrawerBottom(items?.length ? true : false);
@@ -395,9 +520,29 @@ const OrderDrawer = ({
         >
           <div>
             <div className="flex gap-2 items-center font-black text-xl">
+    <>
+      <PlaceOrderModal
+        qrGroup={qrGroup || null}
+        qrId={qrId || null}
+        getWhatsappLink={getWhatsappLink}
+        hotelData={hotelData}
+        tableNumber={tableNumber || 0}
+      />
+      <Drawer open={open_order_drawer} onOpenChange={setOpenOrderDrawer}>
+        <div
+          style={{ ...styles.border }}
+          className={`fixed bottom-0 z-[51] left-1/2 -translate-x-1/2 transition-all duration-500 ${
+            !open_drawer_bottom ? "translate-y-full" : "translate-y-0"
+          } lg:max-w-[50%] bg-white text-black w-full px-[8%] py-6 rounded-t-[35px] bottom-bar-shadow flex items-center justify-between`}
+        >
+          <div>
+            <div className="flex gap-2 items-center font-black text-xl">
               <div>PRICE : </div>
               <div style={{ color: styles.accent }}>
                 {hotelData.currency}
+                {items?.reduce((acc, item) => {
+                  return acc + item.price * item.quantity;
+                }, 0) || 0}
                 {items?.reduce((acc, item) => {
                   return acc + item.price * item.quantity;
                 }, 0) || 0}
@@ -406,6 +551,12 @@ const OrderDrawer = ({
             <div className="flex gap-2 items-center text-sm text-black/70">
               <div>Items :</div>
               <div>{items?.length}</div>
+              {!isQrScan &&
+                deliveryInfo &&
+                items?.length &&
+                !deliveryInfo.isOutOfRange && (
+                  <div className="ml-2">(Delivery)</div>
+                )}
               {!isQrScan &&
                 deliveryInfo &&
                 items?.length &&
@@ -423,7 +574,35 @@ const OrderDrawer = ({
             View Order
           </div>
         </div>
+          <div
+            onClick={handlePlaceOrder}
+            style={{ color: styles.accent }}
+            className="font-black relative"
+          >
+            View Order
+          </div>
+        </div>
 
+        <DrawerContent className="max-h-[80vh] z-[52] lg:max-w-[50%] mx-auto">
+          <DrawerHeader>
+            <DrawerTitle>
+              <HeadingWithAccent
+                accent={styles.accent}
+                className="font-black text-xl tracking-wide"
+              >
+                {order ? "Order Details" : "Your Order"}
+              </HeadingWithAccent>
+            </DrawerTitle>
+            {order ? (
+              <DrawerDescription>
+                Order #{order.id.slice(0, 8)} - {order.status}
+              </DrawerDescription>
+            ) : (
+              <DrawerDescription>
+                Review your items before placing order
+              </DrawerDescription>
+            )}
+          </DrawerHeader>
         <DrawerContent className="max-h-[80vh] z-[52] lg:max-w-[50%] mx-auto">
           <DrawerHeader>
             <DrawerTitle>
@@ -512,6 +691,73 @@ const OrderDrawer = ({
               </TableBody>
             </Table>
           </div>
+          <div className="px-4 overflow-y-auto flex-1">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[50%] font-semibold text-sm text-gray-500">
+                    ITEM
+                  </TableHead>
+                  <TableHead className="text-right font-semibold text-sm text-gray-500">
+                    PRICE
+                  </TableHead>
+                  <TableHead className="text-center font-semibold text-sm text-gray-500">
+                    QTY
+                  </TableHead>
+                  <TableHead className="text-right font-semibold text-sm text-gray-500">
+                    TOTAL
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(items || []).map((item) => (
+                  <TableRow
+                    key={`order-item-${item.id}`}
+                    className="hover:bg-transparent border-b border-gray-100"
+                  >
+                    <TableCell className="font-medium py-3">
+                      {item.name}
+                    </TableCell>
+                    <TableCell className="text-right py-3">
+                      {hotelData.currency}
+                      {item.price}
+                    </TableCell>
+                    <TableCell className="text-center py-3">
+                      {order ? (
+                        item.quantity
+                      ) : (
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => {
+                              if (item.quantity > 1) {
+                                decreaseQuantity(item.id as string);
+                              } else {
+                                removeItem(item.id as string);
+                              }
+                            }}
+                            className="w-6 h-6 rounded-full flex items-center justify-center border"
+                          >
+                            -
+                          </button>
+                          <span>{item.quantity}</span>
+                          <button
+                            onClick={() => increaseQuantity(item.id as string)}
+                            className="w-6 h-6 rounded-full flex items-center justify-center border"
+                          >
+                            +
+                          </button>
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right py-3">
+                      {hotelData.currency}
+                      {(item.price * item.quantity).toFixed(2)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
 
           <DrawerFooter className="border-t">
             <div className="space-y-2">
@@ -519,7 +765,16 @@ const OrderDrawer = ({
               <div className="flex justify-between items-center text-sm">
                 <span className="font-medium">Items Subtotal:</span>
                 <span className="font-medium">
+          <DrawerFooter className="border-t">
+            <div className="space-y-2">
+              {/* Subtotal (items only) */}
+              <div className="flex justify-between items-center text-sm">
+                <span className="font-medium">Items Subtotal:</span>
+                <span className="font-medium">
                   {hotelData.currency}
+                  {(items || [])
+                    .reduce((acc, item) => acc + item.price * item.quantity, 0)
+                    .toFixed(2)}
                   {(items || [])
                     .reduce((acc, item) => acc + item.price * item.quantity, 0)
                     .toFixed(2)}
@@ -533,7 +788,18 @@ const OrderDrawer = ({
                     {qrGroup.name || "Extra Charge"}:
                   </span>
                   <span className="font-medium">
+              {/* QR Group Extra Charges */}
+              {qrGroup?.extra_charge && items?.length && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-medium">
+                    {qrGroup.name || "Extra Charge"}:
+                  </span>
+                  <span className="font-medium">
                     {hotelData.currency}
+                    {getExtraCharge(
+                      items || [],
+                      qrGroup.extra_charge,
+                      qrGroup.charge_type || "FLAT_FEE"
                     {getExtraCharge(
                       items || [],
                       qrGroup.extra_charge,
@@ -543,6 +809,13 @@ const OrderDrawer = ({
                 </div>
               )}
 
+              {/* GST */}
+              {hotelData?.gst_percentage && items?.length && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-medium">
+                    GST ({hotelData.gst_percentage}%):
+                  </span>
+                  <span className="font-medium">
               {/* GST */}
               {hotelData?.gst_percentage && items?.length && (
                 <div className="flex justify-between items-center text-sm">
@@ -565,10 +838,47 @@ const OrderDrawer = ({
                           : 0),
                       hotelData.gst_percentage
                     ).toFixed(2)}
+                    {getGstAmount(
+                      (items || []).reduce(
+                        (acc, item) => acc + item.price * item.quantity,
+                        0
+                      ) +
+                        (qrGroup?.extra_charge
+                          ? getExtraCharge(
+                              items || [],
+                              qrGroup.extra_charge,
+                              qrGroup.charge_type || "FLAT_FEE"
+                            )
+                          : 0),
+                      hotelData.gst_percentage
+                    ).toFixed(2)}
                   </span>
                 </div>
               )}
 
+              {/* Delivery Charges (if applicable) */}
+              {!isQrScan &&
+                deliveryInfo &&
+                items?.length &&
+                (deliveryInfo.isOutOfRange ? null : (
+                  <div className="flex justify-between items-center text-sm">
+                    <div>
+                      <span className="font-medium">Delivery Charge:</span>
+                      <div className="text-xs text-gray-500">
+                        {deliveryInfo.distance.toFixed(1)} km ×{" "}
+                        {hotelData.currency}
+                        {deliveryInfo.ratePerKm.toFixed(2)}/km
+                      </div>
+                    </div>
+                    <span className="font-medium">
+                      {hotelData.currency}
+                      {deliveryInfo.cost.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+
+              {/* Grand Total */}
+              <div className="flex justify-between items-center py-2 border-t border-gray-200">
               {/* Delivery Charges (if applicable) */}
               {!isQrScan &&
                 deliveryInfo &&
@@ -630,15 +940,50 @@ const OrderDrawer = ({
                       deliveryCharges
                     ).toFixed(2);
                   })()}
+                  {(() => {
+                    const itemsSubtotal = (items || []).reduce(
+                      (acc, item) => acc + item.price * item.quantity,
+                      0
+                    );
+                    const extraCharges = qrGroup?.extra_charge
+                      ? getExtraCharge(
+                          items || [],
+                          qrGroup.extra_charge,
+                          qrGroup.charge_type || "FLAT_FEE"
+                        )
+                      : 0;
+                    const gstAmount = hotelData?.gst_percentage
+                      ? getGstAmount(
+                          itemsSubtotal + extraCharges,
+                          hotelData.gst_percentage
+                        )
+                      : 0;
+                    const deliveryCharges =
+                      !isQrScan &&
+                      deliveryInfo?.cost &&
+                      !deliveryInfo?.isOutOfRange
+                        ? deliveryInfo.cost
+                        : 0;
+
+                    return (
+                      itemsSubtotal +
+                      extraCharges +
+                      gstAmount +
+                      deliveryCharges
+                    ).toFixed(2);
+                  })()}
                 </span>
               </div>
             </div>
+            </div>
 
+            {items?.length && (
             {items?.length && (
               <>
                 {!order ? (
                   <>
                     <Link
+                      href={"#"}
                       href={"#"}
                       onClick={handlePlaceOrder}
                       style={{ backgroundColor: styles.accent }}
@@ -658,9 +1003,16 @@ const OrderDrawer = ({
                   <div className="w-full text-center text-sm text-gray-500">
                     Your order has been placed. Please wait for confirmation.
                   </div>
+                  <div className="w-full text-center text-sm text-gray-500">
+                    Your order has been placed. Please wait for confirmation.
+                  </div>
                 )}
               </>
             )}
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    </>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>

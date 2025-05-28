@@ -37,6 +37,16 @@ export interface GeoLocation {
     };
   };
 }
+export interface GeoLocation {
+  type: "Point"; // likely always "Point" in your case
+  coordinates: [number, number]; // [longitude, latitude]
+  crs?: {
+    type: string;
+    properties: {
+      name: string;
+    };
+  };
+}
 
 export interface User extends BaseUser {
   role: "user";

@@ -70,11 +70,16 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       const category = await fetchFromHasura(getCategory, {
         name: formattedName,
         partner_id: userData?.id,
-      }).then((res) => res.category[0]);
+      }).then((res) => res.category);
 
-      if (category) {
-        return category;
-      }
+      const existingCategory = existingCategories[0];
+
+      if (existingCategory) {
+
+
+        return existingCategory as Category;
+      } else {
+
 
       const addedCat = await fetchFromHasura(addCategory, {
         category: {
@@ -90,7 +95,8 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         ],
       });
 
-      return addedCat as Category;
+        return addedCat as Category;
+      }
     } catch (error: unknown) {
       console.error(error);
     }
@@ -126,7 +132,6 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       // to update categorys of menu items
       revalidateTag(user?.id as string);
       updatedCategories(get().categories);
-
     } catch (error) {
       console.error(error);
     }
