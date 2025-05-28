@@ -66,10 +66,6 @@ const OrderItemCard = ({
     setLocalOrder(initialOrder);
   }, [initialOrder]);
 
-  const handlePrintKOT = useReactToPrint({
-    contentRef: kotRef,
-  });
-
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
@@ -314,10 +310,12 @@ const OrderItemCard = ({
 
         <div className="mt-4 flex gap-2 items-center justify-between flex-wrap">
           <div className="flex gap-2 flex-wrap">
-            <Button size="sm" variant="outline" onClick={handlePrintKOT}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print KOT
-            </Button>
+            <Link href={`/kot/${localOrder.id}`} target="_blank" passHref>
+              <Button size="sm" variant="outline">
+                <Printer className="h-4 w-4 mr-2" />
+                Print KOT
+              </Button>
+            </Link>
             <Link target="_blank" href={`/bill/${localOrder.id}`} passHref>
               <Button size="sm" variant="outline">
                 <Printer className="h-4 w-4 mr-2" />
