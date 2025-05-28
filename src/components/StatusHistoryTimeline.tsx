@@ -5,26 +5,26 @@ import {
   ReverseStatusMapping,
 } from "@/lib/statusHistory";
 import React from "react";
-import { CheckCircle2, Truck, PackageCheck } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FaMotorcycle } from "react-icons/fa";
 
 const statusConfig = {
   accepted: {
     title: "Accepted",
-    icon: <CheckCircle2 className="h-5 w-5" />,
+    icon: <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 " />,
     color: "bg-green-500",
     description: "Order confirmed",
   },
   dispatched: {
     title: "Dispatched",
-    icon: <FaMotorcycle className="h-5 w-5" />,
+    icon: <FaMotorcycle className="h-4 w-4 sm:h-5 sm:w-5 " />,
     color: "bg-blue-500",
     description: "On the way",
   },
   completed: {
     title: "Completed",
-    icon: <CheckCircle2 className="h-5 w-5" />,
+    icon: <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 " />,
     color: "bg-purple-500",
     description: "Order received",
   },
@@ -64,7 +64,7 @@ const StatusHistoryTimeline = ({
   }, -1);
 
   return (
-    <div className="w-full px-4 py-6">
+    <div className="w-full sm:px-4 py-6">
       <div className="relative">
         {/* Horizontal line */}
         <div
@@ -92,7 +92,7 @@ const StatusHistoryTimeline = ({
                 {/* Status indicator */}
                 <div
                   className={cn(
-                    "flex items-center justify-center w-10 h-10 rounded-full border-4 z-10 mb-2",
+                    "flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-4 z-10 mb-2",
                     isActive
                       ? `${entry.color} border-white text-white`
                       : "bg-gray-100 border-gray-200 text-gray-400"

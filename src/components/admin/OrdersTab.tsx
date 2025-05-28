@@ -259,7 +259,7 @@ const OrdersTab = () => {
 
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList
-          className={`grid w-full grid-flow-col  mb-6 relative justify-stretch `}
+          className={`flex w-full flex-col sm:flex-row mb-20 sm:mb-6 relative justify-stretch `}
         >
           {features?.delivery.enabled && (
             <TabsTrigger value="delivery" className="relative w-full">

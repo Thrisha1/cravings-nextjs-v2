@@ -215,7 +215,7 @@ const OrderItemCard = ({
               : "Unknown"}
           </p>
           {localOrder.type === "delivery" && (
-            <>
+            <div className="flex flex-col gap-3">
               <p className="text-sm mt-3">
                 Delivery Address: {localOrder.deliveryAddress || "Unknown"}
               </p>
@@ -224,12 +224,11 @@ const OrderItemCard = ({
                   href={`${deliveryLocation}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-blue-500 hover:underline mt-1"
+                  className="text-sm hover:underline py-2 px-3 bg-orange-500 text-white rounded-md w-max"
                 >
                   View Location
                 </a>
               )}
-              <br />
               <AddNoteComponent setOrder={setLocalOrder} order={localOrder} />
               {localOrder.notes && (
                 <p className="text-sm mt-2">
@@ -237,7 +236,7 @@ const OrderItemCard = ({
                   {localOrder.notes}
                 </p>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
