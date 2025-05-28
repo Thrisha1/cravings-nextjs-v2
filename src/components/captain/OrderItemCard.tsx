@@ -43,6 +43,18 @@ const OrderItemCard = ({
 //     content: () => kotRef.current,
 //   });
 
+  // Add console logging for grantTotal
+  console.log("OrderItemCard grantTotal details:", {
+    orderId: order.id,
+    grantTotal,
+    orderTotalPrice: order.totalPrice,
+    extraCharges: order.extraCharges,
+    extraChargesTotal: (order.extraCharges || []).reduce((sum, c) => sum + (c.amount || 0), 0),
+    foodSubtotal: order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+    gstAmount,
+    gstPercentage
+  });
+
   // Add console logging for captain orders
   if (order.orderedby === "captain") {
     console.log("Captain order details:", {
@@ -147,6 +159,7 @@ const OrderItemCard = ({
           <div className="flex justify-between sm:flex-col sm:text-right items-center sm:items-end gap-2 sm:gap-1">
             <div className="font-medium text-base sm:text-lg">
               ₹{grantTotal.toFixed(2)}
+              
             </div>
             <div className="flex items-center gap-2">
               <div

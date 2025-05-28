@@ -65,7 +65,7 @@ export interface Order {
   captain?: {
     id: string;
     name: string;
-    phone: string;
+    phone?: string;
     email: string;
   };
   extraCharges?:

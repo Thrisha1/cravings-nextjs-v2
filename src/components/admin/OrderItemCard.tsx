@@ -329,7 +329,7 @@ const OrderItemCard = ({
 
       {/* Hidden elements for printing */}
       <div className="hidden">
-        <KOTTemplate ref={kotRef} order={order} />
+        <KOTTemplate ref={kotRef} order={order} key={`kot-${order.id}`} />
         <BillTemplate
           key={`${order.id}-bill`}
           ref={billRef}

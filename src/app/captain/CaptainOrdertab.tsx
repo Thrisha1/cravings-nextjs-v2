@@ -32,7 +32,7 @@ const CaptainOrdersTab = () => {
   const { subscribeOrders, partnerOrders, deleteOrder, fetchOrderOfPartner } = useOrderStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
   const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
   const [partnerData, setPartnerData] = useState<Partner | null>(null);
   const [newOrderAlert, setNewOrderAlert] = useState({
@@ -86,7 +86,12 @@ const CaptainOrdersTab = () => {
           // First get the orders
           const ordersResponse = await fetchFromHasura(
             `query GetOrders($partner_id: uuid!) {
-              orders(where: {partner_id: {_eq: $partner_id}, orderedby: {_eq: "captain"}}) {
+              orders(where: {
+                partner_id: {_eq: $partner_id}, 
+                orderedby: {_eq: "captain"},
+                captain_id: {_is_null: false},
+                status: {_eq: "completed"}
+              }) {
                 id
                 status
                 created_at
@@ -207,95 +212,59 @@ const CaptainOrdersTab = () => {
 
     console.log("Setting up subscription for partner:", captainData.partner_id);
 
-    type SubscriptionOrder = {
-      id: string;
-      status: string;
-      created_at: string;
-      total_price: number;
-      partner_id: string;
-      orderedby: string;
-      extra_charges: any;
-      order_items: Array<{
-        id: string;
-        quantity: number;
-        menu: {
-          id: string;
-          name: string;
-          price: number;
-          category: {
-            name: string;
-          };
-          description?: string;
-          image_url?: string;
-          is_top?: boolean;
-          is_available?: boolean;
-          priority?: number;
-          offers?: Array<{
-            offer_price: number;
-          }>;
-        };
-      }>;
-    };
-
     const unsubscribe = subscribeOrders((allOrders: any[]) => {
-      console.log("Subscription received orders:", {
-        totalOrders: allOrders?.length ?? 0,
-        orders: allOrders?.map(o => ({
-          id: o.id,
-          partner_id: o.partner_id,
-          orderedby: o.orderedby,
-          hasItems: !!o.items,
-          itemsCount: o.items?.length
-        })) ?? []
-      });
+      // Filter out POS orders and only keep completed captain orders
+      const captainOrders = allOrders.filter(order => 
+        order.orderedby === "captain" && 
+        order.captain_id !== null &&
+        order.status === "completed"
+      );
 
-      if (!Array.isArray(allOrders)) {
-        console.error("Received invalid orders data:", allOrders);
+      if (!Array.isArray(captainOrders)) {
+        console.error("Received invalid orders data:", captainOrders);
         setOrders([]);
         return;
       }
 
-      // Map the orders to match our format
-      const mappedOrders = allOrders
-        .map(order => {
-          console.log("Processing order in component:", {
-            id: order.id,
-            hasItems: !!order.items,
-            itemsCount: order.items?.length,
-            firstItem: order.items?.[0] ? {
-              id: order.items[0].id,
-              name: order.items[0].name,
-              quantity: order.items[0].quantity
-            } : null,
-            createdAt: order.createdAt
-          });
+      // Keep existing orders and only add new ones
+      setOrders(currentOrders => {
+        const existingOrderIds = new Set(currentOrders.map(o => o.id));
+        const newOrders = captainOrders.filter(order => !existingOrderIds.has(order.id));
 
-          // The order items are already mapped in the store
-          const mappedOrder: Order = {
+        if (newOrders.length === 0) {
+          console.log("No new orders in subscription update");
+          return currentOrders;
+        }
+
+        console.log("Processing new orders from subscription:", newOrders.map(o => o.id));
+
+        // Map only the new orders
+        const mappedNewOrders = newOrders.map(order => {
+          const currentCaptain = captainData as Captain;
+          const isCurrentCaptainOrder = order.captain_id === currentCaptain.id;
+          
+          const orderCaptain = isCurrentCaptainOrder ? {
+            id: currentCaptain.id,
+            name: currentCaptain.name,
+            email: currentCaptain.email
+          } : undefined;
+
+          return {
             id: order.id,
             status: order.status as "pending" | "completed" | "cancelled",
             createdAt: order.createdAt,
-            totalPrice: order.total_price,
+            totalPrice: order.total_price || 0,
             partnerId: order.partner_id,
             orderedby: order.orderedby,
-            extraCharges: order.extra_charges,
+            extraCharges: order.extra_charges || [],
             items: order.items || [],
-            captain: order.captain,
+            captain: orderCaptain,
             captain_id: order.captain_id
           };
-          return mappedOrder;
-        })
-        .filter((order): order is Order => order !== null);
+        });
 
-      console.log("Mapped orders result:", {
-        totalOrders: mappedOrders.length,
-        orders: mappedOrders.map(o => ({
-          id: o.id,
-          itemsCount: o.items.length
-        }))
+        return [...currentOrders, ...mappedNewOrders];
       });
-
-      setOrders(mappedOrders);
     });
 
     return () => {
@@ -432,23 +401,36 @@ const CaptainOrdersTab = () => {
                 const gstAmount = getGstAmount(foodSubtotal, gstPercentage);
                 const totalPriceWithGst = foodSubtotal + gstAmount;
 
-                const extraChargesTotal = (order?.extraCharges ?? []).reduce(
-                  (acc, charge) =>
-                    acc +
-                      getExtraCharge(
-                        order?.items || [],
-                        charge.amount,
-                        charge.charge_type as QrGroup["charge_type"]
-                      ) || 0,
+                // Calculate extra charges total
+                const extraChargesTotal = (order.extraCharges || []).reduce(
+                  (acc, charge) => acc + (charge.amount || 0),
                   0
                 );
-                const grandTotal = totalPriceWithGst + extraChargesTotal;
+
+                // Use the order's totalPrice if it exists and matches our calculation
+                // Otherwise use our calculated total
+                const calculatedTotal = totalPriceWithGst + extraChargesTotal;
+                const grantTotal = order.totalPrice === calculatedTotal ? 
+                  order.totalPrice : 
+                  calculatedTotal;
+
+                console.log("Order display details:", {
+                  id: order.id,
+                  orderTotalPrice: order.totalPrice,
+                  calculatedTotal,
+                  foodSubtotal,
+                  gstAmount,
+                  extraChargesTotal,
+                  extraCharges: order.extraCharges,
+                  grantTotal,
+                  usingOrderTotal: order.totalPrice === calculatedTotal
+                });
 
                 return (
                   <OrderItemCard
                     key={order.id + "-" + index}
                     deleteOrder={async (id) => { await deleteOrder(id); }}
-                    grantTotal={grandTotal}
+                    grantTotal={grantTotal}
                     gstAmount={gstAmount}
                     gstPercentage={gstPercentage}
                     order={order}

@@ -133,7 +133,7 @@ export const CaptainCheckoutModal = () => {
       {/* Hidden elements for printing */}
       <div className="hidden">
         {/* KOT Template */}
-        <KOTTemplate ref={kotRef} order={order} />
+        <KOTTemplate ref={kotRef} order={order} key={`kot-${order.id}`} />
 
         {/* Bill Template */}
         <BillTemplate 
