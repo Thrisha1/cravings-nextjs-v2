@@ -9,7 +9,7 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import { Howl } from "howler";
 import { useRouter } from "next/navigation";
 import { usePOSStore } from "@/store/posStore";
-import { getExtraCharge, getGstAmount } from "@/components/hotelDetail/OrderDrawer";
+import {  getGstAmount } from "@/components/hotelDetail/OrderDrawer";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import {
   AlertDialog,
