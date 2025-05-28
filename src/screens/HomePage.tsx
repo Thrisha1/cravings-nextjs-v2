@@ -67,7 +67,7 @@ export default function HomePage() {
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <UtensilsCrossed className="h-8 w-8 text-orange-600" />
-                  <span className="text-sm font-medium px-3 py-1 rounded-full bg-orange-100 text-orange-700">Restaurant Management Platform</span>
+                  <span className="text-sm font-medium px-3 py-1 rounded-full bg-orange-100 text-orange-700">Restaurant Management Platform By Cravings</span>
                 </div>
 
                 <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
