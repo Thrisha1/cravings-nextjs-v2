@@ -27,6 +27,8 @@ import {
   toStatusDisplayFormat,
 } from "@/lib/statusHistory";
 import AddNoteComponent from "./AddNoteComponent";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const OrderItemCard = ({
   order: initialOrder,
@@ -57,15 +59,12 @@ const OrderItemCard = ({
     null
   );
   const { updateOrderStatusHistory } = useOrderStore();
+  const router = useRouter();
 
   // Sync localOrder with prop changes
   useEffect(() => {
     setLocalOrder(initialOrder);
   }, [initialOrder]);
-
-  const handlePrintBill = useReactToPrint({
-    contentRef: billRef,
-  });
 
   const handlePrintKOT = useReactToPrint({
     contentRef: kotRef,
@@ -232,7 +231,7 @@ const OrderItemCard = ({
               <AddNoteComponent setOrder={setLocalOrder} order={localOrder} />
               {localOrder.notes && (
                 <p className="text-sm mt-2">
-                  <span className="font-medium text-orange-500">Note:{" "}</span>
+                  <span className="font-medium text-orange-500">Note: </span>
                   {localOrder.notes}
                 </p>
               )}
@@ -319,10 +318,12 @@ const OrderItemCard = ({
               <Printer className="h-4 w-4 mr-2" />
               Print KOT
             </Button>
-            <Button size="sm" variant="outline" onClick={handlePrintBill}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print Bill
-            </Button>
+            <Link target="_blank" href={`/bill/${localOrder.id}`} passHref>
+              <Button size="sm" variant="outline">
+                <Printer className="h-4 w-4 mr-2" />
+                Print Bill
+              </Button>
+            </Link>
 
             {localOrder.status === "pending" && (
               <>
