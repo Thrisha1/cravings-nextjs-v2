@@ -138,9 +138,14 @@ export function EditMenuItemModal({
             }}
           />
           {children}
-          <Button type="submit" className="w-full">
-            Save Changes
-          </Button>
+          <div className="flex gap-2">
+            <Button type="submit" className="w-full">
+              Save Changes
+            </Button>
+            <Button className="w-full" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
