@@ -95,107 +95,65 @@ const OrderItemCard = ({
     <>
       <Card className="p-3 sm:p-4 hover:bg-gray-50 transition-colors">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4">
-          <div className="flex-1">
-            <div className="font-medium text-base sm:text-lg">
-              {order.orderedby === "captain" 
-                ? `Order #${order.id.split('-')[0].toUpperCase()}`
-                : order.type === "delivery" 
-                  ? "Delivery Order" 
-                  : order.type === "table_order" 
-                    ? "Table Order" 
-                    : "POS Order"}
+          {/* Left section - Order details */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between sm:justify-start gap-2">
+              <div className="font-medium text-base sm:text-lg truncate">
+                {order.orderedby === "captain" 
+                  ? `Order #${order.id.split('-')[0].toUpperCase()}`
+                  : order.type === "delivery" 
+                    ? "Delivery Order" 
+                    : order.type === "table_order" 
+                      ? "Table Order" 
+                      : "POS Order"}
+              </div>
+              <div
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs whitespace-nowrap ${getStatusColor(
+                  order.status
+                )}`}
+              >
+                {getStatusIcon(order.status)}
+                <span>
+                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                </span>
+              </div>
             </div>
             {order.orderedby === "captain" && (
-              <div className="text-sm text-gray-600 mt-1">
+              <div className="text-sm text-gray-600 mt-1 truncate">
                 Captain: {order.captain?.name || "Unknown Captain"}
               </div>
             )}
-            <div className="text-xs sm:text-sm text-gray-500 mt-1">
+            <div className="text-sm text-gray-500 mt-1">
               {(() => {
                 try {
-                  if (!order.createdAt) {
-                    console.error("Order missing createdAt:", {
-                      orderId: order.id,
-                      order: order
-                    });
-                    return "Date not available";
-                  }
-
-                  // Parse the ISO date string
+                  if (!order.createdAt) return "Date not available";
                   const date = new Date(order.createdAt);
-                  
-                  // Validate the date
-                  if (isNaN(date.getTime())) {
-                    console.error("Invalid date value:", {
-                      orderId: order.id,
-                      createdAt: order.createdAt,
-                      parsedDate: date.toString()
-                    });
-                    return "Invalid date";
-                  }
-
-                  // Format the date using date-fns
-                  // PPp format will show: Apr 29, 2024, 7:38 PM
+                  if (isNaN(date.getTime())) return "Invalid date";
                   return format(date, "PPp");
                 } catch (error) {
-                  console.error("Error formatting date:", {
-                    error,
-                    orderId: order.id,
-                    createdAt: order.createdAt,
-                    errorMessage: error instanceof Error ? error.message : String(error)
-                  });
                   return "Error formatting date";
                 }
               })()}
             </div>
             <div className="mt-2 space-y-1">
               {order.items.map((item, index) => (
-                <div key={index} className="text-xs sm:text-sm">
+                <div key={index} className="text-xs sm:text-sm truncate">
                   {item.quantity}x {item.name}
                 </div>
               ))}
             </div>
           </div>
-          <div className="flex justify-between sm:flex-col sm:text-right items-center sm:items-end gap-2 sm:gap-1">
-            <div className="font-medium text-base sm:text-lg">
-              ₹{grantTotal.toFixed(2)}
-              
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${getStatusColor(
-                  order.status
-                )}`}
-              >
-                {getStatusIcon(order.status)}
-                <span className="hidden sm:inline">
-                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                </span>
-                <span className="sm:hidden">
-                  {order.status.charAt(0).toUpperCase()}
-                </span>
+
+          {/* Right section - Total and actions */}
+          <div className="flex flex-col sm:items-end gap-2">
+            <div className="flex items-center justify-between w-full sm:w-auto">
+              <div className="font-medium text-base sm:text-lg">
+                ₹{grantTotal.toFixed(2)}
               </div>
-              {order.status === "pending" && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => updateOrderStatus(order.id, "completed")}
-                  >
-                    Complete
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => updateOrderStatus(order.id, "cancelled")}
-                  >
-                    Cancel
-                  </Button>
-                </>
-              )}
               <Button
                 size="sm"
                 variant="ghost"
+                className="ml-4 sm:hidden"
                 onClick={() => {
                   setOrder(order);
                   setEditOrderModalOpen(true);
@@ -203,10 +161,41 @@ const OrderItemCard = ({
               >
                 <Edit className="h-4 w-4" />
               </Button>
-              {/* <Button size="sm" variant="ghost" onClick={handlePrintBill}>
-                <Printer className="h-4 w-4" />
-              </Button> */}
             </div>
+            {order.status === "pending" ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="whitespace-nowrap"
+                  onClick={() => updateOrderStatus(order.id, "completed")}
+                >
+                  Complete
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="whitespace-nowrap"
+                  onClick={() => updateOrderStatus(order.id, "cancelled")}
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-4 sm:mt-6">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="hidden sm:inline-flex"
+                  onClick={() => {
+                    setOrder(order);
+                    setEditOrderModalOpen(true);
+                  }}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </Card>

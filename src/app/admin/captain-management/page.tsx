@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore, Partner } from "@/store/authStore";
 import { getFeatures } from "@/lib/getFeatures";
@@ -31,6 +31,8 @@ export default function CaptainManagementPage() {
   const [isDeletingCaptain, setIsDeletingCaptain] = useState<string | null>(null);
   const [showCaptainForm, setShowCaptainForm] = useState(false);
   const [features, setFeatures] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+  const loginUrl = typeof window !== 'undefined' ? `cravings.live/captainlogin` : '/captainlogin';
 
   useEffect(() => {
     if (userData && userData.role === "partner") {
@@ -139,6 +141,17 @@ export default function CaptainManagementPage() {
     }
   };
 
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(loginUrl);
+      setCopied(true);
+      toast.success("Login URL copied to clipboard!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error("Failed to copy URL");
+    }
+  };
+
   if (!userData || !features?.captainordering?.enabled) {
     return (
       <div className="p-8 text-center text-gray-500">Captain ordering is not enabled or you do not have access.</div>
@@ -148,10 +161,50 @@ export default function CaptainManagementPage() {
   return (
     <div className="min-h-screen w-full bg-orange-50 p-4">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4 mb-6">
           <h1 className="text-3xl font-bold">Captain Management</h1>
-          <Button variant="outline" onClick={() => router.push("/profile")}>Back to Profile</Button>
         </div>
+
+        {/* Captain Login Link */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Captain Login</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col space-y-4">
+              <p className="text-sm text-gray-600">
+                Share this login link with your captains to access their accounts.
+              </p>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={loginUrl}
+                  readOnly
+                  className="flex-1 font-mono text-sm"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={copyToClipboard}
+                  className="shrink-0"
+                >
+                  {copied ? (
+                    <div className="h-4 w-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => window.open(loginUrl, '_blank')}
+                  className="shrink-0"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Create Captain Form - Always visible at the top */}
         <Card>

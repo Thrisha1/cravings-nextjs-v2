@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ExtraCharge, usePOSStore } from "@/store/posStore";
-import { Plus, Minus, ShoppingCart, Loader2 } from "lucide-react";
+import { Plus, Minus, ShoppingCart, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Table,
@@ -47,7 +47,8 @@ export const Captaincart = () => {
     tableNumbers,
     tableNumber,
     loading,
-    order
+    order,
+    removeFromCart
   } = usePOSStore();
   
   const { userData } = useAuthStore();
@@ -138,33 +139,41 @@ export const Captaincart = () => {
   return (
     <>
       <Drawer open={isOpen} onOpenChange={setIsOpen}>
-        {/* order details */}
-        <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 flex items-center justify-between gap-auto w-full sm:w-fit sm:gap-60 lg:gap-80 bg-white border-2 border-black/10 rounded-t-[35px] px-7 py-5 sm:py-7 shadow-2xl duration-500 transition-all ${totalAmount > 0 ? "translate-y-0" : "translate-y-full"}`}>
-          <div className="flex flex-col gap-1">
-            {/* price */}
-            <div className="flex gap-2 text-nowrap font-extrabold text-xl lg:text-2xl">
-              <div>PRICE :</div>
-              <div>
-                {captainData?.currency || "$"}
-                {grandTotal.toFixed(2)}
-              </div>
-            </div>
+        {/* Cart Summary Bar - Only show when there are items */}
+        <div className={`fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg transition-transform duration-300 ${cartItems.length > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
+          <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col gap-1">
+                {/* price */}
+                <div className="flex gap-2 text-nowrap font-extrabold text-lg sm:text-xl lg:text-2xl">
+                  <div>PRICE :</div>
+                  <div>
+                    {captainData?.currency || "$"}
+                    {grandTotal.toFixed(2)}
+                  </div>
+                </div>
 
-            {/* total Items */}
-            <div className="inline-flex flex-nowrap text-nowrap gap-2 font-medium text-black/50 te text-sm">
-              <div>Total Items :</div>
-              <div>{cartItems.reduce((acc, item) => acc + item.quantity, 0)}</div>
+                {/* total Items */}
+                <div className="inline-flex flex-nowrap text-nowrap gap-2 font-medium text-black/50 text-sm">
+                  <div>Total Items :</div>
+                  <div>{cartItems.reduce((acc, item) => acc + item.quantity, 0)}</div>
+                </div>
+              </div>
+
+              <Button 
+                onClick={() => setIsOpen(true)}
+                className="bg-black hover:bg-black/90 text-white font-semibold text-sm sm:text-base flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg min-w-[140px] justify-center"
+              >
+                <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" /> 
+                <span>View Order</span>
+              </Button>
             </div>
           </div>
-
-          <DrawerTrigger className="text-black font-black text-base lg:text-lg flex gap-2 text-nowrap flex-nowrap">
-            <ShoppingCart className="w-7 h-7" /> View Order
-          </DrawerTrigger>
         </div>
 
-        <DrawerContent className="max-h-[80vh] sm:h-[80vh] w-[100vw] sm:w-[80vw] lg:w-[50vw] mx-auto sm:px-5">
-          <DrawerHeader>
-            <DrawerTitle>Your Cart</DrawerTitle>
+        <DrawerContent className="max-h-[85vh] sm:max-h-[80vh]">
+          <DrawerHeader className="border-b px-4 py-3 sm:py-4">
+            <DrawerTitle className="text-lg sm:text-xl">Your Cart</DrawerTitle>
             <DrawerDescription>
               {cartItems.length > 0
                 ? "Review your items before checkout"
@@ -172,7 +181,7 @@ export const Captaincart = () => {
             </DrawerDescription>
           </DrawerHeader>
 
-          <div className="px-4 overflow-y-auto flex-1">
+          <div className="flex-1 overflow-y-auto px-4 py-3 sm:py-4">
             {cartItems.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -213,7 +222,7 @@ export const Captaincart = () => {
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
-                          <span>{item.quantity}</span>
+                          <span className="w-6 text-center">{item.quantity}</span>
                           <Button
                             variant="outline"
                             size="icon"
@@ -239,7 +248,7 @@ export const Captaincart = () => {
           </div>
 
           {cartItems.length > 0 && (
-            <DrawerFooter className="border-t">
+            <DrawerFooter className="border-t px-4 py-3 sm:py-4">
               {(captainData?.gst_percentage || 0) > 0 ? (
                 <>
                   <div className="flex justify-between items-center mb-2 text-sm">
@@ -269,7 +278,7 @@ export const Captaincart = () => {
               <Button
                 onClick={handleCheckoutFlow}
                 disabled={loading}
-                className="w-full"
+                className="w-full bg-black hover:bg-black/90 text-white py-3 text-base font-semibold"
               >
                 {loading ? (
                   <>

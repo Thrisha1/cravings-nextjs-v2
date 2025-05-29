@@ -18,11 +18,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useState } from "react";
+import { toast } from "sonner";
+import { usePOSStore } from "@/store/posStore";
 
 export default function CaptainDashboard() {
   const router = useRouter();
   const { signOut } = useAuthStore();
   const [isPOSOpen, setIsPOSOpen] = useState(false);
+  const { cartItems } = usePOSStore();
 
   const handleSignOut = () => {
     signOut();
@@ -75,21 +78,38 @@ export default function CaptainDashboard() {
       </div>
 
       {/* POS Dialog */}
-      <Dialog open={isPOSOpen} onOpenChange={setIsPOSOpen}>
-        <DialogContent className="max-w-[95vw] h-[90vh] sm:max-w-[90vw] lg:max-w-[80vw]">
-          <DialogHeader>
+      <Dialog open={isPOSOpen} onOpenChange={(open) => {
+        // Only allow closing through the cancel button
+        if (!open && cartItems.length > 0) {
+          toast.error("Please complete or cancel the current order first");
+          return;
+        }
+        setIsPOSOpen(open);
+      }}>
+        <DialogContent className="max-w-none w-screen h-screen p-0 sm:p-0">
+          <DialogHeader className="p-4 border-b">
             <DialogTitle>Create New Order</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-hidden flex flex-col h-[calc(100vh-8rem)]">
+            <div className="flex-1 overflow-y-auto p-4">
               <CaptainPOS />
             </div>
-            <div className="flex-none">
+            <div className="flex-none border-t">
               <Captaincart />
             </div>
           </div>
-          <div className="flex-none flex justify-end mt-4">
-            <Button variant="outline" onClick={() => setIsPOSOpen(false)}>
+          <div className="flex-none flex justify-end gap-2 p-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                if (cartItems.length > 0) {
+                  toast.error("Please complete or cancel the current order first");
+                  return;
+                }
+                setIsPOSOpen(false);
+              }}
+              className="px-6 py-2.5 text-base font-semibold min-w-[120px] border-2 hover:bg-gray-100"
+            >
               Cancel
             </Button>
           </div>

@@ -32,8 +32,6 @@ const CaptainOrdersTab = () => {
   const { subscribeOrders, partnerOrders, deleteOrder, fetchOrderOfPartner } = useOrderStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
-  const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
   const [partnerData, setPartnerData] = useState<Partner | null>(null);
   const [newOrderAlert, setNewOrderAlert] = useState({
     show: false,
@@ -46,6 +44,43 @@ const CaptainOrdersTab = () => {
     editOrderModalOpen: isOpen,
     setEditOrderModalOpen,
   } = usePOSStore();
+
+  // Helper function to sort orders
+  const sortOrders = (ordersToSort: Order[]) => {
+    return [...ordersToSort].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA; // Always newest first
+    });
+  };
+
+  // Helper function to process orders
+  const processOrders = (rawOrders: any[]) => {
+    return rawOrders.map((order: any) => {
+      // Always use current captain data for captain orders
+      const orderCaptain = {
+        id: captainData.id,
+        name: captainData.name,
+        email: captainData.email
+      };
+
+      return {
+        ...order,
+        createdAt: order.created_at,
+        extraCharges: order.extra_charges || [],
+        items: order.order_items.map((item: any) => ({
+          id: item.menu.id,
+          name: item.menu.name,
+          price: parseFloat(item.menu.price) || 0,
+          quantity: parseInt(item.quantity) || 0,
+          category: item.menu.category.name
+        })),
+        captain: orderCaptain,
+        captain_id: captainData.id,
+        totalPrice: parseFloat(order.total_price) || 0
+      };
+    });
+  };
 
   // Fetch partner data
   useEffect(() => {
@@ -83,13 +118,12 @@ const CaptainOrdersTab = () => {
     const fetchInitialOrders = async () => {
       if (captainData?.partner_id) {
         try {
-          // First get the orders
           const ordersResponse = await fetchFromHasura(
-            `query GetOrders($partner_id: uuid!) {
+            `query GetOrders($partner_id: uuid!, $captain_id: uuid!) {
               orders(where: {
                 partner_id: {_eq: $partner_id}, 
                 orderedby: {_eq: "captain"},
-                captain_id: {_is_null: false},
+                captain_id: {_eq: $captain_id},
                 status: {_eq: "completed"}
               }) {
                 id
@@ -115,101 +149,20 @@ const CaptainOrdersTab = () => {
               }
             }`,
             {
-              partner_id: captainData.partner_id
+              partner_id: captainData.partner_id,
+              captain_id: captainData.id
             }
           );
 
-          console.log("Raw orders response:", ordersResponse);
-
           if (!ordersResponse.orders) {
-            console.log("No orders found in response");
             setOrders([]);
             setLoading(false);
             return;
           }
 
-          // Get unique captain IDs
-          const captainIds = [...new Set(ordersResponse.orders
-            .map((order: any) => order.captain_id)
-            .filter((id: string | null) => id !== null))];
-
-          console.log("Found captain IDs:", captainIds);
-
-          // Then get the captains
-          const captainsResponse = await fetchFromHasura(
-            `query GetCaptains($captain_ids: [uuid!]!) {
-              captain(where: {id: {_in: $captain_ids}}) {
-                id
-                name
-                email
-              }
-            }`,
-            {
-              captain_ids: captainIds
-            }
-          );
-
-          console.log("Captains response:", captainsResponse);
-
-          // Create a map of captain data
-          const captainMap = new Map(
-            captainsResponse.captain.map((captain: any) => [captain.id, captain])
-          );
-
-          // Map the orders with captain data
-          const processedOrders = ordersResponse.orders.map((order: any) => {
-            // If this is the current captain's order, use their data
-            const currentCaptain = captainData as Captain;
-            const isCurrentCaptainOrder = order.captain_id === currentCaptain.id;
-            const orderCaptain = isCurrentCaptainOrder ? {
-              id: currentCaptain.id,
-              name: currentCaptain.name,
-              email: currentCaptain.email
-            } : order.captain_id ? captainMap.get(order.captain_id) : null;
-
-            const processedOrder = {
-              ...order,
-              createdAt: order.created_at,
-              extraCharges: order.extra_charges || [],
-              items: order.order_items.map((item: any) => ({
-                id: item.menu.id,
-                name: item.menu.name,
-                price: parseFloat(item.menu.price) || 0,
-                quantity: parseInt(item.quantity) || 0,
-                category: item.menu.category.name
-              })),
-              captain: orderCaptain,
-              captain_id: order.captain_id,
-              totalPrice: parseFloat(order.total_price) || 0
-            };
-
-            console.log("Processed order:", {
-              id: processedOrder.id,
-              totalPrice: processedOrder.totalPrice,
-              items: processedOrder.items.map((item: OrderItem) => ({
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity
-              }))
-            });
-
-            return processedOrder;
-          });
-
-          console.log("Final processed orders:", processedOrders.map((order: Order) => ({
-            id: order.id,
-            totalPrice: order.totalPrice,
-            itemsCount: order.items.length,
-            items: order.items.map((item: OrderItem) => ({
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity
-            }))
-          })));
-
-          setOrders(processedOrders);
+          const processedOrders = processOrders(ordersResponse.orders);
+          setOrders(sortOrders(processedOrders));
         } catch (error) {
-          console.error("Error fetching orders:", error);
           toast.error("Failed to load orders");
         } finally {
           setLoading(false);
@@ -218,56 +171,34 @@ const CaptainOrdersTab = () => {
     };
 
     fetchInitialOrders();
-  }, [captainData?.partner_id]);
-
-  // Sort orders
-  useEffect(() => {
-    const sortedOrders = [...orders].sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
-    });
-
-    setSortedOrders(sortedOrders);
-  }, [orders, sortOrder]);
+  }, [captainData?.partner_id, captainData?.id]);
 
   // Subscribe to new orders
   useEffect(() => {
-    if (!captainData?.partner_id) return;
-
-    console.log("Setting up subscription for partner:", captainData.partner_id);
+    if (!captainData?.partner_id || !captainData?.id) return;
 
     const unsubscribe = subscribeOrders((allOrders: any[]) => {
-      // Filter out POS orders and only keep completed captain orders
+      // Only process orders for the current captain
       const captainOrders = allOrders.filter(order => 
         order.orderedby === "captain" && 
-        order.captain_id !== null &&
+        order.captain_id === captainData.id &&
         order.status === "completed"
       );
 
       if (!Array.isArray(captainOrders)) {
-        console.error("Received invalid orders data:", captainOrders);
         setOrders([]);
         return;
       }
 
-      // Keep existing orders and only add new ones
       const processNewOrders = async () => {
-        const currentOrders = orders; // Get current orders
+        const currentOrders = orders;
         const existingOrderIds = new Set(currentOrders.map(o => o.id));
         const newOrders = captainOrders.filter(order => !existingOrderIds.has(order.id));
 
-        if (newOrders.length === 0) {
-          console.log("No new orders in subscription update");
-          return;
-        }
+        if (newOrders.length === 0) return;
 
-        console.log("Processing new orders from subscription:", newOrders.map(o => o.id));
-
-        // Fetch complete order details for new orders
         const processedNewOrders = await Promise.all(newOrders.map(async (order) => {
           try {
-            // Fetch complete order details including order_items
             const orderDetails = await fetchFromHasura(
               `query GetOrderDetails($orderId: uuid!) {
                 orders_by_pk(id: $orderId) {
@@ -293,121 +224,38 @@ const CaptainOrdersTab = () => {
                   }
                 }
               }`,
-              { orderId: order.id }
+              { 
+                orderId: order.id
+              }
             );
 
             const orderData = orderDetails.orders_by_pk;
-            if (!orderData) {
-              console.error("No order details found for order:", order.id);
-              return null;
-            }
+            if (!orderData || orderData.captain_id !== captainData.id) return null;
 
-            const currentCaptain = captainData as Captain;
-            const isCurrentCaptainOrder = orderData.captain_id === currentCaptain.id;
-            
-            const orderCaptain = isCurrentCaptainOrder ? {
-              id: currentCaptain.id,
-              name: currentCaptain.name,
-              email: currentCaptain.email
-            } : undefined;
-
-            const processedOrder: Order = {
-              id: orderData.id,
-              status: orderData.status as "pending" | "completed" | "cancelled",
-              createdAt: orderData.created_at,
-              totalPrice: parseFloat(orderData.total_price) || 0,
-              partnerId: orderData.partner_id,
-              orderedby: orderData.orderedby,
-              extraCharges: orderData.extra_charges || [],
-              items: orderData.order_items.map((item: any) => ({
-                id: item.menu.id,
-                name: item.menu.name,
-                price: parseFloat(item.menu.price) || 0,
-                quantity: parseInt(item.quantity) || 0,
-                category: item.menu.category.name
-              })),
-              captain: orderCaptain,
-              captain_id: orderData.captain_id
-            };
-
-            console.log("Processed subscription order:", {
-              id: processedOrder.id,
-              totalPrice: processedOrder.totalPrice,
-              items: processedOrder.items.map((item: OrderItem) => ({
-                name: item.name,
-                price: item.price,
-                quantity: item.quantity
-              })),
-              extraCharges: processedOrder.extraCharges
-            });
-
-            return processedOrder;
+            return processOrders([orderData])[0];
           } catch (error) {
-            console.error("Error processing subscription order:", order.id, error);
             return null;
           }
         }));
 
-        // Filter out any null orders (failed to process)
         const validNewOrders = processedNewOrders.filter((order): order is Order => order !== null);
-
-        console.log("Adding new processed orders:", validNewOrders.map((o: Order) => ({
-          id: o.id,
-          totalPrice: o.totalPrice,
-          itemsCount: o.items.length,
-          extraChargesCount: (o.extraCharges || []).length
-        })));
-
-        setOrders([...orders, ...validNewOrders]);
+        if (validNewOrders.length > 0) {
+          setOrders(prevOrders => {
+            // Create a map of existing orders by ID to prevent duplicates
+            const orderMap = new Map(prevOrders.map(order => [order.id, order]));
+            // Add new orders to the map
+            validNewOrders.forEach(order => orderMap.set(order.id, order));
+            // Convert map back to array and sort
+            return sortOrders(Array.from(orderMap.values()));
+          });
+        }
       };
 
       processNewOrders();
     });
 
-    return () => {
-      console.log("Cleaning up subscription");
-      unsubscribe();
-    };
-  }, [captainData?.partner_id, orders]);
-
-  // Add logging to the orders state effect
-  useEffect(() => {
-    console.log("Orders state changed:", {
-      ordersLength: orders.length,
-      orders: orders.map(o => ({
-        id: o.id,
-        partnerId: o.partnerId,
-        orderedby: o.orderedby
-      }))
-    });
-  }, [orders]);
-
-  // Add logging to the sorted orders effect
-  useEffect(() => {
-    console.log("Sorting orders:", {
-      inputOrdersLength: orders.length,
-      sortOrder
-    });
-    const sortedOrders = [...orders].sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
-    });
-
-    console.log("Sorted orders result:", {
-      outputOrdersLength: sortedOrders.length,
-      orders: sortedOrders.map(o => ({
-        id: o.id,
-        createdAt: o.createdAt
-      }))
-    });
-
-    setSortedOrders(sortedOrders);
-  }, [orders, sortOrder]);
-
-  const toggleSortOrder = () => {
-    setSortOrder(sortOrder === "newest" ? "oldest" : "newest");
-  };
+    return () => unsubscribe();
+  }, [captainData?.partner_id, captainData?.id]);
 
   const updateOrderStatus = async (
     orderId: string,
@@ -452,14 +300,13 @@ const CaptainOrdersTab = () => {
         }
       }
 
-      setOrders((prev) =>
-        prev.map((order) =>
+      setOrders(prevOrders => 
+        prevOrders.map(order =>
           order.id === orderId ? { ...order, status: newStatus } : order
         )
       );
       toast.success(`Order marked as ${newStatus}`);
     } catch (error) {
-      console.error(error);
       toast.error(`Failed to update order status`);
     }
   };
@@ -469,11 +316,6 @@ const CaptainOrdersTab = () => {
       
       {/* Fixed Header */}
       <div className="flex-none p-4 border-b">
-        <div className="flex justify-end gap-2">
-          <Button size="sm" variant="outline" onClick={toggleSortOrder}>
-            {sortOrder === "newest" ? "Show Oldest First" : "Show Newest First"}
-          </Button>
-        </div>
       </div>
 
       {/* Scrollable Orders Section */}
@@ -484,12 +326,12 @@ const CaptainOrdersTab = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {sortedOrders.length === 0 ? (
+            {orders.length === 0 ? (
               <p className="text-gray-500 text-center py-4">
                 No orders found
               </p>
-            ) : (
-              sortedOrders.map((order, index) => {
+            ) :
+              orders.map((order, index) => {
                 const gstPercentage = partnerData?.gst_percentage || 0;
                 const foodSubtotal = order.items.reduce((sum, item) => {
                   return sum + item.price * item.quantity;
@@ -537,7 +379,7 @@ const CaptainOrdersTab = () => {
                   />
                 );
               })
-            )}
+            }
           </div>
         )}
       </div>
