@@ -20,13 +20,18 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import Link from "next/link";
-import {
-  getGstAmount,
-  calculateDeliveryDistanceAndCost,
-} from "../OrderDrawer";
+import { getGstAmount, calculateDeliveryDistanceAndCost } from "../OrderDrawer";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import { table } from "console";
 import { getExtraCharge } from "@/lib/getExtraCharge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { getFeatures } from "@/lib/getFeatures";
 
 const ItemsCard = ({
   items,
@@ -113,25 +118,60 @@ interface AddressCardProps {
   geoError: string | null;
   deliveryInfo: any;
   hasLocation: boolean;
+  hotelData: HotelData;
+  selectedLocation: string | null;
+  setSelectedLocation: (location: string) => void;
 }
 
 const AddressCard = ({
   address,
-  setAddress,
   setShowMapModal,
   getLocation,
   isGeoLoading,
   geoError,
   deliveryInfo,
   hasLocation,
+  hotelData,
+  selectedLocation,
+  setSelectedLocation,
 }: AddressCardProps) => {
   mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+
+  const hasMultiWhatsapp =
+    getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled &&
+    hotelData?.whatsapp_numbers?.length > 0;
+
 
   return (
     <div className="bg-white rounded-lg shadow p-4 mb-4">
       <div className="flex justify-between items-center mb-3">
         <h3 className="font-bold text-lg">Delivery Address</h3>
       </div>
+
+      {hasMultiWhatsapp && (
+        <div className="mb-4">
+          <Label className="flex items-center gap-2 mb-2">
+            Select Hotel Location
+          </Label>
+          <Select
+            value={selectedLocation || ""}
+            onValueChange={setSelectedLocation}
+          >
+            <SelectTrigger className="w-full">
+              {selectedLocation
+                ? selectedLocation.toUpperCase()
+                : "Select Area"}
+            </SelectTrigger>
+            <SelectContent className="z-[60]">
+              {hotelData.whatsapp_numbers.map((item) => (
+                <SelectItem key={item.area} value={item.area}>
+                  {item.area.toUpperCase()}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <Textarea
         value={address || ""}
@@ -152,7 +192,9 @@ const AddressCard = ({
           className="w-full"
           variant={hasLocation ? "outline" : "outline"}
           disabled={isGeoLoading}
-          style={!hasLocation ? { borderColor: '#ef4444', color: '#ef4444' } : {}}
+          style={
+            !hasLocation ? { borderColor: "#ef4444", color: "#ef4444" } : {}
+          }
         >
           {isGeoLoading ? (
             <>
@@ -280,7 +322,7 @@ const BillCard = ({
         )}
 
         {/* Delivery charge */}
-        {(isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange) && (
+        {isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange && (
           <div className="flex justify-between">
             <div>
               <span>Delivery Charge</span>
@@ -641,8 +683,8 @@ const PlaceOrderModal = ({
     increaseQuantity,
     decreaseQuantity,
     removeItem,
-    coordinates: selectedLocation,
-    setUserCoordinates: setSelectedLocation,
+    coordinates: selectedCoords,
+    setUserCoordinates: setSelectedCoords,
     setUserAddress: setAddress,
     userAddress: address,
     clearOrder,
@@ -661,11 +703,41 @@ const PlaceOrderModal = ({
   const [showMapModal, setShowMapModal] = useState(false);
   const [showLoginDrawer, setShowLoginDrawer] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
 
   const isDelivery = !tableNumber;
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
   const isQrScan = qrId !== null && tableNumber !== 0;
-  const hasLocation = !!selectedLocation || !!address;
+  const hasLocation = !!selectedCoords || !!address;
+
+  // Check if multi-whatsapp feature is enabled
+  const hasMultiWhatsapp =
+    getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled &&
+    hotelData?.whatsapp_numbers?.length > 0;
+
+  useEffect(() => {
+    const selectedPhone = localStorage.getItem(
+      `hotel-${hotelData.id}-whatsapp-area`
+    );
+
+    const selectedLocation = hotelData.whatsapp_numbers.find(
+      (item) => item.area === selectedPhone
+    );
+
+    if (selectedLocation) {
+      setSelectedLocation(selectedLocation.area);
+    } else {
+      setSelectedLocation(null);
+    }
+  }, []);
+
+  const handleSelectHotelLocation = (location: string) => {
+    setSelectedLocation(location);
+    const phoneNumber = hotelData.whatsapp_numbers.find(
+      (item) => item.area === location
+    )?.number;
+    localStorage.setItem(`hotel-${hotelData.id}-whatsapp-area`, phoneNumber || "");
+  };
 
   useEffect(() => {
     const checkGeolocationPermission = async () => {
@@ -676,7 +748,8 @@ const PlaceOrderModal = ({
 
         if (permissionStatus.state === "denied") {
           useLocationStore.setState({
-            error: "Location permission is denied. Please enable it in your browser settings.",
+            error:
+              "Location permission is denied. Please enable it in your browser settings.",
             isLoading: false,
           });
         }
@@ -689,10 +762,10 @@ const PlaceOrderModal = ({
   }, []);
 
   useEffect(() => {
-    if (isDelivery && hasDelivery && selectedLocation && !isQrScan) {
+    if (isDelivery && hasDelivery && selectedCoords && !isQrScan) {
       calculateDeliveryDistanceAndCost(hotelData as HotelData);
     }
-  }, [selectedLocation, isDelivery, hasDelivery, isQrScan]);
+  }, [selectedCoords, isDelivery, hasDelivery, isQrScan]);
 
   const handlePlaceOrder = async () => {
     if (isDelivery && !address && !isQrScan) {
@@ -700,13 +773,18 @@ const PlaceOrderModal = ({
       return;
     }
 
-    if (isDelivery && hasDelivery && !selectedLocation && !isQrScan) {
+    if (isDelivery && hasDelivery && !selectedCoords && !isQrScan) {
       toast.error("Please select your location");
       return;
     }
 
     if (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan) {
       toast.error("Delivery is not available to your location");
+      return;
+    }
+
+    if (hasMultiWhatsapp && !selectedLocation) {
+      toast.error("Please select a hotel location");
       return;
     }
 
@@ -778,8 +856,9 @@ const PlaceOrderModal = ({
   // Determine if place order button should be disabled
   const isPlaceOrderDisabled =
     isPlacingOrder ||
-    (isDelivery && hasDelivery && !selectedLocation && !isQrScan) ||
-    (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan);
+    (isDelivery && hasDelivery && !selectedCoords && !isQrScan) ||
+    (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan) ||
+    (hasMultiWhatsapp && !selectedLocation);
 
   return (
     <Dialog open={open_place_order_modal} onOpenChange={setOpenPlaceOrderModal}>
@@ -823,6 +902,9 @@ const PlaceOrderModal = ({
                 geoError={geoError}
                 deliveryInfo={deliveryInfo}
                 hasLocation={hasLocation}
+                hotelData={hotelData}
+                selectedLocation={selectedLocation}
+                setSelectedLocation={handleSelectHotelLocation}
               />
             ) : null}
 
@@ -891,7 +973,7 @@ const PlaceOrderModal = ({
           <MapModal
             showMapModal={showMapModal}
             setShowMapModal={setShowMapModal}
-            setSelectedLocation={setSelectedLocation}
+            setSelectedLocation={setSelectedCoords}
             setAddress={setAddress}
             hotelData={hotelData}
           />
