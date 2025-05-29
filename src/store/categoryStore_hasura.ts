@@ -75,6 +75,20 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       const existingCategory = category[0];
 
       if (existingCategory) {
+
+        const isAlredyInCategories = get().categories.some(
+          (category) => category.id === existingCategory.id
+        );
+
+        if (!isAlredyInCategories) {
+          set({
+            categories: [
+              ...get().categories,
+              { name: formatDisplayName(existingCategory.name), id: existingCategory.id },
+            ],
+          });
+        }
+
         return existingCategory as Category;
       } else {
         const addedCat = await fetchFromHasura(addCategory, {
