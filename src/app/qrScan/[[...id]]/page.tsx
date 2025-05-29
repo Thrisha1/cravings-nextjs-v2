@@ -1,4 +1,4 @@
-import { getPartnerAndOffersQuery } from "@/api/partners";
+import { getPartnerAndOffersQuery, getPartnerSubscriptionQuery } from "@/api/partners";
 import { GET_QR_TABLE } from "@/api/qrcodes";
 import { getAuthCookie } from "@/app/auth/actions";
 import { HotelData } from "@/app/hotels/[...id]/page";
@@ -27,7 +27,7 @@ const page = async ({
 
   // Validate and find the correct UUID from the path segments
   let validQrId: string | null = null;
-  
+
   if (qrId && Array.isArray(qrId)) {
     // Check each segment for a valid UUID
     for (const segment of qrId) {
@@ -98,7 +98,6 @@ const page = async ({
     groupData: qr_codes[0].qr_group,
     tableNumber: qr_codes[0].table_number,
   });
-  
 
   const tableNumber = qr_codes[0].table_number;
 
@@ -174,19 +173,57 @@ const page = async ({
     const isOrderingEnabled = features?.ordering.enabled && tableNumber !== 0;
     const isDeliveryEnabled = features?.delivery.enabled && tableNumber === 0;
 
-    // if (isOrderingEnabled || isDeliveryEnabled) {
+    const getLastSubscription = await fetchFromHasura(
+      getPartnerSubscriptionQuery,
+      {
+        partnerId: hoteldata?.id || "",
+      }
+    );
+
+    const lastSubscription = getLastSubscription?.partner_subscriptions[0];
+
+    if (hoteldata?.status === "inactive") {
       return (
-        <HotelMenuPage
-          socialLinks={socialLinks}
-          auth={auth}
-          hoteldata={hotelDataWithOfferPrice as HotelData}
-          offers={filteredOffers}
-          tableNumber={tableNumber}
-          theme={theme}
-          qrGroup={qr_codes[0].qr_group}
-          qrId={validQrId}
-        />
+        <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4 py-8">
+          <div className="text-center p-4 sm:p-8 bg-white rounded-3xl shadow-lg w-full max-w-[90%] sm:max-w-md mx-auto">
+            <h1 className="text-xl sm:text-3xl font-bold mb-4 text-orange-600">
+              {new Date(lastSubscription?.expiry_date) < new Date()
+                ? "Hotel Subscription Expired"
+                : "Hotel is Currently Inactive"}
+            </h1>
+            <p className="mb-6 text-sm sm:text-base text-gray-600">
+              This hotel is temporarily unavailable. For assistance, please
+              contact our support team.
+            </p>
+            <div className="text-gray-700 bg-gray-100 p-4 rounded-md">
+              <p className="font-medium text-sm sm:text-base">
+                Contact Support:
+              </p>
+              <a
+                href="tel:+916238969297"
+                className="text-blue-600 hover:text-blue-800 block mt-2 text-sm sm:text-base"
+              >
+                +91 6238969297
+              </a>
+            </div>
+          </div>
+        </div>
       );
+    }
+
+    // if (isOrderingEnabled || isDeliveryEnabled) {
+    return (
+      <HotelMenuPage
+        socialLinks={socialLinks}
+        auth={auth}
+        hoteldata={hotelDataWithOfferPrice as HotelData}
+        offers={filteredOffers}
+        tableNumber={tableNumber}
+        theme={theme}
+        qrGroup={qr_codes[0].qr_group}
+        qrId={validQrId}
+      />
+    );
     // }
 
     // return (

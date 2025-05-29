@@ -124,7 +124,7 @@ export function Navbar() {
               userData?.status === "active"
                 ? [{ href: "/admin/orders", label: "Orders" }]
                 : []),
-              ...(features?.stockmanagement.access
+              ...(features?.stockmanagement.access && userData?.status === "active"
                 ? [{ href: "/admin/stock-management", label: "Stock Management" }]
                 : []),
             ]

@@ -30,6 +30,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 // Types
 export interface Partner {
@@ -42,7 +43,7 @@ export interface Partner {
 export interface PartnerSubscription {
   id: string;
   partner_id: string;
-  joined_at: string;
+  created_at: string;
   plan: "300" | "500";
   type: "monthly" | "yearly";
   expiry_date: string;
@@ -63,6 +64,7 @@ const SubscriptionManagement = () => {
     partners,
     subscriptions,
     payments,
+    repeatLastPlan,
     loading,
     error,
     currentView,
@@ -71,6 +73,7 @@ const SubscriptionManagement = () => {
     newSubscription,
     newPayment,
     includePayment,
+    getLastSubscription,
     subscriptionPayment,
     hasMorePartners,
     hasMoreSubscriptions,
@@ -111,13 +114,12 @@ const SubscriptionManagement = () => {
   if (currentView === "addSubscription" && selectedPartner) {
     const partner = partners.find((p) => p.id === selectedPartner);
 
-  
     return (
       <div className="p-6">
         <Button onClick={backToList} variant="outline" className="mb-4">
           Back to Partners
         </Button>
-  
+
         <Card>
           <CardHeader>
             <CardTitle>Add Subscription for {partner?.store_name}</CardTitle>
@@ -125,7 +127,7 @@ const SubscriptionManagement = () => {
           <CardContent>
             {loading && <p>Loading...</p>}
             {error && <p className="text-red-500">{error}</p>}
-  
+
             <div className="space-y-6">
               {/* Subscription Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -170,7 +172,7 @@ const SubscriptionManagement = () => {
                   </Select>
                 </div>
               </div>
-  
+
               {/* Payment Option */}
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
@@ -185,7 +187,7 @@ const SubscriptionManagement = () => {
                     Add payment with subscription
                   </Label>
                 </div>
-  
+
                 {includePayment && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg">
                     <div>
@@ -230,7 +232,9 @@ const SubscriptionManagement = () => {
                               if (selectedDate) {
                                 setSubscriptionPayment({
                                   ...subscriptionPayment,
-                                  date: selectedDate.toISOString().split("T")[0],
+                                  date: selectedDate
+                                    .toISOString()
+                                    .split("T")[0],
                                 });
                               }
                             }}
@@ -242,7 +246,7 @@ const SubscriptionManagement = () => {
                   </div>
                 )}
               </div>
-  
+
               <div className="flex space-x-2">
                 <Button onClick={addSubscription} disabled={loading}>
                   Add Subscription {includePayment ? "& Payment" : ""}
@@ -301,7 +305,7 @@ const SubscriptionManagement = () => {
                     <TableCell className="capitalize">
                       {subscription.type}
                     </TableCell>
-                    <TableCell>{formatDate(subscription.joined_at)}</TableCell>
+                    <TableCell>{formatDate(subscription.created_at)}</TableCell>
                     <TableCell>
                       {formatDate(subscription.expiry_date)}
                     </TableCell>
@@ -545,12 +549,19 @@ const SubscriptionManagement = () => {
             </TableHeader>
             <TableBody>
               {getSortedPartners().map((partner) => {
-                const activeSubscriptions = getActiveSubscriptions(partner.id);
+                const activeSubscriptions = getLastSubscription(partner.id);
                 const nearestExpiry = getNearestExpiryDate(partner.id);
 
                 return (
                   <TableRow key={partner.id}>
-                    <TableCell>{partner.store_name}</TableCell>
+                    <TableCell>
+                      <Link
+                        className="underline text-orange-600"
+                        href={`/hotels/${partner.store_name}/${partner.id}`}
+                      >
+                        {partner.store_name}
+                      </Link>
+                    </TableCell>
                     <TableCell>{partner.phone}</TableCell>
                     <TableCell>
                       <Select
@@ -570,24 +581,40 @@ const SubscriptionManagement = () => {
                     </TableCell>
                     <TableCell>
                       <div className="space-y-2">
-                        {activeSubscriptions.length > 0 ? (
-                          activeSubscriptions.map((sub) => (
-                            <div key={sub.id} className="text-sm">
+                        {activeSubscriptions ? (
+                          isActiveSubscription(activeSubscriptions) ? (
+                            // Active subscription display
+                            <div className="text-sm">
                               <span className="font-medium">
-                                {sub.plan} plan
+                                {activeSubscriptions.plan} plan
                               </span>{" "}
-                              ({sub.type}) - Expires{" "}
-                              {formatDate(sub.expiry_date)}
-                              {sub.expiry_date === nearestExpiry && (
+                              ({activeSubscriptions.type}) - Expires{" "}
+                              {formatDate(activeSubscriptions.expiry_date)}
+                              {activeSubscriptions.expiry_date ===
+                                nearestExpiry && (
                                 <span className="ml-2 bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">
                                   Nearest
                                 </span>
                               )}
                             </div>
-                          ))
+                          ) : (
+                            // Expired subscription display
+                            <div className="text-sm">
+                              <span className="font-medium line-through">
+                                {activeSubscriptions.plan} plan
+                              </span>{" "}
+                              <span className="text-red-500">
+                                ({activeSubscriptions.type}) - Expired on{" "}
+                                {formatDate(activeSubscriptions.expiry_date)}
+                              </span>
+                              <span className="ml-2 bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">
+                                Expired
+                              </span>
+                            </div>
+                          )
                         ) : (
                           <span className="text-gray-500">
-                            No active subscriptions
+                            No subscriptions
                           </span>
                         )}
                       </div>
@@ -611,9 +638,9 @@ const SubscriptionManagement = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => showAddSubscriptionForm(partner.id)}
+                          onClick={() => repeatLastPlan(partner.id, true)}
                         >
-                          Add Subscription
+                          Repeat Last Plan
                         </Button>
                       </div>
                     </TableCell>

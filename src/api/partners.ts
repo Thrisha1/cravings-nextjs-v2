@@ -17,14 +17,13 @@ query GetAllPartners($limit: Int, $offset: Int) {
   }
 }`;
 
-
 export const getPartnerByIdQuery = `
   query GetPartnerDsitricts() {
     partners {
       district
     }
   }
-  `; 
+  `;
 
 export const getPartnerAndOffersQuery = `
 query GetPartnerAndOffersQuery($id: uuid!) {
@@ -96,20 +95,20 @@ query GetPartnerAndOffersQuery($id: uuid!) {
 `;
 
 export const getInactivePartnersQuery = `
-  query GetInactivePartners {
-    partners(where: { status: { _eq: "inactive" } }) {
-      id
-      name
-      email
-      store_name
-      location
-      status
-      upi_id
-      description
-      phone
-      district
-    }
+  query GetInactivePartnersWithoutSubscription {
+  partners(where: {status: {_eq: "inactive"}, _not: {partner_subscriptions: {}}}) {
+    id
+    name
+    email
+    store_name
+    location
+    status
+    upi_id
+    description
+    phone
+    district
   }
+}
 `;
 
 export const getAllPartnerUpiIdsQuery = `
@@ -121,6 +120,18 @@ export const getAllPartnerUpiIdsQuery = `
     }
   }
 `;
+
+export const getPartnerSubscriptionQuery = `
+query GetLastSubscription($partnerId: uuid!) {
+  partner_subscriptions(
+    where: { partner_id: { _eq: $partnerId } },
+    order_by: { expiry_date: desc },
+    limit: 1
+  ) {
+    id
+    expiry_date
+}
+}`;
 
 /*...........mutation...........*/
 
@@ -149,7 +160,6 @@ export const updatePartnerMutation = `
     }
   }
 `;
-
 
 /*...........types...........*/
 

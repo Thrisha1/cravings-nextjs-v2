@@ -1,4 +1,4 @@
-import { getPartnerAndOffersQuery } from "@/api/partners";
+import { getPartnerAndOffersQuery, getPartnerSubscriptionQuery } from "@/api/partners";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import HotelMenuPage from "@/screens/HotelMenuPage_v2";
 import { MenuItem } from "@/store/menuStore_hasura";
@@ -21,8 +21,6 @@ export async function generateMetadata({
   const { id: hotelIds } = await params;
 
   const hotelId = isUUID(hotelIds?.[0] || "") ? hotelIds?.[0] : hotelIds?.[1];
-  
-  
 
   const getHotelData = unstable_cache(
     async (id: string) => {
@@ -30,7 +28,7 @@ export async function generateMetadata({
         const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
           id,
         });
-        
+
         return {
           id,
           ...partnerData.partners[0],
@@ -164,8 +162,7 @@ const HotelPage = async ({
     return {
       ...item,
       price: item.offers?.[0]?.offer_price || item.price,
-      
-    }
+    };
   });
 
   const hotelDataWithOfferPrice = {
@@ -173,6 +170,37 @@ const HotelPage = async ({
     menus: menuItemWithOfferPrice,
   };
 
+  const getLastSubscription = await fetchFromHasura(getPartnerSubscriptionQuery,
+    {
+      partnerId: hoteldata?.id || "",
+    }
+  );
+
+  const lastSubscription = getLastSubscription?.partner_subscriptions[0];
+
+
+  if (hoteldata?.status === "inactive") {
+
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4 py-8">
+          <div className="text-center p-4 sm:p-8 bg-white rounded-3xl shadow-lg w-full max-w-[90%] sm:max-w-md mx-auto">
+            <h1 className="text-xl sm:text-3xl font-bold mb-4 text-orange-600">{(new Date(lastSubscription?.expiry_date) < new Date()) ? "Hotel Subscription Expired" : "Hotel is Currently Inactive"}</h1>
+            <p className="mb-6 text-sm sm:text-base text-gray-600">
+              This hotel is temporarily unavailable. For assistance, please contact our support team.
+            </p>
+            <div className="text-gray-700 bg-gray-100 p-4 rounded-md">
+              <p className="font-medium text-sm sm:text-base">Contact Support:</p>
+              <a href="tel:+916238969297" className="text-blue-600 hover:text-blue-800 block mt-2 text-sm sm:text-base">
+                +91 6238969297
+              </a>
+            </div>
+          </div>
+        </div>
+      );
+
+  
+  }
+ 
 
   return (
     <>

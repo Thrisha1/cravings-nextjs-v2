@@ -17,7 +17,7 @@ export async function middleware(request: NextRequest) {
   if (pathname === '/') {
     if (authToken) {
       try {
-        const decrypted = decryptText(authToken) as { id: string; role: string };
+        const decrypted = decryptText(authToken) as { id: string; role: string; status?: string };
         if (decrypted?.role === 'partner') {
           return NextResponse.redirect(new URL('/admin', request.url));
         }
@@ -45,9 +45,21 @@ export async function middleware(request: NextRequest) {
     }
   };
 
+  // Allowed routes for inactive partners (exact matches only)
+  const inactivePartnerAllowedRoutes = [
+    '/admin',        // Only exact match, not /admin/*
+    '/profile',
+    '/offers',
+    '/explore',
+    '/',
+    '/login',
+    '/partner'
+  ];
+
   // Check if trying to access a protected route
   const isProtectedRoute = Object.values(roleAccessRules)
-    .some(rule => rule.allowed.some(route => pathname.startsWith(route)));
+    .some(rule => rule.allowed.some(route => pathname.startsWith(route))) ||
+    inactivePartnerAllowedRoutes.includes(pathname); // Note: using includes() for exact match
 
   if (!isProtectedRoute) {
     return NextResponse.next();
@@ -61,7 +73,7 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    const decrypted = decryptText(authToken) as { id: string; role: string };
+    const decrypted = decryptText(authToken) as { id: string; role: string; status?: string };
     
     if (!decrypted?.id || !decrypted?.role) {
       throw new Error('Invalid token structure');
@@ -70,17 +82,34 @@ export async function middleware(request: NextRequest) {
     const userRole = decrypted.role as keyof typeof roleAccessRules;
     const userRules = roleAccessRules[userRole] || roleAccessRules.user;
 
-    // Check if user has access to the requested route
-    const hasAccess = userRules.allowed.some(route => pathname.startsWith(route));
-    
-    if (!hasAccess) {
-      return NextResponse.redirect(new URL(userRules.redirect, request.url));
+    // Special handling for inactive partners
+    if (userRole === 'partner' && decrypted.status === 'inactive') {
+      // For inactive partners, only allow exact matches to the allowed routes
+      const isAllowedRoute = inactivePartnerAllowedRoutes.includes(pathname);
+      
+      // Special case: allow /admin but not /admin/*
+      if (pathname.startsWith('/admin/') || (pathname === '/admin' && !isAllowedRoute)) {
+        return NextResponse.redirect(new URL('/admin', request.url));
+      }
+      
+      if (!isAllowedRoute) {
+        return NextResponse.redirect(new URL('/admin', request.url));
+      }
+    } else {
+      // Normal role-based access check for active users
+      const hasAccess = userRules.allowed.some(route => pathname.startsWith(route));
+      if (!hasAccess) {
+        return NextResponse.redirect(new URL(userRules.redirect, request.url));
+      }
     }
 
     // Add user info to headers
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-user-id', decrypted.id);
     requestHeaders.set('x-user-role', decrypted.role);
+    if (decrypted.status) {
+      requestHeaders.set('x-user-status', decrypted.status);
+    }
 
     return NextResponse.next({
       request: {

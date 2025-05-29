@@ -15,7 +15,7 @@ interface PartnerSubscription {
   partner_id: string;
   plan: string;
   type: "monthly" | "yearly";
-  joined_at: string;
+  created_at: string;
   expiry_date: string;
 }
 
@@ -72,7 +72,7 @@ export const usePartnerManagement = () => {
 
   // Form states
   const [newSubscription, setNewSubscription] = useState<
-    Omit<PartnerSubscription, "id" | "expiry_date" | "joined_at">
+    Omit<PartnerSubscription, "id" | "expiry_date" | "created_at">
   >({
     partner_id: "",
     plan: "300",
@@ -115,7 +115,7 @@ export const usePartnerManagement = () => {
         `
           : `
           query Partners($limit: Int!, $offset: Int!) {
-            partners(limit: $limit, offset: $offset) {
+            partners(limit: $limit, offset: $offset ,order_by: {partner_subscriptions_aggregate: {max: {expiry_date: desc_nulls_last}}}) {
               id
               phone
               status
@@ -163,11 +163,11 @@ export const usePartnerManagement = () => {
           partner_subscriptions(
             where: {partner_id: {_in: $partnerIds}}, 
             limit: $limit,
-            order_by: {joined_at: desc}
+            order_by: {created_at: desc}
           ) {
             expiry_date
             id
-            joined_at
+            created_at
             plan
             type
             partner_id
@@ -214,11 +214,11 @@ export const usePartnerManagement = () => {
             where: {partner_id: {_eq: $partnerId}}, 
             limit: $limit, 
             offset: $offset,
-            order_by: {joined_at: desc}
+            order_by: {created_at: desc}
           ) {
             expiry_date
             id
-            joined_at
+            created_at
             plan
             type
             partner_id
@@ -364,9 +364,15 @@ export const usePartnerManagement = () => {
       let expiryDate;
 
       if (newSubscription.type === "monthly") {
-        expiryDate = addMonths(new Date(), 1).toISOString();
+        expiryDate = addMonths(
+          new Date(subscriptionPayment.date),
+          1
+        ).toISOString();
       } else {
-        expiryDate = addYears(new Date(), 1).toISOString();
+        expiryDate = addYears(
+          new Date(subscriptionPayment.date),
+          1
+        ).toISOString();
       }
 
       // Add subscription
@@ -376,7 +382,7 @@ export const usePartnerManagement = () => {
           insert_partner_subscriptions_one(object: $object) {
             id
             expiry_date
-            joined_at
+            created_at
             plan
             type
             partner_id
@@ -386,7 +392,7 @@ export const usePartnerManagement = () => {
         {
           object: {
             ...newSubscription,
-            joined_at: joinedAt,
+            created_at: joinedAt,
             expiry_date: expiryDate,
           },
         }
@@ -496,6 +502,7 @@ export const usePartnerManagement = () => {
       });
 
       setCurrentView("payments");
+      fetchPartners(partnersOffset, true);
     } catch (err) {
       setError("Failed to add payment");
       console.error(err);
@@ -620,6 +627,21 @@ export const usePartnerManagement = () => {
     [subscriptions, isActiveSubscription]
   );
 
+  const getLastSubscription = useCallback(
+    (partnerId: string) => {
+      const partnerSubscriptions = subscriptions[partnerId] || [];
+
+      if (partnerSubscriptions.length === 0) return null;
+
+      // Sort by expiry_date (descending) to get the most recent expiry
+      return [...partnerSubscriptions].sort(
+        (a, b) =>
+          new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime()
+      )[0];
+    },
+    [subscriptions]
+  );
+
   // Get nearest expiry date for a partner
   const getNearestExpiryDate = useCallback(
     (partnerId: string) => {
@@ -638,16 +660,141 @@ export const usePartnerManagement = () => {
   // Sort partners by nearest expiry date
   const getSortedPartners = useCallback(() => {
     return [...partners].sort((a, b) => {
-      const aExpiry = getNearestExpiryDate(a.id);
-      const bExpiry = getNearestExpiryDate(b.id);
+      const aExpiry = getLastSubscription(a.id);
+      const bExpiry = getLastSubscription(b.id);
+      const now = new Date().getTime();
+      
+      const aIsExpired = aExpiry && new Date(aExpiry.expiry_date).getTime() < now;
+      const bIsExpired = bExpiry && new Date(bExpiry.expiry_date).getTime() < now;
+      
+      // Sort expired first
+      if (aIsExpired && !bIsExpired) return -1;
+      if (!aIsExpired && bIsExpired) return 1;
+      
+      // Then sort by status (inactive before active)
+      if (a.status !== b.status) {
+        return a.status === 'inactive' ? -1 : 1;
+      }
 
+      // Finally sort by expiry date
       if (!aExpiry && !bExpiry) return 0;
       if (!aExpiry) return 1;
       if (!bExpiry) return -1;
 
-      return new Date(aExpiry).getTime() - new Date(bExpiry).getTime();
+      return (
+        new Date(aExpiry.expiry_date).getTime() -
+        new Date(bExpiry.expiry_date).getTime()
+      );
     });
-  }, [partners, getNearestExpiryDate]);
+  }, [partners, getLastSubscription]);
+
+  const repeatLastPlan = useCallback(
+    async (partnerId: string, includePayment: boolean = false) => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Get the last subscription for the partner
+        const lastSubscription = getLastSubscription(partnerId);
+
+        if (!lastSubscription) {
+          setError("No previous subscription found");
+          return;
+        }
+
+        const joinedAt = new Date().toISOString();
+        let expiryDate;
+
+        // Calculate new expiry date based on subscription type
+        if (lastSubscription.type === "monthly") {
+          expiryDate = addMonths(new Date(), 1).toISOString();
+        } else {
+          expiryDate = addYears(new Date(), 1).toISOString();
+        }
+
+        // Add the new subscription
+        const subscriptionData = await fetchFromHasura(
+          `
+        mutation AddSubscription($object: partner_subscriptions_insert_input!) {
+          insert_partner_subscriptions_one(object: $object) {
+            id
+            expiry_date
+            created_at
+            plan
+            type
+            partner_id
+          }
+        }
+      `,
+          {
+            object: {
+              partner_id: partnerId,
+              plan: lastSubscription.plan,
+              type: lastSubscription.type,
+              created_at: joinedAt,
+              expiry_date: expiryDate,
+            },
+          }
+        );
+
+        // Add payment if included
+        if (includePayment) {
+          const paymentAmount = parseInt(lastSubscription.plan);
+          await fetchFromHasura(
+            `
+          mutation AddPayment($object: partner_payments_insert_input!) {
+            insert_partner_payments_one(object: $object) {
+              id
+              amount
+              date
+              partner_id
+            }
+          }
+        `,
+            {
+              object: {
+                partner_id: partnerId,
+                amount: paymentAmount,
+                date: new Date().toISOString().split("T")[0],
+              },
+            }
+          );
+
+          // Update payments state
+          setPayments((prev) => ({
+            ...prev,
+            [partnerId]: [
+              {
+                id: Date.now().toString(), // Temporary ID
+                partner_id: partnerId,
+                amount: paymentAmount,
+                date: new Date().toISOString().split("T")[0],
+              },
+              ...(prev[partnerId] || []),
+            ],
+          }));
+        }
+
+        // Update subscriptions state
+        setSubscriptions((prev) => ({
+          ...prev,
+          [partnerId]: [
+            subscriptionData.insert_partner_subscriptions_one,
+            ...(prev[partnerId] || []),
+          ],
+        }));
+
+        return subscriptionData.insert_partner_subscriptions_one;
+      } catch (err) {
+        setError("Failed to repeat last plan");
+        console.error(err);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [getLastSubscription]
+  );
 
   // Pagination handlers
   const nextPartners = useCallback(() => {
@@ -732,6 +879,7 @@ export const usePartnerManagement = () => {
 
     // Functions
     fetchPartners,
+    repeatLastPlan,
     fetchSubscriptions,
     fetchPayments,
     updatePartnerStatus,
@@ -746,6 +894,7 @@ export const usePartnerManagement = () => {
     formatDate,
     isActiveSubscription,
     getActiveSubscriptions,
+    getLastSubscription,
     getNearestExpiryDate,
     getSortedPartners,
     nextPartners,
