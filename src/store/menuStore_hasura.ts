@@ -9,7 +9,7 @@ import {
   updateMenu,
 } from "@/api/menu";
 import { AuthUser, Partner, useAuthStore } from "./authStore";
-import { Category, useCategoryStore } from "./categoryStore_hasura";
+import { Category, formatDisplayName, useCategoryStore } from "./categoryStore_hasura";
 import { processImage } from "@/lib/processImage";
 import { uploadFileToS3 } from "@/app/actions/aws-s3";
 import { revalidateTag } from "@/app/actions/revalidate";
@@ -233,9 +233,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   updateItem: async (id, updatedItem) => {
     try {
       toast.loading("Updating item...");
-      const categories = useCategoryStore.getState().categories;
-      const { category, ...otherItems } = updatedItem;
       const userData = useAuthStore.getState().userData as AuthUser;
+      const fetchCategories = useCategoryStore.getState().fetchCategories;
+      const allCategories = await fetchCategories(userData.id) || [];
+      const { category, ...otherItems } = updatedItem;
+
 
       let catid;
       let changedItem = { ...otherItems };
@@ -243,7 +245,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       let cat = null;
 
       if (category?.id !== undefined) {
-        cat = categories.find((cat) => cat.name === category.name);
+        cat = allCategories.find((cat) => formatDisplayName(cat.name) === formatDisplayName(category.name));
+        console.log("Category found:", cat);
+        
         catid = cat?.id;
         changedItem = {
           ...changedItem,
@@ -278,6 +282,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         menu: changedItem,
       });
 
+      console.log("Updated item:", updatedItem);
+      console.log("Category:", cat);
+      
+
       const items = get().items.map((item) =>
         item.id === id ? {
           ...item,
@@ -290,6 +298,8 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         } : item
       );
       set({ items });
+      console.log('Items after update:', items);
+      
       revalidateTag(userData?.id);
       get().groupItems();
       toast.dismiss();
@@ -353,7 +363,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
     // 1. Group items by category name (case-insensitive)
     const groupedByName: GroupedItems = items.reduce((acc, item) => {
-      const categoryName = item.category.name;
+      const categoryName = formatDisplayName(item.category.name).toLowerCase();
       if (!acc[categoryName]) {
         acc[categoryName] = [];
       }
