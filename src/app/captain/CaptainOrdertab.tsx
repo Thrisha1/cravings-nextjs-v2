@@ -119,7 +119,10 @@ const CaptainOrdersTab = () => {
             }
           );
 
+          console.log("Raw orders response:", ordersResponse);
+
           if (!ordersResponse.orders) {
+            console.log("No orders found in response");
             setOrders([]);
             setLoading(false);
             return;
@@ -129,6 +132,8 @@ const CaptainOrdersTab = () => {
           const captainIds = [...new Set(ordersResponse.orders
             .map((order: any) => order.captain_id)
             .filter((id: string | null) => id !== null))];
+
+          console.log("Found captain IDs:", captainIds);
 
           // Then get the captains
           const captainsResponse = await fetchFromHasura(
@@ -143,6 +148,8 @@ const CaptainOrdersTab = () => {
               captain_ids: captainIds
             }
           );
+
+          console.log("Captains response:", captainsResponse);
 
           // Create a map of captain data
           const captainMap = new Map(
@@ -160,26 +167,44 @@ const CaptainOrdersTab = () => {
               email: currentCaptain.email
             } : order.captain_id ? captainMap.get(order.captain_id) : null;
 
-            return {
+            const processedOrder = {
               ...order,
               createdAt: order.created_at,
-              extraCharges: order.extra_charges,
+              extraCharges: order.extra_charges || [],
               items: order.order_items.map((item: any) => ({
                 id: item.menu.id,
                 name: item.menu.name,
-                price: item.menu.price,
-                quantity: item.quantity,
+                price: parseFloat(item.menu.price) || 0,
+                quantity: parseInt(item.quantity) || 0,
                 category: item.menu.category.name
               })),
               captain: orderCaptain,
-              captain_id: order.captain_id
+              captain_id: order.captain_id,
+              totalPrice: parseFloat(order.total_price) || 0
             };
+
+            console.log("Processed order:", {
+              id: processedOrder.id,
+              totalPrice: processedOrder.totalPrice,
+              items: processedOrder.items.map((item: OrderItem) => ({
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity
+              }))
+            });
+
+            return processedOrder;
           });
 
-          console.log("Mapped orders with captain data:", processedOrders.map((order: Order) => ({
+          console.log("Final processed orders:", processedOrders.map((order: Order) => ({
             id: order.id,
-            captain_id: order.captain_id,
-            captain: order.captain
+            totalPrice: order.totalPrice,
+            itemsCount: order.items.length,
+            items: order.items.map((item: OrderItem) => ({
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity
+            }))
           })));
 
           setOrders(processedOrders);
@@ -227,51 +252,123 @@ const CaptainOrdersTab = () => {
       }
 
       // Keep existing orders and only add new ones
-      setOrders(currentOrders => {
+      const processNewOrders = async () => {
+        const currentOrders = orders; // Get current orders
         const existingOrderIds = new Set(currentOrders.map(o => o.id));
         const newOrders = captainOrders.filter(order => !existingOrderIds.has(order.id));
 
         if (newOrders.length === 0) {
           console.log("No new orders in subscription update");
-          return currentOrders;
+          return;
         }
 
         console.log("Processing new orders from subscription:", newOrders.map(o => o.id));
 
-        // Map only the new orders
-        const mappedNewOrders = newOrders.map(order => {
-          const currentCaptain = captainData as Captain;
-          const isCurrentCaptainOrder = order.captain_id === currentCaptain.id;
-          
-          const orderCaptain = isCurrentCaptainOrder ? {
-            id: currentCaptain.id,
-            name: currentCaptain.name,
-            email: currentCaptain.email
-          } : undefined;
+        // Fetch complete order details for new orders
+        const processedNewOrders = await Promise.all(newOrders.map(async (order) => {
+          try {
+            // Fetch complete order details including order_items
+            const orderDetails = await fetchFromHasura(
+              `query GetOrderDetails($orderId: uuid!) {
+                orders_by_pk(id: $orderId) {
+                  id
+                  status
+                  created_at
+                  total_price
+                  partner_id
+                  orderedby
+                  captain_id
+                  extra_charges
+                  order_items {
+                    id
+                    quantity
+                    menu {
+                      id
+                      name
+                      price
+                      category {
+                        name
+                      }
+                    }
+                  }
+                }
+              }`,
+              { orderId: order.id }
+            );
 
-          return {
-            id: order.id,
-            status: order.status as "pending" | "completed" | "cancelled",
-            createdAt: order.createdAt,
-            totalPrice: order.total_price || 0,
-            partnerId: order.partner_id,
-            orderedby: order.orderedby,
-            extraCharges: order.extra_charges || [],
-            items: order.items || [],
-            captain: orderCaptain,
-            captain_id: order.captain_id
-          };
-        });
+            const orderData = orderDetails.orders_by_pk;
+            if (!orderData) {
+              console.error("No order details found for order:", order.id);
+              return null;
+            }
 
-        return [...currentOrders, ...mappedNewOrders];
-      });
+            const currentCaptain = captainData as Captain;
+            const isCurrentCaptainOrder = orderData.captain_id === currentCaptain.id;
+            
+            const orderCaptain = isCurrentCaptainOrder ? {
+              id: currentCaptain.id,
+              name: currentCaptain.name,
+              email: currentCaptain.email
+            } : undefined;
+
+            const processedOrder: Order = {
+              id: orderData.id,
+              status: orderData.status as "pending" | "completed" | "cancelled",
+              createdAt: orderData.created_at,
+              totalPrice: parseFloat(orderData.total_price) || 0,
+              partnerId: orderData.partner_id,
+              orderedby: orderData.orderedby,
+              extraCharges: orderData.extra_charges || [],
+              items: orderData.order_items.map((item: any) => ({
+                id: item.menu.id,
+                name: item.menu.name,
+                price: parseFloat(item.menu.price) || 0,
+                quantity: parseInt(item.quantity) || 0,
+                category: item.menu.category.name
+              })),
+              captain: orderCaptain,
+              captain_id: orderData.captain_id
+            };
+
+            console.log("Processed subscription order:", {
+              id: processedOrder.id,
+              totalPrice: processedOrder.totalPrice,
+              items: processedOrder.items.map((item: OrderItem) => ({
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity
+              })),
+              extraCharges: processedOrder.extraCharges
+            });
+
+            return processedOrder;
+          } catch (error) {
+            console.error("Error processing subscription order:", order.id, error);
+            return null;
+          }
+        }));
+
+        // Filter out any null orders (failed to process)
+        const validNewOrders = processedNewOrders.filter((order): order is Order => order !== null);
+
+        console.log("Adding new processed orders:", validNewOrders.map((o: Order) => ({
+          id: o.id,
+          totalPrice: o.totalPrice,
+          itemsCount: o.items.length,
+          extraChargesCount: (o.extraCharges || []).length
+        })));
+
+        setOrders([...orders, ...validNewOrders]);
+      };
+
+      processNewOrders();
     });
 
     return () => {
       console.log("Cleaning up subscription");
       unsubscribe();
     };
-  }, [captainData?.partner_id]);
+  }, [captainData?.partner_id, orders]);
 
   // Add logging to the orders state effect
   useEffect(() => {

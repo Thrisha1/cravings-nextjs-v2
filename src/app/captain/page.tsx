@@ -7,10 +7,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import CaptainOrdersTab from "./CaptainOrdertab";
+import { CaptainPOS } from "./pos/CaptainPOS";
+import { Captaincart } from "./pos/Captaincart";
+import { CaptainCheckoutModal } from "./pos/CaptainCheckoutModal";
+import { EditCaptainOrderModal } from "./pos/EditCaptainOrderModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useState } from "react";
 
 export default function CaptainDashboard() {
   const router = useRouter();
   const { signOut } = useAuthStore();
+  const [isPOSOpen, setIsPOSOpen] = useState(false);
 
   const handleSignOut = () => {
     signOut();
@@ -41,23 +53,19 @@ export default function CaptainDashboard() {
       <div className="flex-1 container mx-auto p-2 sm:p-4 overflow-hidden flex flex-col">
         {/* Create New Order Button */}
         <div className="flex-none flex justify-end mb-3 sm:mb-4">
-          <Link href="/captain/pos">
-            <Button 
-              className="flex items-center gap-2 text-sm sm:text-base w-full sm:w-auto"
-              onClick={() => {
-                router.push("/captain/pos");
-              }}
-            >
-              <PlusCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Create New Order</span>
-              <span className="sm:hidden">New Order</span>
-            </Button>
-          </Link>
+          <Button 
+            className="flex items-center gap-2 text-sm sm:text-base w-full sm:w-auto"
+            onClick={() => setIsPOSOpen(true)}
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Create New Order</span>
+            <span className="sm:hidden">New Order</span>
+          </Button>
         </div>
 
         {/* Orders Management */}
         <Card className="flex-1 flex flex-col min-h-0">
-          <CardHeader className="flex-none p-3 sm:p-3">
+          <CardHeader className="flex-none p-3 sm:p-4">
             <CardTitle className="text-lg sm:text-xl">All Orders</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 p-0">
@@ -65,6 +73,32 @@ export default function CaptainDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* POS Dialog */}
+      <Dialog open={isPOSOpen} onOpenChange={setIsPOSOpen}>
+        <DialogContent className="max-w-[95vw] h-[90vh] sm:max-w-[90vw] lg:max-w-[80vw]">
+          <DialogHeader>
+            <DialogTitle>Create New Order</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-y-auto">
+              <CaptainPOS />
+            </div>
+            <div className="flex-none">
+              <Captaincart />
+            </div>
+          </div>
+          <div className="flex-none flex justify-end mt-4">
+            <Button variant="outline" onClick={() => setIsPOSOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modals */}
+      <CaptainCheckoutModal />
+      <EditCaptainOrderModal />
     </div>
   );
 }
