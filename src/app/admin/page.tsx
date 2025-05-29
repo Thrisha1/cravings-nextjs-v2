@@ -3,7 +3,10 @@ import React from "react";
 import { getAuthCookie } from "../auth/actions";
 import { unstable_cache } from "next/cache";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { getPartnerAndOffersQuery } from "@/api/partners";
+import {
+  getPartnerAndOffersQuery,
+  getPartnerSubscriptionQuery,
+} from "@/api/partners";
 
 import { Partner } from "@/store/authStore";
 
@@ -27,17 +30,29 @@ const page = async () => {
 
   const userDataResponse = await getParnterData();
   const userData = userDataResponse?.partners[0];
+  const getLastSubscription = await fetchFromHasura(
+    getPartnerSubscriptionQuery,
+    {
+      partnerId: userId,
+    }
+  );
+
+  const lastSubscription = getLastSubscription?.partner_subscriptions[0];
 
   if (userData?.status !== "active") {
     return (
       <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 flex justify-center items-center">
         <div className="max-w-2xl w-full p-6 bg-white border-4 border-orange-500 rounded-lg shadow-lg">
           <h2 className="text-xl font-bold text-orange-600 mb-4">
-            Hotel Verification In Progress
+            {new Date(lastSubscription?.expiry_date) < new Date()
+              ? "Hotel Subscription Expired"
+              : "Hotel is currently inactive / under verification"}
           </h2>
           <p className="text-gray-900 mb-4">
-            You are currently in the verification process. We will verify your
-            hotel within 24 hours. For immediate verification, please call{" "}
+            {new Date(lastSubscription?.expiry_date) < new Date()
+              ? "Your subscription has expired. Please renew your subscription to continue using the services."
+              : "This hotel is currently inactive / under verification. Please contact support for more information."}
+            please call{" "}
             <span className="font-bold text-orange-600">+91 6238969297</span>.
           </p>
         </div>
