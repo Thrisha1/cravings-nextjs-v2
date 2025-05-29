@@ -72,28 +72,24 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         partner_id: userData?.id,
       }).then((res) => res.category);
 
-      const existingCategory = existingCategories[0];
+      const existingCategory = category[0];
 
       if (existingCategory) {
-
-
         return existingCategory as Category;
       } else {
+        const addedCat = await fetchFromHasura(addCategory, {
+          category: {
+            name: formattedName,
+            partner_id: userData?.id,
+          },
+        }).then((res) => res.insert_category.returning[0]);
 
-
-      const addedCat = await fetchFromHasura(addCategory, {
-        category: {
-          name: formattedName,
-          partner_id: userData?.id,
-        },
-      }).then((res) => res.insert_category.returning[0]);
-
-      set({
-        categories: [
-          ...get().categories,
-          { name: formatDisplayName(formattedName), id: addedCat.id },
-        ],
-      });
+        set({
+          categories: [
+            ...get().categories,
+            { name: formatDisplayName(formattedName), id: addedCat.id },
+          ],
+        });
 
         return addedCat as Category;
       }

@@ -22,9 +22,9 @@ import {
 import Link from "next/link";
 import {
   getGstAmount,
-  getExtraCharge,
   calculateDeliveryDistanceAndCost,
 } from "../OrderDrawer";
+import { getExtraCharge } from "@/lib/getExtraCharge";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import { table } from "console";
 

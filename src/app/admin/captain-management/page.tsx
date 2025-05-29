@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, X } from "lucide-react";
 import { toast } from "sonner";
-import { useAuthStore } from "@/store/authStore";
+import { useAuthStore, Partner } from "@/store/authStore";
 import { getFeatures } from "@/lib/getFeatures";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { createCaptainMutation, getCaptainsQuery, deleteCaptainMutation } from "@/api/captains";
@@ -33,8 +33,8 @@ export default function CaptainManagementPage() {
   const [features, setFeatures] = useState<any>(null);
 
   useEffect(() => {
-    if (userData) {
-      setFeatures(getFeatures(userData.feature_flags || ""));
+    if (userData && userData.role === "partner") {
+      setFeatures(getFeatures((userData as Partner).feature_flags || ""));
     }
   }, [userData]);
 
