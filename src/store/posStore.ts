@@ -123,7 +123,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
           return;
         }
         const partnerId = captainData.partner_id;
-        console.log("Fetching tables for partner ID:", partnerId, "from captain:", userData);
+        // console.log("Fetching tables for partner ID:", partnerId, "from captain:", userData);
 
         const response = await fetchFromHasura(
           `
@@ -142,7 +142,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
           }
         );
 
-        console.log("All QR codes for partner:", response.qr_codes);
+        // console.log("All QR codes for partner:", response.qr_codes);
         
         if (!response.qr_codes || !Array.isArray(response.qr_codes)) {
           console.error("Invalid response format:", response);
@@ -155,7 +155,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
           .map((qr: any) => Number(qr.table_number))
           .sort((a: number, b: number) => a - b); // Sort numerically
 
-        console.log("Extracted table numbers:", tableNumbers);
+        // console.log("Extracted table numbers:", tableNumbers);
         
         if (tableNumbers.length === 0) {
           console.warn("No table numbers found in qr_codes for partner:", partnerId);
@@ -171,7 +171,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
       } else {
         // For partners, use their own ID
         const partnerId = userData.id;
-        console.log("Fetching tables for partner ID:", partnerId);
+        // console.log("Fetching tables for partner ID:", partnerId);
 
         const response = await fetchFromHasura(
           `

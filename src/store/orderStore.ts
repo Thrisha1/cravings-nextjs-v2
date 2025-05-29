@@ -384,13 +384,13 @@ const useOrderStore = create(
 
       subscribeOrders: (callback) => {
         const userData = useAuthStore.getState().userData;
-        console.log("Setting up subscription with user data:", {
-          userId: userData?.id,
-          role: userData?.role,
-          partnerId: userData?.role === "captain" ? (userData as Captain).partner_id : userData?.id,
-          hasUserData: !!userData,
-          timestamp: new Date().toISOString()
-        });
+        // console.log("Setting up subscription with user data:", {
+        //   userId: userData?.id,
+        //   role: userData?.role,
+        //   partnerId: userData?.role === "captain" ? (userData as Captain).partner_id : userData?.id,
+        //   hasUserData: !!userData,
+        //   timestamp: new Date().toISOString()
+        // });
 
         // If user data is not available yet, set up a retry mechanism
         if (!userData?.id || !userData?.role) {
@@ -430,12 +430,12 @@ const useOrderStore = create(
           return () => {};
         }
 
-        console.log("Setting up subscription with partner ID:", {
-          partnerId,
-          role: userData.role,
-          isCaptain: userData.role === "captain",
-          timestamp: new Date().toISOString()
-        });
+        // console.log("Setting up subscription with partner ID:", {
+        //   partnerId,
+        //   role: userData.role,
+        //   isCaptain: userData.role === "captain",
+        //   timestamp: new Date().toISOString()
+        // });
 
         let subscriptionActive = true;
         const unsubscribe = subscribeToHasura({
@@ -458,16 +458,16 @@ const useOrderStore = create(
 
             // Log captain orders specifically
             const captainOrders = data?.data?.orders?.filter((order: any) => order.orderedby === "captain") || [];
-            console.log("Captain orders in subscription:", {
-              count: captainOrders.length,
-              orders: captainOrders.map((order: any) => ({
-                id: order.id,
-                captainId: order.captain_id,
-                captain: order.captain,
-                hasCaptain: !!order.captain,
-                captainName: order.captain?.name
-              }))
-            });
+            // console.log("Captain orders in subscription:", {
+            //   count: captainOrders.length,
+            //   orders: captainOrders.map((order: any) => ({
+            //     id: order.id,
+            //     captainId: order.captain_id,
+            //     captain: order.captain,
+            //     hasCaptain: !!order.captain,
+            //     captainName: order.captain?.name
+            //   }))
+            // });
 
             if (!data?.data?.orders) {
               console.log("No orders data in subscription response");
@@ -477,17 +477,17 @@ const useOrderStore = create(
 
             const allOrders = data.data.orders.map((order: any) => {
               // Add detailed logging for captain orders
-              if (order.orderedby === "captain") {
-                console.log("Processing captain order:", {
-                  orderId: order.id,
-                  orderedby: order.orderedby,
-                  captainId: order.captain_id,
-                  captain: order.captain,
-                  hasCaptain: !!order.captain,
-                  captainName: order.captain?.name,
-                  rawOrder: order
-                });
-              }
+              // if (order.orderedby === "captain") {
+              //   console.log("Processing captain order:", {
+              //     orderId: order.id,
+              //     orderedby: order.orderedby,
+              //     captainId: order.captain_id,
+              //     captain: order.captain,
+              //     hasCaptain: !!order.captain,
+              //     captainName: order.captain?.name,
+              //     rawOrder: order
+              //   });
+              // }
 
               return {
                 id: order.id,
@@ -523,17 +523,17 @@ const useOrderStore = create(
               };
             }).filter((order: any): order is NonNullable<typeof order> => order !== null);
 
-            console.log("Setting partner orders:", {
-              totalOrders: allOrders.length,
-              captainOrders: allOrders.filter((o: Order) => o.orderedby === "captain").map((o: Order) => ({
-                id: o.id,
-                captainId: o.captain_id,
-                captain: o.captain,
-                hasCaptain: !!o.captain,
-                captainName: o.captain?.name
-              })),
-              timestamp: new Date().toISOString()
-            });
+            // console.log("Setting partner orders:", {
+            //   totalOrders: allOrders.length,
+            //   captainOrders: allOrders.filter((o: Order) => o.orderedby === "captain").map((o: Order) => ({
+            //     id: o.id,
+            //     captainId: o.captain_id,
+            //     captain: o.captain,
+            //     hasCaptain: !!o.captain,
+            //     captainName: o.captain?.name
+            //   })),
+            //   timestamp: new Date().toISOString()
+            // });
 
             set({ partnerOrders: allOrders });
             if (callback) callback(allOrders);

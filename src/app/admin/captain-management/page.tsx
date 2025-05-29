@@ -32,7 +32,7 @@ export default function CaptainManagementPage() {
   const [showCaptainForm, setShowCaptainForm] = useState(false);
   const [features, setFeatures] = useState<any>(null);
   const [copied, setCopied] = useState(false);
-  const loginUrl = typeof window !== 'undefined' ? `cravings.live/captainlogin` : '/captainlogin';
+  const loginUrl = typeof window !== 'undefined' ? `${window.location.origin}/captainlogin` : '/captainlogin';
 
   useEffect(() => {
     if (userData && userData.role === "partner") {

@@ -350,8 +350,8 @@ export const EditCaptainOrderModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-[95vw] h-[90vh] md:h-[80vh] flex flex-col p-4 md:p-6">
-        <DialogHeader className="flex-none">
+      <DialogContent className="max-w-none w-screen h-screen p-0 sm:p-0">
+        <DialogHeader className="p-4 border-b">
           <DialogTitle>Edit Order #{order?.id?.split("-")[0] || ""}</DialogTitle>
           <DialogDescription>
             {tableNumber ? `Table ${tableNumber}` : ""}
@@ -368,7 +368,7 @@ export const EditCaptainOrderModal = () => {
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : (
-          <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+          <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto h-[calc(100vh-8rem)]">
             {/* Order Details */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 flex-none">
               {userData?.role !== "user" && (
@@ -544,7 +544,7 @@ export const EditCaptainOrderModal = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-2 pt-2 flex-none">
+            <div className="flex justify-end gap-2 pt-2 flex-none border-t mt-4">
               <Button variant="outline" onClick={onClose} size="sm">
                 Cancel
               </Button>

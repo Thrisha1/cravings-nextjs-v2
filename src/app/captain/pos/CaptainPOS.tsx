@@ -37,11 +37,11 @@ export const CaptainPOS = () => {
             try {
                 console.log("Fetching menu for partner:", captainData.partner_id);
                 const menuItems = await fetchMenu(captainData.partner_id);
-                console.log("Fetched menu items:", {
-                    totalItems: menuItems.length,
-                    categories: Object.keys(groupedItems),
-                    groupedItems
-                });
+                // console.log("Fetched menu items:", {
+                //     totalItems: menuItems.length,
+                //     categories: Object.keys(groupedItems),
+                //     groupedItems
+                // });
             } catch (error) {
                 console.error("Error fetching menu:", error);
             } finally {
@@ -79,12 +79,12 @@ export const CaptainPOS = () => {
             return;
         }
 
-        console.log("Filtering items:", {
-            searchQuery,
-            selectedCategory,
-            totalCategories: Object.keys(groupedItems).length,
-            categories: Object.keys(groupedItems)
-        });
+        // console.log("Filtering items:", {
+        //     searchQuery,
+        //     selectedCategory,
+        //     totalCategories: Object.keys(groupedItems).length,
+        //     categories: Object.keys(groupedItems)
+        // });
 
         // If there's a search query, filter across all categories
         if (searchQuery) {

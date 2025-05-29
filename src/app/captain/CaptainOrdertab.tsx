@@ -67,6 +67,7 @@ const CaptainOrdersTab = () => {
       return {
         ...order,
         createdAt: order.created_at,
+        tableNumber: order.table_number,
         extraCharges: order.extra_charges || [],
         items: order.order_items.map((item: any) => ({
           id: item.menu.id,
@@ -133,6 +134,7 @@ const CaptainOrdersTab = () => {
                 partner_id
                 orderedby
                 captain_id
+                table_number
                 extra_charges
                 order_items {
                   id
@@ -209,6 +211,7 @@ const CaptainOrdersTab = () => {
                   partner_id
                   orderedby
                   captain_id
+                  table_number
                   extra_charges
                   order_items {
                     id
@@ -353,17 +356,17 @@ const CaptainOrdersTab = () => {
                   order.totalPrice : 
                   calculatedTotal;
 
-                console.log("Order display details:", {
-                  id: order.id,
-                  orderTotalPrice: order.totalPrice,
-                  calculatedTotal,
-                  foodSubtotal,
-                  gstAmount,
-                  extraChargesTotal,
-                  extraCharges: order.extraCharges,
-                  grantTotal,
-                  usingOrderTotal: order.totalPrice === calculatedTotal
-                });
+                // console.log("Order display details:", {
+                //   id: order.id,
+                //   orderTotalPrice: order.totalPrice,
+                //   calculatedTotal,
+                //   foodSubtotal,
+                //   gstAmount,
+                //   extraChargesTotal,
+                //   extraCharges: order.extraCharges,
+                //   grantTotal,
+                //   usingOrderTotal: order.totalPrice === calculatedTotal
+                // });
 
                 return (
                   <OrderItemCard

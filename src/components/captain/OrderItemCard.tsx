@@ -44,26 +44,26 @@ const OrderItemCard = ({
 //   });
 
   // Add console logging for grantTotal
-  console.log("OrderItemCard grantTotal details:", {
-    orderId: order.id,
-    grantTotal,
-    orderTotalPrice: order.totalPrice,
-    extraCharges: order.extraCharges,
-    extraChargesTotal: (order.extraCharges || []).reduce((sum, c) => sum + (c.amount || 0), 0),
-    foodSubtotal: order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-    gstAmount,
-    gstPercentage
-  });
+  // console.log("OrderItemCard grantTotal details:", {
+  //   orderId: order.id,
+  //   grantTotal,
+  //   orderTotalPrice: order.totalPrice,
+  //   extraCharges: order.extraCharges,
+  //   extraChargesTotal: (order.extraCharges || []).reduce((sum, c) => sum + (c.amount || 0), 0),
+  //   foodSubtotal: order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+  //   gstAmount,
+  //   gstPercentage
+  // });
 
   // Add console logging for captain orders
-  if (order.orderedby === "captain") {
-    console.log("Captain order details:", {
-      orderCaptain: order.captain,
-      userDataCaptain: captainData,
-      orderId: order.id,
-      captainId: order.captain_id
-    });
-  }
+  // if (order.orderedby === "captain") {
+  //   console.log("Captain order details:", {
+  //     orderCaptain: order.captain,
+  //     userDataCaptain: captainData,
+  //     orderId: order.id,
+  //     captainId: order.captain_id
+  //   });
+  // }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -121,6 +121,9 @@ const OrderItemCard = ({
             {order.orderedby === "captain" && (
               <div className="text-sm text-gray-600 mt-1 truncate">
                 Captain: {order.captain?.name || "Unknown Captain"}
+                {order.tableNumber && (
+                  <span className="ml-2">• Table {order.tableNumber}</span>
+                )}
               </div>
             )}
             <div className="text-sm text-gray-500 mt-1">
