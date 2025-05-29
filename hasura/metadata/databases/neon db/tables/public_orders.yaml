@@ -2,6 +2,15 @@ table:
   name: orders
   schema: public
 object_relationships:
+  - name: captainid
+    using:
+      manual_configuration:
+        column_mapping:
+          captain_id: id
+        insertion_order: null
+        remote_table:
+          name: captain
+          schema: public
   - name: partner
     using:
       foreign_key_constraint_on: partner_id
