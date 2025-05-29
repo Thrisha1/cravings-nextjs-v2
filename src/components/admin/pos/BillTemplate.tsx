@@ -15,7 +15,6 @@ interface BillTemplateProps {
     name: string;
     amount: number;
     charge_type?: string;
-    charge_type?: string;
     id?: string;
   }>;
 }

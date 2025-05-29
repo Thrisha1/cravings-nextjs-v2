@@ -58,24 +58,9 @@ import {
   revertFeatureToString,
 } from "@/lib/getFeatures";
 import { updateAuthCookie } from "../auth/actions";
+import { DeliveryRules, Order } from "@/store/orderStore";
 import { createCaptainMutation, getCaptainsQuery, deleteCaptainMutation } from "@/api/captains";
 import { subscriptionQuery } from "@/api/orders";
-import { DeliveryRules, Order } from "@/store/orderStore";
-import { Label } from "@/components/ui/label";
-import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/DeliveryAndGeoLocationSettings";
-import useOrderStore from "@/store/orderStore";
-
-interface Captain {
-  id: string;
-  email: string;
-  name: string;
-  partner_id: string;
-  role: string;
-}
-import { DeliveryRules } from "@/store/orderStore";
-import { createCaptainMutation, getCaptainsQuery, deleteCaptainMutation } from "@/api/captains";
-import { subscriptionQuery } from "@/api/orders";
-import { DeliveryRules, Order } from "@/store/orderStore";
 import { Label } from "@/components/ui/label";
 import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/DeliveryAndGeoLocationSettings";
 import useOrderStore from "@/store/orderStore";

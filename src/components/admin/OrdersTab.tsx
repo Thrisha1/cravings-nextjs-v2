@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { update } from "firebase/database";
-import { update } from "firebase/database";
 
 const OrdersTab = () => {
   const router = useRouter();

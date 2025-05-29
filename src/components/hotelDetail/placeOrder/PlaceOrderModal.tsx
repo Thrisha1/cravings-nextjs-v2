@@ -27,7 +27,6 @@ import {
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import { table } from "console";
-import { getExtraCharge } from "@/lib/getExtraCharge";
 import {
   Select,
   SelectContent,
@@ -130,6 +129,7 @@ interface AddressCardProps {
 const AddressCard = ({
   address,
   setShowMapModal,
+  setAddress,
   getLocation,
   isGeoLoading,
   geoError,

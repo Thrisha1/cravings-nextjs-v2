@@ -551,7 +551,6 @@ const OrderDrawer = ({
                 </span>
               </div>
               </div>
-            </div>
 
             {items?.length && (
               <>
