@@ -41,15 +41,20 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         return get().categories as Category[];
       }
 
-      const categories = await fetchFromHasura(getPartnerCategories, {
+      const allCategories = await fetchFromHasura(getPartnerCategories, {
         partner_id: addedBy,
-      }).then((res) => res.category.map((cat: Category) => ({
-        ...cat,
-        name: formatDisplayName(cat.name)
-      })));
+      }).then((res) =>
+        res.category.map((cat: Category) => ({
+          ...cat,
+          name: cat.name,
+        }))
+      );
 
-      set({ categories });
-      return categories as Category[];
+      set({ categories : allCategories.map((cat : Category) => ({
+        ...cat,
+        name: formatDisplayName(cat.name),
+      })) });
+      return allCategories as Category[];
     } catch (error: unknown) {
       console.error(
         "Fetch categories error:",
