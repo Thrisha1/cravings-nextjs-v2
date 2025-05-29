@@ -171,8 +171,6 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         item.category.name.trim().toLowerCase()
       );
 
-      console.log("Category added:", category);
-
       const category_id = category?.id;
 
       if (!category_id) throw new Error("Category ID not found");
@@ -246,7 +244,6 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       if (category?.id !== undefined) {
         cat = allCategories.find((cat) => formatDisplayName(cat.name) === formatDisplayName(category.name));
-        console.log("Category found:", cat);
         
         catid = cat?.id;
         changedItem = {
@@ -281,9 +278,6 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         id,
         menu: changedItem,
       });
-
-      console.log("Updated item:", updatedItem);
-      console.log("Category:", cat);
       
 
       const items = get().items.map((item) =>
@@ -298,7 +292,6 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         } : item
       );
       set({ items });
-      console.log('Items after update:', items);
       
       revalidateTag(userData?.id);
       get().groupItems();
