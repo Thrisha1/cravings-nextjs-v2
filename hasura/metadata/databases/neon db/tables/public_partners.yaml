@@ -2,6 +2,13 @@ table:
   name: partners
   schema: public
 array_relationships:
+  - name: captains
+    using:
+      foreign_key_constraint_on:
+        column: partner_id
+        table:
+          name: captain
+          schema: public
   - name: categories
     using:
       foreign_key_constraint_on:
@@ -43,6 +50,20 @@ array_relationships:
         column: partner_id
         table:
           name: orders
+          schema: public
+  - name: partner_payments
+    using:
+      foreign_key_constraint_on:
+        column: partner_id
+        table:
+          name: partner_payments
+          schema: public
+  - name: partner_subscriptions
+    using:
+      foreign_key_constraint_on:
+        column: partner_id
+        table:
+          name: partner_subscriptions
           schema: public
   - name: payments
     using:

@@ -11,7 +11,7 @@ import { Button } from "./button";
 import { Dialog, DialogContent } from "./dialog";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
-import { formatDisplayName, useCategoryStore } from "@/store/categoryStore_hasura";
+import { Category, formatDisplayName, useCategoryStore } from "@/store/categoryStore_hasura";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 
 interface CategoryDropdownProps {
@@ -39,9 +39,32 @@ export const CategoryDropdown = ({
     if (value === "new-cat") {
       setModalOpen(true);
     } else {
-      // console.log("Selected category:", value);
-
+      console.log("Selected category:", value);
       onChange(value);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategory.trim()) return;
+    
+    setIsLoading(true);
+    try {
+      const createdCategory = await addCategory(newCategory.trim());
+      
+      if (createdCategory) {
+        // Select the newly created category
+        onChange(formatDisplayName(createdCategory.name));
+        toast.success("Category created successfully!");
+      }
+      
+      // Close modal and reset form
+      setModalOpen(false);
+      setNewCategory("");
+    } catch (error) {
+      console.error("Error adding category:", error);
+      toast.error("Error adding category");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -55,7 +78,7 @@ export const CategoryDropdown = ({
           <ScrollArea className="h-48">
             <SelectItem
               value="new-cat"
-              className=" bg-green-100 font-semibold cursor-pointer "
+              className="bg-green-100 font-semibold cursor-pointer"
             >
               Create New Category
             </SelectItem>
@@ -74,43 +97,28 @@ export const CategoryDropdown = ({
         </SelectContent>
       </Select>
 
-      {isModalOpen && (
-        <>
-          <Dialog open={isModalOpen} onOpenChange={setModalOpen}>
-            <DialogContent>
-              <h2>Add New Category</h2>
-              <Input
-                type="text"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                placeholder="Enter new category name"
-              />
-              <Button
-                disabled={!newCategory || isLoading}
-                onClick={() => {
-                  if (newCategory) {
-                    setIsLoading(true);
-                    addCategory(newCategory)
-                      .then(() => {
-                        onChange(newCategory);
-                        setModalOpen(false);
-                        setNewCategory("");
-                        setIsLoading(false);
-                        toast.success("Category created successfully!");
-                      })
-                      .catch((error) => {
-                        setIsLoading(false);
-                        toast.error("Error adding category:", error);
-                      });
-                  }
-                }}
-              >
-                {isLoading ? "Creating..." : "Create Category"}
-              </Button>
-            </DialogContent>
-          </Dialog>
-        </>
-      )}
+      <Dialog open={isModalOpen} onOpenChange={setModalOpen}>
+        <DialogContent>
+          <h2>Add New Category</h2>
+          <Input
+            type="text"
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            placeholder="Enter new category name"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newCategory.trim() && !isLoading) {
+                handleCreateCategory();
+              }
+            }}
+          />
+          <Button
+            disabled={!newCategory.trim() || isLoading}
+            onClick={handleCreateCategory}
+          >
+            {isLoading ? "Creating..." : "Create Category"}
+          </Button>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

@@ -111,7 +111,9 @@ interface MenuState {
   updatedCategories: (categories: Category[]) => void;
   updateCategoriesAsBatch: (categories: Category[]) => Promise<Category[]>;
   deleteCategoryAndItems: (categoryId: string) => Promise<void>;
-  updateItemsAsBatch: (items: { id: string; priority: number }[]) => Promise<void>;
+  updateItemsAsBatch: (
+    items: { id: string; priority: number }[]
+  ) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -141,7 +143,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
               price: (mi.offers[0]?.offer_price || mi.price) ?? 0,
               category: {
                 id: mi.category.id,
-                name: (mi.category.name),
+                name: mi.category.name,
                 priority: mi.category.priority,
               },
             };
@@ -170,7 +172,6 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       );
 
       console.log("Category added:", category);
-      
 
       const category_id = category?.id;
 
@@ -207,13 +208,16 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       });
 
       set({
-        items: [...get().items, {
-          ...insert_menu.returning[0],
-          category: {
-            ...insert_menu.returning[0].category,
-            name: (insert_menu.returning[0].category.name)
-          }
-        }],
+        items: [
+          ...get().items,
+          {
+            ...insert_menu.returning[0],
+            category: {
+              ...insert_menu.returning[0].category,
+              name: insert_menu.returning[0].category.name,
+            },
+          },
+        ],
       });
       revalidateTag(userData?.id);
       get().groupItems();
@@ -236,13 +240,16 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       let catid;
       let changedItem = { ...otherItems };
 
+      let cat = null;
+
       if (category?.id !== undefined) {
-        const cat = categories.find(
-          (cat) =>
-            cat.name === (category.name)
-        );
+        cat = categories.find((cat) => cat.name === category.name);
         catid = cat?.id;
-        changedItem = { ...changedItem, category_id: catid };
+        changedItem = {
+          ...changedItem,
+          category_id: catid,
+          
+        };
       }
 
       if (updatedItem.image_url) {
@@ -272,7 +279,15 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       });
 
       const items = get().items.map((item) =>
-        item.id === id ? { ...item, ...updatedItem } : item
+        item.id === id ? {
+          ...item,
+          ...updatedItem,
+          category: {
+            id : cat?.id || item.category.id,
+            name: cat?.name || item.category.name,
+            priority: cat?.priority || item.category.priority,
+          },
+        } : item
       );
       set({ items });
       revalidateTag(userData?.id);

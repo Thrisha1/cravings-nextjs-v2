@@ -9,6 +9,8 @@
 - "!include public_offers_claimed.yaml"
 - "!include public_order_items.yaml"
 - "!include public_orders.yaml"
+- "!include public_partner_payments.yaml"
+- "!include public_partner_subscriptions.yaml"
 - "!include public_partners.yaml"
 - "!include public_payments.yaml"
 - "!include public_pos.yaml"
