@@ -961,6 +961,10 @@ export default function ProfilePage() {
       setState({
         whatsapp_numbers: whatsappNumbers,
       });
+      setIsEditing((prev) => ({
+        ...prev,
+        whatsappNumber: false,
+      }));
 
       toast.dismiss("whatsapp-nums");
       toast.success("Whatsapp Numbers updated successfully!");
@@ -974,6 +978,10 @@ export default function ProfilePage() {
           : "Failed to update Whatsapp Numbers"
       );
       setIsSaving((prev) => ({ ...prev, whatsappNumber: false }));
+      setIsEditing((prev) => ({
+        ...prev,
+        whatsappNumber: false,
+      }));
     }
   };
 
@@ -1731,69 +1739,118 @@ export default function ProfilePage() {
 
                 {userFeatures?.multiwhatsapp.enabled ? (
                   // Multi-whatsapp UI
-                  <div className="space-y-4">
-                    {whatsappNumbers.map((item, index) => (
-                      <div key={index} className="flex gap-2 items-center">
-                        <div className="flex-1 grid grid-cols-2 gap-2">
-                          <Input
-                            placeholder="Area (e.g. North, South)"
-                            value={item.area}
-                            onChange={(e) => {
-                              const newNumbers = [...whatsappNumbers];
-                              newNumbers[index].area = e.target.value;
-                              setWhatsappNumbers(newNumbers);
-                            }}
-                          />
-                          <Input
-                            type="text"
-                            placeholder="Whatsapp Number"
-                            minLength={10}
-                            maxLength={10}
-                            value={item.number}
-                            onChange={(e) => {
-                              const newNumbers = [...whatsappNumbers];
-                              newNumbers[index].number = e.target.value;
-                              setWhatsappNumbers(newNumbers);
-                            }}
-                          />
-                        </div>
-                        <Button
-                          variant="ghost"
-                          onClick={() => {
-                            const newNumbers = [...whatsappNumbers];
-                            newNumbers.splice(index, 1);
-                            setWhatsappNumbers(newNumbers);
-                          }}
-                          className="text-red-500 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
+                  <>
+                    {isEditing.whatsappNumber ? (
+                      <div className="space-y-4">
+                        {whatsappNumbers.map((item, index) => (
+                          <div key={index} className="flex gap-2 items-center">
+                            <div className="flex-1 grid grid-cols-2 gap-2">
+                              <Input
+                                placeholder="Area (e.g. North, South)"
+                                value={item.area}
+                                onChange={(e) => {
+                                  const newNumbers = [...whatsappNumbers];
+                                  newNumbers[index].area = e.target.value;
+                                  setWhatsappNumbers(newNumbers);
+                                }}
+                              />
+                              <Input
+                                type="text"
+                                placeholder="Whatsapp Number"
+                                minLength={10}
+                                maxLength={10}
+                                value={item.number}
+                                onChange={(e) => {
+                                  const newNumbers = [...whatsappNumbers];
+                                  newNumbers[index].number = e.target.value;
+                                  setWhatsappNumbers(newNumbers);
+                                }}
+                              />
+                            </div>
+                            <Button
+                              variant="ghost"
+                              onClick={() => {
+                                const newNumbers = [...whatsappNumbers];
+                                newNumbers.splice(index, 1);
+                                setWhatsappNumbers(newNumbers);
+                              }}
+                              className="text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
 
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() =>
-                          setWhatsappNumbers([
-                            ...whatsappNumbers,
-                            { number: "", area: "" },
-                          ])
-                        }
-                        variant="outline"
-                      >
-                        Add Another Number
-                      </Button>
-                      <Button
-                        onClick={handleSaveWhatsappNumbers}
-                        disabled={
-                          isSaving.whatsappNumber || !whatsappNumbers.length
-                        }
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
-                      </Button>
-                    </div>
-                  </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() =>
+                              setWhatsappNumbers([
+                                ...whatsappNumbers,
+                                { number: "", area: "" },
+                              ])
+                            }
+                            variant="outline"
+                          >
+                            Add Another Number
+                          </Button>
+                          <Button
+                            onClick={handleSaveWhatsappNumbers}
+                            disabled={
+                              isSaving.whatsappNumber || !whatsappNumbers.length
+                            }
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                          >
+                            {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="grid gap-2">
+                          {whatsappNumbers.map((item, index) => (
+                            <div
+                              key={index}
+                              className="flex gap-2 items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                              <div className="flex-1 grid grid-cols-2 gap-4">
+                                <div className="flex flex-col">
+                                  <span className="text-sm text-gray-500">
+                                    Area
+                                  </span>
+                                  <span className="font-medium">
+                                    {item.area || "Default"}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-sm text-gray-500">
+                                    Number
+                                  </span>
+                                  <span className="font-medium">
+                                    {item.number}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex justify-end">
+                          <Button
+                            onClick={() =>
+                              setIsEditing((prev) => ({
+                                ...prev,
+                                whatsappNumber: true,
+                              }))
+                            }
+                            variant="ghost"
+                            className="mt-4"
+                          >
+                            <Pencil className="w-4 h-4 " />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   // Single whatsapp number UI (original code)
                   <div className="flex gap-2">
