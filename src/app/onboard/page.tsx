@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, ChevronRight } from "lucide-react";
@@ -19,6 +19,11 @@ import RegistrationForm from "./components/RegistrationForm";
 import MenuUploadForm from "./components/MenuUploadForm";
 import BusinessPreview from "./components/BusinessPreview";
 
+// Define localStorage keys
+const LS_BUSINESS_DATA = "cravings_onboard_business_data";
+const LS_CURRENT_STEP = "cravings_onboard_current_step";
+const LS_MENU_ITEMS = "cravings_onboard_menu_items";
+
 // Define the steps for the onboarding process
 const steps = [
   { id: 1, name: "Registration Details" },
@@ -30,16 +35,17 @@ const steps = [
 export interface BusinessRegistrationData {
   businessName: string;
   ownerName: string;
-  email: string;
+  email?: string; // Made optional
   phone: string;
-  password: string;
-  confirmPassword: string;
+  password?: string; // Made optional
+  confirmPassword?: string; // Made optional
   area: string;
-  district: string; // Added district field
-  country: string; // Added country field
+  district: string;
+  country: string;
   location: string; // Google Maps URL
   category: string; // e.g., "restaurant", "cafe", etc.
   upiId: string; // For payments
+  logo: string; // Added logo field
 }
 
 // Define the menu item interface
@@ -50,6 +56,7 @@ export interface MenuItem {
   description: string;
   image: string; // URL to the uploaded image
   category?: string;
+  mustTry?: boolean; // Added mustTry field
 }
 
 export default function OnboardingPage() {
@@ -62,16 +69,17 @@ export default function OnboardingPage() {
   const [businessData, setBusinessData] = useState<BusinessRegistrationData>({
     businessName: "",
     ownerName: "",
-    email: "",
+    email: "", // Keep but optional
     phone: "",
-    password: "",
+    password: "", // Keep but optional
     confirmPassword: "",
     area: "",
-    district: "", // Initialize district field
+    district: "",
     country: "India", // Default country
     location: "",
     category: "restaurant",
     upiId: "",
+    logo: "",
   });
   
   // State for storing menu items
@@ -81,6 +89,79 @@ export default function OnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // State for tracking errors
   const [error, setError] = useState<string | null>(null);
+
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    try {
+      // Load business data
+      const storedBusinessData = localStorage.getItem(LS_BUSINESS_DATA);
+      if (storedBusinessData) {
+        const parsedData = JSON.parse(storedBusinessData);
+        setBusinessData(parsedData);
+      }
+      
+      // Load menu items
+      const storedMenuItems = localStorage.getItem(LS_MENU_ITEMS);
+      if (storedMenuItems) {
+        const parsedMenuItems = JSON.parse(storedMenuItems);
+        setMenuItems(parsedMenuItems);
+      }
+      
+      // Load current step
+      const storedStep = localStorage.getItem(LS_CURRENT_STEP);
+      if (storedStep) {
+        const step = parseInt(storedStep);
+        if (step >= 1 && step <= steps.length) {
+          setCurrentStep(step);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading data from localStorage:", err);
+    }
+  }, []);
+  
+  // Save business data to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_BUSINESS_DATA, JSON.stringify(businessData));
+    } catch (err) {
+      console.error("Error saving business data to localStorage:", err);
+    }
+  }, [businessData]);
+  
+  // Save menu items to localStorage whenever they change
+  useEffect(() => {
+    try {
+      // Create a version with optimized image storage
+      const storableMenuItems = menuItems.map(item => {
+        // If the item has a large base64 image, optimize it
+        if (item.image && item.image.startsWith('data:image') && item.image.length > 50000) {
+          // Create a simplified version for storage
+          return {
+            ...item,
+            image: `image_ref_${item.id}` // Store just a reference
+          };
+        }
+        return item;
+      });
+      
+      localStorage.setItem(LS_MENU_ITEMS, JSON.stringify(storableMenuItems));
+    } catch (err) {
+      console.error("Error saving menu items to localStorage:", err);
+      toast.error("Your menu data exceeded the storage limit. Some images might not persist between sessions.", {
+        duration: 5000,
+      });
+    }
+  }, [menuItems]);
+  
+  // Save current step to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_CURRENT_STEP, currentStep.toString());
+    } catch (err) {
+      console.error("Error saving current step to localStorage:", err);
+    }
+  }, [currentStep]);
 
   // Handle next step
   const handleNext = () => {
@@ -102,49 +183,44 @@ export default function OnboardingPage() {
     setError(null);
     
     try {
-      // Create user account with email and password
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        businessData.email,
-        businessData.password
-      );
+      // Create a unique identifier for this business since we don't have email/password
+      const uniqueId = `${businessData.phone.replace(/\D/g, '')}_${Date.now()}`;
       
-      const user = userCredential.user;
-      
-      // Create business document in Firestore
-      await setDoc(doc(db, "users", user.uid), {
+      // Create business document in Firestore - using a different method without authentication
+      await setDoc(doc(db, "businesses", uniqueId), {
         businessName: businessData.businessName,
         ownerName: businessData.ownerName,
-        email: businessData.email,
         phone: businessData.phone,
         area: businessData.area,
+        district: businessData.district,
+        country: businessData.country,
         location: businessData.location,
         category: businessData.category,
         upiId: businessData.upiId,
+        logo: businessData.logo,
         role: "hotel", // Set role as hotel/business
         accountStatus: "pending", // Set initial status as pending for review
         createdAt: new Date().toISOString(),
       });
       
-      // Store menu items without images for now
-      // We'll implement proper image upload later
-      const menuItemsCollection = doc(db, "users", user.uid, "menu", "items");
+      // Store menu items in the same document or a subcollection
+      const menuItemsCollection = doc(db, "businesses", uniqueId, "menu", "items");
       await setDoc(menuItemsCollection, {
         items: menuItems.map(item => ({
           name: item.name,
           price: item.price,
           description: item.description,
-          // Skip image upload for now
-          // image: item.image,
+          image: item.image,
+          mustTry: item.mustTry,
           category: businessData.category,
         }))
       });
       
       // Show success message
-      toast.success("Business registered successfully! Your account is pending approval.");
+      toast.success("Business registered successfully! Your details have been saved for marketing purposes.");
       
-      // Redirect to success page or dashboard
-      router.push("/admin");
+      // Redirect to a thank you page or the homepage
+      router.push("/thank-you");
       
     } catch (error) {
       console.error("Error submitting data:", error);
@@ -153,14 +229,14 @@ export default function OnboardingPage() {
           ? error.message 
           : "An unexpected error occurred. Please try again."
       );
-      toast.error("Failed to register business. Please try again.");
+      toast.error("Failed to save business information. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl">
+    <div className={`container mx-auto py-8 px-4 ${currentStep === 2 ? 'max-w-7xl' : 'max-w-4xl'}`}>
       <h1 className="text-3xl font-bold text-center mb-8">Business Onboarding</h1>
       
       {/* Stepper */}
@@ -215,7 +291,7 @@ export default function OnboardingPage() {
       )}
 
       {/* Main content */}
-      <Card className="p-6">
+      <Card className={`${currentStep === 2 ? 'p-4' : 'p-6'}`}>
         {currentStep === 1 && (
           <RegistrationForm 
             businessData={businessData}
@@ -230,6 +306,7 @@ export default function OnboardingPage() {
             setMenuItems={setMenuItems}
             onNext={handleNext}
             onPrevious={handlePrevious}
+            businessData={businessData}
           />
         )}
         
