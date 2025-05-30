@@ -25,7 +25,7 @@ const ReviewsPage = () => {
         setHotelData(data as UserData);
       });
     }
-  }, [params.id]);
+  }, [params.id, fetchUserData, getReviewsByHotelId]);
 
   return (
     <section className="min-h-screen bg-gradient-to-b from-orange-500/10 to-orange-500/20">

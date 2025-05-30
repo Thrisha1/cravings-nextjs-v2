@@ -30,7 +30,7 @@ const ReviewsPage = () => {
       };
       fetchMenuItemDetails();
     }
-  }, [params.mId]);
+  }, [params.mId, getReviewsByMenuId]);
 
   return (
     <section className="min-h-screen bg-gradient-to-b from-orange-500/10 to-orange-500/20">

@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, MapPin, Phone, Mail, Check, Loader2, ChevronRight, Star } from "lucide-react";
+import { ArrowLeft, Loader2, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import { BusinessRegistrationData, MenuItem } from "../page";
 
@@ -58,9 +58,11 @@ export default function BusinessPreview({
         <div className="bg-white p-4 flex items-center space-x-3">
           <div className="relative w-16 h-16 overflow-hidden rounded-full border border-gray-100">
             {businessData.logo ? (
-              <img
+              <Image
                 src={businessData.logo}
                 alt={businessData.businessName}
+                width={64}
+                height={64}
                 className="object-cover w-full h-full"
               />
             ) : (
@@ -98,7 +100,12 @@ export default function BusinessPreview({
                   <div key={item.id} className="min-w-[200px] rounded-lg overflow-hidden shadow-sm border">
                     <div className="h-32 relative">
                       {item.image ? (
-                        <img src={item.image} alt={item.name} className="object-cover w-full h-full" />
+                        <Image 
+                          src={item.image} 
+                          alt={item.name} 
+                          fill
+                          className="object-cover"
+                        />
                       ) : (
                         <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                           <span className="text-gray-400">No image</span>
@@ -117,7 +124,7 @@ export default function BusinessPreview({
               ) : (
                 <div className="flex-1 bg-orange-50 rounded-lg p-4 text-center">
                   <p className="text-sm text-orange-600">
-                    Mark items as "Must Try" to highlight them here
+                    Mark items as &quot;Must Try&quot; to highlight them here
                   </p>
                 </div>
               )}
@@ -155,7 +162,13 @@ export default function BusinessPreview({
                 </div>
                 <div className="w-20 h-20 rounded overflow-hidden">
                   {item.image ? (
-                    <img src={item.image} alt={item.name} className="object-cover w-full h-full" />
+                    <Image 
+                      src={item.image} 
+                      alt={item.name} 
+                      width={80}
+                      height={80}
+                      className="object-cover w-full h-full" 
+                    />
                   ) : (
                     <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                       <span className="text-gray-400 text-xs">No image</span>

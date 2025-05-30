@@ -1,6 +1,4 @@
 import { useCategoryStore } from "@/store/categoryStore";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 interface KimiAiLinkProps {

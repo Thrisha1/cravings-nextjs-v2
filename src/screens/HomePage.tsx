@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { UtensilsCrossed, ShoppingCart, Check, X, ChevronRight, Star, CreditCard, FileText } from "lucide-react";
+import { UtensilsCrossed, ShoppingCart, Check, X, ChevronRight, Star, FileText } from "lucide-react";
 // import { PartnerDialog } from "@/components/PartnerDialog";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -387,7 +387,7 @@ export default function HomePage() {
                 
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Edit/add "Must Try" dishes</span>
+                  <span className="text-gray-700">Edit/add &quot;Must Try&quot; dishes</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -502,7 +502,7 @@ export default function HomePage() {
                   <td className="py-3 px-6 text-center"><Check className="h-5 w-5 text-green-600 mx-auto" /></td>
                 </tr>
                 <tr className="bg-gray-50">
-                  <td className="py-3 px-6 text-sm text-gray-800 font-medium">"Must Try" dishes</td>
+                  <td className="py-3 px-6 text-sm text-gray-800 font-medium">&quot;Must Try&quot; dishes</td>
                   <td className="py-3 px-6 text-center"><Check className="h-5 w-5 text-green-600 mx-auto" /></td>
                   <td className="py-3 px-6 text-center"><Check className="h-5 w-5 text-green-600 mx-auto" /></td>
                 </tr>

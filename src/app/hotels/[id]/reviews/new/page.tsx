@@ -39,7 +39,7 @@ const CreateNewReviewPage = () => {
     if (savedRating) {
       setRating(parseInt(savedRating));
     }
-  }, [fetchUserData, user]);
+  }, [fetchUserData, user, params.id, router, userData]);
 
   const handleSubmit = async () => {
     if (!userData) return;

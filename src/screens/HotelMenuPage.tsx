@@ -6,7 +6,6 @@ import Image from "next/image";
 import { Offer } from "@/store/offerStore";
 import { useAuthStore, UserData } from "@/store/authStore";
 import OfferCardMin from "@/components/OfferCardMin";
-import Autoplay from "embla-carousel-autoplay";
 
 import {
   ArrowLeft,
@@ -16,7 +15,6 @@ import {
   Star,
   History,
 } from "lucide-react";
-// import MenuItemCard from "@/components/MenuItemCard";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { revalidateTag } from "@/app/actions/revalidate";
@@ -54,14 +52,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import CategoryList from "@/components/CategoryList";
-import MenuItemCard from "@/components/MenuItemCard";
 import { useMenuStore } from "@/store/menuStore";
-import {
-  Carousel,
-  CarouselItem,
-  CarouselContent,
-} from "@/components/ui/carousel";
 import MenuItemsList from "@/components/hotelDetail/MenuItemsList";
 
 export type MenuItem = {
@@ -107,7 +98,9 @@ const HotelMenuPage = ({
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [userPhone, setUserPhone] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const [menu, setMenu] = useState<MenuItem[]>([]);
+  /* eslint-enable @typescript-eslint/no-unused-vars */
   const [lastVisible, setLastVisible] =
     useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const { fetchTopMenuItems } = useMenuStore();
@@ -247,7 +240,7 @@ const HotelMenuPage = ({
     if (userData?.role != "superadmin") {
       handleQrScan();
     }
-  }, [userData?.role, qrId, error, hoteldata?.id]);
+  }, [userData?.role, qrId, error, hoteldata?.id, handleQrScan]);
 
   const displayedOffers = showAllOffers ? offers : offers.slice(0, 4);
 
@@ -277,7 +270,7 @@ const HotelMenuPage = ({
   useEffect(() => {
     // getMenuItemsCount();
     fetchMenuItems(true);
-  }, []);
+  }, [fetchMenuItems]);
 
   useEffect(() => {
     const fetchItems = async () => {

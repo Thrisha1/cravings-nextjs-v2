@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   PlusCircle, 
   Trash2, 
@@ -33,16 +32,16 @@ import { Badge } from "@/components/ui/badge";
 
 // Custom CSS for hiding scrollbar
 const hideScrollbarStyle = {
-  scrollbarWidth: 'none' as 'none',  /* Firefox */
-  msOverflowStyle: 'none' as 'none',  /* Internet Explorer 10+ */
+  scrollbarWidth: 'none' as const,  /* Firefox */
+  msOverflowStyle: 'none' as const,  /* Internet Explorer 10+ */
 };
 
 // Custom CSS for hiding WebKit/Chrome scrollbar
-const hideWebkitScrollbarCSS = `
-  &::-webkit-scrollbar {
-    display: none;
-  }
-`;
+// const hideWebkitScrollbarCSS = `
+//   &::-webkit-scrollbar {
+//     display: none;
+//   }
+// `;
 
 interface MenuUploadFormProps {
   menuItems: MenuItem[];
@@ -54,7 +53,7 @@ interface MenuUploadFormProps {
 
 // Local storage keys (now handled in the parent component)
 // Keeping the constants for now for backward compatibility
-const LS_MENU_ITEMS = "cravings_onboard_menu_items";
+// const LS_MENU_ITEMS = "cravings_onboard_menu_items";
 const LS_CATEGORIES = "cravings_onboard_categories";
 
 export default function MenuUploadForm({
@@ -74,9 +73,11 @@ export default function MenuUploadForm({
   };
   
   const [newItem, setNewItem] = useState<Omit<MenuItem, "id">>({...defaultItem});
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  /* eslint-enable @typescript-eslint/no-unused-vars */
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -166,7 +167,7 @@ export default function MenuUploadForm({
 
       // Instead of uploading to S3, we'll just store the image preview URL locally
       // This will be a base64 string that can be displayed in the UI
-      let imageUrl = imagePreview || newItem.image || "";
+      const imageUrl = imagePreview || newItem.image || "";
 
       if (isEditing && editingItemId) {
         // Update existing item
@@ -275,6 +276,7 @@ export default function MenuUploadForm({
   };
 
   // Toggle an item's mustTry status
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const toggleMustTry = (id: string) => {
     setMenuItems(prev => 
       prev.map(item => 
@@ -282,6 +284,7 @@ export default function MenuUploadForm({
       )
     );
   };
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 
   return (
     <div className="space-y-6">
@@ -655,7 +658,12 @@ export default function MenuUploadForm({
                                 <div key={`must-try-${item.id}`} className="min-w-[120px] border rounded-lg overflow-hidden">
                                   <div className="h-20 relative">
                                     {item.image ? (
-                                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                      <Image 
+                                        src={item.image} 
+                                        alt={item.name} 
+                                        fill
+                                        className="object-cover" 
+                                      />
                                     ) : (
                                       <div className="w-full h-full bg-gray-100"></div>
                                     )}
@@ -718,7 +726,13 @@ export default function MenuUploadForm({
                                     </div>
                                     <div className="w-16 h-16 rounded overflow-hidden ml-2">
                                       {item.image ? (
-                                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                        <Image 
+                                          src={item.image} 
+                                          alt={item.name} 
+                                          width={64}
+                                          height={64}
+                                          className="w-full h-full object-cover" 
+                                        />
                                       ) : (
                                         <div className="w-full h-full bg-gray-100"></div>
                                       )}

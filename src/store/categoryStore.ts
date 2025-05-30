@@ -42,7 +42,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       set({ categories, loading: false });
       return categories as string[];
-    } catch (error) {
+    } catch (/* eslint-disable @typescript-eslint/no-unused-vars */ _error /* eslint-enable @typescript-eslint/no-unused-vars */) {
       set({ loading: false, error: "Failed to fetch categories" });
       return [];
     }
@@ -82,7 +82,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       }));
   
       return addedCat.id;
-    } catch (error) {
+    } catch (/* eslint-disable @typescript-eslint/no-unused-vars */ error /* eslint-enable @typescript-eslint/no-unused-vars */) {
       console.error(error);
       set({ loading: false, error: "Failed to add category" });
     }
@@ -99,7 +99,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const updated = cat.toLowerCase();
       return updated;
-    } catch (error) {
+    } catch (/* eslint-disable @typescript-eslint/no-unused-vars */ error /* eslint-enable @typescript-eslint/no-unused-vars */) {
       set({ loading: false, error: "Failed to add category" });
     }
   },
@@ -120,7 +120,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         categories: state.categories.filter((category) => category !== cat),
         loading: false,
       }));
-    } catch (error) {
+    } catch (/* eslint-disable @typescript-eslint/no-unused-vars */ error /* eslint-enable @typescript-eslint/no-unused-vars */) {
       set({ loading: false, error: "Failed to delete category" });
     }
   },

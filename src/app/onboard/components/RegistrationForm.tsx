@@ -19,6 +19,7 @@ import { MapPin } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useLocationStore } from "@/store/locationStore";
 import { BusinessRegistrationData } from "../page";
+import Image from "next/image";
 
 // Define the validation schema
 const registrationSchema = z.object({
@@ -276,12 +277,15 @@ export default function RegistrationForm({
   const { locations } = useLocationStore();
   const [formError, setFormError] = useState<string | null>(null);
   const [isIndia, setIsIndia] = useState(true);
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const [selectedState, setSelectedState] = useState<string>("");
   const [selectedDistrict, setSelectedDistrict] = useState<string>("");
+  /* eslint-enable @typescript-eslint/no-unused-vars */
   const [selectedCountryCode, setSelectedCountryCode] = useState("+91");
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<any>({
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm<any>({
     resolver: zodResolver(registrationSchema),
     defaultValues: {
       businessName: businessData.businessName,
@@ -301,6 +305,7 @@ export default function RegistrationForm({
   };
 
   const onSubmit = (data: any) => {
+  /* eslint-enable @typescript-eslint/no-explicit-any */
     try {
       // Prepare the data for the next step
       const updatedData = {
@@ -359,9 +364,11 @@ export default function RegistrationForm({
           <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-6 h-[150px] relative">
             {logoPreview ? (
               <div className="relative w-24 h-24">
-                <img
+                <Image
                   src={logoPreview}
                   alt="Business Logo"
+                  width={96}
+                  height={96}
                   className="w-full h-full object-contain rounded-full border border-gray-200"
                 />
               </div>

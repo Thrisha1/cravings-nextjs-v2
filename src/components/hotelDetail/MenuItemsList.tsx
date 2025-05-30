@@ -10,7 +10,7 @@ const MenuItemsList = ({ hotelId }: { hotelId: string }) => {
   const { getCategoryById } = useCategoryStore();
   const [items, setMenuItems] = useState<MenuItem[] | []>([]);
   const [categorisedItems, setCategorisedItems] = React.useState<{
-    [key: string]: any[];
+    [key: string]: MenuItem[];
   }>({});
 
   useEffect(() => {
@@ -24,7 +24,7 @@ const MenuItemsList = ({ hotelId }: { hotelId: string }) => {
         });
     };
     fetchData();
-  }, []);
+  }, [fetchMenu, hotelId]);
 
   useEffect(() => {
     const fetchGroupedItems = async () => {
@@ -46,7 +46,7 @@ const MenuItemsList = ({ hotelId }: { hotelId: string }) => {
     if (items) {
       fetchGroupedItems();
     }
-  }, [items]);
+  }, [items, getCategoryById]);
 
   return (
     <>

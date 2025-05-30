@@ -25,6 +25,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 interface hotelDetails {
   hotelId: string;
@@ -270,7 +271,7 @@ const QrScanPage = () => {
 
   useEffect(() => {
     getHotelDetails();
-  }, []);
+  }, [getHotelDetails]);
 
   return (
     <main className="px-[7.5%] pt-[12%] pb-[20%] bg-orange-600 h-[100dvh] flex flex-col overflow-hidden">
@@ -526,7 +527,7 @@ const QrScanPage = () => {
                 onClick={() => handleUPIPayment(app)}
                 className="w-full bg-white hover:bg-gray-100 text-black border flex items-center justify-center gap-2"
               >
-                <img src={app.icon} alt={app.name} className="w-6 h-6" />
+                <Image src={app.icon} alt={app.name} width={24} height={24} className="w-6 h-6" />
                 Pay with {app.name}
               </Button>
             ))}
