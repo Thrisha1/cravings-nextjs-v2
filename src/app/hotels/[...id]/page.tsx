@@ -21,8 +21,6 @@ export async function generateMetadata({
   const { id: hotelIds } = await params;
 
   const hotelId = isUUID(hotelIds?.[0] || "") ? hotelIds?.[0] : hotelIds?.[1];
-  
-  
 
   const getHotelData = unstable_cache(
     async (id: string) => {
@@ -30,7 +28,7 @@ export async function generateMetadata({
         const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
           id,
         });
-        
+
         return {
           id,
           ...partnerData.partners[0],

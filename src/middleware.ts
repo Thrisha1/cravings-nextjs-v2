@@ -8,7 +8,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/login', '/signup', '/superlogin', '/hotels', '/partner','/captainlogin'];
+  const publicRoutes = ['/login', '/signup', '/superlogin', '/hotels', '/partner','/captainlogin', '/offers','/explore'];
   if (publicRoutes.includes(pathname)) {
     return NextResponse.next();
   }

@@ -132,7 +132,9 @@ interface MenuState {
   updatedCategories: (categories: Category[]) => void;
   updateCategoriesAsBatch: (categories: Category[]) => Promise<Category[]>;
   deleteCategoryAndItems: (categoryId: string) => Promise<void>;
-  updateItemsAsBatch: (items: { id: string; priority: number }[]) => Promise<void>;
+  updateItemsAsBatch: (
+    items: { id: string; priority: number }[]
+  ) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -162,7 +164,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
               price: (mi.offers[0]?.offer_price || mi.price) ?? 0,
               category: {
                 id: mi.category.id,
-                name: (mi.category.name),
+                name: mi.category.name,
                 priority: mi.category.priority,
               },
             };
