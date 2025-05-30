@@ -84,10 +84,10 @@ export const EditCaptainOrderModal = () => {
   }, [isOpen, order?.id]);
 
   useEffect(() => {
-    if (isOpen) {
-      fetchMenu(order?.partnerId);
+    if (isOpen && order?.partnerId) {
+      fetchMenu(order.partnerId);
     }
-  }, [isOpen]);
+  }, [isOpen, order?.partnerId]);
 
   useEffect(() => {
     const fetchPartnerData = async () => {
@@ -120,6 +120,10 @@ export const EditCaptainOrderModal = () => {
 
     fetchPartnerData();
   }, [captainData?.partner_id]);
+
+  useEffect(() => {
+    console.log("Menu Items:", menuItems);
+  }, [menuItems]);
 
   const fetchOrderDetails = async () => {
     try {
@@ -344,9 +348,12 @@ export const EditCaptainOrderModal = () => {
     }
   };
 
-  const filteredMenuItems = menuItems.filter((item) =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  ).filter((item): item is MenuItem & { id: string } => item.id !== undefined);
+  const filteredMenuItems = menuItems
+    .filter((item): item is MenuItem & { id: string } => {
+      const hasId = item.id !== undefined;
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+      return hasId && (searchQuery === "" || matchesSearch);
+    });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -429,37 +436,35 @@ export const EditCaptainOrderModal = () => {
                     className="h-9"
                   />
 
-                  {searchQuery && (
-                    <div className="border rounded-lg max-h-48 overflow-y-auto">
-                      {filteredMenuItems.length === 0 ? (
-                        <div className="p-3 text-center text-muted-foreground">
-                          No items found
-                        </div>
-                      ) : (
-                        <div className="divide-y">
-                          {filteredMenuItems.map((item) => (
-                            <div
-                              key={item.id}
-                              className="p-2.5 flex justify-between items-center hover:bg-accent cursor-pointer"
-                              onClick={() => {
-                                setNewItemId(item.id!);
-                                setSearchQuery("");
-                              }}
-                            >
-                              <div>
-                                <div className="font-medium text-sm">{item.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {currency}
-                                  {item.price.toFixed(2)}
-                                </div>
+                  <div className="border rounded-lg max-h-48 overflow-y-auto">
+                    {filteredMenuItems.length === 0 ? (
+                      <div className="p-3 text-center text-muted-foreground">
+                        {searchQuery ? "No items found" : "Type to search menu items"}
+                      </div>
+                    ) : (
+                      <div className="divide-y">
+                        {filteredMenuItems.map((item) => (
+                          <div
+                            key={item.id}
+                            className="p-2.5 flex justify-between items-center hover:bg-accent cursor-pointer"
+                            onClick={() => {
+                              setNewItemId(item.id!);
+                              setSearchQuery("");
+                            }}
+                          >
+                            <div>
+                              <div className="font-medium text-sm">{item.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {currency}
+                                {item.price.toFixed(2)}
                               </div>
-                              <Plus className="h-4 w-4" />
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                            <Plus className="h-4 w-4" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {newItemId && (
                     <div className="flex gap-2">
