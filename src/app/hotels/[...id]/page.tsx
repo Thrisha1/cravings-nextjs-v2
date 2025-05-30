@@ -176,7 +176,7 @@ const HotelPage = async ({
     }
   );
 
-  const lastSubscription = getLastSubscription?.partner_subscriptions[0];
+  const lastSubscription = getLastSubscription?.partner_subscriptions?.[0];
 
 
   if (hoteldata?.status === "inactive") {

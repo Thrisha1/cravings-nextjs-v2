@@ -99,14 +99,14 @@ const page = async ({
     tableNumber: qr_codes[0].table_number,
   });
 
-  const tableNumber = qr_codes[0].table_number;
+  const tableNumber = qr_codes?.[0].table_number;
 
   // console.log("Table Number:", tableNumber);
 
   // if (tableNumber !== 0) {
   const { query: search } = await searchParams;
   const auth = await getAuthCookie();
-  const hotelId = qr_codes[0].partner_id;
+  const hotelId = qr_codes?.[0].partner_id;
 
   const getHotelData = unstable_cache(
     async (id: string) => {
@@ -180,7 +180,7 @@ const page = async ({
       }
     );
 
-    const lastSubscription = getLastSubscription?.partner_subscriptions[0];
+    const lastSubscription = getLastSubscription?.partner_subscriptions?.[0];
 
     if (hoteldata?.status === "inactive") {
       return (
