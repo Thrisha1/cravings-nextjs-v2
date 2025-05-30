@@ -3,11 +3,9 @@ import { UtensilsCrossed } from "lucide-react";
 import React from "react";
 
 const Error = ({
-  error,
-  reset,
+  error
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
 }) => {
   return (
     <div className="grid place-content-center w-full min-h-[90vh] opacity-70">
