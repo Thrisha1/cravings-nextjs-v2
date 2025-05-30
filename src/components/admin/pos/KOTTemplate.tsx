@@ -1,12 +1,12 @@
-import { Order } from "@/store/orderStore";
 import React from "react";
+import { Order } from "@/store/orderStore";
 
-const KOTTemplate = ({ ref, order, key }: { ref: React.RefObject<HTMLDivElement | null>, order: Order, key?: string }) => {
+const KOTTemplate = ({ ref, order }: { ref: React.RefObject<HTMLDivElement | null>, order: Order }) => {
 
     if (!order) return null;
 
   return (
-    <div ref={ref} key={key || order.id} className="p-4 kot-template">
+    <div ref={ref} className="p-4 kot-template">
       <h2 className="text-xl font-bold text-center">KITCHEN ORDER TICKET</h2>
       <div className="border-b border-black my-2"></div>
       <div className="flex justify-between mb-2">

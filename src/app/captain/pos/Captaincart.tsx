@@ -69,16 +69,19 @@ export const Captaincart = () => {
   const grandTotal = totalAmount + gstAmount;
 
   useEffect(() => {
-    if (captainData?.partner_id) {
-      console.log("Fetching table numbers for partner:", captainData.partner_id);
-      getPartnerTables().then(() => {
-        console.log("Table numbers fetched:", tableNumbers);
-      }).catch(error => {
-        console.error("Error fetching table numbers:", error);
-      });
-    } else {
-      console.log("No partner ID available in captain data:", captainData);
-    }
+    const fetchTableNumbers = async () => {
+      if (!captainData?.partner_id) return;
+
+      /* console.log("Fetching table numbers for partner:", captainData.partner_id); */
+      try {
+        await getPartnerTables();
+        /* console.log("Table numbers fetched:", tableNumbers); */
+      } catch (error) {
+        /* console.error("Error fetching table numbers:", error); */
+      }
+    };
+
+    fetchTableNumbers();
   }, [captainData?.partner_id, getPartnerTables]);
 
   const handleCheckoutFlow = async () => {

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Minus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useAuthStore, Captain } from "@/store/authStore";
+import { useAuthStore, Captain, Partner } from "@/store/authStore";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 
 export const CaptainPOS = () => {
@@ -18,12 +18,43 @@ export const CaptainPOS = () => {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [filteredGroupedItems, setFilteredGroupedItems] = useState<GroupedItems>({});
     const [isLoading, setIsLoading] = useState(true);
+    const [partnerData, setPartnerData] = useState<Partner | null>(null);
 
     // Set isCaptainOrder to true when component mounts
     useEffect(() => {
         setIsCaptainOrder(true);
         return () => setIsCaptainOrder(false); // Cleanup when component unmounts
     }, [setIsCaptainOrder]);
+
+    // Fetch partner data
+    useEffect(() => {
+        const fetchPartnerData = async () => {
+            if (captainData?.partner_id) {
+                try {
+                    const response = await fetchFromHasura(
+                        `query GetPartnerById($partner_id: uuid!) {
+                            partners_by_pk(id: $partner_id) {
+                                id
+                                currency
+                                gst_percentage
+                                store_name
+                            }
+                        }`,
+                        {
+                            partner_id: captainData.partner_id
+                        }
+                    );
+                    if (response.partners_by_pk) {
+                        setPartnerData(response.partners_by_pk);
+                    }
+                } catch (error) {
+                    console.error("Error fetching partner data:", error);
+                }
+            }
+        };
+
+        fetchPartnerData();
+    }, [captainData?.partner_id]);
 
     // Fetch menu when captain data is available
     useEffect(() => {
@@ -35,7 +66,7 @@ export const CaptainPOS = () => {
             }
 
             try {
-                console.log("Fetching menu for partner:", captainData.partner_id);
+                /* console.log("Fetching menu for partner:", captainData.partner_id); */
                 const menuItems = await fetchMenu(captainData.partner_id);
                 // console.log("Fetched menu items:", {
                 //     totalItems: menuItems.length,
@@ -68,7 +99,8 @@ export const CaptainPOS = () => {
             console.log("Setting default category:", firstCategory);
             setSelectedCategory(firstCategory);
         } else {
-            console.log("No categories found in groupedItems");
+            /* console.log("No categories found in groupedItems"); */
+            return;
         }
     }, [groupedItems, captainData?.partner_id]);
 
@@ -167,82 +199,68 @@ export const CaptainPOS = () => {
 
             {/* Menu Items */}
             {Object.entries(filteredGroupedItems).map(([category, items]) => (
-                <div
-                    key={category}
-                    className="px-6"
-                >
-                    {(!selectedCategory || selectedCategory === category) && (
-                        <>
-                            <h2 className="text-2xl font-bold mb-4">{category}</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {items.map((item) => {
-                                    const cartItem = cartItems.find(
-                                        (cartItem) => cartItem.id === item.id
-                                    );
-                                    return (
-                                        <Card
-                                            key={item.id}
-                                            className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                                            onClick={() => addToCart(item)}
-                                        >
-                                            <CardContent className="p-4">
-                                                <div className="flex justify-between items-center">
-                                                    <div>
-                                                        <h3 className="font-medium">{item.name}</h3>
-                                                        <p className="text-lg font-bold mt-2">
-                                                            {captainData.currency || "$"}
-                                                            {item.price}
-                                                        </p>
-                                                    </div>
-                                                    <div
-                                                        className="flex items-center gap-2"
-                                                        onClick={(e) => e.stopPropagation()}
+                <div key={category} className="space-y-4">
+                    <h2 className="text-lg font-semibold">{category}</h2>
+                    <div className="grid grid-cols-1 gap-4">
+                        {items.map((item) => {
+                            const cartItem = cartItems.find(
+                                (cartItem) => cartItem.id === item.id
+                            );
+                            return (
+                                <Card
+                                    key={item.id}
+                                    className="cursor-pointer hover:shadow-md transition-shadow"
+                                    onClick={() => addToCart(item)}
+                                >
+                                    <CardContent className="p-4">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <h3 className="font-medium">{item.name}</h3>
+                                                <p className="text-lg font-bold mt-2">
+                                                    {partnerData?.currency || "$"}
+                                                    {item.price}
+                                                </p>
+                                            </div>
+                                            <div
+                                                className="flex items-center gap-2"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {cartItem ? (
+                                                    <>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            onClick={() => decreaseQuantity(item.id!)}
+                                                        >
+                                                            <Minus className="h-4 w-4" />
+                                                        </Button>
+                                                        <span className="w-8 text-center">
+                                                            {cartItem.quantity}
+                                                        </span>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            onClick={() => addToCart(item)}
+                                                        >
+                                                            <Plus className="h-4 w-4" />
+                                                        </Button>
+                                                    </>
+                                                ) : (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        onClick={() => addToCart(item)}
                                                     >
-                                                        {cartItem ? (
-                                                            <>
-                                                                <Button
-                                                                    size="icon"
-                                                                    variant="outline"
-                                                                    className="bg-gray-200"
-                                                                    onClick={() => {
-                                                                        if (cartItem.quantity > 1) {
-                                                                            decreaseQuantity(item.id!);
-                                                                        } else {
-                                                                            removeFromCart(item.id!);
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <Minus className="h-4 w-4" />
-                                                                </Button>
-                                                                <span className="w-8 text-center">
-                                                                    {cartItem.quantity}
-                                                                </span>
-                                                                <Button
-                                                                    size="icon"
-                                                                    onClick={() => addToCart(item)}
-                                                                    className="bg-black"
-                                                                >
-                                                                    <Plus className="h-4 w-4" />
-                                                                </Button>
-                                                            </>
-                                                        ) : (
-                                                            <Button
-                                                                size="icon"
-                                                                onClick={() => addToCart(item)}
-                                                                className="bg-black"
-                                                            >
-                                                                <Plus className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    );
-                                })}
-                            </div>
-                        </>
-                    )}
+                                                        <Plus className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
                 </div>
             ))}
         </div>

@@ -203,6 +203,9 @@ const OrderItemCard = ({
           {localOrder.type === "table_order" && (
             <p className="text-sm">Table: {localOrder.tableNumber || "N/A"}</p>
           )}
+          {localOrder.orderedby === "captain" && localOrder.captain && (
+            <p className="text-sm">Captain: {localOrder.captain.name}</p>
+          )}
           <p className="text-sm">
             Customer:{" "}
             {localOrder.user?.phone || localOrder.phone
@@ -251,7 +254,7 @@ const OrderItemCard = ({
                 <div>
                   <span className="font-medium">{item.name}</span>
                   <span className="text-gray-500 ml-2">x{item.quantity}</span>
-                  {item.category && (
+                  {item.category && item.category.name && (
                     <span className="text-gray-400 text-xs ml-2 capitalize">
                       ({item.category.name.trim()})
                     </span>

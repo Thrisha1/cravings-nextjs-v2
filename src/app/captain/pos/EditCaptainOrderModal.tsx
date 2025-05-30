@@ -38,8 +38,7 @@ export const EditCaptainOrderModal = () => {
   const [updating, setUpdating] = useState(false);
   const [items, setItems] = useState<
     Array<{
-      id?: string;
-      menu_id: string;
+      id: string;
       quantity: number;
       menu: {
         name: string;
@@ -66,6 +65,22 @@ export const EditCaptainOrderModal = () => {
   const currency = partnerData?.currency || "$";
   const gstPercentage = partnerData?.gst_percentage || 0;
 
+  const filteredMenuItems = menuItems
+    .filter((item): item is MenuItem & { id: string } => {
+      const hasId = item.id !== undefined;
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const isAvailable = item.is_available !== false;
+      /* console.log("Filtering menu item:", {
+        id: item.id,
+        name: item.name,
+        hasId,
+        matchesSearch,
+        isAvailable,
+        searchQuery
+      }); */
+      return hasId && isAvailable && (searchQuery === "" || matchesSearch);
+    });
+
   const onClose = () => {
     setEditOrderModalOpen(false);
     setOrder(null);
@@ -84,10 +99,120 @@ export const EditCaptainOrderModal = () => {
   }, [isOpen, order?.id]);
 
   useEffect(() => {
-    if (isOpen && order?.partnerId) {
-      fetchMenu(order.partnerId);
-    }
-  }, [isOpen, order?.partnerId]);
+    /* console.log("=== EditCaptainOrderModal State ===", {
+      isOpen,
+      orderId: order?.id,
+      partnerId: order?.partnerId,
+      captainData: {
+        id: captainData?.id,
+        partner_id: captainData?.partner_id,
+        role: captainData?.role
+      },
+      menuItemsCount: menuItems.length,
+      menuItems: menuItems.slice(0, 3).map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        is_available: item.is_available
+      }))
+    }); */
+  }, [isOpen, order, menuItems, captainData]);
+
+  const [menuLoading, setMenuLoading] = useState(false);
+
+  useEffect(() => {
+    /* console.log("=== EditCaptainOrderModal Partner/Order State ===", {
+      isOpen,
+      orderId: order?.id,
+      partnerId: order?.partnerId,
+      captainPartnerId: captainData?.partner_id,
+      orderPartnerId: order?.partnerId,
+      hasOrder: !!order,
+      menuItemsCount: menuItems.length
+    }); */
+  }, [isOpen, order, captainData, menuItems]);
+
+  useEffect(() => {
+    const fetchMenuItems = async () => {
+      if (!isOpen) {
+        /* console.log("Modal is closed, skipping menu fetch"); */
+        return;
+      }
+
+      // Use order's partnerId if available, otherwise use captain's partner_id
+      const partnerId = order?.partnerId || captainData?.partner_id;
+      
+      if (!partnerId) {
+        console.error("❌ No partner ID available for menu fetch:", {
+          orderPartnerId: order?.partnerId,
+          captainPartnerId: captainData?.partner_id
+        });
+        return;
+      }
+
+      console.log("=== Menu Fetching Process ===");
+      console.log("1. Starting menu fetch with:", {
+        partnerId,
+        orderId: order?.id,
+        currentMenuItemsCount: menuItems.length,
+        captainPartnerId: captainData?.partner_id,
+        orderPartnerId: order?.partnerId
+      });
+
+      setMenuLoading(true);
+      try {
+        // Clear existing menu items before fetching
+        useMenuStore.setState({ items: [], groupedItems: {} });
+        
+        console.log("2. Calling fetchMenu with partnerId:", partnerId);
+        const items = await fetchMenu(partnerId, true); // Force refresh the menu
+        
+        /* console.log("3. FetchMenu response:", {
+          success: true,
+          itemsCount: items.length,
+          partnerId: partnerId,
+          firstFewItems: items.slice(0, 3).map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            is_available: item.is_available,
+            category: item.category?.name
+          }))
+        }); */
+        
+        if (items.length === 0) {
+          console.warn("⚠️ No menu items found for partner:", partnerId);
+          toast.warning("No menu items found for this partner");
+        }
+      } catch (error) {
+        console.error("❌ Error in fetchMenu:", {
+          error,
+          partnerId,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorStack: error instanceof Error ? error.stack : undefined
+        });
+        toast.error("Failed to load menu items. Please try again.");
+      } finally {
+        setMenuLoading(false);
+      }
+    };
+
+    fetchMenuItems();
+  }, [isOpen, captainData?.partner_id, fetchMenu]);
+
+  useEffect(() => {
+    /* console.log("4. Filtered menu items:", {
+      searchQuery,
+      totalItems: menuItems.length,
+      filteredCount: filteredMenuItems.length,
+      filteredItems: filteredMenuItems.slice(0, 3).map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        is_available: item.is_available
+      }))
+    }); */
+  }, [searchQuery, filteredMenuItems, menuItems.length]);
 
   useEffect(() => {
     const fetchPartnerData = async () => {
@@ -120,10 +245,6 @@ export const EditCaptainOrderModal = () => {
 
     fetchPartnerData();
   }, [captainData?.partner_id]);
-
-  useEffect(() => {
-    console.log("Menu Items:", menuItems);
-  }, [menuItems]);
 
   const fetchOrderDetails = async () => {
     try {
@@ -165,8 +286,7 @@ export const EditCaptainOrderModal = () => {
       if (orderData) {
         setItems(
           orderData.order_items.map((item: any) => ({
-            id: item.id,
-            menu_id: item.menu.id,
+            id: item.menu.id,
             quantity: item.quantity,
             menu: {
               name: item.menu.name,
@@ -194,8 +314,7 @@ export const EditCaptainOrderModal = () => {
 
   const calculateTotal = (
     items: Array<{
-      id?: string;
-      menu_id: string;
+      id: string;
       quantity: number;
       menu: {
         name: string;
@@ -232,7 +351,7 @@ export const EditCaptainOrderModal = () => {
     if (!menuItem) return;
 
     const existingItemIndex = items.findIndex(
-      (item) => item.menu_id === newItemId
+      (item) => item.id === newItemId
     );
 
     if (existingItemIndex >= 0) {
@@ -242,11 +361,17 @@ export const EditCaptainOrderModal = () => {
       );
     } else {
       const newItem = {
-        menu_id: newItemId,
+        id: newItemId,
         quantity: 1,
         menu: {
           name: menuItem.name,
           price: menuItem.price,
+          category: menuItem.category,
+          description: menuItem.description,
+          image_url: menuItem.image_url,
+          is_top: menuItem.is_top,
+          is_available: menuItem.is_available,
+          priority: menuItem.priority
         },
       };
       const updatedItems = [...items, newItem];
@@ -285,7 +410,7 @@ export const EditCaptainOrderModal = () => {
         orderId: order.id,
         items: items.map((item) => ({
           order_id: order.id,
-          menu_id: item.menu_id,
+          menu_id: item.id,
           quantity: item.quantity,
         })),
       });
@@ -298,7 +423,7 @@ export const EditCaptainOrderModal = () => {
         phone: phone || "",
         partnerId: captainData.partner_id,
         items: items.map((item) => ({
-          id: item.menu_id,
+          id: item.id,
           name: item.menu.name,
           price: item.menu.price,
           quantity: item.quantity,
@@ -322,7 +447,7 @@ export const EditCaptainOrderModal = () => {
             items_available: 0,
             id: crypto.randomUUID(),
             menu: {
-              id: item.menu_id,
+              id: item.id,
               name: item.menu.name,
               price: item.menu.price,
               category: {
@@ -348,13 +473,6 @@ export const EditCaptainOrderModal = () => {
     }
   };
 
-  const filteredMenuItems = menuItems
-    .filter((item): item is MenuItem & { id: string } => {
-      const hasId = item.id !== undefined;
-      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-      return hasId && (searchQuery === "" || matchesSearch);
-    });
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-none w-screen h-screen p-0 sm:p-0">
@@ -370,7 +488,7 @@ export const EditCaptainOrderModal = () => {
           </DialogDescription>
         </DialogHeader>
 
-        {loading ? (
+        {loading || menuLoading ? (
           <div className="flex-1 flex justify-center items-center">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
@@ -437,9 +555,13 @@ export const EditCaptainOrderModal = () => {
                   />
 
                   <div className="border rounded-lg max-h-48 overflow-y-auto">
-                    {filteredMenuItems.length === 0 ? (
+                    {menuItems.length === 0 ? (
                       <div className="p-3 text-center text-muted-foreground">
-                        {searchQuery ? "No items found" : "Type to search menu items"}
+                        Loading menu items...
+                      </div>
+                    ) : filteredMenuItems.length === 0 ? (
+                      <div className="p-3 text-center text-muted-foreground">
+                        {searchQuery ? "No items found" : "No menu items available"}
                       </div>
                     ) : (
                       <div className="divide-y">
@@ -448,6 +570,11 @@ export const EditCaptainOrderModal = () => {
                             key={item.id}
                             className="p-2.5 flex justify-between items-center hover:bg-accent cursor-pointer"
                             onClick={() => {
+                              console.log("Selected menu item:", {
+                                id: item.id,
+                                name: item.name,
+                                price: item.price
+                              });
                               setNewItemId(item.id!);
                               setSearchQuery("");
                             }}

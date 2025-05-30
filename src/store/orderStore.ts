@@ -530,7 +530,7 @@ const useOrderStore = create(
                   userId: order.user_id,
                   orderedby: order.orderedby,
                   captain_id: order.captain_id,
-                  captain: order.captain,
+                  captain: order.captainid,
                   user: order.user,
                   items:
                     order.order_items?.map((i: any) => ({
@@ -1214,7 +1214,7 @@ const useOrderStore = create(
             user: order.user,
             orderedby: order.orderedby,
             captain_id: order.captain_id,
-            captain: order.captain_id ? captainMap[order.captain_id] : null,
+            captain: order.captainid,
             items: order.order_items.map((i: any) => ({
               id: i.item.id,
               quantity: i.quantity,
