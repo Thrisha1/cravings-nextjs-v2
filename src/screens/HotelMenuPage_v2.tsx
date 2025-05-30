@@ -21,8 +21,8 @@ import SocialLinkList from "@/components/SocialLinkList";
 import { getFeatures } from "@/lib/getFeatures";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import ShopClosedModalWarning from "@/components/admin/ShopClosedModalWarning";
-import { fetchFromHasura } from "@/lib/hasuraClient";
-import { usePartnerStore } from "@/store/usePartnerStore";
+// import { fetchFromHasura } from "@/lib/hasuraClient";
+// import { usePartnerStore } from "@/store/usePartnerStore";
 
 export type MenuItem = {
   description: string;
@@ -86,44 +86,10 @@ const HotelMenuPage = ({
 
   useEffect(() => {
     if (hoteldata) {
-      console.log("🏪 HotelMenuPage: Initializing with hoteldata:", {
-        geo_location: hoteldata.geo_location,
-        delivery_rate: hoteldata.delivery_rate,
-        store_name: hoteldata.store_name,
-      });
-
       setHotelId(hoteldata.id);
       genOrderId();
-
-      // Save restaurant delivery data to local storage
-      if (hoteldata.geo_location && hoteldata.delivery_rate) {
-        const restaurantDeliveryData = {
-          geo_location: hoteldata.geo_location,
-          delivery_rate: hoteldata.delivery_rate,
-          store_name: hoteldata.store_name,
-          location: hoteldata.location,
-        };
-        
-        try {
-          localStorage.setItem(`restaurant-${hoteldata.id}-delivery-data`, JSON.stringify(restaurantDeliveryData));
-          // Verify the data was saved
-          const savedData = localStorage.getItem(`restaurant-${hoteldata.id}-delivery-data`);
-          // console.log("✅ HotelMenuPage: Saved restaurant delivery data to local storage:", {
-          //   saved: savedData ? JSON.parse(savedData) : null,
-          //   key: `restaurant-${hoteldata.id}-delivery-data`
-          // });
-        } catch (error) {
-          console.error("❌ HotelMenuPage: Failed to save restaurant delivery data:", error);
-        }
-      } else {
-        console.warn("⚠️ HotelMenuPage: Restaurant delivery data missing:", { 
-          geo_location: hoteldata.geo_location, 
-          delivery_rate: hoteldata.delivery_rate,
-          hotelId: hoteldata.id
-        });
-      }
     }
-  }, [hoteldata]);
+  }, [hoteldata, setHotelId, genOrderId]);
 
   const getCategories = () => {
     const uniqueCategoriesMap = new Map<string, Category>();
