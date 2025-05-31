@@ -70,14 +70,14 @@ export const EditCaptainOrderModal = () => {
       const hasId = item.id !== undefined;
       const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
       const isAvailable = item.is_available !== false;
-      /* console.log("Filtering menu item:", {
+      console.log("Filtering menu item:", {
         id: item.id,
         name: item.name,
         hasId,
         matchesSearch,
         isAvailable,
         searchQuery
-      }); */
+      });
       return hasId && isAvailable && (searchQuery === "" || matchesSearch);
     });
 
@@ -99,7 +99,7 @@ export const EditCaptainOrderModal = () => {
   }, [isOpen, order?.id]);
 
   useEffect(() => {
-    /* console.log("=== EditCaptainOrderModal State ===", {
+    console.log("=== EditCaptainOrderModal State ===", {
       isOpen,
       orderId: order?.id,
       partnerId: order?.partnerId,
@@ -115,93 +115,61 @@ export const EditCaptainOrderModal = () => {
         price: item.price,
         is_available: item.is_available
       }))
-    }); */
+    });
   }, [isOpen, order, menuItems, captainData]);
 
-  const [menuLoading, setMenuLoading] = useState(false);
-
   useEffect(() => {
-    /* console.log("=== EditCaptainOrderModal Partner/Order State ===", {
-      isOpen,
-      orderId: order?.id,
-      partnerId: order?.partnerId,
-      captainPartnerId: captainData?.partner_id,
-      orderPartnerId: order?.partnerId,
-      hasOrder: !!order,
-      menuItemsCount: menuItems.length
-    }); */
-  }, [isOpen, order, captainData, menuItems]);
-
-  useEffect(() => {
-    const fetchMenuItems = async () => {
-      if (!isOpen) {
-        /* console.log("Modal is closed, skipping menu fetch"); */
-        return;
-      }
-
-      // Use order's partnerId if available, otherwise use captain's partner_id
-      const partnerId = order?.partnerId || captainData?.partner_id;
-      
-      if (!partnerId) {
-        console.error("❌ No partner ID available for menu fetch:", {
-          orderPartnerId: order?.partnerId,
-          captainPartnerId: captainData?.partner_id
-        });
-        return;
-      }
-
+    if (isOpen && order?.partnerId) {
       console.log("=== Menu Fetching Process ===");
       console.log("1. Starting menu fetch with:", {
-        partnerId,
-        orderId: order?.id,
+        partnerId: order.partnerId,
+        orderId: order.id,
         currentMenuItemsCount: menuItems.length,
-        captainPartnerId: captainData?.partner_id,
-        orderPartnerId: order?.partnerId
+        captainPartnerId: captainData?.partner_id
       });
 
-      setMenuLoading(true);
-      try {
-        // Clear existing menu items before fetching
-        useMenuStore.setState({ items: [], groupedItems: {} });
-        
-        console.log("2. Calling fetchMenu with partnerId:", partnerId);
-        const items = await fetchMenu(partnerId, true); // Force refresh the menu
-        
-        /* console.log("3. FetchMenu response:", {
-          success: true,
-          itemsCount: items.length,
-          partnerId: partnerId,
-          firstFewItems: items.slice(0, 3).map(item => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            is_available: item.is_available,
-            category: item.category?.name
-          }))
-        }); */
-        
-        if (items.length === 0) {
-          console.warn("⚠️ No menu items found for partner:", partnerId);
-          toast.warning("No menu items found for this partner");
-        }
-      } catch (error) {
-        console.error("❌ Error in fetchMenu:", {
-          error,
-          partnerId,
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
-          errorStack: error instanceof Error ? error.stack : undefined
-        });
-        toast.error("Failed to load menu items. Please try again.");
-      } finally {
-        setMenuLoading(false);
+      const partnerId = order.partnerId;
+      if (!partnerId) {
+        console.error("❌ No partner ID available");
+        toast.error("Unable to load menu items - missing partner information");
+        return;
       }
-    };
-
-    fetchMenuItems();
-  }, [isOpen, captainData?.partner_id, fetchMenu]);
+      
+      console.log("2. Calling fetchMenu with partnerId:", partnerId);
+      fetchMenu(partnerId)
+        .then((items) => {
+          console.log("3. FetchMenu response:", {
+            success: true,
+            itemsCount: items.length,
+            partnerId: partnerId,
+            firstFewItems: items.slice(0, 3).map(item => ({
+              id: item.id,
+              name: item.name,
+              price: item.price,
+              is_available: item.is_available,
+              category: item.category?.name
+            }))
+          });
+          
+          if (items.length === 0) {
+            console.warn("⚠️ No menu items found for partner:", partnerId);
+            toast.warning("No menu items found for this partner");
+          }
+        })
+        .catch((error) => {
+          console.error("❌ Error in fetchMenu:", {
+            error,
+            partnerId,
+            errorMessage: error.message,
+            errorStack: error.stack
+          });
+          toast.error("Failed to load menu items. Please try again.");
+        });
+    }
+  }, [isOpen, order?.partnerId, fetchMenu]);
 
   useEffect(() => {
-    /* console.log("4. Filtered menu items:", {
+    console.log("4. Filtered menu items:", {
       searchQuery,
       totalItems: menuItems.length,
       filteredCount: filteredMenuItems.length,
@@ -211,7 +179,7 @@ export const EditCaptainOrderModal = () => {
         price: item.price,
         is_available: item.is_available
       }))
-    }); */
+    });
   }, [searchQuery, filteredMenuItems, menuItems.length]);
 
   useEffect(() => {
@@ -488,7 +456,7 @@ export const EditCaptainOrderModal = () => {
           </DialogDescription>
         </DialogHeader>
 
-        {loading || menuLoading ? (
+        {loading ? (
           <div className="flex-1 flex justify-center items-center">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>

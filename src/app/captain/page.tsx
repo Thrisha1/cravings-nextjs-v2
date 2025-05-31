@@ -86,11 +86,11 @@ export default function CaptainDashboard() {
         }
         setIsPOSOpen(open);
       }}>
-        <DialogContent className="max-w-none w-screen h-screen p-0 sm:p-0">
+        <DialogContent className="max-w-none w-screen h-[100dvh] p-0 sm:p-0 flex flex-col">
           <DialogHeader className="p-4 border-b">
             <DialogTitle>Create New Order</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden flex flex-col h-[calc(100vh-8rem)]">
+          <div className="flex-1 overflow-hidden flex flex-col h-[calc(100dvh-8rem)]">
             <div className="flex-1 overflow-y-auto p-4">
               <CaptainPOS />
             </div>
@@ -98,7 +98,7 @@ export default function CaptainDashboard() {
               <Captaincart />
             </div>
           </div>
-          <div className="flex-none flex justify-end gap-2 p-4 border-t">
+          <div className="flex-none flex justify-end gap-2 p-4 border-t pb-[env(safe-area-inset-bottom)]">
             <Button 
               variant="outline" 
               onClick={() => {
