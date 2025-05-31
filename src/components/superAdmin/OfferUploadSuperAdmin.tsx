@@ -58,23 +58,24 @@ export const KERALA_DISTRICTS = [
   "Kasaragod",
 ];
 
+const initialFormData = {
+  partner_name: "",
+  item_name: "",
+  price: 0,
+  location: "",
+  description: "",
+  insta_link: "",
+  likes: 0,
+  image_url: "",
+  id: "",
+  district: "",
+};
+
 export default function OfferUploadSuperAdmin() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-
-  const [formData, setFormData] = useState<CommonOffer>({
-    partner_name: "",
-    item_name: "",
-    price: 0,
-    location: "",
-    description: "",
-    insta_link: "",
-    likes: 0,
-    image_url: "",
-    id: "",
-    district: "",
-  });
+  const [formData, setFormData] = useState<CommonOffer>(initialFormData);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -95,6 +96,16 @@ export default function OfferUploadSuperAdmin() {
         ...prev,
         image_url: blobUrl,
       }));
+    }
+  };
+
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setImagePreview(null);
+    // Clear file input
+    const fileInput = document.getElementById("image-upload") as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = "";
     }
   };
 
@@ -151,6 +162,9 @@ export default function OfferUploadSuperAdmin() {
       toast.success("Item created successfully!");
       revalidateTag("all-common-offers");
       await sendCommonOfferWhatsAppMsg(insert_common_offers_one.id);
+      
+      // Reset form after successful submission
+      resetForm();
     } catch (error) {
       console.error("Error creating item:", error);
       toast.error("Failed to create item. Please try again.");
