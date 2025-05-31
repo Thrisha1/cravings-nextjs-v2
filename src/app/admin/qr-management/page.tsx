@@ -424,37 +424,39 @@ const QrManagementPage = () => {
                   <DialogTitle>Add New QR Group</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="groupName" className="text-right">
-                      Group Name
-                    </Label>
-                    <Input
-                      id="groupName"
-                      value={newGroupName}
-                      onChange={(e) => setNewGroupName(e.target.value)}
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="chargeType" className="text-right">
-                      Charge Type
-                    </Label>
-                    <Select
-                      value={newChargeType}
-                      onValueChange={(value: 'PER_ITEM' | 'FLAT_FEE') => setNewChargeType(value)}
-                    >
-                      <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Select charge type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="FLAT_FEE">Flat Fee</SelectItem>
-                        <SelectItem value="PER_ITEM">Per Item</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 w-full md:w-1/2">
+                      <Label htmlFor="groupName">
+                        Group Name
+                      </Label>
+                      <Input
+                        id="groupName"
+                        value={newGroupName}
+                        onChange={(e) => setNewGroupName(e.target.value)}
+                        className="w-full"
+                      />
+                    </div>
+                    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 w-full md:w-1/2">
+                      <Label htmlFor="chargeType">
+                        Charge Type
+                      </Label>
+                      <Select
+                        value={newChargeType}
+                        onValueChange={(value: 'PER_ITEM' | 'FLAT_FEE') => setNewChargeType(value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select charge type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FLAT_FEE">Flat Fee</SelectItem>
+                          <SelectItem value="PER_ITEM">Per Item</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   {/* Pricing Rules Section */}
-                  <div className="col-span-4">
+                  <div className="w-full">
                     <div className="flex items-center justify-between mb-3">
                       <Label className="text-sm font-medium">Pricing Rules</Label>
                       <Button
@@ -471,37 +473,37 @@ const QrManagementPage = () => {
 
                     <div className="space-y-3 border rounded-lg p-4">
                       {newPricingRules.map((rule, index) => (
-                        <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                          <div className="col-span-3">
+                        <div key={index} className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-end">
+                          <div className="w-full sm:w-1/3">
                             <Label className="text-xs">Min Amount ($)</Label>
                             <Input
                               type="number"
                               value={rule.min_amount}
                               onChange={(e) => updatePricingRule(index, 'min_amount', parseInt(e.target.value) || 0)}
-                              className="h-8"
+                              className="h-8 w-full"
                             />
                           </div>
-                          <div className="col-span-3">
+                          <div className="w-full sm:w-1/3">
                             <Label className="text-xs">Max Amount ($)</Label>
                             <Input
                               type="number"
                               value={rule.max_amount || ''}
                               onChange={(e) => updatePricingRule(index, 'max_amount', e.target.value ? parseInt(e.target.value) : null)}
                               placeholder="No limit"
-                              className="h-8"
+                              className="h-8 w-full"
                             />
                           </div>
-                          <div className="col-span-3">
+                          <div className="w-full sm:w-1/3">
                             <Label className="text-xs">Extra Charge ($)</Label>
                             <Input
                               type="number"
                               step="0.01"
                               value={rule.charge}
                               onChange={(e) => updatePricingRule(index, 'charge', parseFloat(e.target.value) || 0)}
-                              className="h-8"
+                              className="h-8 w-full"
                             />
                           </div>
-                          <div className="col-span-3 flex justify-end">
+                          <div className="flex justify-end sm:justify-start mt-1">
                             {newPricingRules.length > 1 && (
                               <Button
                                 type="button"
