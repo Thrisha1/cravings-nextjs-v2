@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getFeatures } from "@/lib/getFeatures";
+import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
 
 const ItemsCard = ({
   items,
@@ -56,7 +57,9 @@ const ItemsCard = ({
             className="flex justify-between items-center border-b pb-2"
           >
             <div>
-              <p className="font-medium">{item.name}</p>
+              <DescriptionWithTextBreak accent="black" maxChars={15}>
+                {item.name}
+              </DescriptionWithTextBreak>
               <p className="text-sm text-gray-500">{item.category.name}</p>
             </div>
             <div className="flex items-center gap-3">
@@ -140,7 +143,6 @@ const AddressCard = ({
   const hasMultiWhatsapp =
     getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled &&
     hotelData?.whatsapp_numbers?.length > 0;
-
 
   return (
     <div className="bg-white rounded-lg shadow p-4 mb-4">
@@ -293,7 +295,7 @@ const BillCard = ({
         </div>
 
         {/* QR Group Extra Charges */}
-        {qrGroup && qrExtraCharges > 0 && (
+        {qrGroup && qrExtraCharges > 0 ? (
           <div className="flex justify-between">
             <div>
               <span>{qrGroup.name || "Service Charge"}</span>
@@ -308,10 +310,10 @@ const BillCard = ({
               {qrExtraCharges.toFixed(2)}
             </span>
           </div>
-        )}
+        ) : null}
 
         {/* GST */}
-        {gstPercentage && (
+        {gstPercentage ? (
           <div className="flex justify-between">
             <span>GST ({gstPercentage}%)</span>
             <span>
@@ -319,10 +321,10 @@ const BillCard = ({
               {gstAmount.toFixed(2)}
             </span>
           </div>
-        )}
+        ) : null}
 
         {/* Delivery charge */}
-        {(isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange) ? (
+        {isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange ? (
           <div className="flex justify-between">
             <div>
               <span>Delivery Charge</span>
@@ -736,7 +738,10 @@ const PlaceOrderModal = ({
     const phoneNumber = hotelData.whatsapp_numbers.find(
       (item) => item.area === location
     )?.number;
-    localStorage.setItem(`hotel-${hotelData.id}-whatsapp-area`, phoneNumber || "");
+    localStorage.setItem(
+      `hotel-${hotelData.id}-whatsapp-area`,
+      phoneNumber || ""
+    );
   };
 
   useEffect(() => {
@@ -762,7 +767,7 @@ const PlaceOrderModal = ({
   }, []);
 
   useEffect(() => {
-    if (isDelivery && hasDelivery && selectedCoords && !isQrScan) {
+    if (isDelivery && hasDelivery && selectedCoords !== null && !isQrScan) {
       calculateDeliveryDistanceAndCost(hotelData as HotelData);
     }
   }, [selectedCoords, isDelivery, hasDelivery, isQrScan]);
@@ -853,6 +858,14 @@ const PlaceOrderModal = ({
     setShowLoginDrawer(false);
   };
 
+  useEffect(() => {
+    if (items?.length === 0) {
+      setOpenPlaceOrderModal(false);
+      setOpenDrawerBottom(true);
+      return;
+    }
+  }, [items]);
+
   // Determine if place order button should be disabled
   const isPlaceOrderDisabled =
     isPlacingOrder ||
@@ -924,26 +937,29 @@ const PlaceOrderModal = ({
 
             {/* Place Order Button */}
             {user && !isPlaceOrderDisabled ? (
-              <Link
-                className="pt-4"
-                href={getWhatsappLink(orderId as string)}
-                target="_blank"
-              >
-                <Button
-                  onClick={handlePlaceOrder}
-                  className="w-full"
-                  disabled={isPlaceOrderDisabled || !user}
+              <>
+                <div></div>
+                <Link
+                  className="pt-4"
+                  href={getWhatsappLink(orderId as string)}
+                  target="_blank"
                 >
-                  {isPlacingOrder ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Placing Order...
-                    </>
-                  ) : (
-                    "Place Order"
-                  )}
-                </Button>
-              </Link>
+                  <Button
+                    onClick={handlePlaceOrder}
+                    className="w-full"
+                    disabled={isPlaceOrderDisabled || !user}
+                  >
+                    {isPlacingOrder ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Placing Order...
+                      </>
+                    ) : (
+                      "Place Order"
+                    )}
+                  </Button>
+                </Link>
+              </>
             ) : (
               <Button
                 className="w-full"
