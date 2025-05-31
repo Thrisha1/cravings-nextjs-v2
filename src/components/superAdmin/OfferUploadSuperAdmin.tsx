@@ -1,7 +1,7 @@
 // app/dashboard/items/new/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { uploadFileToS3 } from "@/app/actions/aws-s3";
 import { processImage } from "@/lib/processImage";
@@ -71,11 +71,82 @@ const initialFormData = {
   district: "",
 };
 
+const isValidInstagramLink = (url: string | null) => {
+  return url === "" || url === null || /instagram\.com\/(p|reel)\//.test(url);
+};
+
+const extractInstagramReelId = (url: string) => {
+  const regex = /instagram\.com\/(reel|p)\/([^\/?]+)/;
+  const match = url.match(regex);
+  return match ? match[2] : null;
+};
+
+const getInstagramThumbnailUrl = (reelId: string) => {
+  return `https://www.instagram.com/p/${reelId}/media/?size=l`;
+};
+
 export default function OfferUploadSuperAdmin() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState<CommonOffer>(initialFormData);
+  const [errors, setErrors] = useState({
+    insta_link: "",
+    location: ""
+  });
+  const [isFetchingThumbnail, setIsFetchingThumbnail] = useState(false);
+  const [instagramLinkChanged, setInstagramLinkChanged] = useState(false);
+
+  useEffect(() => {
+    const fetchThumbnail = async () => {
+      if (!formData.insta_link || !isValidInstagramLink(formData.insta_link)) {
+        setImagePreview(null);
+        return;
+      }
+
+      const reelId = extractInstagramReelId(formData.insta_link);
+      console.log("Extracted Reel ID:", reelId);
+      
+      if (!reelId) {
+        setImagePreview(null);
+        return;
+      }
+
+      setIsFetchingThumbnail(true);
+      try {
+        const thumbnailUrl = getInstagramThumbnailUrl(reelId);
+        
+        // Create a proxy request to avoid CORS issues
+        const proxyUrl = `/api/instagram-proxy?url=${encodeURIComponent(thumbnailUrl)}`;
+        const response = await fetch(proxyUrl);
+        
+        if (response.ok) {
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          setImagePreview(objectUrl);
+          setFormData(prev => ({
+            ...prev,
+            image_url: objectUrl
+          }));
+        } else {
+          throw new Error("Thumbnail not found");
+        }
+      } catch (error) {
+        console.error("Failed to fetch Instagram thumbnail:", error);
+        toast.warning("Couldn't fetch Instagram thumbnail automatically. Please upload an image manually.");
+        setImagePreview(null);
+      } finally {
+        setIsFetchingThumbnail(false);
+        setInstagramLinkChanged(false);
+      }
+    };
+
+    // Only fetch if the Instagram link has changed and is valid
+    if (instagramLinkChanged && isValidInstagramLink(formData.insta_link)) {
+      const debounceTimer = setTimeout(fetchThumbnail, 1000);
+      return () => clearTimeout(debounceTimer);
+    }
+  }, [formData.insta_link, instagramLinkChanged]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -85,6 +156,16 @@ export default function OfferUploadSuperAdmin() {
       ...prev,
       [name]: name === "price" ? Number(value) : value,
     }));
+
+    // Clear error when user types
+    if (name === "insta_link" || name === "location") {
+      setErrors(prev => ({...prev, [name]: ""}));
+    }
+
+    // Track Instagram link changes
+    if (name === "insta_link") {
+      setInstagramLinkChanged(true);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,6 +183,8 @@ export default function OfferUploadSuperAdmin() {
   const resetForm = () => {
     setFormData(initialFormData);
     setImagePreview(null);
+    setErrors({ insta_link: "", location: "" });
+    setInstagramLinkChanged(false);
     // Clear file input
     const fileInput = document.getElementById("image-upload") as HTMLInputElement;
     if (fileInput) {
@@ -109,22 +192,49 @@ export default function OfferUploadSuperAdmin() {
     }
   };
 
+  const validateForm = () => {
+    let valid = true;
+    const newErrors = { insta_link: "", location: "" };
+
+    if (formData.insta_link && !isValidInstagramLink(formData.insta_link)) {
+      newErrors.insta_link = "Please enter a valid Instagram Reel link";
+      valid = false;
+    }
+
+    if (!formData.location) {
+      newErrors.location = "Location link is required";
+      valid = false;
+    }
+
+    setErrors(newErrors);
+    return valid;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       let s3Url = null;
 
-      if ((formData.location?.length ?? 0) <= 5) {
-        toast.error("Location should be provided!");
-        throw new Error("Location should be provided!");
-      }
-
       // Upload image to S3 if exists
       if (formData.image_url) {
+        // If the image is from Instagram, we need to fetch it first
+        let imageToUpload = formData.image_url;
+        
+        if (formData.image_url.includes('instagram.com')) {
+          const response = await fetch(formData.image_url);
+          const blob = await response.blob();
+          imageToUpload = URL.createObjectURL(blob);
+        }
+
         const processedImage = await processImage(
-          formData.image_url as string,
+          imageToUpload,
           `local`
         );
 
@@ -174,7 +284,7 @@ export default function OfferUploadSuperAdmin() {
   };
 
   return (
-    <div className=" mx-auto">
+    <div className="mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Partner Name */}
@@ -269,16 +379,21 @@ export default function OfferUploadSuperAdmin() {
               htmlFor="location"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Location (optional)
+              Google Maps Location Link *
             </Label>
             <Input
-              type="text"
+              type="url"
               id="location"
               name="location"
               value={formData.location || ""}
               onChange={handleChange}
+              placeholder="https://maps.google.com/..."
+              required
               className="w-full px-4 py-2 border border-gray-300 rounded-md bg-white focus-visible:ring-orange-500"
             />
+            {errors.location && (
+              <p className="mt-1 text-sm text-red-600">{errors.location}</p>
+            )}
           </div>
 
           {/* Instagram Link */}
@@ -287,7 +402,7 @@ export default function OfferUploadSuperAdmin() {
               htmlFor="insta_link"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Instagram Link (optional)
+              Instagram Reel Link (optional)
             </Label>
             <Input
               type="url"
@@ -295,8 +410,12 @@ export default function OfferUploadSuperAdmin() {
               name="insta_link"
               value={formData.insta_link || ""}
               onChange={handleChange}
+              placeholder="https://www.instagram.com/reel/..."
               className="w-full px-4 py-2 border border-gray-300 rounded-md bg-white focus-visible:ring-orange-500"
             />
+            {errors.insta_link && (
+              <p className="mt-1 text-sm text-red-600">{errors.insta_link}</p>
+            )}
           </div>
         </div>
 
@@ -321,9 +440,46 @@ export default function OfferUploadSuperAdmin() {
         {/* Image Upload */}
         <div>
           <Label className="block text-sm font-medium text-gray-700 mb-1">
-            Item Image (optional)
+            {formData.insta_link && isValidInstagramLink(formData.insta_link)
+              ? "Instagram Reel Thumbnail"
+              : "Item Image (optional - upload manually or provide Instagram Reel link)"}
           </Label>
-          <div className="mt-1 flex items-center">
+          
+          <div className="mt-4">
+            {isFetchingThumbnail ? (
+              <div className="w-64 h-64 border border-gray-200 rounded-md flex items-center justify-center bg-gray-100">
+                <p>Loading Instagram thumbnail...</p>
+              </div>
+            ) : imagePreview ? (
+              <div className="space-y-2">
+                <div className="w-64 h-64 border border-gray-200 rounded-md overflow-hidden">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                {formData.insta_link && isValidInstagramLink(formData.insta_link) && (
+                  <p className="text-sm text-gray-500">
+                    Using Instagram thumbnail. You can still upload a different image below.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="w-64 h-64 border border-gray-200 rounded-md flex items-center justify-center bg-gray-100">
+                {formData.insta_link && !isValidInstagramLink(formData.insta_link) ? (
+                  <p className="text-red-500">Invalid Instagram Reel link</p>
+                ) : (
+                  <p>No image selected</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <Label className="block text-sm font-medium text-gray-700 mb-1">
+              Upload Custom Image (optional)
+            </Label>
             <Input
               id="image-upload"
               name="image-upload"
@@ -333,19 +489,6 @@ export default function OfferUploadSuperAdmin() {
               className="bg-white focus-visible:ring-orange-500"
             />
           </div>
-
-          {imagePreview && (
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-2">Image Preview:</p>
-              <div className="w-64 h-64 border border-gray-200 rounded-md overflow-hidden">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Form Actions */}
@@ -359,7 +502,7 @@ export default function OfferUploadSuperAdmin() {
           </Button>
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isFetchingThumbnail}
             className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Creating..." : "Create Item"}
