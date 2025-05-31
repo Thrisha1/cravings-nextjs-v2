@@ -55,7 +55,7 @@ const ItemsCard = ({
         {items.map((item) => (
           <div
             key={item.id}
-            className="flex justify-between items-center border-b pb-2"
+            className="flex justify-between items-center border-b pb-2 gap-5"
           >
             <div>
               <DescriptionWithTextBreak accent="black" maxChars={15}>
@@ -246,20 +246,28 @@ const AddressCard = ({
       </div>
 
       {/* Location Permission Dialog */}
-      <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
+      <Dialog
+        open={showPermissionDialog}
+        onOpenChange={setShowPermissionDialog}
+      >
         <DialogContent className="z-[62] h-[100dvh] w-[100dvw]">
           <DialogHeader>
             <DialogTitle></DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <h1 className="text-xl font-semibold">Location Permission Required</h1>
+            <h1 className="text-xl font-semibold">
+              Location Permission Required
+            </h1>
             <p>
               To provide accurate delivery estimates, we need access to your
               location.
             </p>
             <ul className="list-disc pl-5 space-y-2">
               <li>Please don't deny the location permission</li>
-              <li>This helps us calculate accurate <span className="font-medium">delivery charges</span></li>
+              <li>
+                This helps us calculate accurate{" "}
+                <span className="font-medium">delivery charges</span>
+              </li>
               <li>Your location is only used for this order</li>
             </ul>
             <p className="font-medium">
@@ -499,12 +507,14 @@ const MapModal = ({
   setSelectedLocation,
   setAddress,
   hotelData,
+  setOpenPlaceOrderModal,
 }: {
   showMapModal: boolean;
   setShowMapModal: (show: boolean) => void;
   setSelectedLocation: (coords: { lng: number; lat: number }) => void;
   setAddress: (address: string) => void;
   hotelData: HotelData;
+  setOpenPlaceOrderModal: (open: boolean) => void;
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -618,6 +628,17 @@ const MapModal = ({
     if (showMapModal) {
       initializeMap();
     }
+
+    if (showMapModal) {
+      setOpenPlaceOrderModal(false);
+      document.body.style.overflowY = "hidden !important";
+      document.body.style.maxHeight = "100vh";
+    } else {
+      document.body.style.overflowY = "auto";
+      document.body.style.maxHeight = "auto";
+      setOpenPlaceOrderModal(true);
+
+    }
   }, [showMapModal]);
 
   const updateMarker = (lng: number, lat: number) => {
@@ -648,22 +669,18 @@ const MapModal = ({
     }
   };
 
+  if (!showMapModal) return null;
+
   return (
     <div
-      className={`fixed inset-0 top-0 left-0 z-50 h-screen w-screen ${
+      className={`fixed top-0 left-0 z-[5000] h-screen w-screen ${
         showMapModal ? "overflow-hidden" : "hidden"
       }`}
     >
-      <div
-        className={`fixed inset-0 top-0 bg-black/50 w-full h-full ${
-          showMapModal ? "" : "hidden"
-        }`}
-        onClick={() => setShowMapModal(false)}
-      />
-
-      <div className="flex justify-center min-h-screen">
+     
+      <div className="flex items-center justify-center min-h-screen w-screen">
         <div
-          className="relative bg-white rounded-lg max-w-screen-lg w-full h-[90vh] m-4 flex flex-col overflow-hidden"
+          className="relative z-[5000] bg-white rounded-lg w-screen h-[100dvh] flex flex-col overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-between items-center p-4 border-b">
@@ -901,129 +918,134 @@ const PlaceOrderModal = ({
     (hasMultiWhatsapp && !selectedLocation);
 
   return (
-    <Dialog open={open_place_order_modal} onOpenChange={setOpenPlaceOrderModal}>
-      <DialogContent className="w-screen h-[100dvh] overflow-y-auto z-[60] bg-gray-50">
-        <DialogHeader>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => {
-                setOpenPlaceOrderModal(false);
-                setOpenDrawerBottom(true);
-              }}
-              className="p-2 rounded-full hover:bg-gray-200"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <DialogTitle>Review Your Order</DialogTitle>
-          </div>
-        </DialogHeader>
-
-        {(items?.length ?? 0) > 0 && (
-          <div className="space-y-4">
-            <ItemsCard
-              items={items || []}
-              increaseQuantity={increaseQuantity}
-              decreaseQuantity={decreaseQuantity}
-              removeItem={removeItem}
-              currency={hotelData?.currency || "₹"}
-            />
-
-            {isQrScan ? (
-              <TableNumberCard tableNumber={tableNumber} />
-            ) : isDelivery ? (
-              <AddressCard
-                address={address}
-                setAddress={setAddress}
-                setShowMapModal={setShowMapModal}
-                getLocation={getLocation}
-                isGeoLoading={isGeoLoading}
-                geoError={geoError}
-                deliveryInfo={deliveryInfo}
-                hasLocation={hasLocation}
-                hotelData={hotelData}
-                selectedLocation={selectedLocation}
-                setSelectedLocation={handleSelectHotelLocation}
-              />
-            ) : null}
-
-            <BillCard
-              items={items || []}
-              currency={hotelData?.currency || "₹"}
-              gstPercentage={hotelData?.gst_percentage}
-              deliveryInfo={deliveryInfo}
-              isDelivery={isDelivery && !isQrScan}
-              qrGroup={qrGroup}
-              tableNumber={tableNumber}
-            />
-
-            {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}
-
-            {user && !isPlaceOrderDisabled ? (
-              <>
-                <div></div>
-                <Link
-                  className="pt-4"
-                  href={getWhatsappLink(orderId as string)}
-                  target="_blank"
-                >
-                  <Button
-                    onClick={handlePlaceOrder}
-                    className="w-full"
-                    disabled={isPlaceOrderDisabled || !user}
-                  >
-                    {isPlacingOrder ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Placing Order...
-                      </>
-                    ) : (
-                      "Place Order"
-                    )}
-                  </Button>
-                </Link>
-              </>
-            ) : (
-              <Button
-                className="w-full"
-                disabled={isPlaceOrderDisabled || !user}
-              >
-                {isPlacingOrder ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Placing Order...
-                  </>
-                ) : (
-                  "Place Order"
-                )}
-              </Button>
-            )}
-
-            {isDelivery && !isQrScan && deliveryInfo?.isOutOfRange && (
-              <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
-                Delivery is not available to your selected location
-              </div>
-            )}
-          </div>
-        )}
-
-        {!isQrScan && (
-          <MapModal
-            showMapModal={showMapModal}
-            setShowMapModal={setShowMapModal}
-            setSelectedLocation={setSelectedCoords}
-            setAddress={setAddress}
-            hotelData={hotelData}
-          />
-        )}
-
-        <LoginDrawer
-          showLoginDrawer={showLoginDrawer}
-          setShowLoginDrawer={setShowLoginDrawer}
-          hotelId={hotelData?.id || ""}
-          onLoginSuccess={handleLoginSuccess}
+    <>
+     
+        <MapModal
+          setOpenPlaceOrderModal={setOpenPlaceOrderModal}
+          showMapModal={showMapModal}
+          setShowMapModal={setShowMapModal}
+          setSelectedLocation={setSelectedCoords}
+          setAddress={setAddress}
+          hotelData={hotelData}
         />
-      </DialogContent>
-    </Dialog>
+  
+      <Dialog
+        open={open_place_order_modal}
+        onOpenChange={setOpenPlaceOrderModal}
+      >
+        <DialogContent className="w-screen h-[100dvh] overflow-y-auto z-[60] bg-gray-50">
+          <DialogHeader>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => {
+                  setOpenPlaceOrderModal(false);
+                  setOpenDrawerBottom(true);
+                }}
+                className="p-2 rounded-full hover:bg-gray-200"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <DialogTitle>Review Your Order</DialogTitle>
+            </div>
+          </DialogHeader>
+
+          {(items?.length ?? 0) > 0 && (
+            <div className="space-y-4">
+              <ItemsCard
+                items={items || []}
+                increaseQuantity={increaseQuantity}
+                decreaseQuantity={decreaseQuantity}
+                removeItem={removeItem}
+                currency={hotelData?.currency || "₹"}
+              />
+
+              {isQrScan ? (
+                <TableNumberCard tableNumber={tableNumber} />
+              ) : isDelivery ? (
+                <AddressCard
+                  address={address}
+                  setAddress={setAddress}
+                  setShowMapModal={setShowMapModal}
+                  getLocation={getLocation}
+                  isGeoLoading={isGeoLoading}
+                  geoError={geoError}
+                  deliveryInfo={deliveryInfo}
+                  hasLocation={hasLocation}
+                  hotelData={hotelData}
+                  selectedLocation={selectedLocation}
+                  setSelectedLocation={handleSelectHotelLocation}
+                />
+              ) : null}
+
+              <BillCard
+                items={items || []}
+                currency={hotelData?.currency || "₹"}
+                gstPercentage={hotelData?.gst_percentage}
+                deliveryInfo={deliveryInfo}
+                isDelivery={isDelivery && !isQrScan}
+                qrGroup={qrGroup}
+                tableNumber={tableNumber}
+              />
+
+              {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}
+
+              {user && !isPlaceOrderDisabled ? (
+                <>
+                  <div></div>
+                  <Link
+                    className="pt-4"
+                    href={getWhatsappLink(orderId as string)}
+                    target="_blank"
+                  >
+                    <Button
+                      onClick={handlePlaceOrder}
+                      className="w-full"
+                      disabled={isPlaceOrderDisabled || !user}
+                    >
+                      {isPlacingOrder ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Placing Order...
+                        </>
+                      ) : (
+                        "Place Order"
+                      )}
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <Button
+                  className="w-full"
+                  disabled={isPlaceOrderDisabled || !user}
+                >
+                  {isPlacingOrder ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Placing Order...
+                    </>
+                  ) : (
+                    "Place Order"
+                  )}
+                </Button>
+              )}
+
+              {isDelivery && !isQrScan && deliveryInfo?.isOutOfRange && (
+                <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
+                  Delivery is not available to your selected location
+                </div>
+              )}
+            </div>
+          )}
+
+          <LoginDrawer
+            showLoginDrawer={showLoginDrawer}
+            setShowLoginDrawer={setShowLoginDrawer}
+            hotelId={hotelData?.id || ""}
+            onLoginSuccess={handleLoginSuccess}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
