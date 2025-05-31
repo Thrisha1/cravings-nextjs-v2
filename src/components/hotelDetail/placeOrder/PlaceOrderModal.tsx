@@ -322,7 +322,7 @@ const BillCard = ({
         )}
 
         {/* Delivery charge */}
-        {isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange && (
+        {(isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange) ? (
           <div className="flex justify-between">
             <div>
               <span>Delivery Charge</span>
@@ -332,7 +332,7 @@ const BillCard = ({
               {deliveryInfo.cost.toFixed(2)}
             </span>
           </div>
-        )}
+        ) : null}
 
         <div className="border-t pt-2 mt-2 flex justify-between font-bold text-lg">
           <span>Grand Total</span>
