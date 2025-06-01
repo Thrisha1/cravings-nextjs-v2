@@ -130,6 +130,8 @@ const BottomNav = () => {
 
   return (
     <section className={`lg:hidden`}>
+      {/* Spacer to prevent content from being hidden behind the fixed nav */}
+      <div className="h-[64px] w-full" aria-hidden="true"></div>
       {/* Bottom Navigation Bar */}
       <div 
         className={`fixed bottom-0 left-0 w-full bg-white px-4 py-3 flex justify-around z-[500] border-t border-gray-200 transition-transform duration-300 ${
