@@ -1118,6 +1118,7 @@ const PlaceOrderModal = ({
           setSelectedLocation={setSelectedCoords}
           setAddress={setAddress}
           hotelData={hotelData}
+          setOpenPlaceOrderModal={setOpenPlaceOrderModal}
         />
       )}
 
