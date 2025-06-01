@@ -7,7 +7,6 @@ const OffersLayout = ({children}: {children: React.ReactNode}) => {
     <>
         <Navbar />
         {children}
-        <BottomNav/>
     </>
   )
 }

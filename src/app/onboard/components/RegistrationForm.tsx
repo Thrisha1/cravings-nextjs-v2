@@ -19,14 +19,13 @@ import { MapPin } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useLocationStore } from "@/store/locationStore";
 import { BusinessRegistrationData } from "../page";
+import Image from "next/image";
 
 // Define the validation schema
 const registrationSchema = z.object({
   businessName: z.string().min(1, "Business name is required"),
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   countryCode: z.string().optional(),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
   isIndia: z.boolean().default(true),
   country: z.string().optional(),
   state: z.string().optional(),
@@ -278,17 +277,20 @@ export default function RegistrationForm({
   const { locations } = useLocationStore();
   const [formError, setFormError] = useState<string | null>(null);
   const [isIndia, setIsIndia] = useState(true);
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const [selectedState, setSelectedState] = useState<string>("");
-  const [selectedCountryCode, setSelectedCountryCode] = useState<string>("+91"); // Default to India's code
+  const [selectedDistrict, setSelectedDistrict] = useState<string>("");
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+  const [selectedCountryCode, setSelectedCountryCode] = useState("+91");
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<any>({
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm<any>({
     resolver: zodResolver(registrationSchema),
     defaultValues: {
       businessName: businessData.businessName,
       phone: businessData.phone,
       countryCode: "+91",
-      email: businessData.email,
-      password: businessData.password,
       isIndia: true,
       state: businessData.area,
       district: businessData.district,
@@ -303,14 +305,13 @@ export default function RegistrationForm({
   };
 
   const onSubmit = (data: any) => {
+  /* eslint-enable @typescript-eslint/no-explicit-any */
     try {
       // Prepare the data for the next step
       const updatedData = {
         ...businessData,
         businessName: data.businessName,
         phone: isIndia ? data.phone : `${data.countryCode} ${data.phone}`,
-        email: data.email,
-        password: data.password,
         area: isIndia ? data.state : "",
         district: isIndia ? data.district : "",
         country: !isIndia ? data.country : "India",
@@ -326,6 +327,27 @@ export default function RegistrationForm({
     }
   };
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (limit to 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setLogoPreview(result);
+      setBusinessData({
+        ...businessData,
+        logo: result
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold">Register as Partner</h2>
@@ -337,6 +359,42 @@ export default function RegistrationForm({
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="logo">Business Logo</Label>
+          <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-md p-6 h-[150px] relative">
+            {logoPreview ? (
+              <div className="relative w-24 h-24">
+                <Image
+                  src={logoPreview}
+                  alt="Business Logo"
+                  width={96}
+                  height={96}
+                  className="w-full h-full object-contain rounded-full border border-gray-200"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center text-gray-500">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-2">
+                  <span className="text-2xl">🏪</span>
+                </div>
+                <p className="text-sm">Upload your business logo</p>
+              </div>
+            )}
+            <input
+              type="file"
+              id="logo"
+              accept="image/*"
+              className="absolute inset-0 w-0 h-0 opacity-0"
+              onChange={handleLogoChange}
+            />
+            <label 
+              htmlFor="logo" 
+              className="absolute inset-0 cursor-pointer"
+              aria-label="Upload logo"
+            />
+          </div>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="businessName">Business Name</Label>
           <Input
@@ -513,34 +571,8 @@ export default function RegistrationForm({
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="Enter your email"
-            {...register("email")}
-          />
-          {errors.email && (
-            <p className="text-sm text-red-500">{errors.email.message as string}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="Enter your password"
-            {...register("password")}
-          />
-          {errors.password && (
-            <p className="text-sm text-red-500">{errors.password.message as string}</p>
-          )}
-        </div>
-
         <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600">
-          Sign up with Email
+          Continue
         </Button>
       </form>
     </div>

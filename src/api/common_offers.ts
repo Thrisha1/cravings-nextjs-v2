@@ -41,9 +41,22 @@ mutation InsertCommonOffer(
   }
 }`;
 
-export const getAllCommonOffers = `
-  query GetAllCommonOffers($limit: Int , $offset: Int) {
-    common_offers(order_by: {created_at: desc} , limit: $limit, offset: $offset) {
+export const getAllCommonOffers = (district : string | null , searchQuery : string | null) => {
+  return  `
+  query GetAllCommonOffers($limit: Int, $offset: Int, $district: String, $searchQuery: String) {
+    common_offers: common_offers(
+      order_by: {created_at: desc}, 
+      limit: $limit, 
+      offset: $offset,
+      where: {
+        ${district ? 'district: {_eq: $district}' : ''}
+        ${district && searchQuery ? ',' : ''}
+        ${searchQuery ? `_or: [
+          {partner_name: {_ilike: $searchQuery}},
+          {item_name: {_ilike: $searchQuery}}
+        ]` : ''}
+      }
+    ) {
       id
       partner_name
       item_name
@@ -52,13 +65,23 @@ export const getAllCommonOffers = `
       district
       created_at
     }
-    common_offers_aggregate {
+    common_offers_aggregate: common_offers_aggregate(
+      where: {
+        ${district ? 'district: {_eq: $district}' : ''}
+        ${district && searchQuery ? ',' : ''}
+        ${searchQuery ? `_or: [
+          {partner_name: {_ilike: $searchQuery}},
+          {item_name: {_ilike: $searchQuery}}
+        ]` : ''}
+      }
+    ) {
       aggregate {
         count
       }
     }
   }
 `;
+}
 
 export const getCommonOffersWithDistance = `
   query GetCommonOffersWithDistance(

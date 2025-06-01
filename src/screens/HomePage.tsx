@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { UtensilsCrossed, ShoppingCart, Check, X, ChevronRight, Star, CreditCard, FileText } from "lucide-react";
+import { UtensilsCrossed, ShoppingCart, Check, X, ChevronRight, Star, FileText } from "lucide-react";
 // import { PartnerDialog } from "@/components/PartnerDialog";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
