@@ -58,16 +58,16 @@ const ItemsCard = ({
             className="flex justify-between items-center border-b pb-2 gap-5"
           >
             <div>
-              <DescriptionWithTextBreak accent="black" maxChars={15}>
+              <DescriptionWithTextBreak spanClassName="text-sm text-black" accent="black" maxChars={15}>
                 {item.name}
               </DescriptionWithTextBreak>
-              <p className="text-sm text-gray-500">{item.category.name}</p>
+              <p className="text-xs text-gray-500">{item.category.name}</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="font-medium">
+              {/* <span className="font-medium">
                 {currency}
                 {item.price.toFixed(2)}
-              </span>
+              </span> */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
