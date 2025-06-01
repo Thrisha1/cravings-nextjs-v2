@@ -1,16 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  FullModal,
+  FullModalContent,
+  FullModalHeader,
+  FullModalTitle,
+  FullModalBody,
+  FullModalFooter,
+} from "@/components/ui/full_modal";
 import {
   Select,
   SelectContent,
@@ -41,6 +42,44 @@ export function OffersTab() {
   });
   const [isAdding, setAdding] = useState(false);
   const [isDeleting, setDeleting] = useState<Record<string, boolean>>({});
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const formContainerRef = useRef<HTMLDivElement>(null);
+
+  // Create refs for the form fields
+  const priceInputRef = useRef<HTMLInputElement>(null);
+  const itemsInputRef = useRef<HTMLInputElement>(null);
+  const fromTimeInputRef = useRef<HTMLInputElement>(null);
+  const toTimeInputRef = useRef<HTMLInputElement>(null);
+
+  const scrollToView = (el: HTMLElement) => {
+    if (formContainerRef.current && el) {
+      setTimeout(() => {
+        // Scroll the element into view with some offset from the top
+        const yOffset = -100;
+        const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }, 300);
+    }
+  };
+
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setKeyboardOpen(true);
+    scrollToView(e.target);
+  };
+
+  const handleInputBlur = () => {
+    setTimeout(() => {
+      // Only set keyboard as closed if no inputs are focused
+      if (
+        document.activeElement !== priceInputRef.current &&
+        document.activeElement !== itemsInputRef.current &&
+        document.activeElement !== fromTimeInputRef.current &&
+        document.activeElement !== toTimeInputRef.current
+      ) {
+        setKeyboardOpen(false);
+      }
+    }, 100);
+  };
 
   const handleOfferDelete = (id: string) => async () => {
     setDeleting({
@@ -64,6 +103,35 @@ export function OffersTab() {
       }
     })();
   }, [userData]);
+
+  // Add listener for visual viewport resize (keyboard opening/closing)
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        const currentHeight = window.visualViewport.height;
+        const windowHeight = window.innerHeight;
+        
+        // If visual viewport is significantly smaller than window height, keyboard is probably open
+        if (windowHeight - currentHeight > 150) {
+          setKeyboardOpen(true);
+        } else {
+          setKeyboardOpen(false);
+        }
+      }
+    };
+
+    // Add the event listener
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+    }
+
+    // Clean up
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,99 +225,155 @@ export function OffersTab() {
     setAdding(false);
   };
 
+  const handleCancel = () => {
+    // Blur any focused inputs to dismiss the keyboard
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    
+    setNewOffer({
+      menuItemId: "",
+      newPrice: "",
+      itemsAvailable: "",
+      fromTime: "",
+      toTime: "",
+    });
+    setIsOpen(false);
+    setKeyboardOpen(false);
+  };
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Active Offers</h2>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="icon">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Offer</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="menuItem">Select Menu Item</Label>
-                <Select
-                  required
-                  value={newOffer.menuItemId}
-                  onValueChange={(value) =>
-                    setNewOffer({ ...newOffer, menuItemId: value })
-                  }
-                >
-                  <SelectTrigger id="menuItem">
-                    <SelectValue placeholder="Select a product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {items.map((item) => (
-                      <SelectItem key={item.id} value={item.id as string}>
-                        {item.name} - ₹{item.price.toFixed(2)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        <Button 
+          variant="outline" 
+          size="icon" 
+          onClick={() => setIsOpen(true)}
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
+        
+        <FullModal open={isOpen} onOpenChange={setIsOpen}>
+          <FullModalContent>
+            <FullModalHeader>
+              <FullModalTitle>Create New Offer</FullModalTitle>
+            </FullModalHeader>
+            <FullModalBody>
+              <div ref={formContainerRef} className="pb-20">
+                <form id="create-offer-form" onSubmit={handleSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="menuItem">Select Menu Item</Label>
+                    <Select
+                      required
+                      value={newOffer.menuItemId}
+                      onValueChange={(value) => {
+                        setNewOffer({ ...newOffer, menuItemId: value });
+                        // Force close keyboard if open
+                        if (document.activeElement instanceof HTMLElement) {
+                          document.activeElement.blur();
+                        }
+                      }}
+                    >
+                      <SelectTrigger id="menuItem">
+                        <SelectValue placeholder="Select a product" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {items.map((item) => (
+                          <SelectItem key={item.id} value={item.id as string}>
+                            {item.name} - ₹{item.price.toFixed(2)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="newPrice">New Price in ₹</Label>
-                <Input
-                  required
-                  id="newPrice"
-                  type="number"
-                  placeholder="Enter new price"
-                  value={newOffer.newPrice}
-                  onChange={(e) =>
-                    setNewOffer({ ...newOffer, newPrice: e.target.value })
-                  }
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newPrice">New Price in ₹</Label>
+                    <Input
+                      required
+                      ref={priceInputRef}
+                      id="newPrice"
+                      type="number"
+                      placeholder="Enter new price"
+                      value={newOffer.newPrice}
+                      onChange={(e) =>
+                        setNewOffer({ ...newOffer, newPrice: e.target.value })
+                      }
+                      onFocus={handleInputFocus}
+                      onBlur={handleInputBlur}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="itemsAvailable">
-                  Number of Items Available
-                </Label>
-                <Input
-                  required
-                  id="itemsAvailable"
-                  type="number"
-                  placeholder="Enter quantity"
-                  value={newOffer.itemsAvailable}
-                  onChange={(e) =>
-                    setNewOffer({ ...newOffer, itemsAvailable: e.target.value })
-                  }
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="itemsAvailable">
+                      Number of Items Available
+                    </Label>
+                    <Input
+                      required
+                      ref={itemsInputRef}
+                      id="itemsAvailable"
+                      type="number"
+                      placeholder="Enter quantity"
+                      value={newOffer.itemsAvailable}
+                      onChange={(e) =>
+                        setNewOffer({ ...newOffer, itemsAvailable: e.target.value })
+                      }
+                      onFocus={handleInputFocus}
+                      onBlur={handleInputBlur}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="fromTime">From Time</Label>
-                <Input
-                  required
-                  id="fromTime"
-                  type="datetime-local"
-                  value={newOffer.fromTime}
-                  onChange={(e) =>
-                    setNewOffer({ ...newOffer, fromTime: e.target.value })
-                  }
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fromTime">From Time</Label>
+                    <Input
+                      required
+                      ref={fromTimeInputRef}
+                      id="fromTime"
+                      type="datetime-local"
+                      value={newOffer.fromTime}
+                      onChange={(e) =>
+                        setNewOffer({ ...newOffer, fromTime: e.target.value })
+                      }
+                      onFocus={handleInputFocus}
+                      onBlur={handleInputBlur}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="toTime">To Time</Label>
-                <Input
-                  required
-                  id="toTime"
-                  type="datetime-local"
-                  value={newOffer.toTime}
-                  onChange={(e) =>
-                    setNewOffer({ ...newOffer, toTime: e.target.value })
-                  }
-                />
+                  <div className="space-y-2">
+                    <Label htmlFor="toTime">To Time</Label>
+                    <Input
+                      required
+                      ref={toTimeInputRef}
+                      id="toTime"
+                      type="datetime-local"
+                      value={newOffer.toTime}
+                      onChange={(e) =>
+                        setNewOffer({ ...newOffer, toTime: e.target.value })
+                      }
+                      onFocus={handleInputFocus}
+                      onBlur={handleInputBlur}
+                    />
+                  </div>
+                </form>
               </div>
-
+            </FullModalBody>
+            <FullModalFooter 
+              className={`${keyboardOpen ? 'keyboard-visible' : ''} sticky-footer`}
+              style={{
+                // Use style to ensure the footer stays above the keyboard
+                bottom: keyboardOpen ? `${window.visualViewport?.offsetTop || 0}px` : '0',
+                position: 'fixed',
+                width: '100%',
+              }}
+            >
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                type="button"
+              >
+                Cancel
+              </Button>
               <Button
                 disabled={
                   isAdding ||
@@ -260,13 +384,14 @@ export function OffersTab() {
                   !newOffer.toTime
                 }
                 type="submit"
-                className="w-full bg-orange-600"
+                form="create-offer-form"
+                className="bg-orange-600"
               >
                 {isAdding ? "Creating..." : "Create Offer"}
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </FullModalFooter>
+          </FullModalContent>
+        </FullModal>
       </div>
 
       <>

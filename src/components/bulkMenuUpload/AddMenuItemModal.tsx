@@ -1,10 +1,12 @@
 import { useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  FullModal,
+  FullModalContent,
+  FullModalHeader,
+  FullModalTitle,
+  FullModalBody,
+  FullModalFooter,
+} from "@/components/ui/full_modal";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -64,79 +66,102 @@ export function AddMenuItemModal({
     }
   };
 
+  const handleCancel = () => {
+    onOpenChange(false);
+    // Reset form
+    setNewItem({
+      name: "",
+      price: "",
+      image: "",
+      description: "",
+      category: "",
+    });
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90%] sm:max-w-4xl rounded-xl">
-        <DialogHeader>
-          <DialogTitle>Add New Menu Item</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Image Preview and Selection */}
-          {newItem.category && newItem.name && (
-            <div className="space-y-2">
-              {newItem.image ? (
-                <div
-                  className="relative h-[200px] w-[200px] cursor-pointer"
-                  onClick={() => setIsImageModalOpen(true)}
-                >
-                  <Img
-                    src={newItem.image}
-                    alt="Selected item"
-                    className="object-cover rounded-lg w-full h-full"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
-                    <p className="text-white">Click to change image</p>
+    <FullModal open={isOpen} onOpenChange={onOpenChange}>
+      <FullModalContent>
+        <FullModalHeader>
+          <FullModalTitle>Add New Menu Item</FullModalTitle>
+        </FullModalHeader>
+        <FullModalBody>
+          <form id="add-menu-item-form" onSubmit={handleSubmit} className="space-y-4">
+            {/* Image Preview and Selection */}
+            {newItem.category && newItem.name && (
+              <div className="space-y-2">
+                {newItem.image ? (
+                  <div
+                    className="relative h-[200px] w-[200px] cursor-pointer"
+                    onClick={() => setIsImageModalOpen(true)}
+                  >
+                    <Img
+                      src={newItem.image}
+                      alt="Selected item"
+                      className="object-cover rounded-lg w-full h-full"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
+                      <p className="text-white">Click to change image</p>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-[200px]"
-                  onClick={() => setIsImageModalOpen(true)}
-                >
-                  Select Image
-                </Button>
-              )}
-            </div>
-          )}
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-[200px]"
+                    onClick={() => setIsImageModalOpen(true)}
+                  >
+                    Select Image
+                  </Button>
+                )}
+              </div>
+            )}
 
-          <ImageGridModal
-            isOpen={isImageModalOpen}
-            onOpenChange={setIsImageModalOpen}
-            itemName={newItem.name}
-            category={newItem.category}
-            currentImage={newItem.image}
-            onSelectImage={(newImageUrl: string) => {
-              setNewItem((prev) => ({ ...prev, image: newImageUrl }));
-              setIsImageModalOpen(false);
-            }}
-          />
+            <ImageGridModal
+              isOpen={isImageModalOpen}
+              onOpenChange={setIsImageModalOpen}
+              itemName={newItem.name}
+              category={newItem.category}
+              currentImage={newItem.image}
+              onSelectImage={(newImageUrl: string) => {
+                setNewItem((prev) => ({ ...prev, image: newImageUrl }));
+                setIsImageModalOpen(false);
+              }}
+            />
 
-          <Input
-            required
-            placeholder="Product Name"
-            value={newItem.name}
-            onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-          />
-          <Input
-            required
-            type="number"
-            placeholder="Price in ₹"
-            value={newItem.price}
-            onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
-          />
-          <Textarea
-            placeholder="Product Description"
-            value={newItem.description}
-            onChange={(e) =>
-              setNewItem({ ...newItem, description: e.target.value })
-            }
-          />
-          <CategoryDropdown
-            value={newItem.category}
-            onChange={(value) => setNewItem({ ...newItem, category: value })}
-          />
+            <Input
+              required
+              placeholder="Product Name"
+              value={newItem.name}
+              onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+            />
+            <Input
+              required
+              type="number"
+              placeholder="Price in ₹"
+              value={newItem.price}
+              onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+            />
+            <Textarea
+              placeholder="Product Description"
+              value={newItem.description}
+              onChange={(e) =>
+                setNewItem({ ...newItem, description: e.target.value })
+              }
+            />
+            <CategoryDropdown
+              value={newItem.category}
+              onChange={(value) => setNewItem({ ...newItem, category: value })}
+            />
+          </form>
+        </FullModalBody>
+        <FullModalFooter>
+          <Button 
+            variant="outline" 
+            onClick={handleCancel}
+            type="button"
+          >
+            Cancel
+          </Button>
           <Button
             disabled={
               !newItem.name ||
@@ -144,13 +169,13 @@ export function AddMenuItemModal({
               !newItem.category ||
               isSubmitting
             }
+            form="add-menu-item-form"
             type="submit"
-            className="w-full disabled:opacity-50"
           >
             {isSubmitting ? "Submitting..." : "Add Item"}
           </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </FullModalFooter>
+      </FullModalContent>
+    </FullModal>
   );
 }

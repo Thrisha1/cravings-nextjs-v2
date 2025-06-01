@@ -1,13 +1,14 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullModal,
+  FullModalContent,
+  FullModalHeader,
+  FullModalTitle,
+  FullModalDescription,
+  FullModalFooter,
+  FullModalBody,
+} from "@/components/ui/full_modal";
 import { Button } from "@/components/ui/button";
 import { usePOSStore } from "@/store/posStore";
 import { Loader2, Plus, Minus, X } from "lucide-react";
@@ -31,6 +32,7 @@ export const EditOrderModal = () => {
   } = usePOSStore();
   const { fetchMenu, items: menuItems } = useMenuStore();
   const { userData } = useAuthStore();
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -50,6 +52,7 @@ export const EditOrderModal = () => {
   const [phone, setPhone] = useState<string | null>(null);
   const [newItemId, setNewItemId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   const currency = (userData as Partner)?.currency || "$";
   const gstPercentage = (userData as Partner)?.gst_percentage || 0;
@@ -62,6 +65,15 @@ export const EditOrderModal = () => {
     setPhone(null);
     setNewItemId("");
     setSearchQuery("");
+  };
+
+  // Handle input focus to detect keyboard
+  const handleInputFocus = () => {
+    setKeyboardOpen(true);
+  };
+
+  const handleInputBlur = () => {
+    setKeyboardOpen(false);
   };
 
   useEffect(() => {
@@ -171,6 +183,13 @@ export const EditOrderModal = () => {
     }
 
     setNewItemId("");
+    // Scroll to ensure new item is visible
+    setTimeout(() => {
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 100);
   };
 
   const handleUpdateOrder = async () => {
@@ -264,21 +283,21 @@ export const EditOrderModal = () => {
   );
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Edit Order #{order?.id?.split("-")[0]}</DialogTitle>
-          <DialogDescription>
+    <FullModal open={isOpen} onOpenChange={onClose}>
+      <FullModalContent showCloseButton={false}>
+        <FullModalHeader>
+          <FullModalTitle>Edit Order #{order?.id?.split("-")[0]}</FullModalTitle>
+          <FullModalDescription>
             {tableNumber ? `Table ${tableNumber}` : ""}
-          </DialogDescription>
-        </DialogHeader>
+          </FullModalDescription>
+        </FullModalHeader>
 
         {loading ? (
-          <div className="flex justify-center py-8">
+          <div className="flex justify-center items-center flex-1">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto pr-1">
+          <FullModalBody>
             <div className="space-y-6">
               {/* Order Details */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -295,6 +314,8 @@ export const EditOrderModal = () => {
                           setTableNumber(Number(e.target.value) || null)
                         }
                         placeholder="Table number"
+                        onFocus={handleInputFocus}
+                        onBlur={handleInputBlur}
                       />
                     </div>
 
@@ -305,6 +326,8 @@ export const EditOrderModal = () => {
                         value={phone || ""}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="Customer phone"
+                        onFocus={handleInputFocus}
+                        onBlur={handleInputBlur}
                       />
                     </div>
                   </>
@@ -330,9 +353,12 @@ export const EditOrderModal = () => {
                 <h3 className="font-medium mb-3">Add New Item</h3>
                 <div className="space-y-3">
                   <Input
+                    ref={searchInputRef}
                     placeholder="Search menu items..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onFocus={handleInputFocus}
+                    onBlur={handleInputBlur}
                   />
 
                   {searchQuery && (
@@ -350,6 +376,10 @@ export const EditOrderModal = () => {
                               onClick={() => {
                                 setNewItemId(item.id!);
                                 setSearchQuery("");
+                                setKeyboardOpen(false);
+                                if (searchInputRef.current) {
+                                  searchInputRef.current.blur();
+                                }
                               }}
                             >
                               <div>
@@ -448,10 +478,10 @@ export const EditOrderModal = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </FullModalBody>
         )}
 
-        <DialogFooter className="mt-4 pt-4 border-t">
+        <FullModalFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
@@ -465,8 +495,8 @@ export const EditOrderModal = () => {
               "Update Order"
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </FullModalFooter>
+      </FullModalContent>
+    </FullModal>
   );
 };
