@@ -1,35 +1,85 @@
-import HomePage from "@/screens/HomePage";
-import type { Metadata } from "next";
-// import { redirect } from "next/navigation";
-// import OfferMainPage from "../offers/page";
+import { getAllCommonOffers } from "@/api/common_offers";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import Explore from "@/screens/Explore";
+import { unstable_cache } from "next/cache";
+import React from "react";
 
-export const metadata: Metadata = {
-  title: "Cravings | Restaurant Management Platform | Digital Menus & Delivery",
-  description:
-    "Cravings is a modern restaurant management platform offering QR code menus, self-ordering, and your own delivery website. Trusted by 80+ restaurants. Control your prices, manage delivery, and delight customers.",
-  icons: ["/icon-192x192.png"],
-  openGraph: {
-    title: "Cravings | Restaurant Management Platform | Digital Menus & Delivery",
-    description:
-      "Cravings is a modern restaurant management platform offering QR code menus, self-ordering, and your own delivery website. Trusted by 80+ restaurants. Control your prices, manage delivery, and delight customers.",
-    images: [
-      {
-        url: "/ogImage_default.jpeg",
-        width: 1200,
-        height: 630,
-        alt: "Cravings Restaurant Management Platform",
-      },
+interface CommonOffer {
+  id: string;
+  partner_name: string;
+  item_name: string;
+  price: number;
+  image_url: string;
+  district: string;
+  created_at: string;
+}
+
+interface CommonOffersResponse {
+  common_offers: CommonOffer[];
+  common_offers_aggregate: {
+    aggregate: {
+      count: number;
+    };
+  };
+}
+
+const page = async ({
+  searchParams,
+}: {
+  searchParams: Promise<{ location?: string | null; query?: string }>;
+}) => {
+  const limit = 8;
+  const district = (await searchParams)?.location?.toLowerCase() || "";
+  const searchQuery = (await searchParams)?.query || "";
+
+  const getCommonOffers = unstable_cache(
+    async () => {
+      const variables: Record<string, any> = {
+        limit: limit,
+        offset: 0,
+      };
+
+      if (district) variables.district = district;
+      if (searchQuery) variables.searchQuery = `%${searchQuery}%`;
+
+      const response = await fetchFromHasura(
+        getAllCommonOffers(district, searchQuery),
+        variables
+      );
+      return (
+        response || {
+          common_offers: [],
+          common_offers_aggregate: { aggregate: { count: 0 } },
+        }
+      );
+    },
+    [
+      "all-common-offers",
+      "common-offers",
+      district || "all",
+      searchQuery || "all",
     ],
-    type: "website",
-    locale: "en_US",
-    siteName: "Cravings",
-    url: "https://www.cravings.live/",
-  },
+    {
+      tags: [
+        "all-common-offers",
+        "common-offers",
+        "district:" + (district || "all"),
+        "searchQuery:" + (searchQuery || "all"),
+      ],
+    }
+  );
+
+  const { common_offers, common_offers_aggregate } = await getCommonOffers();
+
+  return (
+    <Explore
+      commonOffers={common_offers}
+      limit={limit}
+      totalOffers={common_offers_aggregate.aggregate.count}
+      initialDistrict={district}
+      initialSearchQuery={searchQuery}
+    />
+  );
 };
 
-export default function Home() {
-
-  return <HomePage />;
-
-  // return <OfferMainPage/>
-}
+export default page;

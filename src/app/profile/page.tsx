@@ -1092,14 +1092,14 @@ export default function ProfilePage() {
             <div className="flex md:flex-row flex-col gap-4">
               {userData?.role === "user" && (
                 <>
-                  <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
+                  {/* <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
                     <Tag className="sm:size-4 size-8 mr-2" />
                     {profile.offersClaimed} Offers Claimed
-                  </Badge>
-                  <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
+                  </Badge> */}
+                  {/* <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
                     <UtensilsCrossed className="sm:size-4 size-8 mr-2" />
                     {profile.restaurantsSubscribed} Restaurants Subscribed
-                  </Badge>
+                  </Badge> */}
                 </>
               )}
               {userData?.role === "partner" && (
@@ -1132,7 +1132,7 @@ export default function ProfilePage() {
         </Card>
 
         {/* Claimed Offers Section */}
-        {userData?.role === "user" && (
+        {/* {userData?.role === "user" && (
           <Card className="overflow-hidden hover:shadow-xl transition-shadow">
             <CardHeader>
               <CardTitle className="text-2xl font-bold">
@@ -1168,7 +1168,7 @@ export default function ProfilePage() {
               ))}
             </CardContent>
           </Card>
-        )}
+        )} */}
 
         {/* Account Settings Section (Only for hotel) */}
         {userData?.role === "partner" && (
