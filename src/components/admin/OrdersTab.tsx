@@ -191,7 +191,7 @@ const OrdersTab = () => {
   };
 
   return (
-    <div className="py-10 px-[8%]">
+    <div className="py-6 px-4 sm:px-[8%] max-w-7xl mx-auto">
       {/* New Order Alert Dialog */}
       <AlertDialog
         open={newOrderAlert.show}
@@ -240,29 +240,34 @@ const OrdersTab = () => {
 
       <TodaysEarnings orders={orders} />
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold mb-5 sm:mb-0">Orders Management</h2>
-        <div className="flex gap-2 flex-wrap justify-center">
+        <h2 className="text-2xl font-bold mb-4 sm:mb-0">Orders Management</h2>
+        <div className="flex gap-2 w-full sm:w-auto">
           {features?.pos.enabled && (
             <Button
               variant={"outline"}
               size="sm"
+              className="flex-1 sm:flex-none"
               onClick={handleCreateNewOrder}
             >
               Create New Order
             </Button>
           )}
-          <Button size="sm" onClick={() => router.push("/admin/orders/all")}>
+          <Button 
+            size="sm"
+            className="flex-1 sm:flex-none"
+            onClick={() => router.push("/admin/orders/all")}
+          >
             Show All Orders
           </Button>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList
-          className={`flex w-full flex-col sm:flex-row mb-20 sm:mb-6 relative justify-stretch `}
+          className="flex w-full gap-1 mb-6 rounded-lg p-1 overflow-x-auto"
         >
           {features?.delivery.enabled && (
-            <TabsTrigger value="delivery" className="relative w-full">
+            <TabsTrigger value="delivery" className="relative flex-1 min-w-[100px] py-2">
               Deliveries
               {newOrders.delivery && (
                 <span className="absolute -top-1 -right-1 h-3 w-3">
@@ -272,7 +277,7 @@ const OrdersTab = () => {
               )}
             </TabsTrigger>
           )}
-          <TabsTrigger value="table" className="relative w-full">
+          <TabsTrigger value="table" className="relative flex-1 min-w-[100px] py-2">
             Table Orders
             {newOrders.table && (
               <span className="absolute -top-1 -right-1 h-3 w-3">
@@ -282,7 +287,7 @@ const OrdersTab = () => {
             )}
           </TabsTrigger>
           {features?.pos.enabled && (
-            <TabsTrigger value="pos" className="relative w-full">
+            <TabsTrigger value="pos" className="relative flex-1 min-w-[100px] py-2">
               POS Orders
               {newOrders.pos && (
                 <span className="absolute -top-1 -right-1 h-3 w-3">
@@ -303,7 +308,9 @@ const OrdersTab = () => {
             <TabsContent value="delivery">
               <div className="space-y-4">
                 {sortedOrders.length === 0 ? (
-                  <p className="text-gray-500">No deliveries found</p>
+                  <div className="text-center py-12 border rounded-lg bg-gray-50">
+                    <p className="text-gray-500">No deliveries found</p>
+                  </div>
                 ) : (
                   sortedOrders.map((order, index) => (
                     <OrderItemCard
@@ -331,7 +338,9 @@ const OrdersTab = () => {
             <TabsContent value="table">
               <div className="space-y-4">
                 {sortedOrders.length === 0 ? (
-                  <p className="text-gray-500">No table orders found</p>
+                  <div className="text-center py-12 border rounded-lg bg-gray-50">
+                    <p className="text-gray-500">No table orders found</p>
+                  </div>
                 ) : (
                   sortedOrders.map((order, index) => (
                     <OrderItemCard
@@ -359,7 +368,9 @@ const OrdersTab = () => {
             <TabsContent value="pos">
               <div className="space-y-4">
                 {sortedOrders.length === 0 ? (
-                  <p className="text-gray-500">No POS orders found</p>
+                  <div className="text-center py-12 border rounded-lg bg-gray-50">
+                    <p className="text-gray-500">No POS orders found</p>
+                  </div>
                 ) : (
                   sortedOrders.map((order, index) => {
                     const gstPercentage =

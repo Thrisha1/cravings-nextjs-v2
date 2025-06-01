@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { usePOSStore } from "@/store/posStore";
@@ -264,7 +265,7 @@ export const EditOrderModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[100vh] flex flex-col md:max-h-[80vh]">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Edit Order #{order?.id?.split("-")[0]}</DialogTitle>
           <DialogDescription>
@@ -277,193 +278,194 @@ export const EditOrderModal = () => {
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : (
-          <div className="space-y-6 max-h-[500px] overflow-y-auto">
-            {/* Order Details */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {userData?.role !== "user" && (
-                <>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium">
-                      Table Number
-                    </label>
-                    <Input
-                      type="number"
-                      value={tableNumber || ""}
-                      onChange={(e) =>
-                        setTableNumber(Number(e.target.value) || null)
-                      }
-                      placeholder="Table number"
-                    />
-                  </div>
+          <div className="flex-1 overflow-y-auto pr-1">
+            <div className="space-y-6">
+              {/* Order Details */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {userData?.role !== "user" && (
+                  <>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium">
+                        Table Number
+                      </label>
+                      <Input
+                        type="number"
+                        value={tableNumber || ""}
+                        onChange={(e) =>
+                          setTableNumber(Number(e.target.value) || null)
+                        }
+                        placeholder="Table number"
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium">Phone</label>
-                    <Input
-                      type="tel"
-                      value={phone || ""}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="Customer phone"
-                    />
-                  </div>
-                </>
-              )}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium">Phone</label>
+                      <Input
+                        type="tel"
+                        value={phone || ""}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="Customer phone"
+                      />
+                    </div>
+                  </>
+                )}
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium">Total</label>
-                <div className="flex items-center h-10 px-3 py-2 rounded-md border bg-background text-sm">
-                  {currency}
-                  {totalPrice.toFixed(2)}
-                  {gstPercentage > 0 && (
-                    <span className="text-xs text-muted-foreground ml-2">
-                      (incl. {gstPercentage}% GST: {currency}
-                      {((totalPrice * gstPercentage) / 100).toFixed(2)})
-                    </span>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium">Total</label>
+                  <div className="flex items-center h-10 px-3 py-2 rounded-md border bg-background text-sm">
+                    {currency}
+                    {totalPrice.toFixed(2)}
+                    {gstPercentage > 0 && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        (incl. {gstPercentage}% GST: {currency}
+                        {((totalPrice * gstPercentage) / 100).toFixed(2)})
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Add New Item */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-3">Add New Item</h3>
+                <div className="space-y-3">
+                  <Input
+                    placeholder="Search menu items..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+
+                  {searchQuery && (
+                    <div className="border rounded-lg max-h-52 overflow-y-auto">
+                      {filteredMenuItems.length === 0 ? (
+                        <div className="p-3 text-center text-muted-foreground">
+                          No items found
+                        </div>
+                      ) : (
+                        <div className="divide-y">
+                          {filteredMenuItems.map((item) => (
+                            <div
+                              key={item.id}
+                              className="p-3 flex justify-between items-center hover:bg-accent cursor-pointer"
+                              onClick={() => {
+                                setNewItemId(item.id!);
+                                setSearchQuery("");
+                              }}
+                            >
+                              <div>
+                                <div className="font-medium">{item.name}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {currency}
+                                  {item.price.toFixed(2)}
+                                </div>
+                              </div>
+                              <Plus className="h-4 w-4" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {newItemId && (
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="flex-1 border rounded-lg p-3">
+                        {menuItems.find((item) => item.id === newItemId)?.name} -{" "}
+                        {currency}
+                        {menuItems
+                          .find((item) => item.id === newItemId)
+                          ?.price.toFixed(2)}
+                      </div>
+                      <Button onClick={handleAddItem} className="sm:w-auto w-full">Add to Order</Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Current Items */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-3">Current Items</h3>
+                <div className="rounded-lg overflow-hidden border">
+                  {items.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground">
+                      No items in this order
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {items.map((item, index) => (
+                        <div
+                          key={index}
+                          className="p-3 flex flex-col sm:flex-row justify-between gap-2"
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium">{item.menu.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {currency}
+                              {item.menu.price.toFixed(2)} each
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 justify-end">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() =>
+                                handleQuantityChange(index, item.quantity - 1)
+                              }
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+
+                            <span className="w-8 text-center">
+                              {item.quantity}
+                            </span>
+
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() =>
+                                handleQuantityChange(index, item.quantity + 1)
+                              }
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => handleRemoveItem(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
             </div>
-
-            {/* Add New Item */}
-            <div>
-              <h3 className="font-medium mb-2">Add New Item</h3>
-              <div className="space-y-3">
-                <Input
-                  placeholder="Search menu items..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-
-                {searchQuery && (
-                  <div className="border rounded-lg max-h-60 overflow-y-auto">
-                    {filteredMenuItems.length === 0 ? (
-                      <div className="p-3 text-center text-muted-foreground">
-                        No items found
-                      </div>
-                    ) : (
-                      <div className="divide-y">
-                        {filteredMenuItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className="p-3 flex justify-between items-center hover:bg-accent cursor-pointer"
-                            onClick={() => {
-                              setNewItemId(item.id!);
-                              setSearchQuery("");
-                            }}
-                          >
-                            <div>
-                              <div className="font-medium">{item.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {currency}
-                                {item.price.toFixed(2)}
-                              </div>
-                            </div>
-                            <Plus className="h-4 w-4" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {newItemId && (
-                  <div className="flex gap-2">
-                    <div className="flex-1 border rounded-lg p-3">
-                      {menuItems.find((item) => item.id === newItemId)?.name} -{" "}
-                      {currency}
-                      {menuItems
-                        .find((item) => item.id === newItemId)
-                        ?.price.toFixed(2)}
-                    </div>
-                    <Button onClick={handleAddItem}>Add to Order</Button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Current Items */}
-            <div>
-              <h3 className="font-medium mb-2">Current Items</h3>
-              <div className="border rounded-lg overflow-hidden">
-                {items.length === 0 ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    No items in this order
-                  </div>
-                ) : (
-                  <div className="divide-y">
-                    {items.map((item, index) => (
-                      <div
-                        key={index}
-                        className="p-3 flex justify-between items-center"
-                      >
-                        <div className="flex-1">
-                          <div className="font-medium">{item.menu.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {currency}
-                            {item.menu.price.toFixed(2)} each
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() =>
-                              handleQuantityChange(index, item.quantity - 1)
-                            }
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-
-                          <span className="w-8 text-center">
-                            {item.quantity}
-                          </span>
-
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() =>
-                              handleQuantityChange(index, item.quantity + 1)
-                            }
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive"
-                            onClick={() => handleRemoveItem(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button onClick={handleUpdateOrder} disabled={updating}>
-                {updating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  "Update Order"
-                )}
-              </Button>
-            </div>
           </div>
         )}
+
+        <DialogFooter className="mt-4 pt-4 border-t">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleUpdateOrder} disabled={updating || loading}>
+            {updating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              "Update Order"
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
