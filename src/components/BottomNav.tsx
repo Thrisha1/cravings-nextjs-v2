@@ -1,6 +1,7 @@
 "use client";
-import { useAuthStore } from "@/store/authStore";
-import { BadgePercent, Telescope, ShoppingBag, User, LayoutDashboard, Package, Shield, Home, Info } from "lucide-react";
+import { getFeatures } from "@/lib/getFeatures";
+import { Partner, useAuthStore } from "@/store/authStore";
+import { BadgePercent, Telescope, ShoppingBag, User, LayoutDashboard, Package, Shield, Home, Info, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -24,6 +25,8 @@ const BottomNav = () => {
       ];
     }
 
+    const features = getFeatures((userData as Partner)?.feature_flags || "");
+
     switch (userData.role) {
       case 'user':
         return [
@@ -33,17 +36,54 @@ const BottomNav = () => {
           { href: "/profile", name: "Profile", icon: <User size={20} />, exactMatch: false }
         ];
       case 'partner':
-        return [
+        const partnerItems = [
           { 
             href: "/admin", 
             name: "Dashboard", 
             icon: <LayoutDashboard size={20} />,
             exactMatch: true
-          },
-          { href: "/admin/orders", name: "Orders", icon: <ShoppingBag size={20} />, exactMatch: false },
-          { href: "/admin/stock-management", name: "Stock", icon: <Package size={20} />, exactMatch: false },
-          { href: "/profile", name: "Profile", icon: <User size={20} />, exactMatch: false }
+          }
         ];
+
+        // Add Orders if ordering is enabled
+        if (features?.ordering?.enabled) {
+          partnerItems.push({
+            href: "/admin/orders",
+            name: "Orders",
+            icon: <ShoppingBag size={20} />,
+            exactMatch: false
+          });
+        }
+
+        // Add Stock if stockmanagement is enabled
+        if (features?.stockmanagement?.enabled) {
+          partnerItems.push({
+            href: "/admin/stock-management",
+            name: "Stock",
+            icon: <Package size={20} />,
+            exactMatch: false
+          });
+        }
+
+        // Add POS if pos is enabled
+        if (features?.pos?.enabled) {
+          partnerItems.push({
+            href: "/admin/pos",
+            name: "POS",
+            icon: <CreditCard size={20} />,
+            exactMatch: false
+          });
+        }
+
+        // Always add Profile
+        partnerItems.push({
+          href: "/profile",
+          name: "Profile",
+          icon: <User size={20} />,
+          exactMatch: false
+        });
+
+        return partnerItems;
       case 'superadmin':
         return [
           { href: "/superadmin", name: "Admin", icon: <Shield size={20} />, exactMatch: false },
