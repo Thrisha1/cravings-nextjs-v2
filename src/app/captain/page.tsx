@@ -98,7 +98,7 @@ export default function CaptainDashboard() {
               <Captaincart />
             </div>
           </div>
-          <div className="flex-none flex justify-end gap-2 p-4 border-t pb-[env(safe-area-inset-bottom)]">
+          <div className="flex-none flex justify-end gap-2 px-4 py-3 border-t mt-2">
             <Button 
               variant="outline" 
               onClick={() => {
@@ -108,7 +108,7 @@ export default function CaptainDashboard() {
                 }
                 setIsPOSOpen(false);
               }}
-              className="px-6 py-2.5 text-base font-semibold min-w-[120px] border-2 hover:bg-gray-100"
+              className="px-6 py-2 text-base font-semibold min-w-[120px] border-2 hover:bg-gray-100"
             >
               Cancel
             </Button>

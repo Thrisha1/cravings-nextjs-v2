@@ -73,23 +73,25 @@ export const CaptainCheckoutModal = () => {
         open={postCheckoutModalOpen}
         onOpenChange={setPostCheckoutModalOpen}
       >
-        <DialogContent className="max-w-none w-screen h-screen p-0 sm:p-0">
-          <DialogHeader className="p-4 border-b flex flex-row items-center justify-between">
-            <div>
-              <DialogTitle className="text-xl sm:text-2xl">Order #{order.id}</DialogTitle>
-              <DialogDescription className="text-base mt-1">
+        <DialogContent className="max-w-none w-screen h-[100dvh] p-0 sm:p-0 flex flex-col">
+          <DialogHeader className="p-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] border-b sticky top-0 bg-white z-10">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between pt-1">
+                <DialogTitle className="text-xl sm:text-2xl">Order #{order.id}</DialogTitle>
+                <Button
+                  variant="outline"
+                  onClick={() => setPostCheckoutModalOpen(false)}
+                  className="px-4 py-2.5 text-base font-semibold border-2 hover:bg-gray-100"
+                >
+                  Back
+                </Button>
+              </div>
+              <DialogDescription className="text-base pb-1">
                 {order.tableNumber && (
                   <span className="text-green-600 font-medium">Table {order.tableNumber}</span>
                 )}
               </DialogDescription>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setPostCheckoutModalOpen(false)}
-              className="px-4 py-2 text-base font-semibold border-2 hover:bg-gray-100"
-            >
-              Back
-            </Button>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">

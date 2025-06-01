@@ -136,7 +136,7 @@ export const EditCaptainOrderModal = () => {
       }
       
       console.log("2. Calling fetchMenu with partnerId:", partnerId);
-      fetchMenu(partnerId)
+      fetchMenu(partnerId, true)
         .then((items) => {
           console.log("3. FetchMenu response:", {
             success: true,
@@ -441,10 +441,22 @@ export const EditCaptainOrderModal = () => {
     }
   };
 
+  // Add a loading state for menu items
+  const [menuLoading, setMenuLoading] = useState(false);
+
+  // Update the menu loading state
+  useEffect(() => {
+    if (isOpen && order?.partnerId) {
+      setMenuLoading(true);
+      fetchMenu(order.partnerId, true)
+        .finally(() => setMenuLoading(false));
+    }
+  }, [isOpen, order?.partnerId, fetchMenu]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-none w-screen h-screen p-0 sm:p-0">
-        <DialogHeader className="p-4 border-b">
+      <DialogContent className="max-w-none w-screen h-[100dvh] p-0 sm:p-0 flex flex-col">
+        <DialogHeader className="p-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] border-b sticky top-0 bg-white z-10">
           <DialogTitle>Edit Order #{order?.id?.split("-")[0] || ""}</DialogTitle>
           <DialogDescription>
             {tableNumber ? `Table ${tableNumber}` : ""}
@@ -461,7 +473,7 @@ export const EditCaptainOrderModal = () => {
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : (
-          <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto h-[calc(100vh-8rem)]">
+          <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto h-[calc(100dvh-12rem)]">
             {/* Order Details */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 flex-none">
               {userData?.role !== "user" && (
@@ -523,9 +535,14 @@ export const EditCaptainOrderModal = () => {
                   />
 
                   <div className="border rounded-lg max-h-48 overflow-y-auto">
-                    {menuItems.length === 0 ? (
+                    {menuLoading ? (
+                      <div className="p-3 text-center">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                        <div className="text-muted-foreground">Loading menu items...</div>
+                      </div>
+                    ) : menuItems.length === 0 ? (
                       <div className="p-3 text-center text-muted-foreground">
-                        Loading menu items...
+                        No menu items available
                       </div>
                     ) : filteredMenuItems.length === 0 ? (
                       <div className="p-3 text-center text-muted-foreground">
@@ -644,7 +661,7 @@ export const EditCaptainOrderModal = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-2 pt-2 flex-none border-t mt-4">
+            <div className="flex justify-end gap-2 pt-2 flex-none border-t mt-4 sticky bottom-0 bg-white pb-[env(safe-area-inset-bottom)]">
               <Button variant="outline" onClick={onClose} size="sm">
                 Cancel
               </Button>
