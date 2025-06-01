@@ -48,6 +48,12 @@ const OrdersTab = () => {
     pos: false,
   });
   const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
+  const [displayedOrders, setDisplayedOrders] = useState<Order[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const ordersPerPage = 10;
+  
   const [newOrderAlert, setNewOrderAlert] = useState({
     show: false,
     tableCount: 0,
@@ -56,7 +62,9 @@ const OrdersTab = () => {
   });
   const soundRef = useRef<Howl | null>(null);
   const { setOrder, setEditOrderModalOpen } = usePOSStore();
+  const orderAlertRef = useRef<boolean>(false);
 
+  // Preload sound effect immediately
   useEffect(() => {
     soundRef.current = new Howl({
       src: ["/audio/tone.wav"],
@@ -68,6 +76,68 @@ const OrdersTab = () => {
       soundRef.current?.unload();
     };
   }, []);
+
+  // Priority subscription for new orders - runs before other effects
+  useEffect(() => {
+    if (!userData?.id) return;
+
+    // Set up subscription immediately
+    const unsubscribe = subscribeOrders((allOrders) => {
+      const prevOrders = prevOrdersRef.current;
+
+      // Count new pending orders
+      const newTableOrders = allOrders.filter(
+        (order) =>
+          order.status === "pending" &&
+          order.type === "table_order" &&
+          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      );
+
+      const newDeliveryOrders = allOrders.filter(
+        (order) =>
+          order.status === "pending" &&
+          order.type === "delivery" &&
+          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      );
+
+      const newPOSOrders = allOrders.filter(
+        (order) =>
+          order.status === "pending" &&
+          order.type === "pos" &&
+          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      );
+
+      const totalNewOrders =
+        newTableOrders.length + newDeliveryOrders.length + newPOSOrders.length;
+
+      if (totalNewOrders > 0 && !orderAlertRef.current) {
+        // Play sound immediately
+        soundRef.current?.play();
+        orderAlertRef.current = true;
+
+        // Show alert dialog with highest priority
+        setNewOrderAlert({
+          show: true,
+          tableCount: newTableOrders.length,
+          deliveryCount: newDeliveryOrders.length,
+          posCount: newPOSOrders.length,
+        });
+
+        // Update new order indicators
+        setNewOrders({
+          table: newTableOrders.length > 0,
+          delivery: newDeliveryOrders.length > 0,
+          pos: newPOSOrders.length > 0,
+        });
+      }
+
+      prevOrdersRef.current = allOrders;
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [userData?.id]);
 
   useEffect(() => {
     if (partnerOrders) {
@@ -114,6 +184,9 @@ const OrdersTab = () => {
       setActiveTab(value);
       setNewOrders((prev) => ({ ...prev, [value]: false }));
       localStorage.setItem("ordersActiveTab", value);
+      // Reset pagination when tab changes
+      setPage(1);
+      setHasMore(true);
     }
   };
 
@@ -123,68 +196,41 @@ const OrdersTab = () => {
       if (activeTab === "delivery") return order.type === "delivery";
       if (activeTab === "pos") return order.type === "pos";
       return false;
+    }).sort((a, b) => {
+      // Sort by created date, most recent first
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
     setSortedOrders(filteredByTypeOrders);
+    // Reset pagination when filtered orders change
+    setPage(1);
+    setHasMore(true);
   }, [orders, activeTab]);
 
   useEffect(() => {
-    if (!userData?.id) return;
+    // Update displayed orders based on current page
+    if (sortedOrders.length > 0) {
+      const startIndex = 0;
+      const endIndex = page * ordersPerPage;
+      const currentDisplayedOrders = sortedOrders.slice(startIndex, endIndex);
+      
+      setDisplayedOrders(currentDisplayedOrders);
+      // Check if we have more orders to load
+      setHasMore(endIndex < sortedOrders.length);
+    } else {
+      setDisplayedOrders([]);
+      setHasMore(false);
+    }
+  }, [sortedOrders, page]);
 
-    const unsubscribe = subscribeOrders((allOrders) => {
-      const prevOrders = prevOrdersRef.current;
-
-      // Count new pending orders
-      const newTableOrders = allOrders.filter(
-        (order) =>
-          order.status === "pending" &&
-          order.type === "table_order" &&
-          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
-      );
-
-      const newDeliveryOrders = allOrders.filter(
-        (order) =>
-          order.status === "pending" &&
-          order.type === "delivery" &&
-          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
-      );
-
-      const newPOSOrders = allOrders.filter(
-        (order) =>
-          order.status === "pending" &&
-          order.type === "pos" &&
-          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
-      );
-
-      const totalNewOrders =
-        newTableOrders.length + newDeliveryOrders.length + newPOSOrders.length;
-
-      if (totalNewOrders > 0) {
-        soundRef.current?.play();
-
-        // Show alert dialog
-        setNewOrderAlert({
-          show: true,
-          tableCount: newTableOrders.length,
-          deliveryCount: newDeliveryOrders.length,
-          posCount: newPOSOrders.length,
-        });
-
-        // Update new order indicators
-        setNewOrders({
-          table: newTableOrders.length > 0,
-          delivery: newDeliveryOrders.length > 0,
-          pos: newPOSOrders.length > 0,
-        });
-      }
-
-      prevOrdersRef.current = allOrders;
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [userData?.id]);
+  const loadMoreOrders = () => {
+    setLoadingMore(true);
+    // Small delay to show loading state
+    setTimeout(() => {
+      setPage(prevPage => prevPage + 1);
+      setLoadingMore(false);
+    }, 500);
+  };
 
   const handleCreateNewOrder = () => {
     router.push("/admin/pos");
@@ -192,12 +238,15 @@ const OrdersTab = () => {
 
   return (
     <div className="py-6 px-4 sm:px-[8%] max-w-7xl mx-auto">
-      {/* New Order Alert Dialog */}
+      {/* High Priority New Order Alert Dialog */}
       <AlertDialog
         open={newOrderAlert.show}
-        onOpenChange={(open) =>
-          setNewOrderAlert((prev) => ({ ...prev, show: open }))
-        }
+        onOpenChange={(open) => {
+          setNewOrderAlert((prev) => ({ ...prev, show: open }));
+          if (!open) {
+            orderAlertRef.current = false;
+          }
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -217,6 +266,7 @@ const OrdersTab = () => {
                   deliveryCount: 0,
                   posCount: 0,
                 });
+                orderAlertRef.current = false;
                 // Switch to the tab with most new orders
                 const maxCount = Math.max(
                   newOrderAlert.tableCount,
@@ -307,87 +357,22 @@ const OrdersTab = () => {
           <>
             <TabsContent value="delivery">
               <div className="space-y-4">
-                {sortedOrders.length === 0 ? (
+                {displayedOrders.length === 0 ? (
                   <div className="text-center py-12 border rounded-lg bg-gray-50">
                     <p className="text-gray-500">No deliveries found</p>
                   </div>
                 ) : (
-                  sortedOrders.map((order, index) => (
-                    <OrderItemCard
-                      gstAmount={getGstAmount(
-                        order.items.reduce((sum, item) => {
-                          return sum + item.price * item.quantity;
-                        }, 0),
-                        (userData as Partner)?.gst_percentage || 0
-                      )}
-                      grantTotal={order.totalPrice || 0}
-                      key={`delivery-${order.id}-${index}`}
-                      order={order}
-                      deleteOrder={handleDeleteOrder}
-                      updateOrderStatus={(status) => {
-                        handleUpdateOrderStatus(order.id, status);
-                      }}
-                      setOrder={setOrder}
-                      setEditOrderModalOpen={setEditOrderModalOpen}
-                      gstPercentage={(userData as Partner)?.gst_percentage || 0}
-                    />
-                  ))
-                )}
-              </div>
-            </TabsContent>
-            <TabsContent value="table">
-              <div className="space-y-4">
-                {sortedOrders.length === 0 ? (
-                  <div className="text-center py-12 border rounded-lg bg-gray-50">
-                    <p className="text-gray-500">No table orders found</p>
-                  </div>
-                ) : (
-                  sortedOrders.map((order, index) => (
-                    <OrderItemCard
-                      key={`table-${order.id}-${index}`}
-                      gstAmount={getGstAmount(
-                        order.items.reduce((sum, item) => {
-                          return sum + item.price * item.quantity;
-                        }, 0),
-                        (userData as Partner)?.gst_percentage || 0
-                      )}
-                      grantTotal={order.totalPrice || 0}
-                      order={order}
-                      deleteOrder={handleDeleteOrder}
-                      updateOrderStatus={(status) => {
-                        handleUpdateOrderStatus(order.id, status);
-                      }}
-                      setOrder={setOrder}
-                      setEditOrderModalOpen={setEditOrderModalOpen}
-                      gstPercentage={(userData as Partner)?.gst_percentage || 0}
-                    />
-                  ))
-                )}
-              </div>
-            </TabsContent>
-            <TabsContent value="pos">
-              <div className="space-y-4">
-                {sortedOrders.length === 0 ? (
-                  <div className="text-center py-12 border rounded-lg bg-gray-50">
-                    <p className="text-gray-500">No POS orders found</p>
-                  </div>
-                ) : (
-                  sortedOrders.map((order, index) => {
-                    const gstPercentage =
-                      (userData as Partner)?.gst_percentage || 0;
-                    const foodSubtotal = order.items.reduce((sum, item) => {
-                      return sum + item.price * item.quantity;
-                    }, 0);
-                    const gstAmount = getGstAmount(foodSubtotal, gstPercentage);
-                    const totalPriceWithGst = foodSubtotal + gstAmount;
-                    const extraChargesTotal = (
-                      order?.extraCharges ?? []
-                    ).reduce((acc, charge) => acc + charge.amount, 0);
-                    const grandTotal = totalPriceWithGst + extraChargesTotal;
-
-                    return (
+                  <>
+                    {displayedOrders.map((order, index) => (
                       <OrderItemCard
-                        key={`pos-${order.id}-${index}`}
+                        gstAmount={getGstAmount(
+                          order.items.reduce((sum, item) => {
+                            return sum + item.price * item.quantity;
+                          }, 0),
+                          (userData as Partner)?.gst_percentage || 0
+                        )}
+                        grantTotal={order.totalPrice || 0}
+                        key={`delivery-${order.id}-${index}`}
                         order={order}
                         deleteOrder={handleDeleteOrder}
                         updateOrderStatus={(status) => {
@@ -395,12 +380,143 @@ const OrdersTab = () => {
                         }}
                         setOrder={setOrder}
                         setEditOrderModalOpen={setEditOrderModalOpen}
-                        gstPercentage={gstPercentage}
-                        gstAmount={gstAmount}
-                        grantTotal={grandTotal}
+                        gstPercentage={(userData as Partner)?.gst_percentage || 0}
                       />
-                    );
-                  })
+                    ))}
+                    
+                    {hasMore && (
+                      <div className="flex justify-center mt-6">
+                        <Button 
+                          variant="outline" 
+                          onClick={loadMoreOrders}
+                          disabled={loadingMore}
+                          className="w-full max-w-xs"
+                        >
+                          {loadingMore ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            `Load More (${sortedOrders.length - displayedOrders.length} remaining)`
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </TabsContent>
+            <TabsContent value="table">
+              <div className="space-y-4">
+                {displayedOrders.length === 0 ? (
+                  <div className="text-center py-12 border rounded-lg bg-gray-50">
+                    <p className="text-gray-500">No table orders found</p>
+                  </div>
+                ) : (
+                  <>
+                    {displayedOrders.map((order, index) => (
+                      <OrderItemCard
+                        key={`table-${order.id}-${index}`}
+                        gstAmount={getGstAmount(
+                          order.items.reduce((sum, item) => {
+                            return sum + item.price * item.quantity;
+                          }, 0),
+                          (userData as Partner)?.gst_percentage || 0
+                        )}
+                        grantTotal={order.totalPrice || 0}
+                        order={order}
+                        deleteOrder={handleDeleteOrder}
+                        updateOrderStatus={(status) => {
+                          handleUpdateOrderStatus(order.id, status);
+                        }}
+                        setOrder={setOrder}
+                        setEditOrderModalOpen={setEditOrderModalOpen}
+                        gstPercentage={(userData as Partner)?.gst_percentage || 0}
+                      />
+                    ))}
+                    
+                    {hasMore && (
+                      <div className="flex justify-center mt-6">
+                        <Button 
+                          variant="outline" 
+                          onClick={loadMoreOrders}
+                          disabled={loadingMore}
+                          className="w-full max-w-xs"
+                        >
+                          {loadingMore ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            `Load More (${sortedOrders.length - displayedOrders.length} remaining)`
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </TabsContent>
+            <TabsContent value="pos">
+              <div className="space-y-4">
+                {displayedOrders.length === 0 ? (
+                  <div className="text-center py-12 border rounded-lg bg-gray-50">
+                    <p className="text-gray-500">No POS orders found</p>
+                  </div>
+                ) : (
+                  <>
+                    {displayedOrders.map((order, index) => {
+                      const gstPercentage =
+                        (userData as Partner)?.gst_percentage || 0;
+                      const foodSubtotal = order.items.reduce((sum, item) => {
+                        return sum + item.price * item.quantity;
+                      }, 0);
+                      const gstAmount = getGstAmount(foodSubtotal, gstPercentage);
+                      const totalPriceWithGst = foodSubtotal + gstAmount;
+                      const extraChargesTotal = (
+                        order?.extraCharges ?? []
+                      ).reduce((acc, charge) => acc + charge.amount, 0);
+                      const grandTotal = totalPriceWithGst + extraChargesTotal;
+
+                      return (
+                        <OrderItemCard
+                          key={`pos-${order.id}-${index}`}
+                          order={order}
+                          deleteOrder={handleDeleteOrder}
+                          updateOrderStatus={(status) => {
+                            handleUpdateOrderStatus(order.id, status);
+                          }}
+                          setOrder={setOrder}
+                          setEditOrderModalOpen={setEditOrderModalOpen}
+                          gstPercentage={gstPercentage}
+                          gstAmount={gstAmount}
+                          grantTotal={grandTotal}
+                        />
+                      );
+                    })}
+                    
+                    {hasMore && (
+                      <div className="flex justify-center mt-6">
+                        <Button 
+                          variant="outline" 
+                          onClick={loadMoreOrders}
+                          disabled={loadingMore}
+                          className="w-full max-w-xs"
+                        >
+                          {loadingMore ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            `Load More (${sortedOrders.length - displayedOrders.length} remaining)`
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </TabsContent>
