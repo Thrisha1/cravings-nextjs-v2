@@ -15,7 +15,7 @@ const DiscountBadge = ({ discount }: { discount: number }) => {
         <span className="font-bold text-xl z-10">{discount}%</span>
         <span className="font-medium text-sm z-10">OFF</span>
 
-        <Image
+        <Img
           src="/christmas_banner_ball.webp"
           alt="christmas badge"
           width={400}

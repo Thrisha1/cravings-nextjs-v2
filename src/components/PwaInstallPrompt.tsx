@@ -7,6 +7,7 @@ import {
 } from "./ui/drawer";
 import Image from "next/image";
 import { Carousel, CarouselContent, CarouselItem } from "./ui/carousel";
+import Img from "./Img";
 
 const PwaInstallPrompt = () => {
   const { isInstallable, promptInstall } = usePWAInstallPrompt();
@@ -38,7 +39,7 @@ const PwaInstallPrompt = () => {
         {/* header  */}
         <div className="flex items-center justify-between px-4 py-3 border-b-2 border-black/10">
           <div className="flex items-center gap-2 ">
-            <Image
+            <Img
               src={"/icon-64x64.png"}
               alt="Cravings"
               width={64}
@@ -79,10 +80,9 @@ const PwaInstallPrompt = () => {
                     key={`screenshot ${index + 1}`}
                   >
                     <div className="relative aspect-[9/21] w-[130px] xl:w-[180px]">
-                      <Image
+                      <Img
                         src={scrnshot}
                         alt={`Screenshot ${index + 1}`}
-                        fill
                         className="w-auto h-auto object-cover "
                       />
                     </div>

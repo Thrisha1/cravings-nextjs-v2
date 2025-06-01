@@ -1,549 +1,258 @@
-"use client";
+import { getPartnerAndOffersQuery, getPartnerSubscriptionQuery } from "@/api/partners";
+import { GET_QR_TABLE } from "@/api/qrcodes";
+import { getAuthCookie } from "@/app/auth/actions";
+import { HotelData } from "@/app/hotels/[...id]/page";
+import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
+import { getFeatures } from "@/lib/getFeatures";
+import { getSocialLinks } from "@/lib/getSocialLinks";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import HotelMenuPage from "@/screens/HotelMenuPage_v2";
+import QrPayment from "@/screens/QrPayment";
+import { Offer } from "@/store/offerStore_hasura";
+import { AlertTriangle } from "lucide-react";
+import { unstable_cache } from "next/cache";
+import React from "react";
 
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-} from "firebase/firestore";
-import { FileClock, UtensilsCrossed } from "lucide-react";
-import React, { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useAuthStore } from "@/store/authStore";
-import Link from "next/link";
-import { toast } from "sonner";
-import PartnerLoginModal from "@/components/PartnerLoginModal";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import Image from "next/image";
+const isUUID = (str: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-interface hotelDetails {
-  hotelId: string;
-  hotelName: string;
-  hotelArea: string;
-}
+const page = async ({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ [key: string]: string | undefined }>;
+  searchParams: Promise<{ query: string; qrScan: string }>;
+}) => {
+  const { id: qrId } = await params;
 
-interface UPIApp {
-  name: string;
-  icon: string;
-  getUrl: (params: {
-    upiId: string;
-    merchantName: string;
-    amount: number;
-    transactionId: string;
-  }) => string;
-}
+  // Validate and find the correct UUID from the path segments
+  let validQrId: string | null = null;
 
-const upiApps: UPIApp[] = [
-  {
-    name: "Google Pay",
-    icon: "/google-pay.png",
-    getUrl: ({ upiId, merchantName, amount, transactionId }) =>
-      `gpay://upi/pay?pa=${upiId}&pn=${encodeURIComponent(
-        merchantName
-      )}&tr=${transactionId}&tn=Payment%20to%20${encodeURIComponent(
-        merchantName
-      )}&am=${amount}&cu=INR`,
-  },
-  {
-    name: "PhonePe",
-    icon: "/phonepay-icon.jpg",
-    getUrl: ({ upiId, merchantName, amount, transactionId }) =>
-      `phonepe://pay?pa=${upiId}&pn=${encodeURIComponent(
-        merchantName
-      )}&tr=${transactionId}&tn=Payment%20to%20${encodeURIComponent(
-        merchantName
-      )}&am=${amount}&cu=INR`,
-  },
-  {
-    name: "Paytm",
-    icon: "/paytm-icon.jpg",
-    getUrl: ({ upiId, merchantName, amount, transactionId }) =>
-      `paytmmp://pay?pa=${upiId}&pn=${encodeURIComponent(
-        merchantName
-      )}&tr=${transactionId}&tn=Payment%20to%20${encodeURIComponent(
-        merchantName
-      )}&am=${amount}&cu=INR`,
-  },
-];
-
-const QrScanPage = () => {
-  const [billAmount, setBillAmount] = useState<string>("");
-  const [hotelDetails, setHotelDetails] = useState<hotelDetails>();
-  const params = useParams();
-  const ids = params.id as string[];
-  const id = ids[0];
-  const {
-    user,
-    signInWithPhone,
-    fetchUserVisit,
-    handleFollow,
-    updateUserVisits,
-    updateUserPayment,
-  } = useAuthStore();
-  const [isSignedIn, setIsSignedIn] = useState<boolean>(true);
-  const [phoneNumber, setPhoneNumber] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isRecentVisit, setIsRecentVisit] = useState<boolean>(false);
-  const [discount, setDiscount] = useState<number>(0);
-  const [isPaymentSuccess, setIsPaymentSuccess] = useState<boolean>(false);
-  const [showUpiErrorDialog, setShowUpiErrorDialog] = useState(false);
-  const [showHotelPage, setShowHotelPage] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [isBillAmountSubmitted, setIsBillAmountSubmitted] = useState(false);
-  const router = useRouter();
-
-  const getHotelDetails = async () => {
-    try {
-      if (id) {
-        const qrCodeRef = doc(db, "qrcodes", id);
-        const qrCodeSnap = await getDoc(qrCodeRef);
-
-        if (qrCodeSnap.exists()) {
-          const qrData = qrCodeSnap.data();
-          setHotelDetails(qrData as hotelDetails);
-        } else {
-          throw new Error("QR code not found");
-        }
-      } else {
-        throw new Error("ID is null");
+  if (qrId && Array.isArray(qrId)) {
+    // Check each segment for a valid UUID
+    for (const segment of qrId) {
+      if (segment && isUUID(segment)) {
+        validQrId = segment;
+        break;
       }
-    } catch (error) {
-      toast.error("Upi pyament not available");
-      console.error(error);
     }
-  };
+  } else if (qrId && isUUID(qrId)) {
+    validQrId = qrId;
+  }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log("handling submit");
-
-    if (!user) {
-      setIsSignedIn(false);
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-
-      console.log("handling follow");
-
-      await handleFollow(hotelDetails?.hotelId as string);
-      const uv = await fetchUserVisit(
-        user.uid,
-        hotelDetails?.hotelId as string
-      );
-
-      if (uv?.isRecentVisit) {
-        setIsRecentVisit(true);
-        setIsBillAmountSubmitted(true);
-        setIsLoading(false);
-        return;
-      }
-
-      console.log("fetching discount");
-
-      const dis = 0;
-      // await getDiscount(
-      //   (uv?.numberOfVisits as number) + 1,
-      //   uv?.lastDiscountedVisit as string | null
-      // );
-      const amount = billAmount.replace("₹", "");
-
-      console.log("updating user visits");
-      await updateUserVisits(
-        user.uid,
-        hotelDetails?.hotelId as string,
-        Number(amount),
-        dis
-      );
-
-      console.log("done");
-      setDiscount(dis);
-      setIsBillAmountSubmitted(true);
-      setIsLoading(false);
-    } catch (error) {
-      console.error(error);
-      toast.error(error as string);
-      setIsLoading(false);
-    }
-  };
-
-  const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!phoneNumber) {
-      return;
-    }
-    try {
-      let cleanedPhone = phoneNumber.replace("+91", "");
-      cleanedPhone = cleanedPhone.replace(" ", "");
-      if (cleanedPhone.length !== 10) {
-        throw new Error("Invalid phone number");
-      }
-      setIsLoading(true);
-      await signInWithPhone(cleanedPhone);
-      setIsSignedIn(true);
-    } catch (error) {
-      console.error(error);
-      toast.error(error as string);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePayNow = async () => {
-    try {
-      setIsLoading(true);
-      await updateUserPayment(
-        user?.uid as string,
-        hotelDetails?.hotelId as string
-      );
-      const upiRef = collection(db, "upi_ids");
-      const q = query(
-        upiRef,
-        where("userId", "==", hotelDetails?.hotelId as string)
-      );
-      const upiDocSnap = await getDocs(q);
-      if (!upiDocSnap.empty) {
-        const isIphone = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        if (isIphone) {
-          setShowPaymentModal(true);
-        } else {
-          const upiData = upiDocSnap.docs[0].data();
-          const upiId = upiData.upiId;
-          const finalAmount =
-            Number(billAmount.replace("₹", "")) -
-            (Number(billAmount.replace("₹", "")) * discount) / 100;
-          router.push(
-            `upi://pay?pa=${upiId}&pn=${hotelDetails?.hotelName}&am=${finalAmount}&tn=Payment%20to%20${hotelDetails?.hotelName}`
-          );
-        }
-        setIsPaymentSuccess(true);
-      } else {
-        setShowUpiErrorDialog(true);
-        setShowHotelPage(true);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Something went wrong");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleUPIPayment = (app: UPIApp) => {
-    setShowPaymentModal(false);
-
-    const upiRef = collection(db, "upi_ids");
-    const q = query(
-      upiRef,
-      where("userId", "==", hotelDetails?.hotelId as string)
-    );
-    getDocs(q).then((upiDocSnap) => {
-      if (!upiDocSnap.empty) {
-        const upiData = upiDocSnap.docs[0].data();
-        const upiId = upiData.upiId;
-        const finalAmount =
-          Number(billAmount.replace("₹", "")) -
-          (Number(billAmount.replace("₹", "")) * discount) / 100;
-
-        const paymentUrl = app.getUrl({
-          upiId,
-          merchantName: hotelDetails?.hotelName || "",
-          amount: finalAmount,
-          transactionId: Date.now().toString(),
-        });
-
-        window.location.href = paymentUrl;
-      }
-    });
-  };
-
-  useEffect(() => {
-    getHotelDetails();
-  }, [getHotelDetails]);
-
-  return (
-    <main className="px-[7.5%] pt-[12%] pb-[20%] bg-orange-600 h-[100dvh] flex flex-col overflow-hidden">
-      <div className="flex justify-between items-start">
-        {/* cravings title  */}
-        <div className="flex flex-col gap-2 flex-1">
-          {/* logo  */}
-          <div className="flex items-center gap-2">
-            <UtensilsCrossed className="w-10 h-10 text-white" />
-            <h1 className="text-white text-xl font-bold">Cravings</h1>
-          </div>
-
-          {/* short descritpion  */}
-          <div className="text-white/80 font-medium text-[12px] mt-2">
-            <p>Get discounts and offers in your favorite restaurants</p>
+  if (!validQrId) {
+    // No valid UUID found, return an error page
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50 p-4">
+        <div className="w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+          <div className="flex flex-col space-y-4 text-center">
+            <div className="space-y-2">
+              <AlertTriangle className="mx-auto h-10 w-10 text-red-500" />
+              <h2 className="text-2xl font-bold tracking-tight">
+                Invalid QR Code
+              </h2>
+              <p className="text-muted-foreground">
+                The QR code you scanned is not valid or has expired.
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Please scan a valid QR code or contact staff for assistance.
+            </p>
           </div>
         </div>
-
-        {/* discount history button  */}
-        <Link
-          href={
-            hotelDetails
-              ? `${window.location.origin}/hotels/${hotelDetails?.hotelId}?qid=${id}`
-              : ""
-          }
-          className={`${
-            hotelDetails?.hotelId
-              ? "cursor-pointer"
-              : "w-36 h-8 animate-pulse cursor-default"
-          } bg-white text-black px-4 py-2 rounded-full disabled:opacity-50 flex items-center gap-2`}
-        >
-          {hotelDetails?.hotelId ? (
-            <>
-              <FileClock className="w-4 h-4" />
-              <p className="text-black font-medium text-[12px]">
-                Discount History
-              </p>
-            </>
-          ) : null}
-        </Link>
       </div>
+    );
+  }
 
-      {/* main section  */}
-      <section className={`flex flex-col flex-1 justify-end`}>
-        {isSignedIn ? (
-          <>
-            { isBillAmountSubmitted || isRecentVisit ? (
-              <div className="flex flex-col flex-1 justify-between items-center">
-                <div></div>
-                <div className="flex flex-col gap-2">
-                  <h1 className="text-white text-8xl font-bold text-center">
-                    ₹
-                    {Number(billAmount.replace("₹", "")) -
-                      Number(billAmount.replace("₹", "")) * (discount / 100)}
-                  </h1>
-                  {discount > 0 ? (
-                    <h1 className="text-white/70 font-medium text-center">
-                      Yay! You got a {discount}% discount
-                    </h1>
-                  ) : (
-                    <h1 className="text-white/70 font-medium text-center">
-                      Better luck next time with more discounts!
-                    </h1>
-                  )}
-                </div>
+  const { qr_codes } = await fetchFromHasura(GET_QR_TABLE, {
+    id: validQrId,
+  });
 
-                <div className="flex flex-col gap-2 w-full">
-                  <button
-                    disabled={isLoading}
-                    onClick={
-                      isPaymentSuccess
-                        ? () => {
-                            router.push(
-                              `${window.location.origin}/hotels/${hotelDetails?.hotelId}`
-                            );
-                          }
-                        : handlePayNow
-                    }
-                    className="bg-white text-black px-4 w-full py-2 rounded-md disabled:opacity-50 flex-1"
-                  >
-                    {isPaymentSuccess
-                      ? "Go To Hotel Page"
-                      : isLoading
-                      ? "Processing..."
-                      : "Pay Now"}
-                  </button>
-
-                  {showHotelPage && (
-                    <button
-                      onClick={() => {
-                        router.push(
-                          `${window.location.origin}/hotels/${hotelDetails?.hotelId}`
-                        );
-                      }}
-                      className="bg-white text-black px-4 w-full py-2 rounded-md"
-                    >
-                      Go To Hotel Page
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <>
-                <form
-                  onSubmit={handleSubmit}
-                  className="flex flex-col gap-2 mt-5 flex-1 justify-between"
-                >
-                  <div />
-
-                  <input
-                    disabled={!hotelDetails}
-                    id="billAmount"
-                    name="billAmount"
-                    value={billAmount}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9]/g, "");
-                      if (value === "") {
-                        setBillAmount("");
-                      } else {
-                        const formattedValue = `₹${value}`;
-                        setBillAmount(formattedValue);
-                      }
-                    }}
-                    type="text"
-                    placeholder="₹0"
-                    className="w-full p-2 rounded-md text-center text-6xl font-bold bg-transparent text-white placeholder:text-white/70 focus:outline-none "
-                  />
-
-                  <div className="w-full flex flex-col gap-4">
-                    <div className="flex flex-col gap-1">
-                      <Link
-                        href={
-                          hotelDetails
-                            ? `${window.location.origin}/hotels/${hotelDetails?.hotelId}`
-                            : ""
-                        }
-                        className={`text-black bg-white rounded-full px-3 py-2 text-[12px] capitalize flex items-center gap-1 font-medium ${
-                          hotelDetails
-                            ? "w-fit cursor-pointer select-none"
-                            : "h-8 w-[40%] animate-pulse cursor-default"
-                        }`}
-                      >
-                        {hotelDetails ? (
-                          <>
-                            <UtensilsCrossed className="w-4 h-4" />
-                            View Menu
-                          </>
-                        ) : null}
-                      </Link>
-                      <h1 className="text-white text-4xl font-bold capitalize">
-                        {hotelDetails?.hotelName ? (
-                          <>{hotelDetails?.hotelName}</>
-                        ) : (
-                          <div className="bg-white w-[80%] h-8 rounded-full animate-pulse" />
-                        )}
-                      </h1>
-                      <div className="text-white/80 text-sm capitalize">
-                        {hotelDetails?.hotelArea ? (
-                          <>{hotelDetails?.hotelArea}</>
-                        ) : (
-                          <div className="bg-white/50 w-[30%] h-5 rounded-full animate-pulse" />
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      disabled={!hotelDetails || !billAmount || isLoading}
-                      type="submit"
-                      className="bg-white text-black px-4 py-2 rounded-md disabled:opacity-50"
-                    >
-                      {isLoading ? "Discounting..." : "Get Discount"}
-                    </button>
-                  </div>
-                </form>
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            {/* Headings  */}
-            <div className="flex flex-col gap-1">
-              <h1 className="text-white text-4xl font-bold">
-                New To Cravings?
-              </h1>
-              <div className="text-white/80 text-sm">
-                Sign in to get discounts and offers
-              </div>
+  // Check if QR code exists
+  if (!qr_codes || qr_codes.length === 0) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50 p-4">
+        <div className="w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+          <div className="flex flex-col space-y-4 text-center">
+            <div className="space-y-2">
+              <AlertTriangle className="mx-auto h-10 w-10 text-red-500" />
+              <h2 className="text-2xl font-bold tracking-tight">
+                QR Code Not Found
+              </h2>
+              <p className="text-muted-foreground">
+                The QR code you scanned could not be found in our system.
+              </p>
             </div>
-
-            {/* bill input  */}
-            <form onSubmit={handleSignIn} className="flex flex-col gap-2 mt-5">
-              <input
-                id="phoneNumber"
-                name="phoneNumber"
-                value={phoneNumber}
-                onChange={(e) => {
-                  let value = e.target.value.replace(/[^0-9]/g, "");
-                  if (value.startsWith("91")) {
-                    value = value.slice(2);
-                  }
-                  const formattedValue = `+91 ${value}`;
-                  setPhoneNumber(formattedValue);
-                }}
-                type="text"
-                placeholder="Enter phone number"
-                className="w-full p-2 rounded-md bg-white/10 text-white placeholder:text-white/70 focus:outline-none focus:border-white border-2 border-transparent"
-              />
-              <button
-                disabled={!phoneNumber || isLoading}
-                type="submit"
-                className="bg-white text-black px-4 py-2 rounded-md disabled:opacity-50"
-              >
-                {isLoading ? "Signing In..." : "Sign In"}
-              </button>
-            </form>
-          </>
-        )}
-      </section>
-
-      <PartnerLoginModal />
-
-      <Dialog open={showUpiErrorDialog} onOpenChange={setShowUpiErrorDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>UPI Payment Unavailable</DialogTitle>
-            <DialogDescription>
-              UPI payment option is not available right now. Please use cash or
-              card instead.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              onClick={() => setShowUpiErrorDialog(false)}
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-            >
-              Okay
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Choose Payment Method</DialogTitle>
-            <DialogDescription>
-              Select your preferred UPI payment app
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4">
-            {upiApps.map((app) => (
-              <Button
-                key={app.name}
-                onClick={() => handleUPIPayment(app)}
-                className="w-full bg-white hover:bg-gray-100 text-black border flex items-center justify-center gap-2"
-              >
-                <Image src={app.icon} alt={app.name} width={24} height={24} className="w-6 h-6" />
-                Pay with {app.name}
-              </Button>
-            ))}
+            <p className="text-sm text-muted-foreground">
+              Please scan a valid QR code or contact staff for assistance.
+            </p>
           </div>
-          <DialogFooter>
-            <Button
-              onClick={() => setShowPaymentModal(false)}
-              variant="outline"
-            >
-              Cancel
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </main>
+        </div>
+      </div>
+    );
+  }
+
+  console.log("🔍 QR Code Data:", {
+    qrCode: qr_codes[0],
+    hasGroup: !!qr_codes[0].qr_group,
+    groupData: qr_codes[0].qr_group,
+    tableNumber: qr_codes[0].table_number,
+  });
+
+  const tableNumber = qr_codes?.[0].table_number;
+
+  // console.log("Table Number:", tableNumber);
+
+  // if (tableNumber !== 0) {
+  const { query: search } = await searchParams;
+  const auth = await getAuthCookie();
+  const hotelId = qr_codes?.[0].partner_id;
+
+  const getHotelData = unstable_cache(
+    async (id: string) => {
+      try {
+        const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
+          id,
+        });
+        return {
+          id,
+          ...partnerData.partners[0],
+        } as HotelData;
+      } catch (error) {
+        console.error("Error fetching hotel data:", error);
+        return null;
+      }
+    },
+    [hotelId as string, "hotel-data"],
+    { tags: [hotelId as string, "hotel-data"] }
   );
+
+  const hoteldata = hotelId ? await getHotelData(hotelId) : null;
+  const offers = hoteldata?.offers;
+
+  let filteredOffers: Offer[] = [];
+  if (offers) {
+    const today = new Date().setHours(0, 0, 0, 0);
+    filteredOffers = search
+      ? offers
+          .filter(
+            (offer) => new Date(offer.end_time).setHours(0, 0, 0, 0) < today
+          )
+          .filter((offer) =>
+            Object.values(offer).some((value) =>
+              String(value).toLowerCase().includes(search.trim().toLowerCase())
+            )
+          )
+      : offers.filter(
+          (offer) => new Date(offer.end_time).setHours(0, 0, 0, 0) >= today
+        );
+  }
+
+  const theme = (
+    typeof hoteldata?.theme === "string"
+      ? JSON.parse(hoteldata?.theme)
+      : hoteldata?.theme || {}
+  ) as ThemeConfig;
+
+  const socialLinks = getSocialLinks(hoteldata as HotelData);
+
+  const menuItemWithOfferPrice = hoteldata?.menus?.map((item) => {
+    return {
+      ...item,
+      price: item.offers?.[0]?.offer_price || item.price,
+    };
+  });
+
+  const hotelDataWithOfferPrice = {
+    ...hoteldata,
+    menus: menuItemWithOfferPrice,
+  };
+
+  if (hoteldata) {
+    const features = getFeatures(hoteldata.feature_flags as string);
+    const isOrderingEnabled = features?.ordering.enabled && tableNumber !== 0;
+    const isDeliveryEnabled = features?.delivery.enabled && tableNumber === 0;
+
+    const getLastSubscription = await fetchFromHasura(
+      getPartnerSubscriptionQuery,
+      {
+        partnerId: hoteldata?.id || "",
+      }
+    );
+
+    const lastSubscription = getLastSubscription?.partner_subscriptions?.[0];
+
+    if (hoteldata?.status === "inactive") {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4 py-8">
+          <div className="text-center p-4 sm:p-8 bg-white rounded-3xl shadow-lg w-full max-w-[90%] sm:max-w-md mx-auto">
+            <h1 className="text-xl sm:text-3xl font-bold mb-4 text-orange-600">
+              {new Date(lastSubscription?.expiry_date) < new Date()
+                ? "Hotel Subscription Expired"
+                : "Hotel is Currently Inactive"}
+            </h1>
+            <p className="mb-6 text-sm sm:text-base text-gray-600">
+              This hotel is temporarily unavailable. For assistance, please
+              contact our support team.
+            </p>
+            <div className="text-gray-700 bg-gray-100 p-4 rounded-md">
+              <p className="font-medium text-sm sm:text-base">
+                Contact Support:
+              </p>
+              <a
+                href="tel:+916238969297"
+                className="text-blue-600 hover:text-blue-800 block mt-2 text-sm sm:text-base"
+              >
+                +91 6238969297
+              </a>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // if (isOrderingEnabled || isDeliveryEnabled) {
+    return (
+      <HotelMenuPage
+        socialLinks={socialLinks}
+        auth={auth}
+        hoteldata={hotelDataWithOfferPrice as HotelData}
+        offers={filteredOffers}
+        tableNumber={tableNumber}
+        theme={theme}
+        qrGroup={qr_codes[0].qr_group}
+        qrId={validQrId}
+      />
+    );
+    // }
+
+    // return (
+    //   <div className="flex h-screen w-full items-center justify-center bg-gray-50 p-4">
+    //     <div className="w-full max-w-md rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+    //       <div className="flex flex-col space-y-4 text-center">
+    //         <div className="space-y-2">
+    //           <AlertTriangle className="mx-auto h-10 w-10 text-yellow-500" />
+    //           <h2 className="text-2xl font-bold tracking-tight">
+    //             Access Restricted
+    //           </h2>
+    //           <p className="text-muted-foreground">
+    //             {tableNumber === 0
+    //               ? "Delivery is not enabled for this hotel."
+    //               : "In-restaurant ordering is not enabled for this hotel."}
+    //           </p>
+    //         </div>
+    //         <p className="text-sm text-muted-foreground">
+    //           Please contact staff for assistance.
+    //         </p>
+    //       </div>
+    //     </div>
+    //   </div>
+    // );
+  }
+
+  // } else {
+  //   return <QrPayment />;
+  // }
 };
 
-export default QrScanPage;
+export default page;

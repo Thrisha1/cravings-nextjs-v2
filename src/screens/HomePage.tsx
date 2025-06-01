@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from "react";
 export default function HomePage() {
   const navigate = useRouter();
   const [isIndianPricing, setIsIndianPricing] = useState(true);
-  
+
   // Restaurant partners data from hotel-list.txt
   const restaurants = [
     { url: "https://www.cravings.live/qrScan/CHICKING-OOTY/6ec40577-e2d5-4a47-80ec-5e63ab9f9677", name: "CHICKING OOTY", logo: "/logos/chicking.png" },
@@ -25,31 +25,31 @@ export default function HomePage() {
 
   // Triple the array for continuous scrolling
   const duplicatedRestaurants = [...restaurants, ...restaurants, ...restaurants];
-  
+
   const scrollRef1 = useRef<HTMLDivElement>(null);
   const animationRef1 = useRef<number | null>(null);
-  
+
   // Scroll animation using requestAnimationFrame
   useEffect(() => {
     let scrollPosition1 = 0;
-    
+
     const scroll1 = () => {
       if (scrollRef1.current) {
         // Increase scroll position - left to right scrolling
         scrollPosition1 -= 0.5;
-        
+
         // Reset when scrolled enough to create seamless loop
         if (scrollPosition1 <= -1500) {
           scrollPosition1 = 0;
         }
-        
+
         scrollRef1.current.style.transform = `translateX(${scrollPosition1}px)`;
         animationRef1.current = requestAnimationFrame(scroll1);
       }
     };
-    
+
     animationRef1.current = requestAnimationFrame(scroll1);
-    
+
     return () => {
       if (animationRef1.current) {
         cancelAnimationFrame(animationRef1.current);
@@ -67,25 +67,25 @@ export default function HomePage() {
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <UtensilsCrossed className="h-8 w-8 text-orange-600" />
-                  <span className="text-sm font-medium px-3 py-1 rounded-full bg-orange-100 text-orange-700">Restaurant Management Platform</span>
+                  <span className="text-sm font-medium px-3 py-1 rounded-full bg-orange-100 text-orange-700">Restaurant Management Platform By Cravings</span>
                 </div>
-                
+
                 <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
                   Digital Menus & Custom Delivery Platform for Modern Restaurants
                 </h1>
               </div>
-              
+
               <p className="text-xl text-gray-600 leading-relaxed">
                 Elevate your restaurant with QR code menus, self-ordering, and your own delivery website. Control your prices, add extra charges, and manage your own delivery system.
               </p>
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <Button
+                {/* <Button
                   onClick={() => navigate.push("/partner")}
                   className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-6 text-lg rounded-full transition-all duration-300 shadow-md hover:shadow-lg"
                 >
                   Start Your Free Trial
-                </Button>
+                </Button> */}
                 <Button
                   onClick={() => window.open("https://wa.me/918590115462?text=Hi!%20I'm%20interested%20in%20partnering%20with%20Cravings.%20Can%20you%20share%20the%20details", "_blank")}
                   variant="outline"
@@ -115,17 +115,17 @@ export default function HomePage() {
                 </p>
               </div>
             </div>
-            
+
             <div className="hidden lg:block relative">
               <div className="absolute -top-10 -right-10 w-64 h-64 bg-orange-200 rounded-full opacity-50 blur-3xl"></div>
               <div className="relative z-10 rounded-lg overflow-hidden shadow-2xl border-8 border-white">
                 <div className="relative bg-white p-4 border-b border-gray-100">
                   <div className="w-16 h-1 bg-gray-200 rounded mx-auto"></div>
                 </div>
-                <Image 
-                  src="/placeholder-menu-qr.jpg" 
-                  alt="Digital menu with QR code" 
-                  width={600} 
+                <Image
+                  src="/placeholder-menu-qr.jpg"
+                  alt="Digital menu with QR code"
+                  width={600}
                   height={450}
                   className="w-full h-auto"
                   onError={(e) => {
@@ -153,17 +153,17 @@ export default function HomePage() {
       <div className="py-12 bg-white border-t border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-gray-500 text-sm font-medium mb-8">TRUSTED BY LEADING RESTAURANTS</p>
-          
+
           {/* Scrolling row */}
           <div className="relative overflow-hidden">
             <div className="flex overflow-hidden" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
               <div ref={scrollRef1} className="flex">
                 {duplicatedRestaurants.map((restaurant, i) => (
-                  <a 
-                    href={restaurant.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    key={`row1-${i}`} 
+                  <a
+                    href={restaurant.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    key={`row1-${i}`}
                     className="group mx-3 shrink-0"
                   >
                     <div className="bg-white hover:bg-orange-50 border border-gray-200 hover:border-orange-300 rounded-lg p-4 transition-colors flex flex-col items-center justify-center h-32 w-[180px] relative overflow-hidden">
@@ -171,18 +171,18 @@ export default function HomePage() {
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity">
                         <div className="absolute inset-0 bg-orange-500 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500 origin-center"></div>
                       </div>
-                      
+
                       {/* Restaurant logo */}
                       <div className="h-16 w-full flex items-center justify-center mb-2 relative">
-                        <Image 
-                          src={restaurant.logo} 
-                          alt={restaurant.name} 
-                          width={100} 
+                        <Image
+                          src={restaurant.logo}
+                          alt={restaurant.name}
+                          width={100}
                           height={60}
                           className="max-h-16 w-auto object-contain"
                         />
                       </div>
-                      
+
                       {/* Restaurant name */}
                       <p className="text-center text-sm font-medium text-gray-700 group-hover:text-orange-700 transition-colors relative z-10 line-clamp-1">
                         {restaurant.name}
@@ -194,8 +194,8 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-          </div>
-          
+      </div>
+
       {/* Key Features Section */}
       <div className="py-16 md:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -258,9 +258,9 @@ export default function HomePage() {
               </h3>
               <ul className="space-y-3">
                 {[
-                  "Custom pricing control", 
-                  "Add extra charges", 
-                  "Multiple WhatsApp channels", 
+                  "Custom pricing control",
+                  "Add extra charges",
+                  "Multiple WhatsApp channels",
                   "Manage your own delivery"
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-2 text-gray-600">
@@ -272,7 +272,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-        </div>
+      </div>
 
       {/* How It Works Section */}
       <div className="py-16 md:py-24 bg-gray-50">
@@ -329,13 +329,13 @@ export default function HomePage() {
           {/* Pricing Toggle */}
           <div className="flex justify-center mb-12">
             <div className="bg-gray-100 p-1 rounded-lg inline-flex">
-              <button 
+              <button
                 className={`px-6 py-2 rounded-md font-medium transition-colors ${isIndianPricing ? 'bg-orange-500 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
                 onClick={() => setIsIndianPricing(true)}
               >
                 India Pricing
               </button>
-              <button 
+              <button
                 className={`px-6 py-2 rounded-md font-medium transition-colors ${!isIndianPricing ? 'bg-orange-500 text-white' : 'text-gray-700 hover:bg-gray-200'}`}
                 onClick={() => setIsIndianPricing(false)}
               >
@@ -369,41 +369,53 @@ export default function HomePage() {
               </div>
               <div className="p-6 space-y-4">
                 <p className="font-medium text-gray-700 uppercase text-sm tracking-wide">MENU DIGITALIZATION:</p>
-                
+
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-orange-500" />
+                  <span className="text-gray-700">Create shareable offers</span>
+                </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-orange-500" />
                   <span className="text-gray-700">Theme color customization</span>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-orange-500" />
                   <span className="text-gray-700">Menu customization (images, prices, names)</span>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-orange-500" />
                   <span className="text-gray-700">Reorder categories</span>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-orange-500" />
                   <span className="text-gray-700">Edit/add &quot;Must Try&quot; dishes</span>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-orange-500" />
                   <span className="text-gray-700">Google reviews integration</span>
                 </div>
+
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-orange-500" />
+                  <span className="text-gray-700">Social media integration</span>
+                </div>
               </div>
               <div className="p-6 border-t border-gray-100 space-y-4">
-                <Button 
-                  onClick={() => navigate.push("/partner")}
+                <Button
+                  onClick={() => window.open("https://wa.me/918590115462?text=Hi!%20I'm%20interested%20in%20the%20menu%20plan.%20Can%20you%20share%20more%20details%20about%20this?", "_blank")}
                   className="w-full bg-orange-500 hover:bg-orange-600 text-white"
                 >
                   Select Plan
                 </Button>
-                <Button 
-                  onClick={() => navigate.push("/demo")}
+                <Button
+                  onClick={() => {
+                    navigate.push("/hotels/Fried-Express/322331a7-8487-404a-a371-ae73e1afec82");
+                    window.scrollTo(0, 0);
+                  }}
                   className="w-full bg-white hover:bg-gray-50 text-orange-500 border border-orange-500"
                 >
                   View Demo
@@ -421,8 +433,11 @@ export default function HomePage() {
                 <div className="mt-4 flex items-baseline">
                   {isIndianPricing ? (
                     <>
-                      <span className="text-4xl font-bold text-gray-900">₹500</span>
-                      <span className="ml-1 text-lg text-gray-500">/month</span>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl text-gray-500 line-through">₹600</span>
+                        <span className="text-4xl font-bold text-gray-900">₹500</span>
+                        <span className="text-lg text-gray-500">/month</span>
+                      </div>
                     </>
                   ) : (
                     <>
@@ -432,41 +447,80 @@ export default function HomePage() {
                   )}
                 </div>
                 <p className="mt-2 text-sm text-gray-500">
-                  {isIndianPricing ? 'or ₹5000/year (Save 17%)' : 'or $150/year (Save 17%)'}
+                  {isIndianPricing ? <span><span className="text-gray-500 line-through">₹7200</span> <span className="text-gray-900 text-lg">₹6000</span> / year (Save 17%) </span> : <span>or $150/year (Save 17%)</span>}
                 </p>
               </div>
               <div className="p-6 space-y-4">
                 <p className="font-medium text-gray-700 uppercase text-sm tracking-wide">ALL BASIC FEATURES PLUS:</p>
-                
+
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-orange-500" />
+                  <span className="text-gray-700">Everything in Basic plan</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-orange-500" />
+                  <span className="text-gray-700">Inbuilt POS</span>
+                </div>
+
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-orange-500" />
                   <span className="text-gray-700">Table ordering system</span>
                 </div>
-                
+
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-orange-500" />
+                  <span className="text-gray-700">Add charges in each table like Ac / Non-Ac, etc.</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-orange-500" />
+                  <span className="text-gray-700">KOT and KDS system</span>
+                </div>
+
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-orange-500" />
                   <span className="text-gray-700">Receive orders via WhatsApp</span>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-orange-500" />
                   <span className="text-gray-700">Admin dashboard for order tracking</span>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-orange-500" />
                   <span className="text-gray-700">Outside delivery orders via WhatsApp</span>
                 </div>
+
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-orange-500" />
+                  <span className="text-gray-700">Detailed Analytics</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-orange-500" />
+                  <span className="text-gray-700">And GST and other extra charges</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-orange-500" />
+                  <span className="text-gray-700">Automatic stock updation</span>
+                </div>
+
               </div>
               <div className="p-6 border-t border-gray-100 space-y-4">
-                <Button 
-                  onClick={() => navigate.push("/partner")}
+                <Button
+                  onClick={() => window.open("https://wa.me/918590115462?text=Hi!%20I'm%20interested%20in%20the%20ordering%20system%20and%20delivery%20plan.%20Can%20you%20share%20more%20details%20about%20this?", "_blank")}
                   className="w-full bg-orange-500 hover:bg-orange-600 text-white"
                 >
                   Select Plan
                 </Button>
-                <Button 
-                  onClick={() => navigate.push("/demo")}
+                <Button
+                  onClick={() => { 
+                    navigate.push("/hotels/Al-Raidhan/373a15f9-9c58-4e34-ae07-b272e578928f")
+                    window.scrollTo(0, 0);
+                   }}
                   className="w-full bg-white hover:bg-gray-50 text-orange-500 border border-orange-500"
                 >
                   View Demo
@@ -502,7 +556,7 @@ export default function HomePage() {
                   <td className="py-3 px-6 text-center"><Check className="h-5 w-5 text-green-600 mx-auto" /></td>
                 </tr>
                 <tr className="bg-gray-50">
-                  <td className="py-3 px-6 text-sm text-gray-800 font-medium">&quot;Must Try&quot; dishes</td>
+                  <td className="py-3 px-6 text-sm text-gray-800 font-medium"> &quot;Must Try&quot; dishes</td>
                   <td className="py-3 px-6 text-center"><Check className="h-5 w-5 text-green-600 mx-auto" /></td>
                   <td className="py-3 px-6 text-center"><Check className="h-5 w-5 text-green-600 mx-auto" /></td>
                 </tr>
@@ -555,12 +609,12 @@ export default function HomePage() {
             Join hundreds of restaurants already using our platform to streamline operations and delight customers.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button
+            {/* <Button
               onClick={() => navigate.push("/partner")}
               className="bg-white hover:bg-orange-50 text-orange-600 px-8 py-6 text-lg rounded-full transition-all duration-300 shadow-lg hover:shadow-xl"
             >
               Start Your Free Trial
-            </Button>
+            </Button> */}
             <Button
               onClick={() => window.open("https://wa.me/918590115462?text=Hi!%20I'm%20interested%20in%20partnering%20with%20Cravings.%20Can%20you%20share%20the%20details", "_blank")}
               variant="outline"

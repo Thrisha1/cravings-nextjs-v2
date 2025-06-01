@@ -1,7 +1,7 @@
 async function subscribeTopic(token: string) {
   try {
     const response = await fetch(
-      process.env.NEXT_PUBLIC_FIREBASE_BACKEND_URL + "/api/topic/subscribe",
+      process.env.NEXT_PUBLIC_SERVER_URL + "/api/topic/subscribe",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

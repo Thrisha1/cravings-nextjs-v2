@@ -5,6 +5,8 @@ import { Pencil, Trash, Upload, Loader2 } from "lucide-react";
 import { MenuItem } from "@/components/bulkMenuUpload/EditItemModal";
 import { useState } from "react";
 import { Input } from "../ui/input";
+import Image from "next/image";
+import Img from "../Img";
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -26,9 +28,9 @@ export const MenuItemCard = ({
   onEdit,
   onDelete,
 }: MenuItemCardProps) => {
-  const [itemCategory, setItemCategory] = useState(item.category);
+  const [itemCategory, setItemCategory] = useState(item.category.name);
   return (
-    <Card className="relative">
+    <Card className="relative grid">
       {item.isAdded && (
         <div className="absolute top-2 right-1/2 translate-x-1/2 bg-green-500 text-white px-2 py-1 rounded-md">
           Added
@@ -40,16 +42,25 @@ export const MenuItemCard = ({
           <Checkbox
             checked={item.isSelected}
             onCheckedChange={onSelect}
-            disabled={!item.category || item.isAdded }
+            disabled={!item.category || item.isAdded}
           />
           <div className="font-bold text-lg">{item.name}</div>
         </div>
         <p className="font-bold text-2xl text-right">₹{item.price}</p>
       </div>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 ">
+        {item.image.length > 9 && (
+          <div className="relative w-40 h-40 overflow-hidden rounded-md ">
+            <Img
+              src={item.image}
+              alt={item.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
         <p className="text-gray-600">{item.description}</p>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center ">
           <label htmlFor="category" className="text-sm">
             Category :
           </label>
@@ -60,7 +71,7 @@ export const MenuItemCard = ({
             value={itemCategory}
             onChange={(e) => {
               setItemCategory(e.target.value);
-              item.category = e.target.value;
+              item.category.name = e.target.value;
             }}
           />
         </div>
@@ -70,9 +81,7 @@ export const MenuItemCard = ({
         <div className="flex gap-2">
           <Button
             onClick={onAddToMenu}
-            disabled={
-              item.isAdded || isUploading || !item.category 
-            }
+            disabled={item.isAdded || isUploading || !item.category}
           >
             {isUploading ? (
               <>

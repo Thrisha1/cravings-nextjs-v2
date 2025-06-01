@@ -17,96 +17,61 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import { CountdownTimer } from "@/components/CountdownTimer";
-import { useAuthStore, UserData } from "@/store/authStore";
-import { OfferTicket } from "@/components/OfferTicket";
+import { Partner, useAuthStore } from "@/store/authStore";
 import Share from "@/components/Share";
-import { Offer, useOfferStore } from "@/store/offerStore";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { useClaimedOffersStore } from "@/store/claimedOffersStore";
 import DiscountBadge from "@/components/DiscountBadge";
-import ClaimOfferButton from "@/components/ClaimOfferButton";
 import Link from "next/link";
-import { toast } from "sonner";
-import { useReviewsStore } from "@/store/reviewsStore";
+// import { useReviewsStore } from "@/store/reviewsStore";
+import { Offer } from "@/store/offerStore_hasura";
+import { Button } from "@/components/ui/button";
+import { useClaimedOffersStore } from "@/store/claimedOfferStore_hasura";
+import ClaimedOfferModal from "@/components/ClaimedOfferModal";
+import Img from "@/components/Img";
 
 export default function OfferDetail({
   offer,
   hotelData,
 }: {
   offer: Offer;
-  hotelData: UserData;
+  hotelData: Partner;
 }) {
   const { id: offerId } = useParams();
   const navigate = useRouter();
-  const { user, userData } = useAuthStore();
-  const [showTicket, setShowTicket] = useState(false);
-  const [token, setToken] = useState<string>(""); // Add token state
+  const { userData } = useAuthStore();
   const [isClaimed, setClaimed] = useState(false);
-  const { getAverageReviewByHotelId } = useReviewsStore();
-  const {
-    isOfferClaimed,
-    syncClaimedOffersWithFirestore,
-    addClaimedOffer,
-    updateUserOffersClaimable,
-    offersClaimable,
-    claimedOffers,
-  } = useClaimedOffersStore();
-  const { incrementEnquiry } = useOfferStore();
+  // const { getAverageReviewByHotelId } = useReviewsStore();
+  const { addClaimedOffer, claimedOffers, fetchCalimedOfferByOfferId } =
+    useClaimedOffersStore();
+  const [showClaimModalOpen, setClaimModalOpen] = useState(false);
 
-  // Fetch claimed offers from Firestore when the component mounts
   useEffect(() => {
-    if (user?.uid) {
-      const claimed = isOfferClaimed(offer.id);
-      setClaimed(claimed);
-      const claimedOffer = claimedOffers.find((o) => o.offerId === offer.id);
-      setToken(claimed ? claimedOffer?.token ?? "" : "");
-      const unsubscribe = syncClaimedOffersWithFirestore(user.uid);
-
-      if (offersClaimable < offer.originalPrice - offer.newPrice && !claimed) {
-        toast.error("You don't have enough cravings cash to claim this offer");
-        return;
-      }
-      return () => unsubscribe(); // Clean up the listener on unmount
+    if (userData) {
+      fetchCalimedOfferByOfferId(offerId as string);
     }
-  }, [user, syncClaimedOffersWithFirestore]);
+  }, [offerId, userData]);
+
+  useEffect(() => {
+    if (claimedOffers?.find((offer) => offer.offer?.id === offerId)) {
+      setClaimed(true);
+    } else {
+      setClaimed(false);
+    }
+  }, [claimedOffers]);
 
   const handleClaimOffer = async () => {
-    if (!user) {
-      navigate.push("/login");
-      return;
+    if (!isClaimed) {
+      await addClaimedOffer(offer);
     }
 
-    if (offersClaimable < offer.originalPrice - offer.newPrice) {
-      toast.error("You don't have enough cravings cash to claim this offer");
-      return;
-    }
-
-    const offerDiscount = offer.originalPrice - offer.newPrice;
-
-    if (offer) {
-      try {
-        // Claim the offer and get the token
-        const newToken = await addClaimedOffer(offer, user.uid);
-        setToken(newToken); // Set the token in state
-        setShowTicket(true); // Show the ticket dialog
-
-        // Increment the enquiry count if the offer is not already claimed
-        if (!isClaimed) {
-          incrementEnquiry(offer.id, offer.hotelId);
-          setClaimed(true);
-        }
-
-        await updateUserOffersClaimable(user.uid, -1 * offerDiscount);
-      } catch (error) {
-        console.error("Failed to claim offer:", error);
-      }
-    }
+    // setClaimModalOpen(true);
+    navigate.push(`/hotels/${hotelData.store_name.replace(/\s+/g, '-')}/${hotelData.id}`);
   };
 
-  const isUpcoming = new Date(offer.fromTime) > new Date();
+  const isUpcoming = new Date(offer.start_time) > new Date();
   const discount = Math.round(
-    ((offer.originalPrice - offer.newPrice) / offer.originalPrice) * 100
+    ((offer.menu.price - offer.offer_price) / offer.menu.price) * 100
   );
 
   return (
@@ -121,13 +86,11 @@ export default function OfferDetail({
           </div>
 
           <div className="relative">
-            <Image
-              src={offer.dishImage}
-              alt={offer.dishName}
+            <Img
+              src={offer.menu.image_url}
+              alt={offer.menu.name}
               width={500}
               height={500}
-              priority={false}
-              quality={60}
               className="w-full h-64 object-cover"
             />
 
@@ -138,14 +101,14 @@ export default function OfferDetail({
               />
 
               <span className="text-white/70 line-through text-xl">
-                ₹{offer.originalPrice.toFixed(0)}
+                ₹{offer.menu.price.toFixed(0)}
               </span>
               <span className="text-4xl font-bold text-white">
-                ₹{offer.newPrice.toFixed(0)}
+                ₹{offer.offer_price.toFixed(0)}
               </span>
               <div className="text-base font-bold text-orange-600 flex items-center gap-1">
                 <span>★</span>
-                <span>{offer.rating?.toFixed(1) || "0"}</span>
+                {/* <span>{offer.rating?.toFixed(1) || "0"}</span> */}
               </div>
             </div>
           </div>
@@ -154,10 +117,10 @@ export default function OfferDetail({
             <div className="flex justify-between items-start">
               <div className="space-y-4">
                 <CardTitle className="text-3xl font-bold text-pretty">
-                  {offer.dishName}
+                  {offer.menu.name}
                 </CardTitle>
-                {offer.description && (
-                  <CardDescription>{offer.description}</CardDescription>
+                {offer.menu.description && (
+                  <CardDescription>{offer.menu.description}</CardDescription>
                 )}
               </div>
             </div>
@@ -169,8 +132,8 @@ export default function OfferDetail({
             >
               <div className="grid">
                 <UtensilsCrossed />
-                <span>{offer.hotelName}</span>
-                <Suspense>
+                <span>{offer.partner?.store_name}</span>
+                {/* <Suspense>
                   <div className="flex items-center mt-1  gap-2 text-black/60 text-sm w-fit">
                     <Star
                       className="text-orange-600 fill-orange-600"
@@ -178,31 +141,37 @@ export default function OfferDetail({
                     />
                     {getAverageReviewByHotelId(hotelData?.id as string) ?? 0}
                   </div>
-                </Suspense>
+                </Suspense> */}
                 <span className="text-sm mt-1">
-                  Followers : {hotelData?.followers?.length ?? 0}
+                  {/* Followers : {hotelData?.followers?.length ?? 0} */}
                 </span>
               </div>
 
               <div className="flex justify-end items-center">
-                <div className="text-base bg-orange-600 text-white rounded-xl px-3 py-2">
+                {/* <div className="text-base bg-orange-600 text-white rounded-xl px-3 py-2">
                   {hotelData?.followers?.some((f) => f.user == user?.uid)
                     ? "Unfollow"
                     : "Follow"}
-                </div>
+                </div> */}
               </div>
             </Link>
             <div className="space-y-6 mt-5">
               <div className="space-y-3">
-                {!isUpcoming && (
+                {isUpcoming && (
                   <div className="flex items-center text-lg text-gray-500">
                     <Clock className="w-4 h-4 mr-2" />
-                    <CountdownTimer endTime={offer.toTime} />
+                    <CountdownTimer
+                      endTime={offer.end_time}
+                      upcoming={
+                        new Date(offer.start_time).setHours(0, 0, 0, 0) >
+                        new Date().setHours(0, 0, 0, 0)
+                      }
+                    />
                   </div>
                 )}
                 <div className="flex items-center text-lg text-gray-500">
                   <MapPin className="w-4 h-4 mr-2" />
-                  {offer.area}
+                  {offer.partner?.district}
                 </div>
                 <div className="flex flex-wrap gap-2 mt-4">
                   <Badge
@@ -210,19 +179,19 @@ export default function OfferDetail({
                     className="bg-orange-100 text-orange-800"
                   >
                     <Tag className="w-3 h-3 mr-1" />
-                    {offer.itemsAvailable} items{" "}
+                    {offer.items_available} items{" "}
                     {isUpcoming ? "left" : "available"}
                   </Badge>
                   {offer.enquiries > 0 && (
                     <Badge
                       variant="secondary"
                       className={
-                        offer.enquiries > offer.itemsAvailable
+                        offer.enquiries > offer.items_available
                           ? "bg-red-600 text-white"
                           : "bg-orange-500 text-white"
                       }
                     >
-                      {offer.enquiries > offer.itemsAvailable
+                      {offer.enquiries > offer.items_available
                         ? "High Demand"
                         : "In Demand"}
                     </Badge>
@@ -230,36 +199,45 @@ export default function OfferDetail({
                 </div>
               </div>
 
+              {showClaimModalOpen && (
+                <ClaimedOfferModal
+                  isOpen={showClaimModalOpen}
+                  setOpen={setClaimModalOpen}
+                  offer={offer}
+                />
+              )}
+
               <div className={`h-[36px] w-full`}>
-                {userData ? (
-                  <ClaimOfferButton
-                    handleClaimOffer={handleClaimOffer}
-                    isClaimed={isClaimed}
-                    offer={offer}
-                    offersClaimable={offersClaimable}
-                    setShowTicket={setShowTicket}
-                  />
-                ) : (
-                  <Link
-                    className={`w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm `}
-                    href={"/login"}
+                {offer.deletion_status === 1 || isUpcoming ? (
+                  <Button
+                    disabled
+                    className="w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-gray-600 hover:bg-gray-700 rounded-sm"
                   >
-                    Claim Offer
-                  </Link>
+                    {isUpcoming ? "Upcoming" : "Expired"}
+                  </Button>
+                ) : (
+                  <>
+                    {userData ? (
+                      <Button
+                        onClick={handleClaimOffer}
+                        className="w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm"
+                      >
+                        {isClaimed ? "Claimed" : "Claim Offer"}
+                      </Button>
+                    ) : (
+                      <Link
+                        className={`w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm `}
+                        href={`/hotels/${hotelData.store_name.replace(/\s+/g, '-')}/${hotelData.id}`}
+                      >
+                        Claim Offer
+                      </Link>
+                    )}
+                  </>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
-
-        {showTicket && (
-          <OfferTicket
-            isOpen={showTicket}
-            onClose={() => setShowTicket(false)}
-            offer={offer}
-            token={token} // Pass the token directly
-          />
-        )}
       </div>
     </div>
   );

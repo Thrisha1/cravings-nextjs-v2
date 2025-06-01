@@ -12,20 +12,20 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 type LoginMode = "user" | "partner";
 export default function Login() {
-  const { signInWithPhone, signInPartnerWithEmail, signInWithGooglePartner } = useAuthStore();
+  const { signInWithPhone, signInPartnerWithEmail } = useAuthStore();
   const navigate = useRouter();
   const [mode, setMode] = useState<LoginMode>("user");
   const [isLoading, setIsLoading] = useState(false);
   const [userPhone, setUserPhone] = useState("");
   const [partnerData, setPartnerData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
 
   const handleUserSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     // Remove +91 if present and validate 10 digits
-    const cleanedPhone = userPhone.replace(/^\+91/, '');
+    const cleanedPhone = userPhone.replace(/^\+91/, "");
     if (cleanedPhone.length !== 10) {
       toast.error("Please enter a valid 10-digit phone number");
       return;
@@ -34,7 +34,13 @@ export default function Login() {
     setIsLoading(true);
     try {
       await signInWithPhone(cleanedPhone);
-      navigate.push("/");
+      const redirectPath = localStorage.getItem("redirectPath");
+      if (redirectPath) {
+        localStorage.removeItem("redirectPath");
+        navigate.push(redirectPath);
+      } else {
+        navigate.push("/explore");
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
     } finally {
@@ -47,18 +53,6 @@ export default function Login() {
     setIsLoading(true);
     try {
       await signInPartnerWithEmail(partnerData.email, partnerData.password);
-      navigate.push("/admin");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to sign in");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handlePartnerGoogleSignIn = async () => {
-    try {
-      setIsLoading(true);
-      await signInWithGooglePartner();
       navigate.push("/admin");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
@@ -81,14 +75,18 @@ export default function Login() {
           <Button
             type="button"
             onClick={() => setMode("user")}
-            className={`flex-1 ${mode === "user" ? "bg-orange-600" : "bg-gray-200"}`}
+            className={`flex-1 ${
+              mode === "user" ? "bg-orange-600" : "bg-gray-200"
+            }`}
           >
             Sign in as User
           </Button>
           <Button
             type="button"
             onClick={() => setMode("partner")}
-            className={`flex-1 ${mode === "partner" ? "bg-orange-600" : "bg-gray-200"}`}
+            className={`flex-1 ${
+              mode === "partner" ? "bg-orange-600" : "bg-gray-200"
+            }`}
           >
             Sign in as Partner
           </Button>
@@ -103,7 +101,9 @@ export default function Login() {
                 type="tel"
                 placeholder="Enter your phone number"
                 value={userPhone}
-                onChange={(e) => setUserPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                onChange={(e) =>
+                  setUserPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+                }
                 required
               />
             </div>
@@ -125,7 +125,9 @@ export default function Login() {
                   type="email"
                   placeholder="Enter your email"
                   value={partnerData.email}
-                  onChange={(e) => setPartnerData({ ...partnerData, email: e.target.value })}
+                  onChange={(e) =>
+                    setPartnerData({ ...partnerData, email: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -136,10 +138,17 @@ export default function Login() {
                   type="password"
                   placeholder="Enter your password"
                   value={partnerData.password}
-                  onChange={(e) => setPartnerData({ ...partnerData, password: e.target.value })}
+                  onChange={(e) =>
+                    setPartnerData({ ...partnerData, password: e.target.value })
+                  }
                   required
                 />
-                <Link href="/login/forgot-password" className="text-right flex flex-1 justify-end w-full  text-sm text-gray-500 hover:text-orange-600">Forgot Password?</Link>
+                <Link
+                  href="/login/forgot-password"
+                  className="text-right flex flex-1 justify-end w-full  text-sm text-gray-500 hover:text-orange-600"
+                >
+                  Forgot Password?
+                </Link>
               </div>
               <Button
                 type="submit"
@@ -149,37 +158,6 @@ export default function Login() {
                 {isLoading ? "Please wait..." : "Sign In"}
               </Button>
             </form>
-
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or</span>
-              </div>
-            </div>
-
-            <Button
-              type="button"
-              onClick={handlePartnerGoogleSignIn}
-              className="w-full bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                "Please wait..."
-              ) : (
-                <>
-                  <Image
-                    width={5}
-                    height={5}
-                    src="https://www.google.com/favicon.ico"
-                    alt="Google"
-                    className="w-5 h-5 mr-2"
-                  />
-                  Sign in with Google
-                </>
-              )}
-            </Button>
           </div>
         )}
       </div>

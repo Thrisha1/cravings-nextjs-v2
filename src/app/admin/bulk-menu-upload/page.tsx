@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,10 +12,12 @@ import { useBulkUpload } from "@/hooks/useBulkUpload";
 import { useAuthStore } from "@/store/authStore";
 import { KimiAiLink } from "@/components/ui/KimiAiLink";
 
+
 const BulkUploadPage = () => {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { userData } = useAuthStore();
   const {
+    loading,
     jsonInput,
     menuItems,
     selectAll,
@@ -37,7 +39,17 @@ const BulkUploadPage = () => {
     setIsEditModalOpen,
     setEditingItem,
     handleCategoryChange,
+    handleGenerateImages,
+    handlePartialImageGeneration,
+    handleGenerateAIImages,
   } = useBulkUpload();
+
+  const isAIGenerateEnabled = Array.isArray(menuItems) && menuItems.length > 0 && 'image_prompt' in menuItems[0];
+
+  useEffect(() => {
+    // console.log("Menu Items:", menuItems);
+    
+  },[menuItems]);
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-8">
@@ -80,7 +92,7 @@ const BulkUploadPage = () => {
 
               <Button
                 className="text-[13px] w-full"
-                onClick={() => handleUploadSelected(user?.uid as string)}
+                onClick={() => handleUploadSelected(userData?.id as string)}
                 disabled={isBulkUploading}
               >
                 {isBulkUploading ? (
@@ -109,6 +121,32 @@ const BulkUploadPage = () => {
           </div>
         )}
 
+        {menuItems.length > 0 && (
+          <div className="flex space-x-4 py-4">
+            <Button
+              onClick={handleGenerateImages}
+              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Full Images"}
+            </Button>
+            <Button
+              onClick={handlePartialImageGeneration}
+              className="bg-yellow-600 hover:bg-yellow-700 text-white"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Partial Images"}
+            </Button>
+            <Button
+              onClick={handleGenerateAIImages}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              disabled={loading || !isAIGenerateEnabled}
+            >
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate AI Images"}
+            </Button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {menuItems.map((item, index) => (
             <MenuItemCard
@@ -118,14 +156,12 @@ const BulkUploadPage = () => {
               isUploading={isUploading[index]}
               onSelect={() => handleSelectItem(index)}
               onAddToMenu={() =>
-                handleAddToMenu(item, index, user?.uid as string)
+                handleAddToMenu(item, index, userData?.id as string)
               }
               onEdit={() => handleEdit(index, item)}
               onDelete={() => handleDelete(index)}
               onImageClick={(index, url) => handleImageClick(index, url)}
-              onCategoryChange={(category) =>
-                handleCategoryChange(index, category)
-              }
+              onCategoryChange={(category) => handleCategoryChange(index, { name: category, priority: 0, id: item.category.id })}
             />
           ))}
         </div>

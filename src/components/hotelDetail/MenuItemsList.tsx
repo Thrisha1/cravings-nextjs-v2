@@ -1,81 +1,131 @@
-import { useCategoryStore } from "@/store/categoryStore";
-import { useMenuStore } from "@/store/menuStore";
-import type { MenuItem } from "@/store/menuStore";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Accordion, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { AccordionContent } from "@radix-ui/react-accordion";
+import Image from "next/image";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
+import Img from "../Img";
 
-const MenuItemsList = ({ hotelId }: { hotelId: string }) => {
-  const { fetchMenu } = useMenuStore();
-  const { getCategoryById } = useCategoryStore();
-  const [items, setMenuItems] = useState<MenuItem[] | []>([]);
-  const [categorisedItems, setCategorisedItems] = React.useState<{
-    [key: string]: MenuItem[];
-  }>({});
-
-  useEffect(() => {
-    const fetchData = async () => {
-      await fetchMenu(hotelId)
-        .then((data) => {
-          setMenuItems(data);
-        })
-        .catch((error) => {
-          console.error("Error fetching menu items:", error);
-        });
-    };
-    fetchData();
-  }, [fetchMenu, hotelId]);
+const MenuItemsList = ({
+  hoteldata,
+  styles,
+}: {
+  hoteldata: HotelData;
+  styles: {
+    backgroundColor: string;
+    color: string;
+    accent: string;
+  };
+}) => {
+  const [categorisedItems, setCategorisedItems] = React.useState<
+    Record<string, HotelDataMenus[]>
+  >({});
 
   useEffect(() => {
     const fetchGroupedItems = async () => {
-      const groupedItems: { [key: string]: MenuItem[] } = {};
-      for (const item of items) {
-        const category =
-          (await getCategoryById(item.category)) || "Uncategorized";
+      // 1. First group by category
+      const groupedItems: { [key: string]: HotelDataMenus[] } = {};
+      for (const item of hoteldata.menus) {
+        const category = item.category.name;
         if (!groupedItems[category]) {
           groupedItems[category] = [];
         }
         groupedItems[category].push(item);
       }
-      const sortedItems = Object.fromEntries(
-        Object.entries(groupedItems).sort(([a], [b]) => a.localeCompare(b))
+
+      // 2. Convert to array of categories with their priority
+      const categories = Object.entries(groupedItems).map(
+        ([category, items]) => {
+          const priority = items[0]?.category?.priority || 0; // Get priority from first item
+          return {
+            name: category,
+            priority,
+            items,
+          };
+        }
       );
+
+      // 3. Sort categories by priority (ascending)
+      categories.sort((a, b) => a.priority - b.priority);
+
+      // 4. Convert back to object with sorted order
+      const sortedItems = Object.fromEntries(
+        categories.map((category) => [category.name, category.items])
+      );
+
       setCategorisedItems(sortedItems);
     };
 
-    if (items) {
+    if (hoteldata?.menus?.length > 0) {
       fetchGroupedItems();
     }
-  }, [items, getCategoryById]);
+  }, [hoteldata.menus]);
 
   return (
     <>
       {Object.entries(categorisedItems).length > 0 && (
-        <div className="py-10">
-          <h1 className="text-3xl font-bold  text-center underline underline-offset-2">
+        <div className="pb-10">
+          <h1 className="text-3xl font-bold text-center underline underline-offset-2">
             Menu
           </h1>
 
-          <Accordion type="multiple" defaultValue={[Object.entries(categorisedItems)[0]?.[0]]} className="mt-10">
+          <Accordion
+            type="multiple"
+            defaultValue={[Object.entries(categorisedItems)[0]?.[0]]}
+            className="mt-10 "
+          >
             {Object.entries(categorisedItems).map(([category, items]) => (
               <AccordionItem value={category} key={category} className="mb-6">
                 <AccordionTrigger className="text-xl font-bold mb-2 capitalize">
                   {category + `(${items.length})`}
                 </AccordionTrigger>
-                <AccordionContent className="grid divide-y-2 divide-orange-200">
+                <AccordionContent className="grid divide-y-2 divide-black/20">
                   {items.map((item) => (
-                    <div key={item.id} className="py-2">
-                      <div className="flex justify-between items-center">
-                        <span className="capitalize font-semibold text-lg">
-                          {item.name}
-                        </span>
-                        <span className="font-bold text-2xl text-orange-500">
-                          ₹{item.price}
+                    <div
+                      key={item.id}
+                      className="py-6 rounded px-4 flex-1 relative"
+                    >
+                      <div className="flex flex-col gap-y-2 justify-between items-start w-full">
+                        <div className="flex justify-between w-full">
+                          <div
+                            className={`flex flex-col justify-center w-1/2 ${
+                              !item.is_available ? "opacity-25" : ""
+                            }`}
+                          >
+                            <span className="capitalize text-xl font-bold">
+                              {item.name}
+                            </span>
+                            <span
+                              style={{
+                                color: !item.is_available
+                                  ? styles.color
+                                  : styles.accent,
+                              }}
+                              className={`font-bold text-xl`}
+                            >
+                              ₹{item.price}
+                            </span>
+                          </div>
+                          {item.image_url.length > 0 && (
+                            <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden">
+                              <Img
+                                src={item.image_url}
+                                alt={item.name}
+                                className={`object-cover w-full h-full ${
+                                  !item.is_available ? "grayscale" : ""
+                                }`}
+                              />
+                              {!item.is_available && (
+                                <div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-sm font-semibold py-2 px-3 w-full">
+                                  Unavailabe
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm opacity-50">
+                          {item.description}
                         </span>
                       </div>
-                      <span className="text-sm text-black/50">
-                        {item.description}
-                      </span>
                     </div>
                   ))}
                 </AccordionContent>

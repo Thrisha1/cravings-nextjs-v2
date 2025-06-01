@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
-import { Pen, Plus, Search, Upload } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Pen, Plus, Search, Upload, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,35 +9,48 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch"; // Import the Switch component
-import { MenuItem, useMenuStore } from "@/store/menuStore";
 import { useAdminOfferStore } from "@/store/useAdminOfferStore";
-import { useAuthStore } from "@/store/authStore";
+import { Partner, useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { AddMenuItemModal } from "../bulkMenuUpload/AddMenuItemModal";
 import { EditMenuItemModal } from "./EditMenuItemModal";
-import { deleteFileFromS3 } from "@/app/actions/aws-s3";
+import { CategoryManagementModal } from "./CategoryManagementModal";
+import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
+import { Switch } from "../ui/switch";
 import { toast } from "sonner";
-import { useCategoryStore } from "@/store/categoryStore";
-import CategoryUpdateModal from "./CategoryUpdateModal";
-
+import { deleteFileFromS3 } from "@/app/actions/aws-s3";
+import { useSearchParams } from "next/navigation";
+import { Accordion, AccordionContent, AccordionItem } from "../ui/accordion";
+import { AccordionTrigger } from "@radix-ui/react-accordion";
+import Img from "../Img";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from "@hello-pangea/dnd";
+import { formatDisplayName } from "@/store/categoryStore_hasura";
 export function MenuTab() {
-  const { items, addItem, updateItem, deleteItem } = useMenuStore();
+  const {
+    items: menu,
+    addItem,
+    fetchMenu,
+    updateItem,
+    deleteItem,
+    groupedItems,
+  } = useMenuStore();
   const [isCategoryEditing, setIsCategoryEditing] = useState(false);
-  const [editingCategory, seteditingCategory] = useState({
-    id: "",
-    name: "",
-  });
-  const [categoriesdItems, setCategoriesdItems] = useState<
-    Record<string, MenuItem[]>
-  >({});
-  const { getCategoryById } = useCategoryStore();
   const { adminOffers, fetchAdminOffers } = useAdminOfferStore();
-  const { user } = useAuthStore();
-  const [catUpated, setCatUpdated] = useState(false);
+  const { userData } = useAuthStore();
+  const [catUpdated, setCatUpdated] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const searchParams = useSearchParams();
+  const [isMenuItemsFetching, setIsMenuItemsFetching] = useState(true);
+  const [filteredGroupedItems, setFilteredGroupedItems] = useState(
+    {} as Record<string, MenuItem[]>
+  );
   const [editingItem, setEditingItem] = useState<{
     id: string;
     name: string;
@@ -46,18 +59,45 @@ export function MenuTab() {
     description: string;
     category: string;
   } | null>(null);
+  const [isEditingPriority, setIsEditingPriority] = useState(false);
+  const [tempItems, setTempItems] = useState<Record<string, MenuItem[]>>({});
+  const { updateItemsAsBatch } = useMenuStore();
+  const [currenctCat , setCurrentCat] = useState("");
 
   useEffect(() => {
-    if (user?.uid) {
-      fetchAdminOffers(user.uid);
+    if (userData?.id) {
+      fetchAdminOffers(userData?.id);
+      fetchMenu();
     }
-  }, [user, fetchAdminOffers]);
+  }, [userData, fetchAdminOffers, fetchMenu, catUpdated]);
 
-  const filteredItems = useMemo(() => {
-    return items.filter((item) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [items, searchQuery]);
+  useEffect(() => {
+    if (!isEditModalOpen) {
+      setEditingItem(null);
+    }
+  }, [isEditModalOpen]);
+
+  useEffect(() => {
+    if (!groupedItems) return;
+
+    const filtered: Record<string, MenuItem[]> = {};
+
+    Object.entries(groupedItems).forEach(([category, categoryItems]) => {
+      const filteredCategoryItems = categoryItems.filter((item) =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+      if (filteredCategoryItems.length > 0) {
+        filtered[category] = filteredCategoryItems;
+      }
+    });
+
+    setFilteredGroupedItems(filtered);
+    setTempItems(filtered); // Initialize temp items for drag and drop
+    setTimeout(() => {
+      setIsMenuItemsFetching(false);
+    }, 2000);
+  }, [groupedItems, searchQuery, searchParams]);
 
   const handleAddItem = (item: {
     name: string;
@@ -69,10 +109,18 @@ export function MenuTab() {
     addItem({
       name: item.name,
       price: parseFloat(item.price),
-      image: item.image,
+      image_url: item.image,
       description: item.description,
-      category: item.category,
-      hotelId: user?.uid || "",
+      category: {
+        id: "temp-id-" + Math.random().toString(36).substring(2, 9),
+        name: item.category,
+        priority: 0,
+      },
+      image_source: "local",
+      is_top: false,
+      is_available: true,
+      priority: 0,
+      
     });
   };
 
@@ -84,12 +132,22 @@ export function MenuTab() {
     description: string;
     category: string;
   }) => {
+    const existingItem = menu.find((menuItem) => menuItem.id === item.id);
+
+    if (!existingItem) {
+      throw new Error("Item not found");
+    }
+
     updateItem(item.id, {
       name: item.name,
       price: parseFloat(item.price),
-      image: item.image,
+      image_url: item.image,
       description: item.description,
-      category: item.category,
+      category: {
+        id: existingItem.category.id,
+        name: item.category,
+        priority: existingItem.category.priority,
+      },
     });
   };
 
@@ -107,39 +165,68 @@ export function MenuTab() {
       price: item.price.toString(),
       image: item.image,
       description: item.description || "",
-      category: item.category,
+      category: formatDisplayName(item.category),
     });
     setIsEditModalOpen(true);
   };
-  useEffect(() => {
-    const convertToCategorised = async () => {
-      if (filteredItems.length > 0) {
-        const acc: Record<string, typeof filteredItems> = {};
 
-        for (const item of filteredItems) {
-          const category = await getCategoryById(item.category);
-          if (category) {
-            acc[category] = acc[category] || [];
-            acc[category].push(item);
-          }
-        }
-        setCategoriesdItems(acc);
-      }
-    };
+  const getCategoryPriority = (category: string) => {
+    const categoryItem = menu.find((item) => item.category.name === category);
+    return categoryItem?.category.priority || 0;
+  };
 
-    convertToCategorised();
-  }, [filteredItems, getCategoryById, catUpated]);
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
 
-  const handleCategoryUpdate = async (cat : string , catId : string) => {
-    setIsCategoryEditing(true);
-    seteditingCategory({
-      id : catId,
-      name : cat
-    });
-  }
+    const { source, destination } = result;
+
+    if (source.droppableId === destination.droppableId) {
+      // Reordering within the same category
+      const category = source.droppableId;
+      const items = [...tempItems[category]];
+      const [removed] = items.splice(source.index, 1);
+      items.splice(destination.index, 0, removed);
+
+      // Update priorities for all items in the category
+      const updatedItems = items.map((item, index) => ({
+        ...item,
+        priority: index, // Update priority to match new position
+      }));
+
+      setTempItems((prev) => ({
+        ...prev,
+        [category]: updatedItems,
+      }));
+    }
+  };
+
+  const saveItemOrder = async () => {
+    try {
+      const allItems = Object.values(tempItems).flat().filter((items) => items.category.name === currenctCat);
+
+      const updates = allItems.map((item) => ({
+        id: item.id as string,
+        priority: item.priority,
+      }));
+
+      await updateItemsAsBatch(updates);
+
+      toast.success("Item order saved successfully");
+      setIsEditingPriority(false);
+      fetchMenu(); // Refresh the menu to get the new order
+    } catch (error) {
+      toast.error("Failed to save item order");
+      console.error(error);
+    }
+  };
+
+  const cancelEditing = () => {
+    setIsEditingPriority(false);
+    setTempItems(filteredGroupedItems); // Reset to original order
+  };
 
   return (
-    <div className="p-4">
+    <div className="">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Menu Items</h2>
         <div className="flex gap-2">
@@ -156,6 +243,44 @@ export function MenuTab() {
             <Plus className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+
+      <div className="flex justify-end gap-2 mb-4">
+        {isEditingPriority ? (
+          <>
+            <Button onClick={saveItemOrder} className="flex gap-2 text-xs sm:text-sm">
+              <Save className="h-4 w-4" />
+              <span>Save Order</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={cancelEditing}
+              className="flex gap-2 text-xs sm:text-sm"
+            >
+              <X className="h-4 w-4" />
+              <span>Cancel</span>
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button
+              onClick={() => setIsEditingPriority(true)}
+              variant="outline"
+              className="flex gap-2 text-xs sm:text-sm"
+            >
+              <Pen className="h-4 w-4" />
+              <span>Edit Item Order</span>
+            </Button>
+            <Button
+              onClick={() => setIsCategoryEditing(true)}
+              variant="outline"
+              className="flex gap-2 text-xs sm:text-sm"
+            >
+              <Pen className="h-4 w-4" />
+              <span>Category Update</span>
+            </Button>
+          </>
+        )}
       </div>
 
       <div className="relative mb-6">
@@ -184,108 +309,246 @@ export function MenuTab() {
         />
       )}
 
-      {isCategoryEditing && ( 
-        <CategoryUpdateModal
-          catId={editingCategory?.id || ""}
-          cat={editingCategory?.name || ""}
-          isOpen={isCategoryEditing}
-          setCatUpdated={setCatUpdated}
-          catUpdated={catUpated}
-          onOpenChange={() => setIsCategoryEditing(false)}
+      {isCategoryEditing && (
+        <CategoryManagementModal
+          open={isCategoryEditing}
+          categories={Object.entries(groupedItems).map(([category, items]) => ({
+            id: items[0].category.id,
+            name: (category),
+            priority: items[0].category.priority,
+          }))}
+          onOpenChange={setIsCategoryEditing}
         />
       )}
 
-      <div className="grid gap-4 divide-y-2 divide-gray-300 ">
-        {Object.entries(categoriesdItems).sort().map(([category, items]) => {
-          return (
-            <div key={category} className="pb-10">
-              <div className="flex items-center gap-2 group max-w-fit">
-                <h1 className="text-2xl lg:text-4xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent">
-                  {category}
-                </h1>
-                <button onClick={()=>{
-                  handleCategoryUpdate(category, items[0].category);
-                }} className="group-hover:opacity-100 opacity-0 transition-opacity duration-300">
-                  <Pen />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ">
-                {items.map((item) => (
-                  <Card className="rounded-xl overflow-hidden" key={item.id}>
-                    <CardHeader>
-                      <CardTitle>{item.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-2xl font-bold">
-                        ₹{item.price.toFixed(2)}
-                      </p>
-                      {item.description && (
-                        <p className="text-gray-600 mt-2">{item.description}</p>
-                      )}
-                      <div className="flex items-center mt-2">
-                        <label className="mr-2">Mark as Top 3:</label>
-                        <Switch
-                          checked={item.isTop}
-                          onCheckedChange={() => {
-                            const topItemsCount = filteredItems.filter(
-                              (i) => i.isTop
-                            ).length;
-                            if (item.isTop) {
-                              updateItem(item.id, { isTop: false });
-                            } else if (topItemsCount < 3) {
-                              updateItem(item.id, { isTop: true });
-                            } else {
-                              toast.error(
-                                "You can only mark up to 3 items as Top 3."
-                              );
-                            }
-                          }}
-                        />
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        onClick={() =>
-                          openEditModal({
-                            id: item.id,
-                            name: item.name,
-                            price: item.price,
-                            image: item.image,
-                            description: item.description || "",
-                            category: item.category,
-                          })
-                        }
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={async () => {
-                          const isOfferActive = adminOffers.some(
-                            (offer) => offer.menuItemId === item.id
-                          );
-                          if (isOfferActive) {
-                            alert(
-                              `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
-                            );
-                            return;
-                          }
-                          deleteItem(item.id);
-                          await deleteFileFromS3(item.image);
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </CardFooter>
-                  </Card>
+      {/* Menu Items */}
+      <>
+        {Object.entries(tempItems).length > 0 ? (
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Accordion onValueChange={(value : string) => setCurrentCat(value)} type="single" className="grid gap-4" collapsible>
+              {Object.entries(tempItems)
+                .sort(([categoryA], [categoryB]) => {
+                  const priorityA = getCategoryPriority(categoryA);
+                  const priorityB = getCategoryPriority(categoryB);
+                  return priorityA - priorityB;
+                })
+                .map(([category, items], index) => (
+                  <AccordionItem value={category} key={category + index}>
+                    <AccordionTrigger className="flex items-center gap-2 group max-w-fit">
+                      <h1 className="text-xl lg:text-3xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent flex items-center gap-2">
+                        <div className="left-marker">▶</div> {formatDisplayName(category)}
+                      </h1>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <Droppable droppableId={category}>
+                        {(provided) => (
+                          <div
+                            {...provided.droppableProps}
+                            ref={provided.innerRef}
+                            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                          >
+                            {items
+                              .sort((a, b) => a.priority - b.priority)
+                              .map((item, itemIndex) => (
+                                <Draggable
+                                  key={item.id}
+                                  draggableId={item.id as string}
+                                  index={itemIndex}
+                                  isDragDisabled={!isEditingPriority}
+                                >
+                                  {(provided) => (
+                                    <Card
+                                      {...provided.draggableProps}
+                                      ref={provided.innerRef}
+                                      className={`rounded-xl overflow-hidden grid ${
+                                        isEditingPriority ? "cursor-grab" : ""
+                                      }`}
+                                    >
+                                      <CardHeader className="flex flex-row justify-between gap-4 relative">
+                                        {!item.is_available && (
+                                          <div className="absolute saturate-200 top-0 text-xl px-2 rounded-br-xl py-3 z-[40] left-0 bg-red-500 text-white font-bold">
+                                            Unavailable
+                                          </div>
+                                        )}
+                                        <div>
+                                          {item.image_url.length > 0 && (
+                                            <div className="relative w-32 h-32 overflow-hidden">
+                                              <Img
+                                                src={item.image_url}
+                                                alt={item.name}
+                                                className={`w-full h-full object-cover rounded-lg ${
+                                                  item.is_available
+                                                    ? ""
+                                                    : " saturate-0"
+                                                }`}
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+                                        <CardTitle className="flex items-center justify-between w-full">
+                                          {item.name}
+                                          {isEditingPriority && (
+                                            <div
+                                              {...provided.dragHandleProps}
+                                              className="p-2 rounded-md hover:bg-gray-100"
+                                            >
+                                              <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="24"
+                                                height="24"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                className="h-6 w-6"
+                                              >
+                                                <polyline points="18 8 22 12 18 16"></polyline>
+                                                <polyline points="6 8 2 12 6 16"></polyline>
+                                                <line
+                                                  x1="2"
+                                                  y1="12"
+                                                  x2="22"
+                                                  y2="12"
+                                                ></line>
+                                              </svg>
+                                            </div>
+                                          )}
+                                        </CardTitle>
+                                      </CardHeader>
+                                      <CardContent className="relative">
+                                        <p className="text-2xl font-bold">
+                                          {(userData as Partner)?.currency || "₹"}{userData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09" ? item.price.toFixed(3) : item.price}
+                                        </p>
+                                        {item.description && (
+                                          <p className="text-gray-600 mt-2">
+                                            {item.description}
+                                          </p>
+                                        )}
+                                        <div className="flex items-center mt-2">
+                                          <label className="mr-2">
+                                            Mark as Popular:
+                                          </label>
+                                          <Switch
+                                            checked={item.is_top}
+                                            onCheckedChange={async () => {
+                                              try {
+                                                if (item.is_top) {
+                                                  await updateItem(
+                                                    item.id as string,
+                                                    {
+                                                      is_top: false,
+                                                    }
+                                                  );
+                                                } else {
+                                                  await updateItem(
+                                                    item.id as string,
+                                                    {
+                                                      is_top: true,
+                                                    }
+                                                  );
+                                                }
+                                              } catch (error) {
+                                                toast.error(
+                                                  "Failed to update item status"
+                                                );
+                                                console.error(error);
+                                              }
+                                            }}
+                                          />
+                                        </div>
+                                        <div className="flex items-center mt-3">
+                                          <label className="mr-2">
+                                            Is Available:
+                                          </label>
+                                          <Switch
+                                            checked={item.is_available}
+                                            onCheckedChange={async () => {
+                                              try {
+                                                await updateItem(
+                                                  item.id as string,
+                                                  {
+                                                    is_available:
+                                                      !item.is_available,
+                                                  }
+                                                );
+                                              } catch (error) {
+                                                toast.error(
+                                                  "Failed to mark item as " +
+                                                    (item.is_available
+                                                      ? "Unavailable"
+                                                      : "Available")
+                                                );
+                                                console.error(error);
+                                              }
+                                            }}
+                                          />
+                                        </div>
+                                      </CardContent>
+                                      <CardFooter className="flex justify-end space-x-2">
+                                        <Button
+                                          variant="outline"
+                                          onClick={() =>
+                                            openEditModal({
+                                              id: item.id as string,
+                                              name: item.name,
+                                              price: item.price,
+                                              image: item.image_url,
+                                              description:
+                                                item.description || "",
+                                              category: item.category.name,
+                                            })
+                                          }
+                                        >
+                                          Edit
+                                        </Button>
+                                        <Button
+                                          variant="destructive"
+                                          onClick={async (e) => {
+                                            e.currentTarget.disabled = true;
+                                            e.currentTarget.innerText =
+                                              "Deleting...";
+                                            const isOfferActive =
+                                              adminOffers.some(
+                                                (offer) =>
+                                                  offer.menuItemId === item.id
+                                              );
+                                            if (isOfferActive) {
+                                              alert(
+                                                `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
+                                              );
+                                              return;
+                                            }
+                                            await deleteItem(item.id as string);
+                                            if (item.image_url)
+                                              await deleteFileFromS3(
+                                                item.image_url
+                                              );
+                                          }}
+                                        >
+                                          Delete
+                                        </Button>
+                                      </CardFooter>
+                                    </Card>
+                                  )}
+                                </Draggable>
+                              ))}
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                    </AccordionContent>
+                  </AccordionItem>
                 ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            </Accordion>
+          </DragDropContext>
+        ) : (
+          <div className="text-center">
+            {isMenuItemsFetching ? "Loading Menu...." : "No Menu Items Added!"}
+          </div>
+        )}
+      </>
     </div>
   );
 }

@@ -1,12 +1,13 @@
 "use client";
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Offer } from "@/store/offerStore";
 import Image from "next/image";
 import { Clock, MapPin, Route, UtensilsCrossed } from "lucide-react";
 import { CountdownTimer } from "./CountdownTimer";
 import DiscountBadge from "./DiscountBadge";
 import { useRouter } from "next/navigation";
+import { Offer } from "@/store/offerStore_hasura";
+import Img from "./Img";
 
 const OfferCard = ({
   offer,
@@ -31,37 +32,34 @@ const OfferCard = ({
       >
         {/* image container  */}
         <div className="relative">
-          <Image
-            src={offer.dishImage}
-            alt={offer.dishName}
+          <Img
+            src={offer.menu.image_url || "/image_placeholder.webp"}
+            alt={offer.menu.name}
             width={200}
             height={200}
-            priority={false}
-            loading="lazy"
-            quality={60}
             className="w-full h-32 object-cover"
           />
 
           <div className="absolute bottom-0  p-3  left-0 flex items-end bg-gradient-to-t from-black to-transparent w-full">
             <div className="grid w-full">
               <span className="text-white/70 line-through text-sm">
-                ₹{offer.originalPrice.toFixed(0)}
+                ₹{offer.menu.price.toFixed(0)}
               </span>
               <span className="text-2xl font-bold text-white">
-                ₹{offer.newPrice.toFixed(0)}
+                ₹{offer.offer_price.toFixed(0)}
               </span>
             </div>
 
             <div className="text-sm font-bold text-orange-500 flex items-center gap-1">
               <span>★</span>
-              <span>{offer.rating?.toFixed(1) || "0"}</span>
+              {/* <span>{offer.rating?.toFixed(1) || "0"}</span> */}
             </div>
           </div>
         </div>
 
         <CardHeader className="p-3 md:p-5 space-y-0">
           <CardTitle className="font-bold md:text-xl text-balance">
-            {offer.dishName}
+            {offer.menu.name}
           </CardTitle>
         </CardHeader>
 
@@ -71,30 +69,30 @@ const OfferCard = ({
             <div className="space-y-3">
               <div className="flex justify-between">
                 <div className="flex flex-col gap-2">
-                  {!isUpcoming && (
+      
                     <div className="flex items-center text-sm text-gray-500">
                       <Clock className="w-4 h-4 mr-2" />
                       <CountdownTimer
-                        endTime={offer.toTime}
-                        // upcomming={false}
+                        endTime={offer.end_time}
+                        upcoming={new Date(offer.start_time).setHours(0,0,0,0) > new Date().setHours(0,0,0,0)}
                       />
                     </div>
-                  )}
+   
                   <div className="flex items-center text-sm text-gray-500">
                     <MapPin className="w-4 h-4 mr-2" />
-                    {offer.area}
+                    {offer.partner?.district}
                   </div>
-                  {(offer.distance ?? 0) > 0 && (
+                  {/* {(offer.distance ?? 0) > 0 && (
                     <p className="text-sm text-gray-500 flex items-center gap-2">
                       <Route className="w-4 h-4" />
                       <span>
                         {((offer.distance ?? 0) / 1000).toFixed(2)} km
                       </span>
                     </p>
-                  )}
+                  )} */}
                   <p className="text-sm text-gray-800 flex items-center gap-2">
                     <UtensilsCrossed className="w-4 h-4" />
-                    <span>{offer.hotelName}</span>
+                    <span>{offer.partner?.store_name}</span>
                   </p>
                 </div>
               </div>

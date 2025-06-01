@@ -1,30 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useMenuStore, getMenuItemImage } from "@/store/menuStore";
 import { MenuItem } from "@/components/bulkMenuUpload/EditItemModal";
+import { MenuItem as MenuItemStore } from "@/store/menuStore_hasura";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
-import { useCategoryStore } from "@/store/categoryStore";
+import { useMenuStore } from "@/store/menuStore_hasura";
+import { getImageSource } from "@/lib/getImageSource";
+import axios from "axios";
 
 export const useBulkUpload = () => {
-  const { addCategory } = useCategoryStore();
+  const [loading, setLoading] = useState(false);
   const [jsonInput, setJsonInput] = useState("");
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [selectAll, setSelectAll] = useState(false);
+  const { userData } = useAuthStore();
   const {
     addItem,
     items: menu,
     fetchMenu,
-    setSelectedHotelId,
+    fetchCategorieImages,
   } = useMenuStore();
-  const { userData } = useAuthStore();
   const [editingItem, setEditingItem] = useState<{
     index: number;
     item: MenuItem;
   } | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState<{ [key: number]: boolean }>({});
+  const [isUploading, setIsUploading] = useState<{ [key: number]: boolean }>(
+    {}
+  );
   const [isBulkUploading, setIsBulkUploading] = useState(false);
 
   const validateMenuItem = (item: MenuItem) => {
@@ -38,9 +42,7 @@ export const useBulkUpload = () => {
     ) {
       throw new Error("Price is required and must be a number");
     }
-    if (!item.description || typeof item.description !== "string") {
-      throw new Error("Description is required and must be a string");
-    }
+
     return {
       ...item,
       price: Number(item.price),
@@ -48,7 +50,7 @@ export const useBulkUpload = () => {
   };
 
   useEffect(() => {
-    if (userData?.role === "hotel") {
+    if (userData?.role === "partner") {
       fetchMenu();
     }
   }, [fetchMenu, userData?.role]);
@@ -87,34 +89,25 @@ export const useBulkUpload = () => {
 
       const initialItems = items.map((item) => ({
         ...validateMenuItem(item),
-        image: "/loading-image.gif",
+        image: item.image || "",
         isSelected: false,
         isAdded: false,
-        category: item.category || "",
+        category: {
+          name: item.category,
+          id: item.category,
+          priority: 0,
+        },
       }));
 
       setMenuItems(initialItems);
       localStorage.setItem("bulkMenuItems", JSON.stringify(initialItems));
 
-      const updatedItems = [...initialItems];
-      for (let i = 0; i < items.length; i++) {
-        if (updatedItems[i].category) {
-          const urls = await getMenuItemImage(
-            updatedItems[i].category,
-            updatedItems[i].name
-          );
-          if (urls && urls.length > 0) {
-            updatedItems[i].image = urls[0];
-            setMenuItems([...updatedItems]);
-            localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
-          }
-        }
-      }
-
       toast.success("All items processed successfully!");
     } catch (error) {
       console.error("Error processing JSON:", error);
-      toast.error(error instanceof Error ? error.message : "Invalid JSON format");
+      toast.error(
+        error instanceof Error ? error.message : "Invalid JSON format"
+      );
     }
   };
 
@@ -126,7 +119,6 @@ export const useBulkUpload = () => {
   };
 
   const handleHotelSelect = async (hotelId: string) => {
-    setSelectedHotelId(hotelId);
     await fetchMenu(hotelId);
   };
 
@@ -142,17 +134,28 @@ export const useBulkUpload = () => {
 
     setIsUploading((prev) => ({ ...prev, [index]: true }));
     try {
+      const convertImageToLocalBlob = async (url: string) => {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+      };
 
-      const categoryId = await addCategory(item.category);
+      let image_url = item.image;
 
-      await addItem({
+      if (image_url.length > 0) {
+        image_url = await convertImageToLocalBlob(item.image);
+      }
+
+      const newItem = {
         name: item.name,
-        price: Number(item.price),
-        image: '',
-        description: item.description || "",
-        category: categoryId || "",
-        hotelId: hotelId || userData?.id || "",
-      });
+        price: item.price,
+        image_url: image_url,
+        image_source: getImageSource(item.image),
+        description: item.description,
+        category: item.category,
+      } as Omit<MenuItemStore, "id">;
+
+      await addItem(newItem);
 
       const updatedItems = [...menuItems];
       updatedItems[index] = { ...updatedItems[index], isAdded: true };
@@ -239,6 +242,7 @@ export const useBulkUpload = () => {
   };
 
   const handleEdit = (index: number, item: MenuItem) => {
+    console.log("item", item);
     setEditingItem({ index, item });
     setIsEditModalOpen(true);
   };
@@ -250,10 +254,11 @@ export const useBulkUpload = () => {
         const updatedItems = [...menuItems];
 
         if (!validatedItem.image) {
-          const urls = await getMenuItemImage(
-            validatedItem.category,
-            validatedItem.name
-          );
+          // const urls = await getMenuItemImage(
+          //   validatedItem.category,
+          //   validatedItem.name
+          // );
+          const urls: string[] = [];
           if (urls && urls.length > 0) {
             validatedItem.image = urls[0];
           } else {
@@ -285,7 +290,10 @@ export const useBulkUpload = () => {
     await handleAddToMenu(item, index, hotelId);
   };
 
-  const handleCategoryChange = async (index: number, category: string) => {
+  const handleCategoryChange = async (
+    index: number,
+    category: { name: string; id: string; priority: number }
+  ) => {
     const updatedItems = [...menuItems];
     updatedItems[index] = {
       ...updatedItems[index],
@@ -294,11 +302,10 @@ export const useBulkUpload = () => {
     };
 
     setMenuItems(updatedItems);
-    
+
     try {
-      const urls = await getMenuItemImage(
-        category,
-        updatedItems[index].name
+      const urls = (await fetchCategorieImages(category.name)).map(
+        (img) => img.image_url
       );
       if (urls && urls.length > 0) {
         updatedItems[index].image = urls[0];
@@ -323,7 +330,108 @@ export const useBulkUpload = () => {
     }
   };
 
+  const BATCH_SIZE = 20;
+
+  const processBatch = async (
+    endpoint: string,
+    items: any[],
+    successMessage: string
+  ) => {
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/api/image-gen/${endpoint}`,
+        items,
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      }
+      throw new Error(`Invalid response from ${endpoint} server`);
+    } catch (err) {
+      console.error(
+        `${endpoint} error: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
+      throw err;
+    }
+  };
+
+  const handleBatchImageGeneration = async (
+    endpoint: string,
+    successMessage: string
+  ) => {
+    if (!menuItems) return;
+
+    setLoading(true);
+    const totalItems = menuItems.length;
+    let updatedItems = [...menuItems];
+    let processedCount = 0;
+
+    try {
+      // Process in batches
+      for (let i = 0; i < totalItems; i += BATCH_SIZE) {
+        const batch = menuItems.slice(i, i + BATCH_SIZE);
+
+        toast.info(
+          `Processing items ${i + 1}-${Math.min(
+            i + BATCH_SIZE,
+            totalItems
+          )} of ${totalItems}...`
+        );
+
+        const batchResults = await processBatch(
+          endpoint,
+          batch,
+          successMessage
+        );
+        updatedItems = updatedItems.map((item, index) =>
+          index >= i && index < i + BATCH_SIZE ? batchResults[index - i] : item
+        );
+
+        processedCount += batch.length;
+        setMenuItems([...updatedItems]);
+        localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+      }
+
+      toast.success(successMessage);
+    } catch (err) {
+      console.error(
+        `Batch processing error: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
+      toast.error(
+        `Failed to generate images. Processed ${processedCount} of ${totalItems} items.`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Updated handlers
+  const handleGenerateImages = () =>
+    handleBatchImageGeneration(
+      "fullImages",
+      "Full images generated successfully!"
+    );
+  const handlePartialImageGeneration = () =>
+    handleBatchImageGeneration(
+      "partialImages",
+      "Partial images generated successfully!"
+    );
+  const handleGenerateAIImages = () =>
+    handleBatchImageGeneration(
+      "generateAIImages",
+      "AI images generated successfully!"
+    );
+
   return {
+    loading,
+    setLoading,
     jsonInput,
     setJsonInput,
     menuItems,
@@ -346,5 +454,8 @@ export const useBulkUpload = () => {
     handleImageClick,
     handleHotelSelect,
     handleCategoryChange,
+    handleGenerateImages,
+    handlePartialImageGeneration,
+    handleGenerateAIImages,
   };
 };

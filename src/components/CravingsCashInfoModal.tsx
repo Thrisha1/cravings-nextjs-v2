@@ -7,7 +7,7 @@ import { useAuthStore } from "@/store/authStore";
 
 const CravingsCashInfoModal = () => {
   const [open, setOpen] = useState(false);
-  const { user } = useAuthStore();
+  const { userData } = useAuthStore();
 
   useEffect(() => {
     const request = indexedDB.open("firebaseLocalStorageDb");
@@ -34,7 +34,7 @@ const CravingsCashInfoModal = () => {
     request.onerror = () => {
       console.error("Error opening firebaseLocalStorageDb");
     };
-  }, [user]);
+  }, [userData]);
 
   return (
     <Dialog

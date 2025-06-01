@@ -1,9 +1,10 @@
 "use client";
 import React from "react";
 import { Card } from "./ui/card";
-import { Offer } from "@/store/offerStore";
 import Image from "next/image";
-import DiscountBadge from "./DiscountBadge";;
+import DiscountBadge from "./DiscountBadge";import { Offer } from "@/store/offerStore_hasura";
+import Img from "./Img";
+;
 
 const OfferCardMin = ({
   offer,
@@ -22,29 +23,27 @@ const OfferCardMin = ({
     >
       <Card
         key={offer.id}
-        className="overflow-hidden hover:shadow-xl relative h-full "
+        className="overflow-hidden hover:shadow-xl relative h-full rounded-3xl"
       >
         {/* image container  */}
         <div className="relative">
-          <Image
-            src={offer.dishImage !== "" ? offer.dishImage : "/image_placeholder.webp"}
-            alt={offer.dishName}
+          <Img
+            src={offer.menu.image_url !== "" ? offer.menu.image_url : "/image_placeholder.webp"}
+            alt={offer.menu.name}
             width={300}
             height={300}
-            priority={false}
-            quality={60}
             className="w-full h-48 object-cover"
           />
 
           <div className="grid bg-gradient-to-t from-black to-transparentr p-3 absolute bottom-0 left-0 w-full">
             <span className="text-white/70 line-through text-sm">
-              ₹{offer.originalPrice.toFixed(0)}
+              ₹{offer.menu.price.toFixed(0)}
             </span>
             <span className="text-2xl font-bold text-white">
-              ₹{offer.newPrice.toFixed(0)}
+              ₹{offer.offer_price.toFixed(0)}
             </span>
 
-            <div className="font-bold md:text-xl text-white">{offer.dishName}</div>
+            <div className="font-bold md:text-xl text-white">{offer.menu.name}</div>
           </div>
         </div>
 

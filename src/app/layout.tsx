@@ -7,6 +7,7 @@ import "./globals.css";
 // import RateUsModal from "@/components/RateUsModal";
 import "@smastrom/react-rating/style.css";
 import { Toaster } from "@/components/ui/sonner";
+import AuthInitializer from "@/providers/AuthInitializer";
 // import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
 // import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
 // import LocationAccess from "@/components/LocationAccess";
@@ -16,9 +17,9 @@ export const metadata: Metadata = {
   title: "Cravings",
   description: "Find the best food deals in your area",
   icons: ["/icon-64x64.png", "/icon-192x192.png", "/icon-512x512.png"],
-  metadataBase: new URL("http://cravings.vercel.app"),
+  metadataBase: new URL("https://cravings.live"),
   openGraph: {
-    title: "Cravings",  
+    title: "Cravings",
     description: "Find the best food deals in your area",
     type: "website",
     images: ["/ogImage_default.jpeg"],
@@ -52,7 +53,8 @@ export default function RootLayout({
         />
       </head>
       <body className={`antialiased`}>
-        <Toaster richColors />
+        <AuthInitializer />
+        <Toaster richColors closeButton />
         {/* <Snow /> */}
         {/* <Navbar /> */}
         {/* <RateUsModal /> */}

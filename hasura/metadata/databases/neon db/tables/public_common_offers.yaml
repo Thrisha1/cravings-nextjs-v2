@@ -1,0 +1,3 @@
+table:
+  name: common_offers
+  schema: public

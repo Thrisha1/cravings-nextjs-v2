@@ -1,11 +1,19 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import CategoryDropdown from "@/components/ui/CategoryDropdown";
 import { ImageGridModal } from "../bulkMenuUpload/ImageGridModal";
+import { useAuthStore } from "@/store/authStore";
+import { useCategoryStore } from "@/store/categoryStore_hasura";
+import Img from "../Img";
 
 interface EditMenuItemModalProps {
   isOpen: boolean;
@@ -29,16 +37,23 @@ interface EditMenuItemModalProps {
   children?: React.ReactNode;
 }
 
-export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit, children }: EditMenuItemModalProps) {
-  const [editingItem, setEditingItem] = useState(item);
+export function EditMenuItemModal({
+  isOpen,
+  onOpenChange,
+  item,
+  onSubmit,
+  children,
+}: EditMenuItemModalProps) {
+  const [editingItem, setEditingItem] = useState(item );
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingItem.name || !editingItem.price || !editingItem.image || !editingItem.category) {
+    if (!editingItem.name || !editingItem.price || !editingItem.category) {
       alert("Please fill all the fields");
       return;
     }
+
     onSubmit(editingItem);
     onOpenChange(false);
   };
@@ -53,21 +68,24 @@ export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit, childr
           {/* Image Preview and Selection */}
           <div className="space-y-2">
             {editingItem.image ? (
-              <div className="relative h-[200px] w-full cursor-pointer" onClick={() => setIsImageModalOpen(true)}>
-                <Image 
-                  src={editingItem.image} 
-                  alt="Selected item" 
-                  fill
-                  className="object-cover rounded-lg"
+              <div
+                className="relative h-[200px] w-full cursor-pointer overflow-hidden"
+                onClick={() => setIsImageModalOpen(true)}
+              >
+                <Img
+                  src={editingItem.image}
+                  alt="Selected item"
+                  className="object-contain rounded-lg"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
-                  <p className="text-white">Click to change image</p>
+                  <p className="text-white">Click to change images</p>
                 </div>
               </div>
             ) : (
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 className="w-full h-[200px]"
                 onClick={() => setIsImageModalOpen(true)}
               >
@@ -83,7 +101,7 @@ export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit, childr
             category={editingItem.category}
             currentImage={editingItem.image}
             onSelectImage={(newImageUrl: string) => {
-              setEditingItem(prev => ({ ...prev, image: newImageUrl }));
+              setEditingItem((prev) => ({ ...prev, image: newImageUrl }));
               setIsImageModalOpen(false);
             }}
           />
@@ -93,28 +111,41 @@ export function EditMenuItemModal({ isOpen, onOpenChange, item, onSubmit, childr
             required
             placeholder="Product Name"
             value={editingItem.name}
-            onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+            onChange={(e) =>
+              setEditingItem({ ...editingItem, name: e.target.value })
+            }
           />
           <Input
             required
             type="number"
             placeholder="Price in ₹"
             value={editingItem.price}
-            onChange={(e) => setEditingItem({ ...editingItem, price: e.target.value })}
+            onChange={(e) =>
+              setEditingItem({ ...editingItem, price: e.target.value })
+            }
           />
           <Textarea
             placeholder="Product Description"
             value={editingItem.description}
-            onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+            onChange={(e) =>
+              setEditingItem({ ...editingItem, description: e.target.value })
+            }
           />
           <CategoryDropdown
             value={editingItem.category}
-            onChange={(value) => setEditingItem({ ...editingItem, category: value })}
+            onChange={(value) => {
+              setEditingItem({ ...editingItem, category: value });
+            }}
           />
           {children}
-          <Button type="submit" className="w-full">
-            Save Changes
-          </Button>
+          <div className="flex gap-2">
+            <Button type="submit" className="w-full">
+              Save Changes
+            </Button>
+            <Button className="w-full" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

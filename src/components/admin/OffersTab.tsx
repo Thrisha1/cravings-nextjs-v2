@@ -18,18 +18,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useMenuStore } from "@/store/menuStore";
-import { Offer, useOfferStore } from "@/store/offerStore";
 import { useAuthStore } from "@/store/authStore";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { toast } from "sonner";
+import { useMenuStore } from "@/store/menuStore_hasura";
+import { useOfferStore } from "@/store/offerStore_hasura";
+import Image from "next/image";
+import { formatDate } from "@/lib/formatDate";
+import Img from "../Img";
 
 export function OffersTab() {
   const { items } = useMenuStore();
-  const { addOffer, deleteOffer } = useOfferStore();
-  const { user, userData } = useAuthStore();
+  const { addOffer, fetchPartnerOffers, offers, deleteOffer } = useOfferStore();
+  const { userData } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [isOfferFetched, setIsOfferFetched] = useState(false);
   const [newOffer, setNewOffer] = useState({
     menuItemId: "",
     newPrice: "",
@@ -37,38 +39,31 @@ export function OffersTab() {
     fromTime: "",
     toTime: "",
   });
-  const [offers, setOffers] = useState<Offer[]>([]);
   const [isAdding, setAdding] = useState(false);
-  const [isDeleting, setDeleting] = useState(false);
-
-  const getUserOffers = async () => {
-    const now = new Date().toString();
-    const offersCollection = collection(db, "offers");
-    const offersQuery = query(
-      offersCollection,
-      where("hotelId", "==", user?.uid),
-      where("toTime", "<", now)
-    );
-    const querySnapshot = await getDocs(offersQuery);
-    const offers: Offer[] = [];
-    querySnapshot.forEach((doc) => {
-      offers.push({ id: doc.id, ...doc.data() } as Offer);
-    });
-    setOffers(offers);
-  };
+  const [isDeleting, setDeleting] = useState<Record<string, boolean>>({});
 
   const handleOfferDelete = (id: string) => async () => {
-    setDeleting(true);
+    setDeleting({
+      ...isDeleting,
+      [id]: true,
+    });
     await deleteOffer(id);
-    await getUserOffers();
-    setDeleting(false);
+    setDeleting({
+      ...isDeleting,
+      [id]: false,
+    });
   };
 
   useEffect(() => {
     (async () => {
-      await getUserOffers();
+      if (userData) {
+        await fetchPartnerOffers();
+        setTimeout(() => {
+          setIsOfferFetched(true);
+        }, 2000);
+      }
     })();
-  }, [user]);
+  }, [userData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,17 +121,26 @@ export function OffersTab() {
       return;
     }
 
+    const correspondingItem = items.find(
+      (item) => item.id === newOffer.menuItemId
+    );
+
+    if (correspondingItem?.image_url === "") {
+      toast.error("Please upload an image for the menu item");
+      setAdding(false);
+      return;
+    }
+
     try {
       await addOffer({
-        menuItemId: newOffer.menuItemId,
-        newPrice: parseFloat(newOffer.newPrice),
-        itemsAvailable: parseInt(newOffer.itemsAvailable),
-        fromTime: new Date(newOffer.fromTime),
-        toTime: new Date(newOffer.toTime),
-        category: userData?.category || "hotel",
+        menu_id: newOffer.menuItemId,
+        offer_price: parseFloat(newOffer.newPrice),
+        items_available: parseInt(newOffer.itemsAvailable),
+        start_time: newOffer.fromTime,
+        end_time: newOffer.toTime,
       });
     } catch (error) {
-      toast.error('Failed to create offer');
+      toast.error("Failed to create offer");
       console.error(error);
       setAdding(false);
       return;
@@ -151,7 +155,6 @@ export function OffersTab() {
     });
     setIsOpen(false);
     setAdding(false);
-    await getUserOffers();
   };
 
   return (
@@ -183,7 +186,7 @@ export function OffersTab() {
                   </SelectTrigger>
                   <SelectContent>
                     {items.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
+                      <SelectItem key={item.id} value={item.id as string}>
                         {item.name} - ₹{item.price.toFixed(2)}
                       </SelectItem>
                     ))}
@@ -266,49 +269,63 @@ export function OffersTab() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {offers.map((offer) => {
-          const menuItem = items.find((item) => item.id === offer.menuItemId);
-          if (!menuItem) return null;
-
-          return (
-            <Card key={offer.id}>
-              <CardHeader>
-                <CardTitle>{menuItem.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="text-lg">
-                    Original Price: ₹{offer.originalPrice.toFixed(2)}
-                  </p>
-                  <p className="text-2xl font-bold text-green-600">
-                    Offer Price: ₹{offer.newPrice.toFixed(2)}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    From: {new Date(offer.fromTime).toLocaleString()}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    To: {new Date(offer.toTime).toLocaleString()}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Created At: {new Date(offer.createdAt).toLocaleString()}
-                  </p>
-                  <Button
-                    disabled={isDeleting}
-                    variant="destructive"
-                    className="w-full mt-2"
-                    onClick={
-                      isDeleting ? undefined : handleOfferDelete(offer.id)
-                    }
-                  >
-                    {isDeleting ? "Deleting..." : "Delete Offer"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <>
+        {offers.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {offers.map((offer) => {
+              return (
+                <Card key={offer.id}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{offer.menu.name}</CardTitle>
+                    <div className="relative w-32 h-32 rounded-md overflow-hidden">
+                      <Img
+                        src={offer.menu.image_url}
+                        alt={offer.menu.name}
+                        className="object-cover w-full h-full "
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <p className="text-lg">
+                        Original Price: ₹{offer.menu.price.toFixed(2)}
+                      </p>
+                      <p className="text-2xl font-bold text-green-600">
+                        Offer Price: ₹{offer.offer_price.toFixed(2)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        From: {formatDate(offer.start_time)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        To: {formatDate(offer.end_time)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Created At: {formatDate(offer.created_at)}
+                      </p>
+                      <Button
+                        disabled={isDeleting[offer.id]}
+                        variant="destructive"
+                        className="w-full mt-2"
+                        onClick={
+                          isDeleting[offer.id]
+                            ? undefined
+                            : handleOfferDelete(offer.id)
+                        }
+                      >
+                        {isDeleting[offer.id] ? "Deleting..." : "Delete Offer"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center mt-4">
+            {isOfferFetched ? "No Offers Found!" : "Loading Offers...."}
+          </div>
+        )}
+      </>
     </div>
   );
 }

@@ -8,10 +8,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
+// import Image from "next/image";
 import { toast } from "sonner";
 import CategoryDropdown from "@/components/ui/CategoryDropdown";
 import { ImageGridModal } from "./ImageGridModal";
+import Img from "../Img";
 
 interface AddMenuItemModalProps {
   isOpen: boolean;
@@ -42,18 +43,14 @@ export function AddMenuItemModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      !newItem.name ||
-      !newItem.price ||
-      !newItem.image ||
-      !newItem.category
-    ) {
+    if (!newItem.name || !newItem.price || !newItem.category) {
       toast.error("Please fill all the fields");
       return;
     }
     setIsSubmitting(true);
     try {
       await onSubmit(newItem);
+
       setNewItem({
         name: "",
         price: "",
@@ -75,18 +72,17 @@ export function AddMenuItemModal({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Image Preview and Selection */}
-          {(newItem.category && newItem.name) && (
+          {newItem.category && newItem.name && (
             <div className="space-y-2">
               {newItem.image ? (
                 <div
-                  className="relative h-[200px] w-full cursor-pointer"
+                  className="relative h-[200px] w-[200px] cursor-pointer"
                   onClick={() => setIsImageModalOpen(true)}
                 >
-                  <Image
+                  <Img
                     src={newItem.image}
                     alt="Selected item"
-                    fill
-                    className="object-cover rounded-lg"
+                    className="object-cover rounded-lg w-full h-full"
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity">
                     <p className="text-white">Click to change image</p>
@@ -146,7 +142,6 @@ export function AddMenuItemModal({
               !newItem.name ||
               !newItem.price ||
               !newItem.category ||
-              !newItem.image ||
               isSubmitting
             }
             type="submit"
