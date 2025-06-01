@@ -19,10 +19,17 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  FullModal,
+  FullModalBody,
+  FullModalContent,
+  FullModalFooter,
+  FullModalHeader,
+  FullModalTitle,
+} from "@/components/ui/full_modal";
 import Link from "next/link";
 import { getGstAmount, calculateDeliveryDistanceAndCost } from "../OrderDrawer";
 import { QrGroup } from "@/app/admin/qr-management/page";
-import { table } from "console";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import {
   Select,
@@ -704,11 +711,56 @@ const PlaceOrderModal = ({
   const [showLoginDrawer, setShowLoginDrawer] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const isDelivery = !tableNumber;
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
   const isQrScan = qrId !== null && tableNumber !== 0;
   const hasLocation = !!selectedCoords || !!address;
+
+  // Keyboard detection
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        const currentHeight = window.visualViewport.height;
+        const windowHeight = window.innerHeight;
+        
+        // If visual viewport is significantly smaller than window height, keyboard is probably open
+        if (windowHeight - currentHeight > 150) {
+          setKeyboardOpen(true);
+        } else {
+          setKeyboardOpen(false);
+        }
+      }
+    };
+
+    // Add the event listener
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+    }
+
+    // Clean up
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
+
+  const handleInputFocus = () => {
+    setKeyboardOpen(true);
+  };
+
+  const handleInputBlur = () => {
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLInputElement || 
+          document.activeElement instanceof HTMLTextAreaElement) {
+        return;
+      }
+      setKeyboardOpen(false);
+    }, 100);
+  };
 
   // Check if multi-whatsapp feature is enabled
   const hasMultiWhatsapp =
@@ -720,7 +772,7 @@ const PlaceOrderModal = ({
       `hotel-${hotelData.id}-whatsapp-area`
     );
 
-    const selectedLocation = hotelData.whatsapp_numbers.find(
+    const selectedLocation = hotelData.whatsapp_numbers?.find(
       (item) => item.area === selectedPhone
     );
 
@@ -729,11 +781,11 @@ const PlaceOrderModal = ({
     } else {
       setSelectedLocation(null);
     }
-  }, []);
+  }, [hotelData]);
 
   const handleSelectHotelLocation = (location: string) => {
     setSelectedLocation(location);
-    const phoneNumber = hotelData.whatsapp_numbers.find(
+    const phoneNumber = hotelData.whatsapp_numbers?.find(
       (item) => item.area === location
     )?.number;
     localStorage.setItem(`hotel-${hotelData.id}-whatsapp-area`, phoneNumber || "");
@@ -786,6 +838,11 @@ const PlaceOrderModal = ({
     if (hasMultiWhatsapp && !selectedLocation) {
       toast.error("Please select a hotel location");
       return;
+    }
+
+    // Blur any focused inputs to dismiss keyboard
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
     }
 
     setIsPlacingOrder(true);
@@ -853,6 +910,16 @@ const PlaceOrderModal = ({
     setShowLoginDrawer(false);
   };
 
+  const handleCancel = () => {
+    // Blur any focused inputs to dismiss keyboard
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    
+    setOpenPlaceOrderModal(false);
+    setOpenDrawerBottom(true);
+  };
+
   // Determine if place order button should be disabled
   const isPlaceOrderDisabled =
     isPlacingOrder ||
@@ -861,93 +928,113 @@ const PlaceOrderModal = ({
     (hasMultiWhatsapp && !selectedLocation);
 
   return (
-    <Dialog open={open_place_order_modal} onOpenChange={setOpenPlaceOrderModal}>
-      <DialogContent className="w-screen h-[100dvh] overflow-y-auto z-[60] bg-gray-50">
-        <DialogHeader>
+    <FullModal open={open_place_order_modal} onOpenChange={setOpenPlaceOrderModal}>
+      <FullModalContent className="h-[calc(100vh-56px)] mt-14 flex flex-col" showCloseButton={false}>
+        <FullModalHeader>
           <div className="flex items-center gap-4">
             <button
-              onClick={() => {
-                setOpenPlaceOrderModal(false);
-                setOpenDrawerBottom(true);
-              }}
+              onClick={handleCancel}
               className="p-2 rounded-full hover:bg-gray-200"
             >
               <ArrowLeft size={20} />
             </button>
-            <DialogTitle>Review Your Order</DialogTitle>
+            <FullModalTitle>Review Your Order</FullModalTitle>
           </div>
-        </DialogHeader>
+        </FullModalHeader>
 
-        {(items?.length ?? 0) > 0 && (
-          <div className="space-y-4">
-            {/* Items Card */}
-            <ItemsCard
-              items={items || []}
-              increaseQuantity={increaseQuantity}
-              decreaseQuantity={decreaseQuantity}
-              removeItem={removeItem}
-              currency={hotelData?.currency || "₹"}
-            />
+        <FullModalBody className="flex-1 overflow-hidden flex flex-col pb-44 bg-gray-50">
+          <div 
+            ref={contentRef} 
+            className="space-y-4 flex-1 overflow-y-auto" 
+            style={{ paddingBottom: "80px" }}
+          >
+            {(items?.length ?? 0) > 0 && (
+              <>
+                {/* Items Card */}
+                <ItemsCard
+                  items={items || []}
+                  increaseQuantity={increaseQuantity}
+                  decreaseQuantity={decreaseQuantity}
+                  removeItem={removeItem}
+                  currency={hotelData?.currency || "₹"}
+                />
 
-            {/* Show table number for QR scan or address for delivery */}
-            {isQrScan ? (
-              <TableNumberCard tableNumber={tableNumber} />
-            ) : isDelivery ? (
-              <AddressCard
-                address={address}
-                setAddress={setAddress}
-                setShowMapModal={setShowMapModal}
-                getLocation={getLocation}
-                isGeoLoading={isGeoLoading}
-                geoError={geoError}
-                deliveryInfo={deliveryInfo}
-                hasLocation={hasLocation}
-                hotelData={hotelData}
-                selectedLocation={selectedLocation}
-                setSelectedLocation={handleSelectHotelLocation}
-              />
-            ) : null}
+                {/* Show table number for QR scan or address for delivery */}
+                {isQrScan ? (
+                  <TableNumberCard tableNumber={tableNumber} />
+                ) : isDelivery ? (
+                  <AddressCard
+                    address={address}
+                    setAddress={setAddress}
+                    setShowMapModal={setShowMapModal}
+                    getLocation={getLocation}
+                    isGeoLoading={isGeoLoading}
+                    geoError={geoError}
+                    deliveryInfo={deliveryInfo}
+                    hasLocation={hasLocation}
+                    hotelData={hotelData}
+                    selectedLocation={selectedLocation}
+                    setSelectedLocation={handleSelectHotelLocation}
+                  />
+                ) : null}
 
-            {/* Bill Card */}
-            <BillCard
-              items={items || []}
-              currency={hotelData?.currency || "₹"}
-              gstPercentage={hotelData?.gst_percentage}
-              deliveryInfo={deliveryInfo}
-              isDelivery={isDelivery && !isQrScan}
-              qrGroup={qrGroup}
-              tableNumber={tableNumber}
-            />
+                {/* Bill Card */}
+                <BillCard
+                  items={items || []}
+                  currency={hotelData?.currency || "₹"}
+                  gstPercentage={hotelData?.gst_percentage}
+                  deliveryInfo={deliveryInfo}
+                  isDelivery={isDelivery && !isQrScan}
+                  qrGroup={qrGroup}
+                  tableNumber={tableNumber}
+                />
 
-            {/* Login Card (if not logged in) */}
-            {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}
+                {/* Login Card (if not logged in) */}
+                {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}
 
-            {/* Place Order Button */}
-            {user && !isPlaceOrderDisabled ? (
-              <Link
-                className="pt-4"
-                href={getWhatsappLink(orderId as string)}
-                target="_blank"
-              >
-                <Button
-                  onClick={handlePlaceOrder}
-                  className="w-full"
-                  disabled={isPlaceOrderDisabled || !user}
-                >
-                  {isPlacingOrder ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Placing Order...
-                    </>
-                  ) : (
-                    "Place Order"
-                  )}
-                </Button>
-              </Link>
-            ) : (
+                {isDelivery && !isQrScan && deliveryInfo?.isOutOfRange && (
+                  <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
+                    Delivery is not available to your selected location
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </FullModalBody>
+
+        <FullModalFooter
+          style={{
+            bottom: keyboardOpen ? `${window.visualViewport?.offsetTop || 0}px` : '0',
+            position: 'fixed',
+            width: '100%',
+            zIndex: 30,
+          }}
+          className="border-t bg-background"
+        >
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isPlacingOrder}
+            className="flex-1 sm:flex-initial"
+          >
+            Back
+          </Button>
+          
+          {user ? (
+            <Link
+              href={getWhatsappLink(orderId as string)}
+              target="_blank"
+              className="flex-1 sm:flex-initial"
+              onClick={(e) => {
+                if (isPlaceOrderDisabled) {
+                  e.preventDefault();
+                }
+              }}
+            >
               <Button
-                className="w-full"
+                onClick={handlePlaceOrder}
                 disabled={isPlaceOrderDisabled || !user}
+                className="w-full"
               >
                 {isPlacingOrder ? (
                   <>
@@ -958,36 +1045,37 @@ const PlaceOrderModal = ({
                   "Place Order"
                 )}
               </Button>
-            )}
+            </Link>
+          ) : (
+            <Button
+              onClick={() => setShowLoginDrawer(true)}
+              className="flex-1 sm:flex-initial"
+            >
+              Login to Place Order
+            </Button>
+          )}
+        </FullModalFooter>
+      </FullModalContent>
 
-            {isDelivery && !isQrScan && deliveryInfo?.isOutOfRange && (
-              <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
-                Delivery is not available to your selected location
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Map Modal */}
-        {!isQrScan && (
-          <MapModal
-            showMapModal={showMapModal}
-            setShowMapModal={setShowMapModal}
-            setSelectedLocation={setSelectedCoords}
-            setAddress={setAddress}
-            hotelData={hotelData}
-          />
-        )}
-
-        {/* Login Drawer */}
-        <LoginDrawer
-          showLoginDrawer={showLoginDrawer}
-          setShowLoginDrawer={setShowLoginDrawer}
-          hotelId={hotelData?.id || ""}
-          onLoginSuccess={handleLoginSuccess}
+      {/* Map Modal */}
+      {!isQrScan && (
+        <MapModal
+          showMapModal={showMapModal}
+          setShowMapModal={setShowMapModal}
+          setSelectedLocation={setSelectedCoords}
+          setAddress={setAddress}
+          hotelData={hotelData}
         />
-      </DialogContent>
-    </Dialog>
+      )}
+
+      {/* Login Drawer */}
+      <LoginDrawer
+        showLoginDrawer={showLoginDrawer}
+        setShowLoginDrawer={setShowLoginDrawer}
+        hotelId={hotelData?.id || ""}
+        onLoginSuccess={handleLoginSuccess}
+      />
+    </FullModal>
   );
 };
 
