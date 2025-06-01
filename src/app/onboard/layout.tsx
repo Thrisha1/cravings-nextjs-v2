@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Business Onboarding - Cravings",
@@ -20,9 +21,9 @@ export default function OnboardingLayout({
               <span className="text-sm bg-orange-100 text-orange-800 px-2 py-0.5 rounded">Business</span>
             </div>
             <div>
-              <a href="/" className="text-sm text-gray-600 hover:text-gray-900">
+              <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">
                 Back to Home
-              </a>
+              </Link>
             </div>
           </div>
         </div>
