@@ -762,7 +762,7 @@ const PlaceOrderModal = ({
       setOpenPlaceOrderModal(false);
       setOpenDrawerBottom(true);
     }
-  },[open_place_order_modal])
+  },[open_place_order_modal , items])
 
   // Keyboard detection
   useEffect(() => {
