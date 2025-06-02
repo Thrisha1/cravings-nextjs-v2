@@ -8,7 +8,6 @@ import React, { useEffect, useState } from "react";
 
 const BottomNav = () => {
   const pathname = usePathname();
-  const [isValidPath, setIsValidPath] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const { userData } = useAuthStore();
@@ -97,14 +96,6 @@ const BottomNav = () => {
   const items = getNavItems();
 
   useEffect(() => {
-    // Check if current path matches any of the navigation items
-    const isvalidpath = items.some((item) => 
-      item.exactMatch ? pathname === item.href : pathname.startsWith(item.href)
-    );
-    setIsValidPath(isvalidpath);
-  }, [pathname, items]);
-
-  useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       
@@ -123,10 +114,10 @@ const BottomNav = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  // Always show for non-logged-in users, otherwise check valid path
-  const shouldShow = !userData?.role || isValidPath;
+  // Always show if there are items (removed isValidPath check)
+  const shouldShow = items.length > 0;
 
-  if (!shouldShow || items.length === 0) return null;
+  if (!shouldShow) return null;
 
   return (
     <section className={`lg:hidden`}>
