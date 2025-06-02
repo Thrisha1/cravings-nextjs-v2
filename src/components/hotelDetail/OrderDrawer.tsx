@@ -38,12 +38,7 @@ export const calculateDeliveryDistanceAndCost = async (
 ) => {
   const { setDeliveryInfo } = useOrderStore.getState();
 
-
-
   try {
-
-
-
     const userCoordsStr = localStorage.getItem("user-location-store");
     if (!userCoordsStr) return;
 
@@ -57,7 +52,8 @@ export const calculateDeliveryDistanceAndCost = async (
     }
 
     const restaurantCoords = hotelData?.geo_location?.coordinates;
-    const restaurantCoords = hotelData?.geo_location?.coordinates;
+    if (!restaurantCoords) return;
+
     const userLocation = [
       userLocationData.state.coords.lng,
       userLocationData.state.coords.lat,
@@ -73,16 +69,11 @@ export const calculateDeliveryDistanceAndCost = async (
     const response = await fetch(url);
     const data = await response.json();
 
-    
-
-    
-
     if (!data.routes || data.routes.length === 0) return;
 
     const exactDistance = data.routes[0].distance / 1000;
     const distanceInKm = Math.ceil(exactDistance);
-    const deliveryRate = hotelData?.delivery_rate;
-    const deliveryRate = hotelData?.delivery_rate;
+    const deliveryRate = hotelData?.delivery_rate || 0;
 
     const { delivery_radius, first_km_range, is_fixed_rate } =
       hotelData?.delivery_rules || {};
@@ -93,12 +84,7 @@ export const calculateDeliveryDistanceAndCost = async (
         cost: 0,
         ratePerKm: deliveryRate,
         isOutOfRange: true,
-      });  
-     
-  
-      });  
-     
-  
+      });
       return;
     }
 
@@ -106,22 +92,18 @@ export const calculateDeliveryDistanceAndCost = async (
 
     if (is_fixed_rate) {
       calculatedCost = deliveryRate;
-    } else {
-      if (first_km_range?.km > 0) {
-        if (distanceInKm <= first_km_range.km) {
-          calculatedCost = first_km_range.rate;
-        } else {
-          const remainingDistance = distanceInKm - first_km_range.km;
-          calculatedCost =
-            first_km_range.rate + remainingDistance * deliveryRate;
-        }
+    } else if (first_km_range?.km > 0) {
+      if (distanceInKm <= first_km_range.km) {
+        calculatedCost = first_km_range.rate;
       } else {
-        calculatedCost = distanceInKm * deliveryRate;
+        const remainingDistance = distanceInKm - first_km_range.km;
+        calculatedCost = first_km_range.rate + remainingDistance * deliveryRate;
       }
+    } else {
+      calculatedCost = distanceInKm * deliveryRate;
     }
 
     calculatedCost = Math.max(0, calculatedCost);
-
 
     setDeliveryInfo({
       distance: distanceInKm,
@@ -228,7 +210,6 @@ const OrderDrawer = ({
       ? getGstAmount(baseTotal, hotelData.gst_percentage)
       : 0;
     const qrCharge = qrGroup?.extra_charge
-    const qrCharge = qrGroup?.extra_charge
       ? getExtraCharge(
           items || [],
           qrGroup.extra_charge,
@@ -268,12 +249,9 @@ const OrderDrawer = ({
       ? `*Delivery Charge:* ${hotelData.currency}${deliveryInfo.cost.toFixed(2)}`
       : ""}
     
-    ${
-      qrGroup?.extra_charge
-      qrGroup?.extra_charge
-        ? `*${qrGroup.name}:* ${hotelData.currency}${qrCharge.toFixed(2)}`
-        : ""
-    }
+    ${qrGroup?.extra_charge
+      ? `*${qrGroup.name}:* ${hotelData.currency}${qrCharge.toFixed(2)}`
+      : ""}
     
     *Total Price:* ${hotelData.currency}${grandTotal.toFixed(2)}
     `;
@@ -551,7 +529,7 @@ const OrderDrawer = ({
                   })()}
                 </span>
               </div>
-              </div>
+            </div>
 
             {items?.length && (
               <>
