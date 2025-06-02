@@ -234,7 +234,7 @@ export function CategoryManagementForm({
       </p>
 
       <div className="space-y-4 flex flex-col">
-        <div className="flex gap-2 items-center sticky top-0 z-10 bg-background pt-1 pb-2">
+        <div className="flex gap-0 items-center sticky top-0 z-10 bg-background pt-0 pb-0">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
