@@ -38,19 +38,9 @@ export const calculateDeliveryDistanceAndCost = async (
 ) => {
   const { setDeliveryInfo } = useOrderStore.getState();
 
-  try {
-    const restaurantDataStr = localStorage.getItem(
-      `restaurant-${hotelData.id}-delivery-data`
-    );
-    if (!restaurantDataStr) return;
 
-    const restaurantData = JSON.parse(restaurantDataStr);
-    if (
-      !restaurantData?.geo_location?.coordinates ||
-      !restaurantData?.delivery_rate
-    ) {
-      return;
-    }
+  try {
+
 
     const userCoordsStr = localStorage.getItem("user-location-store");
     if (!userCoordsStr) return;
@@ -64,7 +54,7 @@ export const calculateDeliveryDistanceAndCost = async (
       return;
     }
 
-    const restaurantCoords = restaurantData.geo_location.coordinates;
+    const restaurantCoords = hotelData?.geo_location?.coordinates;
     const userLocation = [
       userLocationData.state.coords.lng,
       userLocationData.state.coords.lat,
@@ -80,11 +70,13 @@ export const calculateDeliveryDistanceAndCost = async (
     const response = await fetch(url);
     const data = await response.json();
 
+    
+
     if (!data.routes || data.routes.length === 0) return;
 
     const exactDistance = data.routes[0].distance / 1000;
     const distanceInKm = Math.ceil(exactDistance);
-    const deliveryRate = parseFloat(restaurantData.delivery_rate);
+    const deliveryRate = hotelData?.delivery_rate;
 
     const { delivery_radius, first_km_range, is_fixed_rate } =
       hotelData?.delivery_rules || {};
@@ -95,7 +87,9 @@ export const calculateDeliveryDistanceAndCost = async (
         cost: 0,
         ratePerKm: deliveryRate,
         isOutOfRange: true,
-      });
+      });  
+     
+  
       return;
     }
 
@@ -119,12 +113,6 @@ export const calculateDeliveryDistanceAndCost = async (
 
     calculatedCost = Math.max(0, calculatedCost);
 
-    console.log({
-      distance: distanceInKm,
-      cost: calculatedCost,
-      ratePerKm: deliveryRate,
-      isOutOfRange: false,
-    });
 
     setDeliveryInfo({
       distance: distanceInKm,
@@ -174,7 +162,7 @@ const OrderDrawer = ({
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
 
   useEffect(() => {
-    setIsQrScan((pathname.includes("qrScan") && !!qrId) && !(tableNumber === 0));
+    setIsQrScan(pathname.includes("qrScan") && !!qrId && !(tableNumber === 0));
   }, [pathname, qrId, tableNumber]);
 
   useEffect(() => {
@@ -270,9 +258,11 @@ const OrderDrawer = ({
       ? `*Delivery Charge:* ${hotelData.currency}${deliveryInfo.cost.toFixed(2)}`
       : ""}
     
-    ${qrGroup?.extra_charge
-      ? `*${qrGroup.name}:* ${hotelData.currency}${qrCharge.toFixed(2)}`
-      : ""}
+    ${
+      qrGroup?.extra_charge
+        ? `*${qrGroup.name}:* ${hotelData.currency}${qrCharge.toFixed(2)}`
+        : ""
+    }
     
     *Total Price:* ${hotelData.currency}${grandTotal.toFixed(2)}
     `;

@@ -63,9 +63,13 @@ const CommonOfferCard = ({ commonOffer }: { commonOffer: CommonOffer }) => {
             {truncateWithEllipsis(commonOffer.partner_name.toLowerCase(), 30)}
           </p>
           <div className="flex justify-between items-center mt-2">
-            <p className="text-orange-600 font-bold text-lg">
-              ₹{commonOffer.price}
-            </p>
+            {commonOffer?.price > 0 ? (
+              <p className="text-orange-600 font-bold text-lg">
+                ₹{commonOffer.price}
+              </p>
+            ) : (
+              <p className="text-orange-600 font-bold text-lg"></p>
+            )}
 
             <p className="text-white/80 font-bold text-right uppercase">
               {districtToShortForm[

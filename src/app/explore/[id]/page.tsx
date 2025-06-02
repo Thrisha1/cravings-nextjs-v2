@@ -50,11 +50,29 @@ export async function generateMetadata({
   return {
     title: commonOffer.item_name,
     icons: [commonOffer.image_url],
-    description: `*KIDILAN FOOD SPOT ALERT* �\n\n🎉 *${commonOffer.partner_name}* is offering *${commonOffer.item_name}* at *₹${commonOffer.price}*! 🌟\n\n${commonOffer.insta_link ? `📱 Instagram: ${commonOffer.insta_link}\n` : ""}🔗 View offer: www.cravings.live/explore/${commonOffer.id}\n\nDon't miss out on this amazing offer from *Cravings*! 🍽️✨`,
+    description: `*KIDILAN FOOD SPOT ALERT* �\n\n🎉 *${
+      commonOffer.partner_name
+    }* is offering *${commonOffer.item_name}* at *₹${
+      commonOffer.price
+    }*! 🌟\n\n${
+      commonOffer.insta_link ? `📱 Instagram: ${commonOffer.insta_link}\n` : ""
+    }🔗 View offer: www.cravings.live/explore/${
+      commonOffer.id
+    }\n\nDon't miss out on this amazing offer from *Cravings*! 🍽️✨`,
     openGraph: {
       images: [commonOffer.image_url],
       title: commonOffer.item_name,
-      description: `*KIDILAN FOOD SPOT ALERT* �\n\n🎉 *${commonOffer.partner_name}* is offering *${commonOffer.item_name}* at *₹${commonOffer.price}*! 🌟\n\n${commonOffer.insta_link ? `📱 Instagram: ${commonOffer.insta_link}\n` : ""}🔗 View offer: www.cravings.live/explore/${commonOffer.id}\n\nDon't miss out on this amazing offer from *Cravings*! 🍽️✨`,
+      description: `*KIDILAN FOOD SPOT ALERT* �\n\n🎉 *${
+        commonOffer.partner_name
+      }* is offering *${commonOffer.item_name}* at *₹${
+        commonOffer.price
+      }*! 🌟\n\n${
+        commonOffer.insta_link
+          ? `📱 Instagram: ${commonOffer.insta_link}\n`
+          : ""
+      }🔗 View offer: www.cravings.live/explore/${
+        commonOffer.id
+      }\n\nDon't miss out on this amazing offer from *Cravings*! 🍽️✨`,
     },
   };
 }
@@ -110,11 +128,15 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
             {" "}
             <UtensilsCrossed size={50} /> {commonOffer.item_name.toLowerCase()}
           </h1>
-          <p className="text-3xl text-orange-500 font-extrabold">
-            {" "}
-            <span className="text-lg font-medium">At Just</span> ₹
-            {commonOffer.price}
-          </p>
+          {commonOffer?.price > 0 ? (
+            <p className="text-3xl text-orange-500 font-extrabold">
+              {" "}
+              <span className="text-lg font-medium">At Just</span> ₹
+              {commonOffer.price}
+            </p>
+          ) : (
+            <p className="text-3xl font-bold text-orange-600"></p>
+          )}
           <p className=" mt-3 font-medium gap-1 flex items-start capitalize ">
             {" "}
             <Hotel size={25} />{" "}

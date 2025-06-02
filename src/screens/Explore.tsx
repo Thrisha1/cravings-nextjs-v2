@@ -1,6 +1,5 @@
 "use client";
 import { getAllCommonOffers } from "@/api/common_offers";
-import { filterAndSortCommonOffers } from "@/app/actions/offerFetching";
 import CommonOfferCard from "@/components/explore/CommonOfferCard";
 import LocationSelection from "@/components/LocationSelection";
 import NoOffersFound from "@/components/NoOffersFound";
@@ -17,17 +16,22 @@ const Explore = ({
   commonOffers,
   limit,
   totalOffers,
+  initialDistrict,
+  initialSearchQuery
 }: {
   commonOffers: CommonOffer[];
   limit: number;
   totalOffers: number;
+  initialDistrict: string | null;
+  initialSearchQuery: string;
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const searchParams = useSearchParams();
   const [offers, setOffers] = useState<CommonOffer[]>(commonOffers);
+  const [currentDistrict, setCurrentDistrict] = useState(initialDistrict);
+  const [currentSearchQuery, setCurrentSearchQuery] = useState(initialSearchQuery);
 
-  const { ref, inView , entry } = useInView({
+  const { ref, inView, entry } = useInView({
     threshold: 0,
   });
 
@@ -36,10 +40,22 @@ const Explore = ({
       if (!inView || isLoadingMore || offers.length >= totalOffers) return;
       
       setIsLoadingMore(true);
-      const newOffers = await fetchFromHasura(getAllCommonOffers, {
+      
+      // Prepare variables object conditionally
+      const variables: any = {
         limit: limit,
-        offset: offers.length,
-      });
+        offset: offers.length + 1
+      };
+      
+      if (currentDistrict) {
+        variables.district = currentDistrict;
+      }
+      
+      if (currentSearchQuery) {
+        variables.searchQuery = `%${currentSearchQuery}%`;
+      }
+      
+      const newOffers = await fetchFromHasura(getAllCommonOffers(currentDistrict, currentSearchQuery), variables);
       
       const { common_offers } = newOffers;
       if (common_offers?.length) {
@@ -52,35 +68,22 @@ const Explore = ({
     }
   };
 
-  const fetchOffers = async (offers: CommonOffer[]) => {
-    // setIsLoading(true);
-    try {
-      const filteredOffs = await filterAndSortCommonOffers({
-        offers: offers,
-        searchQuery: searchParams.get("query") || "",
-        location: searchParams.get("location") || null,
-      });
-      setOffers(filteredOffs as CommonOffer[]);
-    } finally {
-    //   setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchOffers(commonOffers);
-  }, [searchParams.get("location"), searchParams.get("query"), commonOffers]);
 
   useEffect(() => {
     loadMore();
-  }, [inView , entry]);
+  }, [inView, entry]);
 
-  useEffect(()=>{
-    if(isLoadingMore){
-        toast.loading("Loading more items...");
-    }else{
-        toast.dismiss();
+  useEffect(() => {
+    setOffers(commonOffers);
+  },[commonOffers]);
+
+  useEffect(() => {
+    if (isLoadingMore) {
+      toast.loading("Loading more items...");
+    } else {
+      toast.dismiss();
     }
-  },[isLoadingMore])
+  }, [isLoadingMore]);
 
   return (
     <div className="min-h-[100dvh] w-full bg-orange-50 px-3 py-3 relative pb-24">
@@ -97,32 +100,26 @@ const Explore = ({
         <SearchBox />
 
         <section className="mt-5">
-          {isLoading ? (
-            <OfferCardsLoading />
-          ) : (
+          {offers.length > 0 ? (
             <>
-              {offers.length > 0 ? (
-                <>
-                  {/* offer list  */}
-                  <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
-                    {offers.map((offer, index) => {
-                      const isLast = index === offers.length - 1;
-                      return (
-                        <div
-                          key={offer.id}
-                          ref={isLast ? ref : null}
-                        >
-                          <CommonOfferCard commonOffer={offer} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {isLoadingMore && <OfferCardsLoading />}
-                </>
-              ) : (
-                <NoOffersFound />
-              )}
+              {/* offer list  */}
+              <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
+                {offers.map((offer, index) => {
+                  const isLast = index === offers.length - 1;
+                  return (
+                    <div
+                      key={offer.id}
+                      ref={isLast ? ref : null}
+                    >
+                      <CommonOfferCard commonOffer={offer} />
+                    </div>
+                  );
+                })}
+              </div>
+              {isLoadingMore && <OfferCardsLoading />}
             </>
+          ) : (
+            <NoOffersFound />
           )}
         </section>
       </div>
