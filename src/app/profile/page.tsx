@@ -1079,7 +1079,7 @@ export default function ProfilePage() {
               <div
                 onClick={() => {
                   signOut();
-                  router.push("/offers");
+                  router.push("/");
                 }}
                 className="cursor-pointer hover:text-red-500 transition-all rounded-full flex flex-col items-center justify-center gap-1 text-gray-500"
               >

@@ -39,7 +39,7 @@ export default function Login() {
         localStorage.removeItem("redirectPath");
         navigate.push(redirectPath);
       } else {
-        navigate.push("/explore");
+        navigate.push("/");
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
