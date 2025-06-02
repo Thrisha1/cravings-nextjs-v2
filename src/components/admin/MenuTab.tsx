@@ -13,8 +13,8 @@ import { useAdminOfferStore } from "@/store/useAdminOfferStore";
 import { Partner, useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { AddMenuItemForm } from "../bulkMenuUpload/AddMenuItemModal";
-import { EditMenuItemModal } from "./EditMenuItemModal";
-import { CategoryManagementModal } from "./CategoryManagementModal";
+import { EditMenuItemForm } from "./EditMenuItemModal";
+import { CategoryManagementModal, CategoryManagementForm } from "./CategoryManagementModal";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
 import { toast } from "sonner";
@@ -244,7 +244,7 @@ export function MenuTab() {
         </div>
       </div>
 
-      {/* Tab switch: show add form or menu */}
+      {/* Tab switch: show add form, edit form, category management, or menu */}
       {isAddModalOpen ? (
         <AddMenuItemForm
           onSubmit={(item) => {
@@ -252,6 +252,34 @@ export function MenuTab() {
             setIsAddModalOpen(false);
           }}
           onCancel={() => setIsAddModalOpen(false)}
+        />
+      ) : isEditModalOpen && editingItem ? (
+        <EditMenuItemForm
+          item={editingItem}
+          onSubmit={(item) => {
+            handleEditItem(item);
+            setIsEditModalOpen(false);
+          }}
+          onCancel={() => setIsEditModalOpen(false)}
+        />
+      ) : isCategoryEditing ? (
+        <CategoryManagementForm
+          categories={Object.entries(groupedItems).map(([category, items]) => ({
+            id: items[0].category.id,
+            name: category,
+            priority: items[0].category.priority || 0,
+          }))}
+          onSubmit={async (updatedCategories) => {
+            await updateItemsAsBatch(
+              updatedCategories.map(cat => ({
+                id: cat.id,
+                priority: cat.priority || 0,
+              }))
+            );
+            setIsCategoryEditing(false);
+            fetchMenu(); // Refresh the menu to get the new categories
+          }}
+          onCancel={() => setIsCategoryEditing(false)}
         />
       ) : (
         <>
