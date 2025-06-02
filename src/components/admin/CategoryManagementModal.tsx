@@ -224,26 +224,13 @@ export function CategoryManagementForm({
     toast("Changes discarded");
   };
 
-  // Determine if content is scrollable
-  const [isTableScrollable, setIsTableScrollable] = useState(false);
-  
-  useEffect(() => {
-    if (contentRef.current && filteredCategories.length > 5) {
-      setIsTableScrollable(true);
-    } else {
-      setIsTableScrollable(false);
-    }
-  }, [filteredCategories.length]);
-
   return (
-    <div className="container px-0 pb-10">
+    <div className="container px-2 sm:px-0 pb-10">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Manage Categories</h2>
       </div>
       <p className="text-sm text-muted-foreground mt-1 mb-4">
-        {isTableScrollable 
-          ? "Drag categories or use arrows to reorder. Long-press to drag on mobile." 
-          : "Use arrows to reorder categories or change their order."}
+        Drag categories or use arrows to reorder. Long-press to drag on mobile.
       </p>
 
       <div className="space-y-4 flex flex-col">
@@ -279,7 +266,7 @@ export function CategoryManagementForm({
           ref={contentRef}
           className="border rounded-lg flex-1 overflow-hidden flex flex-col"
         >
-          <div className="overflow-y-auto" style={{ maxHeight: '500px' }}>
+          <div className="overflow-visible">
             <DragDropContext onDragEnd={handleDragEnd}>
               <Table className="min-w-full">
                 <TableHeader className="bg-gray-50 sticky top-0 z-10">
