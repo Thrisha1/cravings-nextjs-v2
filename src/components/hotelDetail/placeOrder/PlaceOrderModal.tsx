@@ -757,6 +757,13 @@ const PlaceOrderModal = ({
   const isQrScan = qrId !== null && tableNumber !== 0;
   const hasLocation = !!selectedCoords || !!address;
 
+  useEffect(()=>{
+    if(open_place_order_modal && items?.length === 0) {
+      setOpenPlaceOrderModal(false);
+      setOpenDrawerBottom(true);
+    }
+  },[open_place_order_modal])
+
   // Keyboard detection
   useEffect(() => {
     const handleResize = () => {
