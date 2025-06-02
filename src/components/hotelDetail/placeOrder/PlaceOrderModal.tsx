@@ -35,7 +35,12 @@ interface DeliveryInfo {
 
 // Add type for MapboxGeocoder
 type MapboxGeocoder = IControl & {
-  on: (event: string, callback: (e: { result: { center: [number, number]; place_name: string } }) => void) => void;
+  on: (
+    event: string,
+    callback: (e: {
+      result: { center: [number, number]; place_name: string };
+    }) => void
+  ) => void;
 };
 
 const ItemsCard = ({
@@ -61,7 +66,11 @@ const ItemsCard = ({
             className="flex justify-between items-center border-b pb-2 gap-5"
           >
             <div>
-              <DescriptionWithTextBreak spanClassName="text-sm text-black" accent="black" maxChars={15}>
+              <DescriptionWithTextBreak
+                spanClassName="text-sm text-black"
+                accent="black"
+                maxChars={15}
+              >
                 {item.name}
               </DescriptionWithTextBreak>
               <p className="text-xs text-gray-500">{item.category.name}</p>
@@ -225,14 +234,14 @@ const AddressCard = ({
           )}
         </Button>
 
-        {/* <Button
+        <Button
           type="button"
           onClick={() => setShowMapModal(true)}
           className="w-full"
           variant="outline"
         >
           Select Location on Map
-        </Button> */}
+        </Button>
 
         {geoError && (
           <div className="text-sm text-red-600 p-2 bg-red-50 rounded">
@@ -252,7 +261,9 @@ const AddressCard = ({
       {showPermissionDialog && (
         <div className="fixed inset-0 z-[62] flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg p-6 w-[90vw] max-w-md shadow-lg">
-            <h1 className="text-xl font-semibold mb-2">Location Permission Required</h1>
+            <h1 className="text-xl font-semibold mb-2">
+              Location Permission Required
+            </h1>
             <p className="mb-2">
               To provide accurate delivery estimates, we need access to your
               location.
@@ -260,7 +271,8 @@ const AddressCard = ({
             <ul className="list-disc pl-5 space-y-2 mb-2">
               <li>Please don&apos;t deny the location permission</li>
               <li>
-                This helps us calculate accurate <span className="font-medium">delivery charges</span>
+                This helps us calculate accurate{" "}
+                <span className="font-medium">delivery charges</span>
               </li>
               <li>Your location is only used for this order</li>
             </ul>
@@ -537,7 +549,7 @@ const MapModal = ({
 
     try {
       // Import MapboxGeocoder dynamically to avoid require() style import
-      const { MapboxGeocoder } = await import('@mapbox/mapbox-gl-geocoder');
+      const { MapboxGeocoder } = await import("@mapbox/mapbox-gl-geocoder");
       const geocoderInstance = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl: mapboxgl,
@@ -624,7 +636,6 @@ const MapModal = ({
       document.body.style.overflowY = "auto";
       document.body.style.maxHeight = "auto";
       setOpenPlaceOrderModal(true);
-
     }
   }, [showMapModal]);
 
@@ -664,7 +675,6 @@ const MapModal = ({
         showMapModal ? "overflow-hidden" : "hidden"
       }`}
     >
-     
       <div className="flex items-center justify-center min-h-screen w-screen">
         <div
           className="relative z-[5000] bg-white rounded-lg w-screen h-[100dvh] flex flex-col overflow-hidden"
@@ -753,7 +763,7 @@ const PlaceOrderModal = ({
       if (window.visualViewport) {
         const currentHeight = window.visualViewport.height;
         const windowHeight = window.innerHeight;
-        
+
         // If visual viewport is significantly smaller than window height, keyboard is probably open
         if (windowHeight - currentHeight > 150) {
           setKeyboardOpen(true);
@@ -765,13 +775,13 @@ const PlaceOrderModal = ({
 
     // Add the event listener
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleResize);
+      window.visualViewport.addEventListener("resize", handleResize);
     }
 
     // Clean up
     return () => {
       if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleResize);
+        window.visualViewport.removeEventListener("resize", handleResize);
       }
     };
   }, []);
@@ -926,135 +936,148 @@ const PlaceOrderModal = ({
   };
 
   // Determine if place order button should be disabled
-    
+
   const isPlaceOrderDisabled =
     isPlacingOrder ||
     (isDelivery && hasDelivery && !selectedCoords && !isQrScan) ||
     (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan) ||
     (hasMultiWhatsapp && !selectedLocation);
 
-  if (!open_place_order_modal) return null;
-
   return (
-    <div className="fixed inset-0 z-[60] bg-gray-50 overflow-y-auto">
-      {/* Header */}
-      <div className="sticky top-0 z-[61] bg-white border-b">
-        <div className="flex items-center gap-4 p-4">
-          <button
-            onClick={() => {
-              setOpenPlaceOrderModal(false);
-              setOpenDrawerBottom(true);
-            }}
-            className="p-2 rounded-full hover:bg-gray-200"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-xl font-bold">Review Your Order</h1>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="p-4 pb-32">
-        {(items?.length ?? 0) > 0 && (
-          <div className="space-y-4 max-w-2xl mx-auto">
-            {/* Items Card */}
-            <ItemsCard
-              items={items || []}
-              increaseQuantity={increaseQuantity}
-              decreaseQuantity={decreaseQuantity}
-              removeItem={removeItem}
-              currency={hotelData?.currency || "₹"}
-            />
-
-            {/* Show table number for QR scan or address for delivery */}
-            {isQrScan ? (
-              <TableNumberCard tableNumber={tableNumber} />
-            ) : isDelivery ? (
-              <AddressCard
-                address={address}
-                setAddress={setAddress}
-                setShowMapModal={setShowMapModal}
-                getLocation={getLocation}
-                isGeoLoading={isGeoLoading}
-                geoError={geoError}
-                deliveryInfo={deliveryInfo}
-                hasLocation={hasLocation}
-                hotelData={hotelData}
-                selectedLocation={selectedLocation}
-                setSelectedLocation={handleSelectHotelLocation}
-              />
-            ) : null}
-
-            {/* Bill Card */}
-            <BillCard
-              items={items || []}
-              currency={hotelData?.currency || "₹"}
-              gstPercentage={hotelData?.gst_percentage}
-              deliveryInfo={deliveryInfo}
-              isDelivery={isDelivery && !isQrScan}
-              qrGroup={qrGroup}
-            />
-
-            {/* Login Card (if not logged in) */}
-            {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}
-
-            {isDelivery && !isQrScan && deliveryInfo?.isOutOfRange && (
-              <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
-                Delivery is not available to your selected location
-              </div>
-            )}
-
-            {/* Place Order and Back Buttons */}
-            <div className="flex flex-col gap-3 mt-6">
-              {user ? (
-                <Link
-                  href={getWhatsappLink(orderId as string)}
-                  target="_blank"
-                  onClick={(e) => {
-                    if (isPlaceOrderDisabled) {
-                      e.preventDefault();
-                    }
-                  }}
-                >
-                  <Button
-                    onClick={handlePlaceOrder}
-                    disabled={isPlaceOrderDisabled || !user}
-                    className="w-full"
-                  >
-                    {isPlacingOrder ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Placing Order...
-                      </>
-                    ) : (
-                      "Place Order"
-                    )}
-                  </Button>
-                </Link>
-              ) : null}
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setOpenPlaceOrderModal(false);
-                  setOpenDrawerBottom(true);
-                }}
-                className="w-full"
-              >
-                Back
-              </Button>
-            </div>
+    <>
+      <div
+        className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto ${
+          open_place_order_modal ? "block" : "hidden"
+        }`}
+      >
+        {/* Header */}
+        <div className="sticky top-0  bg-white border-b">
+          <div className="flex items-center gap-4 p-4">
+            <button
+              onClick={() => {
+                setOpenPlaceOrderModal(false);
+                setOpenDrawerBottom(true);
+              }}
+              className="p-2 rounded-full hover:bg-gray-200"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="text-xl font-bold">Review Your Order</h1>
           </div>
-        )}
+        </div>
+
+        {/* Main Content */}
+        <div className="p-4 pb-32">
+          {(items?.length ?? 0) > 0 && (
+            <div className="space-y-4 max-w-2xl mx-auto">
+              {/* Items Card */}
+              <ItemsCard
+                items={items || []}
+                increaseQuantity={increaseQuantity}
+                decreaseQuantity={decreaseQuantity}
+                removeItem={removeItem}
+                currency={hotelData?.currency || "₹"}
+              />
+
+              {/* Show table number for QR scan or address for delivery */}
+              {isQrScan ? (
+                <TableNumberCard tableNumber={tableNumber} />
+              ) : isDelivery ? (
+                <AddressCard
+                  address={address}
+                  setAddress={setAddress}
+                  setShowMapModal={setShowMapModal}
+                  getLocation={getLocation}
+                  isGeoLoading={isGeoLoading}
+                  geoError={geoError}
+                  deliveryInfo={deliveryInfo}
+                  hasLocation={hasLocation}
+                  hotelData={hotelData}
+                  selectedLocation={selectedLocation}
+                  setSelectedLocation={handleSelectHotelLocation}
+                />
+              ) : null}
+
+              {/* Bill Card */}
+              <BillCard
+                items={items || []}
+                currency={hotelData?.currency || "₹"}
+                gstPercentage={hotelData?.gst_percentage}
+                deliveryInfo={deliveryInfo}
+                isDelivery={isDelivery && !isQrScan}
+                qrGroup={qrGroup}
+              />
+
+              {/* Login Card (if not logged in) */}
+              {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}
+
+              {isDelivery && !isQrScan && deliveryInfo?.isOutOfRange && (
+                <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
+                  Delivery is not available to your selected location
+                </div>
+              )}
+
+              {/* Place Order and Back Buttons */}
+              <div className="flex flex-col gap-3 mt-6">
+                {user ? (
+                  <Link
+                    href={getWhatsappLink(orderId as string)}
+                    target="_blank"
+                    onClick={(e) => {
+                      if (isPlaceOrderDisabled) {
+                        e.preventDefault();
+                      }
+                    }}
+                  >
+                    <Button
+                      onClick={handlePlaceOrder}
+                      disabled={isPlaceOrderDisabled || !user}
+                      className="w-full"
+                    >
+                      {isPlacingOrder ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Placing Order...
+                        </>
+                      ) : (
+                        "Place Order"
+                      )}
+                    </Button>
+                  </Link>
+                ) : null}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setOpenPlaceOrderModal(false);
+                    setOpenDrawerBottom(true);
+                  }}
+                  className="w-full"
+                >
+                  Back
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Fixed Footer - Empty now, just for spacing */}
+        <div
+          className="fixed bottom-0 left-0 right-0 bg-white border-t h-4 "
+          style={{
+            bottom: keyboardOpen
+              ? `${window.visualViewport?.offsetTop || 0}px`
+              : "0",
+          }}
+        />
+
+        {/* Login Drawer */}
+        <LoginDrawer
+          showLoginDrawer={showLoginDrawer}
+          setShowLoginDrawer={setShowLoginDrawer}
+          hotelId={hotelData?.id || ""}
+          onLoginSuccess={handleLoginSuccess}
+        />
       </div>
-
-      {/* Fixed Footer - Empty now, just for spacing */}
-      <div 
-        className="fixed bottom-0 left-0 right-0 bg-white border-t h-4 z-[61]"
-        style={{
-          bottom: keyboardOpen ? `${window.visualViewport?.offsetTop || 0}px` : '0',
-        }}
-      />
-
       {/* Map Modal */}
       {!isQrScan && (
         <MapModal
@@ -1066,15 +1089,7 @@ const PlaceOrderModal = ({
           setOpenPlaceOrderModal={setOpenPlaceOrderModal}
         />
       )}
-
-      {/* Login Drawer */}
-      <LoginDrawer
-        showLoginDrawer={showLoginDrawer}
-        setShowLoginDrawer={setShowLoginDrawer}
-        hotelId={hotelData?.id || ""}
-        onLoginSuccess={handleLoginSuccess}
-      />
-    </div>
+    </>
   );
 };
 
