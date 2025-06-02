@@ -16,6 +16,7 @@ export async function middleware(request: NextRequest) {
     '/partner',
     '/offers',
     '/explore',
+    '/about-us',
     '/api/auth'
   ];
 
@@ -37,7 +38,7 @@ export async function middleware(request: NextRequest) {
           role: string; 
           status?: string 
         };
-        
+
         // Superadmin always redirects to /superadmin
         if (decrypted?.role === 'superadmin') {
           return NextResponse.redirect(new URL('/superadmin', request.url));

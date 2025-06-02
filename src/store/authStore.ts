@@ -226,11 +226,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signOut: () => {
-    const { router } = require("next/navigation");
-    removeAuthCookie();
+  signOut: async() => {
+    await removeAuthCookie();
     localStorage.clear();
-    router.push("/");
+    window.location.href = "/";
     set({ userData: null, error: null });
   },
 
