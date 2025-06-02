@@ -114,8 +114,8 @@ const BottomNav = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  // Always show if there are items (removed isValidPath check)
-  const shouldShow = items.length > 0;
+  // Don't show on /captain* routes, otherwise show if items exist
+  const shouldShow = items.length > 0 && !pathname.startsWith("/captain");
 
   if (!shouldShow) return null;
 
