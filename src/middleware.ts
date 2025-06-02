@@ -1,26 +1,40 @@
 // /app/middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { decryptText } from '@/lib/encrtption';
+import { decryptText } from './lib/encrtption';
 
 export async function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token')?.value;
   const pathname = request.nextUrl.pathname;
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/login', '/signup', '/superlogin', '/hotels', '/partner','/captainlogin', '/offers','/explore'];
+  const publicRoutes = ['/login', '/signup', '/superlogin', '/hotels', '/partner','/captainlogin', '/offers','/explore','/api/auth'];
   if (publicRoutes.includes(pathname)) {
     return NextResponse.next();
   }
 
-  // Special case: Redirect partners from root to /admin
+  // Handle root path redirects based on role
   if (pathname === '/') {
     if (authToken) {
       try {
-        const decrypted = decryptText(authToken) as { id: string; role: string; status?: string };
+        const decrypted = decryptText(authToken) as { 
+          id: string; 
+          role: string; 
+          status?: string 
+        };
+        
+        // Superadmin always redirects to /superadmin
+        if (decrypted?.role === 'superadmin') {
+          return NextResponse.redirect(new URL('/superadmin', request.url));
+        }
+        
+        // Partner redirects to /admin
         if (decrypted?.role === 'partner') {
           return NextResponse.redirect(new URL('/admin', request.url));
         }
+        
+        // Regular users stay on home page
+        return NextResponse.next();
       } catch (error) {
         console.error('Error decrypting token:', error);
         // Continue with normal flow if there's an error
@@ -32,7 +46,7 @@ export async function middleware(request: NextRequest) {
   // Route access rules by role
   const roleAccessRules = {
     user: {
-      allowed: ['/profile'],
+      allowed: ['/profile', '/my-orders'],
       redirect: '/login'
     },
     partner: {
@@ -63,7 +77,7 @@ export async function middleware(request: NextRequest) {
   // Check if trying to access a protected route
   const isProtectedRoute = Object.values(roleAccessRules)
     .some(rule => rule.allowed.some(route => pathname.startsWith(route))) ||
-    inactivePartnerAllowedRoutes.includes(pathname); // Note: using includes() for exact match
+    inactivePartnerAllowedRoutes.includes(pathname);
 
   if (!isProtectedRoute) {
     return NextResponse.next();
@@ -72,12 +86,16 @@ export async function middleware(request: NextRequest) {
   // If no auth token, redirect based on the route
   if (!authToken) {
     const isSuperadminRoute = pathname.startsWith('/superadmin');
-    const redirectPath = isSuperadminRoute ? '/superLogin' : '/login';
+    const redirectPath = isSuperadminRoute ? '/superlogin' : '/login';
     return NextResponse.redirect(new URL(redirectPath, request.url));
   }
 
   try {
-    const decrypted = decryptText(authToken) as { id: string; role: string; status?: string };
+    const decrypted = decryptText(authToken) as { 
+      id: string; 
+      role: string; 
+      status?: string 
+    };
     
     if (!decrypted?.id || !decrypted?.role) {
       throw new Error('Invalid token structure');
@@ -131,6 +149,14 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    /*
+     * Match all request paths except for:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - images (image files)
+     * - api/auth (auth API routes)
+     */
     '/((?!_next/static|_next/image|favicon.ico|images|api/auth).*)',
   ],
 };

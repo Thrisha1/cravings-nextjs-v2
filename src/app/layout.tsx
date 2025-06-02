@@ -8,6 +8,7 @@ import "./globals.css";
 import "@smastrom/react-rating/style.css";
 import { Toaster } from "@/components/ui/sonner";
 import AuthInitializer from "@/providers/AuthInitializer";
+import BottomNav from "@/components/BottomNav";
 // import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
 // import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
 // import LocationAccess from "@/components/LocationAccess";
@@ -63,6 +64,7 @@ export default function RootLayout({
         {/* <PwaInstallPrompt /> */}
 
         {children}
+        <BottomNav />
       </body>
     </html>
   );

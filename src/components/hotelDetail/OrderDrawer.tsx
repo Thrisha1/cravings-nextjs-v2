@@ -39,7 +39,9 @@ export const calculateDeliveryDistanceAndCost = async (
   const { setDeliveryInfo } = useOrderStore.getState();
 
 
+
   try {
+
 
 
     const userCoordsStr = localStorage.getItem("user-location-store");
@@ -54,6 +56,7 @@ export const calculateDeliveryDistanceAndCost = async (
       return;
     }
 
+    const restaurantCoords = hotelData?.geo_location?.coordinates;
     const restaurantCoords = hotelData?.geo_location?.coordinates;
     const userLocation = [
       userLocationData.state.coords.lng,
@@ -72,10 +75,13 @@ export const calculateDeliveryDistanceAndCost = async (
 
     
 
+    
+
     if (!data.routes || data.routes.length === 0) return;
 
     const exactDistance = data.routes[0].distance / 1000;
     const distanceInKm = Math.ceil(exactDistance);
+    const deliveryRate = hotelData?.delivery_rate;
     const deliveryRate = hotelData?.delivery_rate;
 
     const { delivery_radius, first_km_range, is_fixed_rate } =
@@ -87,6 +93,9 @@ export const calculateDeliveryDistanceAndCost = async (
         cost: 0,
         ratePerKm: deliveryRate,
         isOutOfRange: true,
+      });  
+     
+  
       });  
      
   
@@ -219,6 +228,7 @@ const OrderDrawer = ({
       ? getGstAmount(baseTotal, hotelData.gst_percentage)
       : 0;
     const qrCharge = qrGroup?.extra_charge
+    const qrCharge = qrGroup?.extra_charge
       ? getExtraCharge(
           items || [],
           qrGroup.extra_charge,
@@ -259,6 +269,7 @@ const OrderDrawer = ({
       : ""}
     
     ${
+      qrGroup?.extra_charge
       qrGroup?.extra_charge
         ? `*${qrGroup.name}:* ${hotelData.currency}${qrCharge.toFixed(2)}`
         : ""
