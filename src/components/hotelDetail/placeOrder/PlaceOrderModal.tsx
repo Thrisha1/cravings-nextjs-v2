@@ -629,13 +629,11 @@ const MapModal = ({
     }
 
     if (showMapModal) {
-      setOpenPlaceOrderModal(false);
       document.body.style.overflowY = "hidden !important";
       document.body.style.maxHeight = "100vh";
     } else {
       document.body.style.overflowY = "auto";
       document.body.style.maxHeight = "auto";
-      setOpenPlaceOrderModal(true);
     }
   }, [showMapModal]);
 
@@ -757,12 +755,12 @@ const PlaceOrderModal = ({
   const isQrScan = qrId !== null && tableNumber !== 0;
   const hasLocation = !!selectedCoords || !!address;
 
-  useEffect(()=>{
-    if(open_place_order_modal && items?.length === 0) {
+  useEffect(() => {
+    if (open_place_order_modal && items?.length === 0) {
       setOpenPlaceOrderModal(false);
       setOpenDrawerBottom(true);
     }
-  },[open_place_order_modal , items])
+  }, [open_place_order_modal, items]);
 
   // Keyboard detection
   useEffect(() => {
