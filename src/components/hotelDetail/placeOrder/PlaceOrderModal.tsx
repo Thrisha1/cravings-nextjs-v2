@@ -981,19 +981,36 @@ const PlaceOrderModal = ({
     (hasMultiWhatsapp && !selectedLocation);
 
   return (
-    <FullModal open={open_place_order_modal} onOpenChange={setOpenPlaceOrderModal}>
-      <FullModalContent className="h-[calc(100vh-56px)] mt-14 flex flex-col" showCloseButton={false}>
-        <FullModalHeader>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleCancel}
-              className="p-2 rounded-full hover:bg-gray-200"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <FullModalTitle>Review Your Order</FullModalTitle>
-          </div>
-        </FullModalHeader>
+    <>
+     
+        <MapModal
+          setOpenPlaceOrderModal={setOpenPlaceOrderModal}
+          showMapModal={showMapModal}
+          setShowMapModal={setShowMapModal}
+          setSelectedLocation={setSelectedCoords}
+          setAddress={setAddress}
+          hotelData={hotelData}
+        />
+  
+      <Dialog
+        open={open_place_order_modal}
+        onOpenChange={setOpenPlaceOrderModal}
+      >
+        <DialogContent className="w-screen h-[100dvh] overflow-y-auto z-[600] bg-gray-50">
+          <DialogHeader>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => {
+                  setOpenPlaceOrderModal(false);
+                  setOpenDrawerBottom(true);
+                }}
+                className="p-2 rounded-full hover:bg-gray-200"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <DialogTitle>Review Your Order</DialogTitle>
+            </div>
+          </DialogHeader>
 
         <FullModalBody className="flex-1 overflow-hidden flex flex-col pb-44 bg-gray-50">
           <div 

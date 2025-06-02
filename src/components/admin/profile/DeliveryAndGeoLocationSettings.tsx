@@ -52,6 +52,12 @@ interface DeliveryAndGeoLocationSettingsProps {
   setIsEditingDelivery: (value: boolean) => void;
   deliverySaving: boolean;
   handleSaveDeliverySettings: () => void;
+  location: string;
+  setLocation: (value: string) => void;
+  locationSaving: boolean;
+  locationEditing: boolean;
+  setIsEditingLocation: (value: boolean) => void;
+  handleSaveLocation: () => void;
 }
 
 export function DeliveryAndGeoLocationSettings({
@@ -71,169 +77,151 @@ export function DeliveryAndGeoLocationSettings({
   setIsEditingDelivery,
   deliverySaving,
   handleSaveDeliverySettings,
+  location,
+  setLocation,
+  locationSaving,
+  locationEditing,
+  setIsEditingLocation,
+  handleSaveLocation,
 }: DeliveryAndGeoLocationSettingsProps) {
-  const [showMapModal, setShowMapModal] = useState(false);
+  const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const marker = useRef<mapboxgl.Marker | null>(null);
-  const geocoder = useRef<any>(null);
+  const [marker, setMarker] = useState<mapboxgl.Marker | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
-  // Initialize map when modal opens
   useEffect(() => {
-    if (!showMapModal || !mapContainer.current) return;
+    if (mapDialogOpen && mapContainer.current && !map.current) {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: "mapbox://styles/mapbox/streets-v12",
+        center: [
+          geoLocation.longitude || 77.5946,
+          geoLocation.latitude || 12.9716,
+        ], // Default to Bangalore if no location
+        zoom: 14,
+      });
 
-    console.log("Initializing map...");
-
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: [
-        geoLocation.longitude || 77.5946,
-        geoLocation.latitude || 12.9716,
-      ],
-      zoom: 12,
-    });
-
-    const MapboxGeocoder = require("@mapbox/mapbox-gl-geocoder");
-    // Add geocoder control
-    geocoder.current = new MapboxGeocoder({
-      accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl,
-      marker: false,
-      placeholder: "Search for places...",
-    });
-
-    map.current.addControl(geocoder.current);
-
-    // Handle geocoder result
-    geocoder.current.on("result", (e: any) => {
-      console.log(e.result, "result");
-
-      const [lng, lat] = e.result.center;
-      // Update or create marker
-      if (marker.current) {
-        marker.current.setLngLat([lng, lat]);
-      } else {
-        marker.current = new mapboxgl.Marker()
-          .setLngLat([lng, lat])
-          .addTo(map.current!);
+      // Add marker if geoLocation exists
+      if (geoLocation.latitude && geoLocation.longitude) {
+        const newMarker = new mapboxgl.Marker()
+          .setLngLat([geoLocation.longitude, geoLocation.latitude])
+          .addTo(map.current);
+        setMarker(newMarker);
       }
-      setGeoLocation({ latitude: lat, longitude: lng });
-    });
 
-    // Add marker if location exists
-    if (geoLocation.latitude && geoLocation.longitude) {
-      marker.current = new mapboxgl.Marker({
-        color: "#FF0000",
-        draggable: true,
-      })
-        .setLngLat([geoLocation.longitude, geoLocation.latitude])
-        .addTo(map.current);
+      // Add click event to place marker
+      map.current.on("click", (e) => {
+        if (marker) {
+          marker.remove();
+        }
+        const newMarker = new mapboxgl.Marker()
+          .setLngLat(e.lngLat)
+          .addTo(map.current!);
+        setMarker(newMarker);
+        setSelectedLocation({
+          lat: e.lngLat.lat,
+          lng: e.lngLat.lng,
+        });
+      });
+
+      return () => {
+        if (map.current) {
+          map.current.remove();
+          map.current = null;
+        }
+      };
     }
+  }, [mapDialogOpen, geoLocation]);
 
-    // Add click handler to update location
-    map.current.on("click", (e) => {
-      const { lng, lat } = e.lngLat;
-      setGeoLocation({ latitude: lat, longitude: lng });
-
-      // Update or create marker
-      if (marker.current) {
-        marker.current.setLngLat([lng, lat]);
-      } else {
-        marker.current = new mapboxgl.Marker()
-          .setLngLat([lng, lat])
-          .addTo(map.current!);
-      }
-    });
-
-    // Add geolocate control
-    map.current.addControl(
-      new mapboxgl.GeolocateControl({
-        positionOptions: {
-          enableHighAccuracy: true,
-        },
-        trackUserLocation: true,
-        showUserLocation: true,
-      })
-    );
-
-    // Add navigation controls
-    map.current.addControl(new mapboxgl.NavigationControl());
-
-    return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-    };
-  }, [showMapModal]);
+  const handleSaveMapLocation = () => {
+    if (selectedLocation) {
+      setGeoLocation({
+        latitude: selectedLocation.lat,
+        longitude: selectedLocation.lng,
+      });
+      handleSaveGeoLocation({
+        latitude: selectedLocation.lat,
+        longitude: selectedLocation.lng,
+      });
+      setMapDialogOpen(false);
+    }
+  };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pt-2">
       {/* Geo Location Section */}
       <div className="space-y-4 w-full">
-        <label htmlFor="placeId" className="text-lg font-semibold">
-          Location
-        </label>
-
-        {/* Map Preview */}
-        <div className="h-48 w-full rounded-md overflow-hidden relative border">
-          {geoLocation.latitude && geoLocation.longitude ? (
-            <div className="h-full w-full bg-gray-100 relative">
-              <img
-                src={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+ff0000(${geoLocation.longitude},${geoLocation.latitude})/${geoLocation.longitude},${geoLocation.latitude},16/600x300?access_token=${mapboxgl.accessToken}`}
-                alt="Map preview"
-                className="h-full w-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="h-full w-full bg-gray-100 flex items-center justify-center">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Location</h3>
+          {locationEditing ? (
+            <div className="flex gap-2">
               <Button
-                onClick={() => setShowMapModal(true)}
                 variant="outline"
-                className="flex items-center gap-2"
+                onClick={() => setIsEditingLocation(false)}
               >
-                <MapPin className="w-4 h-4" />
-                Select Location on Map
+                Cancel
+              </Button>
+              <Button onClick={handleSaveLocation} disabled={locationSaving}>
+                {locationSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
               </Button>
             </div>
+          ) : (
+            <Button
+              onClick={() => setIsEditingLocation(true)}
+              variant="ghost"
+              className="gap-2"
+            >
+              <Pencil className="w-4 h-4" />
+              Edit
+            </Button>
           )}
         </div>
 
-        <div className="flex gap-2">
-          <Button
-            onClick={async () => {
-              const location = await handleGetCurrentLocation();
-              if (location) {
-                setGeoLocation(location);
-                handleSaveGeoLocation(location);
-              }
-            }}
-            variant="outline"
-            className="text-xs"
-            disabled={geoLoading}
-          >
-            {geoLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Getting Location...
-              </>
-            ) : (
-              <>
-                <LocateFixed className="mr-2 h-4 w-4" />
-                Use Current Location
-              </>
-            )}
-          </Button>
-          <Button
-            onClick={() => setShowMapModal(true)}
-            variant="outline"
-            className="flex items-center gap-2 text-xs bg-white"
-          >
-            <MapPin className="w-4 h-4" />
-            Change Location
-          </Button>
-        </div>
+        {locationEditing ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Location Link</Label>
+              <Input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Enter your location link"
+              />
+              <div className="h-px"></div>
+              <a className="text-orange-600 underline" href="https://www.google.com/maps">Get Link {"-->"} </a>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            
+            <div className="h-48 w-full rounded-md overflow-hidden relative border">
+              {geoLocation.latitude && geoLocation.longitude ? (
+                <div className="h-full w-full bg-gray-100 relative">
+                  <img
+                    src={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+ff0000(${geoLocation.longitude},${geoLocation.latitude})/${geoLocation.longitude},${geoLocation.latitude},16/600x300?access_token=${mapboxgl.accessToken}`}
+                    alt="Map preview"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="h-full w-full bg-gray-100 flex items-center justify-center">
+                  <p className="text-muted-foreground">No location set</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {geoError && <p className="text-sm text-red-500">{geoError}</p>}
       </div>
 
@@ -435,48 +423,31 @@ export function DeliveryAndGeoLocationSettings({
         )}
       </div>
 
-      {/* Map Modal */}
-
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 ${
-          showMapModal ? "block" : "hidden"
-        }`}
-      >
-        <div className="bg-white rounded-lg p-4 w-[90vw] h-[90vh] relative">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-lg font-semibold">Select Location</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowMapModal(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          <div
-            ref={mapContainer}
-            className="h-[calc(100%-8rem)] w-full rounded-md"
-          />
-          <div className="flex justify-between items-center mt-4">
-            <div>
-              {geoLocation.latitude && geoLocation.longitude && (
-                <p className="text-sm text-muted-foreground">
-                  Selected: {geoLocation.latitude.toFixed(6)},{" "}
-                  {geoLocation.longitude.toFixed(6)}
-                </p>
-              )}
+      {/* Map Dialog */}
+      <Dialog open={mapDialogOpen} onOpenChange={setMapDialogOpen}>
+        <DialogContent className="max-w-4xl h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Select Your Location</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col h-[calc(80vh-100px)]">
+            <div
+              ref={mapContainer}
+              className="flex-1 rounded-md overflow-hidden"
+            />
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setMapDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveMapLocation}
+                disabled={!selectedLocation}
+              >
+                Save Location
+              </Button>
             </div>
-            <Button
-              onClick={() => {
-                setShowMapModal(false);
-                handleSaveGeoLocation();
-              }}
-            >
-              Confirm
-            </Button>
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
