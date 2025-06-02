@@ -225,14 +225,14 @@ const AddressCard = ({
           )}
         </Button>
 
-        <Button
+        {/* <Button
           type="button"
           onClick={() => setShowMapModal(true)}
           className="w-full"
           variant="outline"
         >
           Select Location on Map
-        </Button>
+        </Button> */}
 
         {geoError && (
           <div className="text-sm text-red-600 p-2 bg-red-50 rounded">
