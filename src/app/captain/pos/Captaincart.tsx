@@ -48,7 +48,8 @@ export const Captaincart = () => {
     tableNumber,
     loading,
     order,
-    removeFromCart
+    removeFromCart,
+    setLoading
   } = usePOSStore();
   
   const { userData } = useAuthStore();
@@ -85,8 +86,16 @@ export const Captaincart = () => {
   }, [captainData?.partner_id, getPartnerTables]);
 
   const handleCheckoutFlow = async () => {
-    console.log("Starting checkout flow. Available table numbers:", tableNumbers);
-    setIsTableModalOpen(true);
+    try {
+      setLoading(true);
+      console.log("Starting checkout flow. Available table numbers:", tableNumbers);
+      setIsTableModalOpen(true);
+    } catch (error) {
+      console.error("Error in checkout flow:", error);
+      toast.error("Failed to start checkout");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleTableSelect = (table: number) => {
@@ -128,14 +137,17 @@ export const Captaincart = () => {
 
   const performCheckout = async () => {
     try {
+      setLoading(true);
       await checkout();
       toast.success("Checkout successful");
       setIsOpen(false);
       setPhoneInput("");
-      setExtraCharges({ name: "", amount: 0 , id: "" });
+      setExtraCharges({ name: "", amount: 0, id: "" });
     } catch (error) {
       console.error("Checkout failed:", error);
       toast.error("Checkout failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -279,9 +291,9 @@ export const Captaincart = () => {
               )}
 
               <Button
+                className="w-full h-12 text-lg font-semibold"
                 onClick={handleCheckoutFlow}
                 disabled={loading}
-                className="w-full bg-black hover:bg-black/90 text-white py-3 text-base font-semibold"
               >
                 {loading ? (
                   <>
@@ -299,10 +311,7 @@ export const Captaincart = () => {
 
       {/* Table Selection Modal */}
       <Dialog open={isTableModalOpen} onOpenChange={setIsTableModalOpen}>
-        <DialogContent 
-          className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
-          onInteractOutside={(e) => e.preventDefault()}
-        >
+        <DialogContent className="sm:max-w-[425px]">
           <div className="space-y-4">
             <DialogHeader>
               <DialogTitle>Select Table Number</DialogTitle>
@@ -344,11 +353,11 @@ export const Captaincart = () => {
       </Dialog>
 
       {/* Phone Number Modal - Fixed for keyboard accessibility */}
-      <Dialog open={isPhoneModalOpen} onOpenChange={setIsPhoneModalOpen}>
-        <DialogContent 
-          className="sm:max-w-[425px] w-[95vw] sm:w-auto h-auto max-h-[95vh] flex flex-col"
-          onInteractOutside={(e) => e.preventDefault()}
-        >
+      <Dialog open={isPhoneModalOpen} onOpenChange={(open) => {
+        if (!open) return; // Prevent closing when clicking outside
+        setIsPhoneModalOpen(open);
+      }}>
+        <DialogContent className="sm:max-w-[425px] w-[95vw] sm:w-auto h-auto max-h-[95vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Customer Phone Number</DialogTitle>
             <DialogDescription>
@@ -380,11 +389,11 @@ export const Captaincart = () => {
       </Dialog>
 
       {/* Extra Charges Modal - Fixed for keyboard accessibility */}
-      <Dialog open={isExtraChargesModalOpen} onOpenChange={setIsExtraChargesModalOpen}>
-        <DialogContent 
-          className="sm:max-w-[425px] w-[95vw] sm:w-auto h-auto max-h-[95vh] flex flex-col"
-          onInteractOutside={(e) => e.preventDefault()}
-        >
+      <Dialog open={isExtraChargesModalOpen} onOpenChange={(open) => {
+        if (!open) return; // Prevent closing when clicking outside
+        setIsExtraChargesModalOpen(open);
+      }}>
+        <DialogContent className="sm:max-w-[425px] w-[95vw] sm:w-auto h-auto max-h-[95vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Extra Charges</DialogTitle>
             <DialogDescription>

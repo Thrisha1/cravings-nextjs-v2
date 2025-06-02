@@ -4,7 +4,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, PlusCircle } from "lucide-react";
+import { LogOut, PlusCircle, X } from "lucide-react";
 import Link from "next/link";
 import CaptainOrdersTab from "./CaptainOrdertab";
 import { CaptainPOS } from "./pos/CaptainPOS";
@@ -77,20 +77,29 @@ export default function CaptainDashboard() {
         </Card>
       </div>
 
-      {/* POS Dialog */}
-      <Dialog open={isPOSOpen} onOpenChange={(open) => {
-        // Only allow closing through the cancel button
-        if (!open && cartItems.length > 0) {
-          toast.error("Please complete or cancel the current order first");
-          return;
-        }
-        setIsPOSOpen(open);
-      }}>
-        <DialogContent className="max-w-none w-screen h-[100dvh] p-0 sm:p-0 flex flex-col">
-          <DialogHeader className="p-4 border-b">
-            <DialogTitle>Create New Order</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-hidden flex flex-col h-[calc(100dvh-8rem)]">
+      {/* POS Overlay */}
+      {isPOSOpen && (
+        <div className="fixed inset-0 bg-white z-50 flex flex-col">
+          <div className="flex-none p-4 border-b">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Create New Order</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (cartItems.length > 0) {
+                    toast.error("Please complete or cancel the current order first");
+                    return;
+                  }
+                  setIsPOSOpen(false);
+                }}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-hidden flex flex-col">
             <div className="flex-1 overflow-y-auto p-4">
               <CaptainPOS />
             </div>
@@ -98,7 +107,7 @@ export default function CaptainDashboard() {
               <Captaincart />
             </div>
           </div>
-          <div className="flex-none flex justify-end gap-2 px-4 py-3 border-t mt-2">
+          <div className="flex-none flex justify-end gap-2 px-4 py-3 border-t">
             <Button 
               variant="outline" 
               onClick={() => {
@@ -113,8 +122,8 @@ export default function CaptainDashboard() {
               Cancel
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* Modals */}
       <CaptainCheckoutModal />

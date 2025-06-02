@@ -101,14 +101,27 @@ export const CaptainCheckoutModal = () => {
   const grandTotal = subtotal + gstAmount;
 
   // Format order time
-  const orderTime = new Date(order.createdAt).toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: true
-  });
+  const orderTime = (() => {
+    try {
+      const date = new Date(order.createdAt);
+      if (isNaN(date.getTime())) {
+        console.error("Invalid date:", order.createdAt);
+        return "Invalid date";
+      }
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+        timeZone: 'Asia/Kolkata'
+      });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Invalid date";
+    }
+  })();
 
   return (
     <>
@@ -116,7 +129,7 @@ export const CaptainCheckoutModal = () => {
         open={postCheckoutModalOpen}
         onOpenChange={setPostCheckoutModalOpen}
       >
-        <DialogContent className="max-w-none w-screen h-[100dvh] p-0 sm:p-0 flex flex-col">
+        <DialogContent className="max-w-none w-[95vw] sm:w-[90vw] md:w-[80vw] lg:w-[70vw] h-[95vh] sm:h-[90vh] p-0 sm:p-0 flex flex-col">
           <DialogHeader className="p-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] border-b sticky top-0 bg-white z-10">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between pt-1">

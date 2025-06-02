@@ -30,6 +30,7 @@ export interface ExtraCharge {
 
 interface POSState {
   loading: boolean;
+  setLoading: (loading: boolean) => void;
   cartItems: CartItem[];
   extraCharges: ExtraCharge[];
   totalAmount: number ;
@@ -68,6 +69,7 @@ interface POSState {
 
 export const usePOSStore = create<POSState>((set, get) => ({
   loading: false,
+  setLoading: (loading: boolean) => set({ loading }),
   cartItems: [],
   extraCharges: [],
   totalAmount: 0,
@@ -467,7 +469,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
           ...orderResponse.insert_orders_one,
           items: cartItems,
           extraCharges: extraCharges,
-          deliveryAddress: get().deliveryAddress || "", 
+          deliveryAddress: get().deliveryAddress || "",
+          createdAt: createdAt
         } as unknown as Order,
       });
       set({ postCheckoutModalOpen: true });
