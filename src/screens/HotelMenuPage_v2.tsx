@@ -57,8 +57,6 @@ interface HotelMenuPageProps {
   qrId?: string | null;
 }
 
-
-
 const HotelMenuPage = ({
   offers,
   hoteldata,
@@ -80,7 +78,7 @@ const HotelMenuPage = ({
     },
   };
 
-  const { setHotelId, genOrderId } = useOrderStore();
+  const { setHotelId, genOrderId, open_place_order_modal } = useOrderStore();
   
   const pathname = usePathname();
 
@@ -138,101 +136,105 @@ const HotelMenuPage = ({
         color: styles.color,
         fontFamily: theme?.fontFamily || "Poppins, sans-serif",
       }}
-      className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 lg:px-[20%] `}
+      className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 lg:px-[20%]`}
     >
-
-      {/* shop closed modal */}
-      <ShopClosedModalWarning
-        hotelId={hoteldata?.id}
-        isShopOpen={hoteldata?.is_shop_open}
-      />
-
-      {/* top part  */}
-      <section className="px-[8%] pt-[20px]">
-        {/* hotel details  */}
-        <div
-          style={{
-            alignItems: theme?.infoAlignment || "start",
-          }}
-          className="flex flex-col gap-3"
-        >
-          {/* banner image  */}
-          <HotelBanner hoteldata={hoteldata} styles={styles} />
-
-          <h1
-            style={{
-              textAlign: theme?.infoAlignment === "center" ? "center" : "left",
-            }}
-            className={"font-black text-3xl max-w-[250px]"}
-            dangerouslySetInnerHTML={{ __html: hoteldata?.store_name || "" }}
+      {/* Only show menu content when not in order placement view */}
+      {!open_place_order_modal ? (
+        <>
+          {/* shop closed modal */}
+          <ShopClosedModalWarning
+            hotelId={hoteldata?.id}
+            isShopOpen={hoteldata?.is_shop_open}
           />
 
-          <DescriptionWithTextBreak
-            style={{
-              textAlign: theme?.infoAlignment === "center" ? "center" : "left",
-            }}
-            accent={styles.accent}
-          >
-            {hoteldata?.description}
-          </DescriptionWithTextBreak>
-        </div>
+          {/* top part  */}
+          <section className="px-[8%] pt-[20px]">
+            {/* hotel details  */}
+            <div
+              style={{
+                alignItems: theme?.infoAlignment || "start",
+              }}
+              className="flex flex-col gap-3"
+            >
+              {/* banner image  */}
+              <HotelBanner hoteldata={hoteldata} styles={styles} />
 
-        {/* right top button  */}
-        <div className="absolute right-[8%] top-[20px] flex flex-col items-center gap-3">
-          {hoteldata?.id === auth?.id && (
-            <ThemeChangeButton hotelData={hoteldata} theme={theme} />
+              <h1
+                style={{
+                  textAlign: theme?.infoAlignment === "center" ? "center" : "left",
+                }}
+                className={"font-black text-3xl max-w-[250px]"}
+                dangerouslySetInnerHTML={{ __html: hoteldata?.store_name || "" }}
+              />
+
+              <DescriptionWithTextBreak
+                style={{
+                  textAlign: theme?.infoAlignment === "center" ? "center" : "left",
+                }}
+                accent={styles.accent}
+              >
+                {hoteldata?.description}
+              </DescriptionWithTextBreak>
+            </div>
+
+            {/* right top button  */}
+            <div className="absolute right-[8%] top-[20px] flex flex-col items-center gap-3">
+              {hoteldata?.id === auth?.id && (
+                <ThemeChangeButton hotelData={hoteldata} theme={theme} />
+              )}
+              <SocialLinkList styles={styles} socialLinks={socialLinks} hotelId={hoteldata?.id} />
+            </div>
+          </section>
+
+          {/* search bar  */}
+          <section className="px-[8%]">
+            <SearchMenu
+              hotelData={hoteldata}
+              feature_flags={hoteldata?.feature_flags || ""}
+              currency={hoteldata?.currency}
+              styles={styles}
+              menu={hoteldata.menus}
+            />
+          </section>
+
+          {/* offers  */}
+          {offers.length > 0 && (
+            <section className="px-[8%]">
+              <OfferList
+                offers={offers}
+                styles={styles}
+                menus={hoteldata?.menus}
+                features={getFeatures(hoteldata?.feature_flags || "")}
+              />
+            </section>
           )}
-          <SocialLinkList styles={styles} socialLinks={socialLinks} hotelId={hoteldata?.id} />
-        </div>
-      </section>
 
-      {/* search bar  */}
-      <section className="px-[8%]">
-        <SearchMenu
-          hotelData={hoteldata}
-          feature_flags={hoteldata?.feature_flags || ""}
-          currency={hoteldata?.currency}
-          styles={styles}
-          menu={hoteldata.menus}
-        />
-      </section>
+          {/* popular  */}
+          {topItems.length > 0 && (
+            <section>
+              <PopularItemsList
+                hotelData={hoteldata}
+                currency={hoteldata?.currency}
+                items={topItems}
+                styles={styles}
+              />
+            </section>
+          )}
 
-      {/* offers  */}
-      {offers.length > 0 && (
-        <section className="px-[8%]">
-          <OfferList
-            offers={offers}
-            styles={styles}
-            menus={hoteldata?.menus}
-            features={getFeatures(hoteldata?.feature_flags || "")}
-          />
-        </section>
-      )}
-
-      {/* popular  */}
-      {topItems.length > 0 && (
-        <section>
-          <PopularItemsList
-            hotelData={hoteldata}
-            currency={hoteldata?.currency}
-            items={topItems}
-            styles={styles}
-          />
-        </section>
-      )}
-
-      {/* menu  */}
-      <section>
-        <MenuItemsList
-          currency={hoteldata?.currency}
-          styles={styles}
-          items={items}
-          hotelData={hoteldata}
-          categories={categories}
-          selectedCategory={selectedCategory}
-          menu={hoteldata?.menus}
-        />
-      </section>
+          {/* menu  */}
+          <section>
+            <MenuItemsList
+              currency={hoteldata?.currency}
+              styles={styles}
+              items={items}
+              hotelData={hoteldata}
+              categories={categories}
+              selectedCategory={selectedCategory}
+              menu={hoteldata?.menus}
+            />
+          </section>
+        </>
+      ) : null}
 
       {/* order drawer  */}
       {((pathname.includes("qrScan") &&
@@ -251,14 +253,16 @@ const HotelMenuPage = ({
       )}
 
       {/* rating  */}
-      <section
-        className={`px-[8.5%] mt-10 ${hoteldata?.footnote ? "" : "mb-40"}`}
-      >
-        <RateThis styles={styles} hotel={hoteldata} type="hotel" />
-      </section>
+      {!open_place_order_modal && (
+        <section
+          className={`px-[8.5%] mt-10 ${hoteldata?.footnote ? "" : "mb-40"}`}
+        >
+          <RateThis styles={styles} hotel={hoteldata} type="hotel" />
+        </section>
+      )}
 
       {/* footnote  */}
-      {hoteldata?.footnote && (
+      {hoteldata?.footnote && !open_place_order_modal && (
         <section
           style={{
             borderTop: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,

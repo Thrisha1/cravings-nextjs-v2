@@ -1,31 +1,12 @@
 "use client";
 import { HotelData } from "@/app/hotels/[...id]/page";
 import { Styles } from "@/screens/HotelMenuPage_v2";
-import HeadingWithAccent from "@/components/HeadingWithAccent";
 import React, { useEffect, useState } from "react";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import useOrderStore, { OrderItem } from "@/store/orderStore";
+import useOrderStore from "@/store/orderStore";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../ui/table";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
-import { QrGroup, PricingRule } from "@/app/admin/qr-management/page";
+import { QrGroup } from "@/app/admin/qr-management/page";
 import PlaceOrderModal from "./placeOrder/PlaceOrderModal";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 
@@ -133,27 +114,20 @@ const OrderDrawer = ({
 }) => {
   const {
     userAddress,
-    order,
     items,
     orderId,
-    increaseQuantity,
-    decreaseQuantity,
     open_drawer_bottom,
     setOpenDrawerBottom,
-    removeItem,
-    coordinates,
     open_order_drawer,
     setOpenPlaceOrderModal,
     setOpenOrderDrawer,
     deliveryInfo,
-    setDeliveryInfo,
   } = useOrderStore();
   const pathname = usePathname();
-  const [isLoading, setIsLoading] = useState(false);
   const [isQrScan, setIsQrScan] = useState(false);
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
-    const [isMoveUp, setMoveUp] = useState(true);
-    const [lastScrollY, setLastScrollY] = useState(0);
+  const [isMoveUp, setMoveUp] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
     setIsQrScan(pathname.includes("qrScan") && !!qrId && !(tableNumber === 0));
@@ -307,13 +281,7 @@ const OrderDrawer = ({
     } catch (error) {
       console.error("Error placing order:", error);
       toast.error("Failed to place order. Please try again.");
-    } finally {
-      setIsLoading(false);
     }
-  };
-
-  const handleViewOrder = () => {
-    setOpenOrderDrawer(true);
   };
 
   useEffect(() => {
@@ -380,7 +348,7 @@ const OrderDrawer = ({
         <div
           onClick={handlePlaceOrder}
           style={{ color: styles.accent }}
-          className="font-black relative"
+          className="font-black relative cursor-pointer"
         >
           View Order
         </div>
