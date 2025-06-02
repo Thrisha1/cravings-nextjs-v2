@@ -38,6 +38,7 @@ export function MenuTab() {
     updateItem,
     deleteItem,
     groupedItems,
+    updateCategoriesAsBatch,
   } = useMenuStore();
   const [isCategoryEditing, setIsCategoryEditing] = useState(false);
   const { adminOffers, fetchAdminOffers } = useAdminOfferStore();
@@ -270,14 +271,15 @@ export function MenuTab() {
             priority: items[0].category.priority || 0,
           }))}
           onSubmit={async (updatedCategories) => {
-            await updateItemsAsBatch(
-              updatedCategories.map(cat => ({
-                id: cat.id,
-                priority: cat.priority || 0,
-              }))
-            );
-            setIsCategoryEditing(false);
-            fetchMenu(); // Refresh the menu to get the new categories
+            try {
+              // Use updateCategoriesAsBatch to update both names and priorities
+              await updateCategoriesAsBatch(updatedCategories);
+              setIsCategoryEditing(false);
+              fetchMenu(); // Refresh the menu to get the new categories
+            } catch (error) {
+              console.error("Failed to update categories:", error);
+              toast.error("Failed to update categories");
+            }
           }}
           onCancel={() => setIsCategoryEditing(false)}
         />
