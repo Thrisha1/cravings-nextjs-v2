@@ -62,6 +62,8 @@ interface POSState {
   calculateTotalWithCharges: () => number;
   isCaptainOrder: boolean;
   setIsCaptainOrder: (isCaptain: boolean) => void;
+  isPOSOpen: boolean;
+  setIsPOSOpen: (open: boolean) => void;
 }
 
 export const usePOSStore = create<POSState>((set, get) => ({
@@ -77,6 +79,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   editOrderModalOpen: false,
   isCaptainOrder: false,
   deliveryAddress: "",
+  isPOSOpen: false,
 
   setDeliveryAddress: (address: string) => {
     set({ deliveryAddress: address });
@@ -504,4 +507,6 @@ export const usePOSStore = create<POSState>((set, get) => ({
       throw error;
     }
   },
+
+  setIsPOSOpen: (open) => set({ isPOSOpen: open }),
 }));

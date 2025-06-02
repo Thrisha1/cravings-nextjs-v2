@@ -8,7 +8,6 @@ import React, { useEffect, useState } from "react";
 
 const BottomNav = () => {
   const pathname = usePathname();
-  const [isValidPath, setIsValidPath] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const { userData } = useAuthStore();
@@ -97,14 +96,6 @@ const BottomNav = () => {
   const items = getNavItems();
 
   useEffect(() => {
-    // Check if current path matches any of the navigation items
-    const isvalidpath = items.some((item) => 
-      item.exactMatch ? pathname === item.href : pathname.startsWith(item.href)
-    );
-    setIsValidPath(isvalidpath);
-  }, [pathname, items]);
-
-  useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       
@@ -123,13 +114,15 @@ const BottomNav = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  // Always show for non-logged-in users, otherwise check valid path
-  const shouldShow = !userData?.role || isValidPath;
+  // Don't show on /captain* routes, otherwise show if items exist
+  const shouldShow = items.length > 0 && !pathname.startsWith("/captain");
 
-  if (!shouldShow || items.length === 0) return null;
+  if (!shouldShow) return null;
 
   return (
     <section className={`lg:hidden`}>
+      {/* Spacer to prevent content from being hidden behind the fixed nav */}
+      <div className="h-[64px] w-full" aria-hidden="true"></div>
       {/* Bottom Navigation Bar */}
       <div 
         className={`fixed bottom-0 left-0 w-full bg-white px-4 py-3 flex justify-around z-[500] border-t border-gray-200 transition-transform duration-300 ${

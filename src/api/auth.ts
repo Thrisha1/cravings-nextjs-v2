@@ -142,7 +142,6 @@ export const partnerMutation = `
     password
     whatsapp_numbers
     store_name
-    location
     status
     upi_id
     description

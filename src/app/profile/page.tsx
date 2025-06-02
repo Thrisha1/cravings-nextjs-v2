@@ -93,6 +93,7 @@ interface CaptainOrder {
     };
   }>;
 }
+import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
 
 interface GeoJSONPoint {
   type: "Point";
@@ -124,6 +125,7 @@ export default function ProfilePage() {
     latitude: 0,
     longitude: 0,
   });
+  const [location, setLocation] = useState("");
   const { claimedOffers } = useClaimedOffersStore();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -138,6 +140,7 @@ export default function ProfilePage() {
     whatsappNumber: false,
     footNote: false,
     geoLocation: false,
+    location: false,
     deliveryRate: false,
     instaLink: false,
     gst: false,
@@ -151,6 +154,7 @@ export default function ProfilePage() {
     currency: false,
     footNote: false,
     geoLocation: false,
+    location: false,
     deliveryRate: false,
     instaLink: false,
     gst: false,
@@ -253,6 +257,7 @@ export default function ProfilePage() {
         latitude: userData?.geo_location?.coordinates?.[1] || 0,
         longitude: userData?.geo_location?.coordinates?.[0] || 0,
       });
+      setLocation(userData?.location || "");
     }
   }, [userData]);
 
@@ -1385,6 +1390,55 @@ export default function ProfilePage() {
     }
   };
 
+
+  
+
+  
+
+  const handleSaveLocation = async () => {
+    try {
+      const isValid =
+        /^https:\/\/(maps\.app\.goo\.gl\/[a-zA-Z0-9]+|www\.google\.[a-z.]+\/maps\/.+)$/i.test(
+          location.trim()
+        );
+  
+      if (!isValid) {
+        throw new Error("Invalid Google Maps URL");
+      }
+  
+      setIsSaving((prev) => ({ ...prev, location: true }));
+      toast.loading("Updating location...");
+  
+      const response = await getCoordinatesFromLink(location.trim());
+      const geoLoc = (await response).coordinates;
+
+      if (!geoLoc) {
+        throw new Error("Failed to extract coordinates from the link");
+      }
+  
+  
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          location: location.trim(),
+          geo_location: geoLoc,
+        },
+      });
+  
+      toast.success("Location updated successfully!");  
+      revalidateTag(userData?.id as string);
+      setState({
+        location: location.trim(),
+        geo_location: geoLoc,
+      });
+      setIsEditing((prev) => ({ ...prev, location: false }));
+    } catch (error) {
+      toast.error("Enter a valid Google Maps location link");
+      console.error(error);
+    } finally {
+      setIsSaving((prev) => ({ ...prev, location: false }));
+    }
+  };
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
   }
@@ -1402,7 +1456,7 @@ export default function ProfilePage() {
               <div
                 onClick={() => {
                   signOut();
-                  router.push("/offers");
+                  router.push("/");
                 }}
                 className="cursor-pointer hover:text-red-500 transition-all rounded-full flex flex-col items-center justify-center gap-1 text-gray-500"
               >
@@ -1711,6 +1765,14 @@ export default function ProfilePage() {
               </div>
 
               <DeliveryAndGeoLocationSettings
+                handleSaveLocation={handleSaveLocation}
+                locationSaving={isSaving.location}
+                locationEditing={isEditing.location}
+                location={location}
+                setLocation={setLocation}
+                setIsEditingLocation={(value) =>
+                  setIsEditing({ ...isEditing, location: value })
+                }
                 geoLocation={geoLocation}
                 setGeoLocation={setGeoLocation}
                 geoLoading={isLoading}

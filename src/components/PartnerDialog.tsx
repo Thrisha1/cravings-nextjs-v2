@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -14,26 +13,20 @@ import {
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
 import { useLocationStore } from "@/store/locationStore";
-import { MapPin } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { resolveShortUrl } from "@/app/actions/extractLatLonFromGoogleMapsUrl";
-// import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function PartnerDialog() {
   const router = useRouter();
-  const { signUpWithEmailForPartner, loading } =
-    useAuthStore();
+  const { signUpWithEmailForPartner, loading } = useAuthStore();
   const { locationData, countries } = useLocationStore();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     hotelName: "",
-    area: "", 
-    location: "",
+    area: "",
     phone: "",
     upiId: "",
     isInIndia: true,
@@ -42,23 +35,10 @@ export function PartnerDialog() {
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [authMethod, setAuthMethod] = useState<"google" | "email">("google");
-
-  // const validateUpiId = (upiId: string) => {
-  //   const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z]{3,}$/;
-  //   return upiRegex.test(upiId);
-  // };
 
   const validateForm = async () => {
-    // if (!validateUpiId(formData.upiId)) {
-    //   setError("Please enter a valid UPI ID (format: username@bankname)");
-    //   setIsSubmitting(false);
-    //   return false;
-    // }
-
     if (
       !formData.hotelName ||
-      !formData.location ||
       !formData.phone ||
       !formData.country ||
       (formData.country === "India" && (!formData.state || !formData.area))
@@ -67,15 +47,11 @@ export function PartnerDialog() {
       setIsSubmitting(false);
       return false;
     }
-    const urlWithCoordinates = await resolveShortUrl(formData.location);
-
+    
     // Save form data to localStorage
     localStorage.setItem(
       "partnerFormData",
-      JSON.stringify({
-        ...formData,
-        location: urlWithCoordinates ?? formData.location,
-      })
+      JSON.stringify(formData)
     );
     return true;
   };
@@ -90,21 +66,20 @@ export function PartnerDialog() {
     }
 
     try {
-        await signUpWithEmailForPartner(
-          formData.hotelName,
-          formData.phone,
-          formData.upiId,
-          formData.area,
-          formData.location,
-          formData.email,
-          formData.password,
-          formData.country,
-          formData.state
-        );
-        toast.success("Account created successfully!");
-        setTimeout(() => {
-          router.push("/admin");
-        }, 1000);
+      await signUpWithEmailForPartner(
+        formData.hotelName,
+        formData.phone,
+        formData.upiId,
+        formData.area,
+        formData.email,
+        formData.password,
+        formData.country,
+        formData.state
+      );
+      toast.success("Account created successfully!");
+      setTimeout(() => {
+        router.push("/admin");
+      }, 1000);
     } catch (error: unknown) {
       setError(
         error instanceof Error ? error.message : "An unexpected error occurred"
@@ -113,10 +88,6 @@ export function PartnerDialog() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const openGoogleMaps = () => {
-    window.open("https://www.google.com/maps", "_blank");
   };
 
   return (
@@ -128,8 +99,6 @@ export function PartnerDialog() {
       </div>
       <ScrollArea className="flex-1 px-6 mt-5">
         <form className="space-y-6 pb-10 px-2">
-          
-
           <div className="space-y-2">
             <Label
               htmlFor="hotelName"
@@ -168,25 +137,6 @@ export function PartnerDialog() {
               required
             />
           </div>
-
-          {/* <div className="space-y-2">
-            <Label
-              htmlFor="upiId"
-              className="text-sm font-medium text-gray-700"
-            >
-              UPI ID
-            </Label>
-            <Input
-              id="upiId"
-              placeholder="Enter your UPI ID (e.g. username@bankname)"
-              value={formData.upiId}
-              onChange={(e) =>
-                setFormData({ ...formData, upiId: e.target.value })
-              }
-              className="w-full"
-              required
-            />
-          </div> */}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between space-x-2 mb-4">
@@ -287,79 +237,36 @@ export function PartnerDialog() {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label
-              htmlFor="location"
-              className="text-sm font-medium text-gray-700"
-            >
-              Google Map Location
-            </Label>
-            <div className="relative">
-              <Textarea
-                id="location"
-                placeholder="Paste your gmap location"
-                value={formData.location}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: e.target.value })
-                }
-                className="min-h-[100px] pr-10"
-                required
-              />
-              <Button
-                type="button"
-                className="absolute right-2 top-2"
-                onClick={openGoogleMaps}
-              >
-                <MapPin className="h-4 w-4 text-gray-500" />
-              </Button>
-            </div>
+          <div className="space-y-2 text-gray-700">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+              required
+            />
           </div>
 
-          {/* <div className="flex items-center justify-between space-x-2 mt-6">
-            <Label htmlFor="auth-method" className="text-sm text-gray-600">
-              {"Sign up with Email"}
-            </Label>
-            <Switch
-              id="auth-method"
-              checked={authMethod === "email"}
-              onCheckedChange={(checked) =>
-                setAuthMethod(checked ? "email" : "google")
+          <div className="space-y-2 text-gray-700">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
               }
-              className="data-[state=checked]:bg-orange-600"
+              required
+              minLength={6}
             />
-          </div> */}
-            <>
-              <div className="space-y-2 text-gray-700">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  required
-                />
-              </div>
+          </div>
 
-              <div className="space-y-2 text-gray-700">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  required
-                  minLength={6}
-                />
-              </div>
-            </>
-
-            {error && (
+          {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4">
               {error}
             </div>

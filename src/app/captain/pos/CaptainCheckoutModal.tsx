@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { usePOSStore } from "@/store/posStore";
 import { Printer, Edit, Loader2 } from "lucide-react";
 import { useReactToPrint } from "react-to-print";
-import { useRef } from "react";
-import { useAuthStore, Captain } from "@/store/authStore";
+import { useAuthStore, Captain, Partner } from "@/store/authStore";
+import { fetchFromHasura } from "@/lib/hasuraClient";
 import KOTTemplate from "@/components/admin/pos/KOTTemplate";
 import BillTemplate from "@/components/admin/pos/BillTemplate";
 
@@ -25,8 +25,41 @@ export const CaptainCheckoutModal = () => {
     postCheckoutModalOpen,
     setEditOrderModalOpen,
   } = usePOSStore();
-    const { userData } = useAuthStore();
-    const captainData = userData as Captain;
+  const { userData } = useAuthStore();
+  const captainData = userData as Captain;
+  const [partnerData, setPartnerData] = useState<Partner | null>(null);
+
+  // Fetch partner data to get currency
+  useEffect(() => {
+    const fetchPartnerData = async () => {
+      if (captainData?.partner_id) {
+        try {
+          const response = await fetchFromHasura(
+            `
+            query GetPartnerById($partner_id: uuid!) {
+              partners_by_pk(id: $partner_id) {
+                id
+                currency
+                gst_percentage
+                store_name
+              }
+            }
+            `,
+            {
+              partner_id: captainData.partner_id
+            }
+          );
+          if (response.partners_by_pk) {
+            setPartnerData(response.partners_by_pk);
+          }
+        } catch (error) {
+          console.error("Error fetching partner data:", error);
+        }
+      }
+    };
+
+    fetchPartnerData();
+  }, [captainData?.partner_id]);
 
   const billRef = useRef<HTMLDivElement>(null);
   const kotRef = useRef<HTMLDivElement>(null);
@@ -53,8 +86,8 @@ export const CaptainCheckoutModal = () => {
 
   if (!order) return null;
 
-  const currency = captainData?.currency || "$";
-  const gstPercentage = captainData?.gst_percentage || 0;
+  const currency = partnerData?.currency || "$";
+  const gstPercentage = partnerData?.gst_percentage || 0;
 
   const calculateGst = (amount: number) => {
     return (amount * gstPercentage) / 100;
@@ -66,6 +99,16 @@ export const CaptainCheckoutModal = () => {
   const subtotal = foodSubtotal + extraChargesTotal;
   const gstAmount = calculateGst(foodSubtotal);
   const grandTotal = subtotal + gstAmount;
+
+  // Format order time
+  const orderTime = new Date(order.createdAt).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true
+  });
 
   return (
     <>
@@ -94,7 +137,8 @@ export const CaptainCheckoutModal = () => {
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto p-4">
             <div className="max-w-2xl mx-auto space-y-6">
               {/* Order Status */}
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -112,14 +156,7 @@ export const CaptainCheckoutModal = () => {
                     <div className="space-y-1 text-right">
                       <div className="text-sm text-gray-500">Order Time</div>
                       <div className="font-medium">
-                        {new Date().toLocaleString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: 'numeric',
-                          minute: 'numeric',
-                          hour12: true
-                        })}
+                        {orderTime}
                       </div>
                     </div>
                   </div>
@@ -178,7 +215,7 @@ export const CaptainCheckoutModal = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3">
+              <div className="flex gap-3 pb-4">
                 <Button
                   variant="outline"
                   onClick={handleEditOrder}
@@ -187,14 +224,6 @@ export const CaptainCheckoutModal = () => {
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Order
                 </Button>
-                {/* <Button onClick={handlePrintKOT} className="flex-1 gap-2">
-                  <Printer className="h-4 w-4" />
-                  Print KOT
-                </Button>
-                <Button onClick={handlePrintBill} className="flex-1 gap-2">
-                  <Printer className="h-4 w-4" />
-                  Print Bill
-                </Button> */}
               </div>
             </div>
           </div>
@@ -210,7 +239,7 @@ export const CaptainCheckoutModal = () => {
         <BillTemplate 
           ref={billRef} 
           order={order} 
-          userData={captainData as any}
+          userData={partnerData || captainData as any}
           extraCharges={extraCharges}
         />
       </div>

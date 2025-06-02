@@ -43,15 +43,15 @@ const TodaysEarnings = ({ orders } : { orders : Order[] }) => {
   }, [orders , userData]);
 
   return (
-    <div className="bg-gray-100 rounded-xl w-full py-6 px-4 sm:px-10 mb-5 flex justify-between items-center">
+    <div className="bg-gray-100 rounded-xl w-full py-5 px-4 sm:px-6 mb-5 flex flex-col sm:flex-row justify-between gap-4 sm:items-center">
       <div>
         <h1 className="text-lg font-bold">Today's Earnings</h1>
-        <p className="text-4xl font-bold">
-          {`${(userData as Partner)?.currency || ""}${todaysEarnings}`}
+        <p className="text-2xl sm:text-4xl font-bold">
+          {`${(userData as Partner)?.currency || ""}${todaysEarnings.toFixed(2)}`}
         </p>
       </div>
 
-      <Link href={'/my-earnings'} className="flex gap-2 bg-black rounded-lg text-xs sm:text-sm text-white font-medium py-2 px-4 items-center">
+      <Link href={'/my-earnings'} className="flex gap-2 bg-black rounded-lg text-xs sm:text-sm text-white font-medium py-2 px-4 items-center justify-center sm:justify-start w-full sm:w-auto">
         <RiBillFill /> View Report
       </Link>
     </div>

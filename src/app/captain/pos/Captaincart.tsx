@@ -299,106 +299,131 @@ export const Captaincart = () => {
 
       {/* Table Selection Modal */}
       <Dialog open={isTableModalOpen} onOpenChange={setIsTableModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Select Table Number</DialogTitle>
-            <DialogDescription>
-              {tableNumbers.length === 0 ? (
-                "No tables available. Please contact the restaurant admin."
-              ) : (
-                "Please choose the table for this order"
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          {tableNumbers.length === 0 ? (
-            <div className="py-4 text-center text-muted-foreground">
-              No tables configured for this restaurant
+        <DialogContent 
+          className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <div className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>Select Table Number</DialogTitle>
+              <DialogDescription>
+                {tableNumbers.length === 0 ? (
+                  "No tables available. Please contact the restaurant admin."
+                ) : (
+                  "Please choose the table for this order"
+                )}
+              </DialogDescription>
+            </DialogHeader>
+
+            {tableNumbers.length === 0 ? (
+              <div className="text-center text-muted-foreground py-4">
+                No tables configured for this restaurant
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-4 py-4">
+                {tableNumbers.map((table) => (
+                  <Button
+                    key={table}
+                    variant={tableNumber === table ? "default" : "outline"}
+                    onClick={() => handleTableSelect(table)}
+                    className="h-12"
+                  >
+                    Table {table}
+                  </Button>
+                ))}
+              </div>
+            )}
+
+            <div className="pt-4">
+              <Button variant="secondary" onClick={handleSkipTable} className="w-full">
+                Skip (No Table)
+              </Button>
             </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-4 py-4">
-              {tableNumbers.map((table) => (
-                <Button
-                  key={table}
-                  variant={tableNumber === table ? "default" : "outline"}
-                  onClick={() => handleTableSelect(table)}
-                  className="h-12"
-                >
-                  Table {table}
-                </Button>
-              ))}
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="secondary" onClick={handleSkipTable}>
-              Skip (No Table)
-            </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Phone Number Modal */}
+      {/* Phone Number Modal - Fixed for keyboard accessibility */}
       <Dialog open={isPhoneModalOpen} onOpenChange={setIsPhoneModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
+        <DialogContent 
+          className="sm:max-w-[425px] w-[95vw] sm:w-auto h-auto max-h-[95vh] flex flex-col"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Customer Phone Number</DialogTitle>
             <DialogDescription>
               Enter customer phone number (optional)
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Input
-              type="tel"
-              placeholder="Phone number"
-              value={phoneInput}
-              onChange={(e) => setPhoneInput(e.target.value)}
-              className="w-full"
-            />
+
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="py-4">
+              <Input
+                type="tel"
+                placeholder="Phone number"
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                className="w-full"
+              />
+            </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="secondary" onClick={handleSkipPhone}>
+
+          <div className="flex gap-2 flex-shrink-0 pt-4">
+            <Button variant="secondary" onClick={handleSkipPhone} className="flex-1">
               Skip
             </Button>
-            <Button onClick={handlePhoneSubmit}>Continue</Button>
-          </DialogFooter>
+            <Button onClick={handlePhoneSubmit} className="flex-1">
+              Continue
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Extra Charges Modal */}
+      {/* Extra Charges Modal - Fixed for keyboard accessibility */}
       <Dialog open={isExtraChargesModalOpen} onOpenChange={setIsExtraChargesModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
+        <DialogContent 
+          className="sm:max-w-[425px] w-[95vw] sm:w-auto h-auto max-h-[95vh] flex flex-col"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Extra Charges</DialogTitle>
             <DialogDescription>
               Add any extra charges (optional)
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className=" w-full">
-              <Input
-                id="charge-name"
-                placeholder="Charge name"
-                className="w-full"
-                value={extraCharges.name}
-                onChange={(e) => setExtraCharges({...extraCharges, name: e.target.value})}
-              />
-            </div>
-            <div className="w-full">
-              <Input
-                id="charge-amount"
-                type="number"
-                placeholder="Amount"
-                className="w-full"
-                value={extraCharges.amount || ""}
-                onChange={(e) => setExtraCharges({...extraCharges, amount: Number(e.target.value)})}
-              />
+
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="grid gap-4 py-4">
+              <div className="w-full">
+                <Input
+                  id="charge-name"
+                  placeholder="Charge name"
+                  className="w-full"
+                  value={extraCharges.name}
+                  onChange={(e) => setExtraCharges({...extraCharges, name: e.target.value})}
+                />
+              </div>
+              <div className="w-full">
+                <Input
+                  id="charge-amount"
+                  type="number"
+                  placeholder="Amount"
+                  className="w-full"
+                  value={extraCharges.amount || ""}
+                  onChange={(e) => setExtraCharges({...extraCharges, amount: Number(e.target.value)})}
+                />
+              </div>
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="secondary" onClick={handleSkipExtraCharges}>
+
+          <div className="flex gap-2 flex-shrink-0 pt-4">
+            <Button variant="secondary" onClick={handleSkipExtraCharges} className="flex-1">
               Skip
             </Button>
-            <Button onClick={handleExtraChargesSubmit}>Complete Order</Button>
-          </DialogFooter>
+            <Button onClick={handleExtraChargesSubmit} className="flex-1">
+              Complete Order
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

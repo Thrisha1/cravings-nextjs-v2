@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { useAdminOfferStore } from "@/store/useAdminOfferStore";
 import { Partner, useAuthStore } from "@/store/authStore";
 import Link from "next/link";
-import { AddMenuItemModal } from "../bulkMenuUpload/AddMenuItemModal";
+import { AddMenuItemForm } from "../bulkMenuUpload/AddMenuItemModal";
 import { EditMenuItemModal } from "./EditMenuItemModal";
 import { CategoryManagementModal } from "./CategoryManagementModal";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
@@ -42,7 +42,6 @@ export function MenuTab() {
   const [isCategoryEditing, setIsCategoryEditing] = useState(false);
   const { adminOffers, fetchAdminOffers } = useAdminOfferStore();
   const { userData } = useAuthStore();
-  const [catUpdated, setCatUpdated] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,7 +68,7 @@ export function MenuTab() {
       fetchAdminOffers(userData?.id);
       fetchMenu();
     }
-  }, [userData, fetchAdminOffers, fetchMenu, catUpdated]);
+  }, [userData, fetchAdminOffers, fetchMenu]);
 
   useEffect(() => {
     if (!isEditModalOpen) {
@@ -245,6 +244,17 @@ export function MenuTab() {
         </div>
       </div>
 
+      {/* Tab switch: show add form or menu */}
+      {isAddModalOpen ? (
+        <AddMenuItemForm
+          onSubmit={(item) => {
+            handleAddItem(item);
+            setIsAddModalOpen(false);
+          }}
+          onCancel={() => setIsAddModalOpen(false)}
+        />
+      ) : (
+        <>
       <div className="flex justify-end gap-2 mb-4">
         {isEditingPriority ? (
           <>
@@ -293,12 +303,6 @@ export function MenuTab() {
           className="pl-10"
         />
       </div>
-
-      <AddMenuItemModal
-        isOpen={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-        onSubmit={handleAddItem}
-      />
 
       {editingItem && (
         <EditMenuItemModal
@@ -549,6 +553,8 @@ export function MenuTab() {
           </div>
         )}
       </>
+        </>
+      )}
     </div>
   );
 }
