@@ -310,7 +310,10 @@ export const Captaincart = () => {
       </Drawer>
 
       {/* Table Selection Modal */}
-      <Dialog open={isTableModalOpen} onOpenChange={setIsTableModalOpen}>
+      <Dialog open={isTableModalOpen} onOpenChange={(open) => {
+        if (!open) return; // Prevent closing on outside click or Escape
+        setIsTableModalOpen(open); // Only allow opening
+      }}>
         <DialogContent className="sm:max-w-[425px]">
           <div className="space-y-4">
             <DialogHeader>

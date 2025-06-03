@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Captain, Partner, useAuthStore } from "@/store/authStore";
 import { Order } from "@/store/orderStore";
+import useOrderStore from "@/store/orderStore";
 
 export const EditCaptainOrderModal = () => {
   const {
@@ -33,6 +34,7 @@ export const EditCaptainOrderModal = () => {
   const { userData } = useAuthStore();
   const captainData = userData as Captain;
   const [partnerData, setPartnerData] = useState<Partner | null>(null);
+  const { partnerOrders } = useOrderStore();
 
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -70,14 +72,14 @@ export const EditCaptainOrderModal = () => {
       const hasId = item.id !== undefined;
       const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
       const isAvailable = item.is_available !== false;
-      console.log("Filtering menu item:", {
-        id: item.id,
-        name: item.name,
-        hasId,
-        matchesSearch,
-        isAvailable,
-        searchQuery
-      });
+      // console.log("Filtering menu item:", {
+      //   id: item.id,
+      //   name: item.name,
+      //   hasId,
+      //   matchesSearch,
+      //   isAvailable,
+      //   searchQuery
+      // });
       return hasId && isAvailable && (searchQuery === "" || matchesSearch);
     });
 
@@ -94,93 +96,73 @@ export const EditCaptainOrderModal = () => {
 
   useEffect(() => {
     if (isOpen && order?.id) {
-      fetchOrderDetails();
-    }
-  }, [isOpen, order?.id]);
-
-  useEffect(() => {
-    console.log("=== EditCaptainOrderModal State ===", {
-      isOpen,
-      orderId: order?.id,
-      partnerId: order?.partnerId,
-      captainData: {
-        id: captainData?.id,
-        partner_id: captainData?.partner_id,
-        role: captainData?.role
-      },
-      menuItemsCount: menuItems.length,
-      menuItems: menuItems.slice(0, 3).map(item => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        is_available: item.is_available
-      }))
-    });
-  }, [isOpen, order, menuItems, captainData]);
-
-  useEffect(() => {
-    if (isOpen && order?.partnerId) {
-      console.log("=== Menu Fetching Process ===");
-      console.log("1. Starting menu fetch with:", {
-        partnerId: order.partnerId,
-        orderId: order.id,
-        currentMenuItemsCount: menuItems.length,
-        captainPartnerId: captainData?.partner_id
-      });
-
-      const partnerId = order.partnerId;
-      if (!partnerId) {
-        console.error("❌ No partner ID available");
-        toast.error("Unable to load menu items - missing partner information");
-        return;
-      }
-      
-      console.log("2. Calling fetchMenu with partnerId:", partnerId);
-      fetchMenu(partnerId, true)
-        .then((items) => {
-          console.log("3. FetchMenu response:", {
-            success: true,
-            itemsCount: items.length,
-            partnerId: partnerId,
-            firstFewItems: items.slice(0, 3).map(item => ({
-              id: item.id,
+      const foundOrder = partnerOrders.find((o: Order) => o.id === order.id);
+      if (foundOrder) {
+        setItems(
+          foundOrder.items.map((item: Order["items"][number]) => ({
+            id: item.id,
+            quantity: item.quantity,
+            menu: {
               name: item.name,
               price: item.price,
+              category: item.category,
+              description: item.description,
+              image_url: item.image_url,
+              is_top: item.is_top,
               is_available: item.is_available,
-              category: item.category?.name
-            }))
-          });
-          
-          if (items.length === 0) {
-            console.warn("⚠️ No menu items found for partner:", partnerId);
-            toast.warning("No menu items found for this partner");
-          }
-        })
-        .catch((error) => {
-          console.error("❌ Error in fetchMenu:", {
-            error,
-            partnerId,
-            errorMessage: error.message,
-            errorStack: error.stack
-          });
-          toast.error("Failed to load menu items. Please try again.");
-        });
+              priority: item.priority,
+              offers: item.offers || [],
+            },
+          }))
+        );
+        setTotalPrice(foundOrder.totalPrice);
+        setTableNumber(foundOrder.tableNumber || null);
+        setPhone(foundOrder.phone || null);
+      }
     }
-  }, [isOpen, order?.partnerId, fetchMenu]);
+  }, [isOpen, order?.id, partnerOrders]);
 
+  // useEffect(() => {
+  //   console.log("=== EditCaptainOrderModal State ===", {
+  //     isOpen,
+  //     orderId: order?.id,
+  //     partnerId: order?.partnerId,
+  //     captainData: {
+  //       id: captainData?.id,
+  //       partner_id: captainData?.partner_id,
+  //       role: captainData?.role
+  //     },
+  //     menuItemsCount: menuItems.length,
+  //     menuItems: menuItems.slice(0, 3).map(item => ({
+  //       id: item.id,
+  //       name: item.name,
+  //       price: item.price,
+  //       is_available: item.is_available
+  //     }))
+  //   });
+  // }, [isOpen, order, menuItems, captainData]);
+
+  const partnerId = order?.partnerId || captainData?.partner_id;
   useEffect(() => {
-    console.log("4. Filtered menu items:", {
-      searchQuery,
-      totalItems: menuItems.length,
-      filteredCount: filteredMenuItems.length,
-      filteredItems: filteredMenuItems.slice(0, 3).map(item => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        is_available: item.is_available
-      }))
-    });
-  }, [searchQuery, filteredMenuItems, menuItems.length]);
+    if (isOpen && partnerId) {
+      // console.log('Fetching menu for partner:', partnerId);
+      fetchMenu(partnerId, true);
+    }
+  }, [isOpen, partnerId, fetchMenu]);
+
+  // useEffect(() => {
+  //   console.log("4. Filtered menu items:", {
+  //     searchQuery,
+  //     totalItems: menuItems.length,
+  //     filteredCount: filteredMenuItems.length,
+  //     filteredItems: filteredMenuItems.slice(0, 3).map(item => ({
+  //       id: item.id,
+  //       name: item.name,
+  //       price: item.price,
+  //       is_available: item.is_available
+  //     }))
+  //   });
+  // }, [searchQuery, filteredMenuItems, menuItems.length]);
 
   useEffect(() => {
     const fetchPartnerData = async () => {
@@ -213,72 +195,6 @@ export const EditCaptainOrderModal = () => {
 
     fetchPartnerData();
   }, [captainData?.partner_id]);
-
-  const fetchOrderDetails = async () => {
-    try {
-      setLoading(true);
-      const response = await fetchFromHasura(
-        `query GetOrderById($orderId: uuid!) {
-          orders_by_pk(id: $orderId) {
-            id
-            total_price
-            table_number
-            phone
-            order_items {
-              id
-              quantity
-              menu {
-                id
-                name
-                price
-                category {
-                  id
-                  name
-                  priority
-                }
-                description
-                image_url
-                is_top
-                is_available
-                priority
-              }
-            }
-          }
-        }`,
-        {
-          orderId: order?.id,
-        }
-      );
-
-      const orderData = response.orders_by_pk;
-      if (orderData) {
-        setItems(
-          orderData.order_items.map((item: any) => ({
-            id: item.menu.id,
-            quantity: item.quantity,
-            menu: {
-              name: item.menu.name,
-              price: item.menu.price,
-              category: item.menu.category,
-              description: item.menu.description,
-              image_url: item.menu.image_url,
-              is_top: item.menu.is_top,
-              is_available: item.menu.is_available,
-              priority: item.menu.priority
-            },
-          }))
-        );
-        setTotalPrice(orderData.total_price);
-        setTableNumber(orderData.table_number);
-        setPhone(orderData.phone);
-      }
-    } catch (error) {
-      console.error("Error fetching order details:", error);
-      toast.error("Failed to load order details");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const calculateTotal = (
     items: Array<{
@@ -453,15 +369,35 @@ export const EditCaptainOrderModal = () => {
     }
   }, [isOpen, order?.partnerId, fetchMenu]);
 
+  // Always fetch menu when modal opens and order?.partnerId is available
+  useEffect(() => {
+    if (isOpen && order?.partnerId) {
+      fetchMenu(order.partnerId, true);
+    }
+  }, [isOpen, order?.partnerId, fetchMenu]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-none w-screen h-[100dvh] p-0 sm:p-0 flex flex-col">
-        <DialogHeader className="p-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] border-b sticky top-0 bg-white z-10">
-          <DialogTitle>Edit Order #{order?.id?.split("-")[0] || ""}</DialogTitle>
-          <DialogDescription>
+      <DialogContent
+        className="fixed inset-0 w-full h-full max-w-none max-h-none p-0 m-0 flex flex-col bg-white z-[9999] rounded-none border-none overflow-hidden"
+        style={{ 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0,
+          transform: 'none',
+          height: '100vh',
+          width: '100vw'
+        }}
+      >
+        <DialogHeader className="flex-shrink-0 p-4 border-b bg-white">
+          <DialogTitle className="text-lg font-semibold">
+            Edit Order #{order?.id?.split("-")[0] || ""}
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
             {tableNumber ? `Table ${tableNumber}` : ""}
             {partnerData?.store_name && (
-              <span className="ml-2 text-muted-foreground">
+              <span className="ml-2">
                 - {partnerData.store_name}
               </span>
             )}
@@ -473,58 +409,57 @@ export const EditCaptainOrderModal = () => {
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : (
-          <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto h-[calc(100dvh-12rem)]">
-            {/* Order Details */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 flex-none">
-              {userData?.role !== "user" && (
-                <>
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-medium">
-                      Table Number
-                    </label>
-                    <Input
-                      type="number"
-                      value={tableNumber || ""}
-                      onChange={(e) =>
-                        setTableNumber(Number(e.target.value) || null)
-                      }
-                      placeholder="Table number"
-                      className="h-9"
-                    />
-                  </div>
+          <>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
+              {/* Order Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {userData?.role !== "user" && (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="block text-sm font-medium">
+                        Table Number
+                      </label>
+                      <Input
+                        type="number"
+                        value={tableNumber || ""}
+                        onChange={(e) =>
+                          setTableNumber(Number(e.target.value) || null)
+                        }
+                        placeholder="Table number"
+                        className="h-9"
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="block text-sm font-medium">Phone</label>
-                    <Input
-                      type="tel"
-                      value={phone || ""}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="Customer phone"
-                      className="h-9"
-                    />
-                  </div>
-                </>
-              )}
+                    <div className="space-y-1.5">
+                      <label className="block text-sm font-medium">Phone</label>
+                      <Input
+                        type="tel"
+                        value={phone || ""}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="Customer phone"
+                        className="h-9"
+                      />
+                    </div>
+                  </>
+                )}
 
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium">Total</label>
-                <div className="flex items-center h-9 px-3 rounded-md border bg-background text-sm">
-                  {currency}
-                  {totalPrice.toFixed(2)}
-                  {gstPercentage > 0 && (
-                    <span className="text-xs text-muted-foreground ml-2">
-                      (incl. {gstPercentage}% GST: {currency}
-                      {((totalPrice * gstPercentage) / 100).toFixed(2)})
-                    </span>
-                  )}
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium">Total</label>
+                  <div className="flex items-center h-9 px-3 rounded-md border bg-background text-sm">
+                    {currency}
+                    {totalPrice.toFixed(2)}
+                    {gstPercentage > 0 && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        (incl. {gstPercentage}% GST: {currency}
+                        {((totalPrice * gstPercentage) / 100).toFixed(2)})
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 flex flex-col gap-4 overflow-y-auto min-h-0">
               {/* Add New Item */}
-              <div className="flex-none">
+              <div>
                 <h3 className="font-medium mb-2">Add New Item</h3>
                 <div className="space-y-3">
                   <Input
@@ -594,7 +529,7 @@ export const EditCaptainOrderModal = () => {
               </div>
 
               {/* Current Items */}
-              <div className="flex-none">
+              <div>
                 <h3 className="font-medium mb-2">Current Items</h3>
                 <div className="border rounded-lg overflow-hidden">
                   {items.length === 0 ? (
@@ -660,15 +595,19 @@ export const EditCaptainOrderModal = () => {
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex justify-end gap-2 pt-2 flex-none border-t mt-4 sticky bottom-0 bg-white pb-[env(safe-area-inset-bottom)]">
-              <Button variant="outline" onClick={onClose} size="sm">
+            {/* Fixed Bottom Buttons */}
+            <div className="flex-shrink-0 bg-white border-t p-4 flex gap-3 safe-area-inset-bottom">
+              <Button variant="outline" onClick={onClose} className="flex-1">
                 Cancel
               </Button>
-              <Button onClick={handleUpdateOrder} disabled={updating} size="sm">
+              <Button 
+                onClick={handleUpdateOrder} 
+                disabled={updating || loading}
+                className="flex-1"
+              >
                 {updating ? (
                   <>
-                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Updating...
                   </>
                 ) : (
@@ -676,7 +615,7 @@ export const EditCaptainOrderModal = () => {
                 )}
               </Button>
             </div>
-          </div>
+          </>
         )}
       </DialogContent>
     </Dialog>
