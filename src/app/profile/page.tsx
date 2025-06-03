@@ -64,6 +64,7 @@ import { subscriptionQuery } from "@/api/orders";
 import { Label } from "@/components/ui/label";
 import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/DeliveryAndGeoLocationSettings";
 import useOrderStore from "@/store/orderStore";
+import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
 
 interface Captain {
   id: string;
@@ -93,8 +94,6 @@ interface CaptainOrder {
     };
   }>;
 }
-import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
-import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
 
 interface GeoJSONPoint {
   type: "Point";
@@ -1416,51 +1415,6 @@ export default function ProfilePage() {
       if (!geoLoc) {
         throw new Error("Failed to extract coordinates from the link");
       }
-  
-  
-      await fetchFromHasura(updatePartnerMutation, {
-        id: userData?.id,
-        updates: {
-          location: location.trim(),
-          geo_location: geoLoc,
-        },
-      });
-  
-      toast.success("Location updated successfully!");  
-      revalidateTag(userData?.id as string);
-      setState({
-        location: location.trim(),
-        geo_location: geoLoc,
-      });
-      setIsEditing((prev) => ({ ...prev, location: false }));
-    } catch (error) {
-      toast.error("Enter a valid Google Maps location link");
-      console.error(error);
-    } finally {
-      setIsSaving((prev) => ({ ...prev, location: false }));
-    }
-  };
-  const handleSaveLocation = async () => {
-    try {
-      const isValid =
-        /^https:\/\/(maps\.app\.goo\.gl\/[a-zA-Z0-9]+|www\.google\.[a-z.]+\/maps\/.+)$/i.test(
-          location.trim()
-        );
-  
-      if (!isValid) {
-        throw new Error("Invalid Google Maps URL");
-      }
-  
-      setIsSaving((prev) => ({ ...prev, location: true }));
-      toast.loading("Updating location...");
-  
-      const response = await getCoordinatesFromLink(location.trim());
-      const geoLoc = (await response).coordinates;
-
-      if (!geoLoc) {
-        throw new Error("Failed to extract coordinates from the link");
-      }
-  
   
       await fetchFromHasura(updatePartnerMutation, {
         id: userData?.id,
