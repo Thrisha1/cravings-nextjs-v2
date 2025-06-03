@@ -9,7 +9,7 @@ import {
   X,
   Loader2,
 } from "lucide-react";
-import { GeoLocation, Partner, useAuthStore } from "@/store/authStore";
+import { AuthUser, GeoLocation, Partner, useAuthStore } from "@/store/authStore";
 import { useLocationStore } from "@/store/geolocationStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -81,6 +81,7 @@ interface CaptainOrder {
   }>;
 }
 import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
+import { HotelData } from "../hotels/[...id]/page";
 
 interface GeoJSONPoint {
   type: "Point";
@@ -218,7 +219,7 @@ export default function ProfilePage() {
           : [{ number: userData.phone || "", area: "default" }]
       );
       setFootNote(userData.footnote || "");
-      const socialLinks = getSocialLinks(userData);
+      const socialLinks = getSocialLinks(userData as HotelData);
       setInstaLink(socialLinks.instagram || "");
       setGst({
         gst_no: userData.gst_no || "",
@@ -334,7 +335,9 @@ export default function ProfilePage() {
                 name: item.name,
                 price: item.price,
                 category: {
-                  name: typeof item.category === 'string' ? item.category : (item.category as any)?.name || ""
+                  name: typeof item.category === 'string'
+                    ? item.category
+                    : (item.category && 'name' in item.category ? item.category.name : "")
                 }
               }
             }))
@@ -1003,7 +1006,7 @@ export default function ProfilePage() {
         return { ...prev, instaLink: true };
       });
 
-      const socialLinks = getSocialLinks(userData);
+      const socialLinks = getSocialLinks(userData as HotelData);
       const instaLinkData = {
         ...socialLinks,
         instagram: instaLink,
