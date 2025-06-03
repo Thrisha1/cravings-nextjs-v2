@@ -251,42 +251,44 @@ const OrdersTab = () => {
           }
         }}
       >
-        <AlertDialogHeader>
-          <AlertDialogTitle>New Orders Received!</AlertDialogTitle>
-          <AlertDialogDescription>
-            You have {newOrderAlert.tableCount} new table order(s),{" "}
-            {newOrderAlert.deliveryCount} new delivery order(s), and{" "}
-            {newOrderAlert.posCount} new POS order(s).
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogAction
-            onClick={() => {
-              setNewOrderAlert({
-                show: false,
-                tableCount: 0,
-                deliveryCount: 0,
-                posCount: 0,
-              });
-              orderAlertRef.current = false;
-              // Switch to the tab with most new orders
-              const maxCount = Math.max(
-                newOrderAlert.tableCount,
-                newOrderAlert.deliveryCount,
-                newOrderAlert.posCount
-              );
-              if (newOrderAlert.tableCount === maxCount) {
-                setActiveTab("table");
-              } else if (newOrderAlert.deliveryCount === maxCount) {
-                setActiveTab("delivery");
-              } else {
-                setActiveTab("pos");
-              }
-            }}
-          >
-            OK
-          </AlertDialogAction>
-        </AlertDialogFooter>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>New Orders Received!</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have {newOrderAlert.tableCount} new table order(s),{" "}
+              {newOrderAlert.deliveryCount} new delivery order(s), and{" "}
+              {newOrderAlert.posCount} new POS order(s).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setNewOrderAlert({
+                  show: false,
+                  tableCount: 0,
+                  deliveryCount: 0,
+                  posCount: 0,
+                });
+                orderAlertRef.current = false;
+                // Switch to the tab with most new orders
+                const maxCount = Math.max(
+                  newOrderAlert.tableCount,
+                  newOrderAlert.deliveryCount,
+                  newOrderAlert.posCount
+                );
+                if (newOrderAlert.tableCount === maxCount) {
+                  setActiveTab("table");
+                } else if (newOrderAlert.deliveryCount === maxCount) {
+                  setActiveTab("delivery");
+                } else {
+                  setActiveTab("pos");
+                }
+              }}
+            >
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
       </AlertDialog>
 
       <TodaysEarnings orders={orders} />
@@ -315,7 +317,7 @@ const OrdersTab = () => {
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList
-          className={`grid w-full grid-flow-col  mb-6 relative justify-stretch `}
+          className="flex w-full gap-1 mb-6 rounded-lg p-1 overflow-x-auto"
         >
           {features?.delivery.enabled && (
             <TabsTrigger value="delivery" className="relative flex-1 min-w-[100px] py-2">

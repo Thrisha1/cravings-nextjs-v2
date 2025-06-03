@@ -8,8 +8,24 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/login', '/signup', '/superlogin', '/hotels', '/partner','/captainlogin', '/offers','/explore','/api/auth'];
-  if (publicRoutes.includes(pathname)) {
+  const publicRoutes = [
+    '/login',
+    '/signup',
+    '/superlogin', 
+    '/hotels',
+    '/partner',
+    '/offers',
+    '/explore',
+    '/about-us',
+    '/api/auth'
+  ];
+
+  // Check if current route is public
+  const isPublicRoute = publicRoutes.some(route => 
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
+
+  if (isPublicRoute) {
     return NextResponse.next();
   }
 
@@ -22,7 +38,7 @@ export async function middleware(request: NextRequest) {
           role: string; 
           status?: string 
         };
-        
+
         // Superadmin always redirects to /superadmin
         if (decrypted?.role === 'superadmin') {
           return NextResponse.redirect(new URL('/superadmin', request.url));

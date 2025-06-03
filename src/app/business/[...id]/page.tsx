@@ -11,6 +11,7 @@ import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
 import { Metadata } from "next";
 import { getSocialLinks } from "@/lib/getSocialLinks";
 import { usePartnerStore } from "@/store/usePartnerStore";
+import { HexColorPicker } from "react-colorful";
 // import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
 
 export async function generateMetadata({

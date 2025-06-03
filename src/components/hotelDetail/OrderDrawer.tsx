@@ -66,6 +66,7 @@ export const calculateDeliveryDistanceAndCost = async (
         ratePerKm: deliveryRate,
         isOutOfRange: true,
       });
+
       return;
     }
 

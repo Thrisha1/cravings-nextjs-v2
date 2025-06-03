@@ -633,7 +633,6 @@ const MapModal = ({
     }
 
     if (showMapModal) {
-      setOpenPlaceOrderModal(false);
       document.body.style.overflowY = "hidden !important";
       document.body.style.maxHeight = "100vh";
     } else {
@@ -760,44 +759,6 @@ const PlaceOrderModal = ({
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
   const isQrScan = qrId !== null && tableNumber !== 0;
   const hasLocation = !!selectedCoords || !!address;
-
-  useEffect(()=>{
-    if(open_place_order_modal && items?.length === 0) {
-      setOpenPlaceOrderModal(false);
-      setOpenDrawerBottom(true);
-    }
-  },[open_place_order_modal])
-
-  // Keyboard detection
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.visualViewport) {
-        const currentHeight = window.visualViewport.height;
-        const windowHeight = window.innerHeight;
-
-        // If visual viewport is significantly smaller than window height, keyboard is probably open
-        if (windowHeight - currentHeight > 150) {
-          setKeyboardOpen(true);
-        } else {
-          setKeyboardOpen(false);
-        }
-      }
-    };
-
-    // Add the event listener
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", handleResize);
-    }
-
-    // Clean up
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener("resize", handleResize);
-      }
-    };
-  }, []);
-
-  // Check if multi-whatsapp feature is enabled
 
   const hasMultiWhatsapp =
     getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled &&

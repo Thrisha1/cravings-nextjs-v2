@@ -293,9 +293,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signOut: () => {
-    removeAuthCookie();
+  signOut: async() => {
+    await removeAuthCookie();
     localStorage.clear();
+    window.location.href = "/";
     set({ userData: null, error: null });
   },
 
