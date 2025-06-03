@@ -137,20 +137,6 @@ export const PostCheckoutModal = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Hidden elements for printing */}
-      <div className="hidden">
-        {/* KOT Template */}
-        <KOTTemplate ref={kotRef} order={order} key={`kot-${order.id}`} />
-
-        {/* Bill Template */}
-        <BillTemplate 
-          ref={billRef} 
-          order={order} 
-          userData={userData as Partner} 
-          extraCharges={extraCharges}
-        />
-      </div>
     </>
   );
 };
