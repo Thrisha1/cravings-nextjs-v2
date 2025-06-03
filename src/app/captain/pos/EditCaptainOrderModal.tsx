@@ -410,7 +410,7 @@ export const EditCaptainOrderModal = () => {
           </div>
         ) : (
           <>
-            <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto pb-[500px] min-h-0">
+            <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto pb-[1000px] min-h-0">
               {/* Order Details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {userData?.role !== "user" && (
@@ -593,27 +593,27 @@ export const EditCaptainOrderModal = () => {
                   )}
                 </div>
               </div>
-            </div>
 
-            {/* Fixed Bottom Buttons */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t p-3 pb-[env(safe-area-inset-bottom)] flex gap-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] h-[72px]">
-              <Button variant="outline" onClick={onClose} className="flex-1">
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleUpdateOrder} 
-                disabled={updating || loading}
-                className="flex-1"
-              >
-                {updating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  "Update Order"
-                )}
-              </Button>
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-8 border-t pt-4">
+                <Button variant="outline" onClick={onClose} className="flex-1">
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpdateOrder} 
+                  disabled={updating || loading}
+                  className="flex-1"
+                >
+                  {updating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Order"
+                  )}
+                </Button>
+              </div>
             </div>
           </>
         )}
