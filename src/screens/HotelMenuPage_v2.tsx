@@ -179,7 +179,7 @@ const HotelMenuPage = ({
 
             {/* right top button  */}
             <div className="absolute right-[8%] top-[20px] flex flex-col items-center gap-3">
-              {hoteldata?.id === auth?.id && (
+              {auth && hoteldata?.id === auth.id && (
                 <ThemeChangeButton hotelData={hoteldata} theme={theme} />
               )}
               <SocialLinkList styles={styles} socialLinks={socialLinks} hotelId={hoteldata?.id} />
