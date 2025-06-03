@@ -1,18 +1,15 @@
 "use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
-  UtensilsCrossed,
   Tag,
   LogOutIcon,
   Pencil,
   Trash2,
   ArrowRight,
-  Plus,
   X,
   Loader2,
 } from "lucide-react";
-import { GeoLocation, Partner, useAuthStore } from "@/store/authStore";
+import { AuthUser, GeoLocation, Partner, useAuthStore } from "@/store/authStore";
 import { useLocationStore } from "@/store/geolocationStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -31,7 +28,6 @@ import {
 import { AlertDialogCancel } from "@radix-ui/react-alert-dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-// import Image from "next/image";
 import { deleteFileFromS3, uploadFileToS3 } from "../actions/aws-s3";
 import { deleteUserMutation } from "@/api/auth";
 import { updatePartnerMutation } from "@/api/partners";
@@ -42,15 +38,7 @@ import { revalidateTag } from "../actions/revalidate";
 import { processImage } from "@/lib/processImage";
 import { Textarea } from "@/components/ui/textarea";
 import Img from "@/components/Img";
-import { Select } from "@radix-ui/react-select";
-import {
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { HotelData, SocialLinks } from "../hotels/[...id]/page";
 import { getSocialLinks } from "@/lib/getSocialLinks";
 import {
   FeatureFlags,
@@ -60,11 +48,11 @@ import {
 import { updateAuthCookie } from "../auth/actions";
 import { DeliveryRules, Order } from "@/store/orderStore";
 import { createCaptainMutation, getCaptainsQuery, deleteCaptainMutation } from "@/api/captains";
-import { subscriptionQuery } from "@/api/orders";
 import { Label } from "@/components/ui/label";
 import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/DeliveryAndGeoLocationSettings";
 import useOrderStore from "@/store/orderStore";
 import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
+import { Offer } from "@/store/offerStore_hasura";
 
 interface Captain {
   id: string;
@@ -93,6 +81,12 @@ interface CaptainOrder {
       };
     };
   }>;
+}
+
+interface HotelData extends Partner {
+  social_links?: string;
+  offers: Offer[];
+  menus: any[];
 }
 
 interface GeoJSONPoint {
@@ -206,12 +200,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (userData?.role === "partner") {
-      // console.log("Debug - UserData:", {
-      //   delivery_rate: userData.delivery_rate,
-      //   geo_location: userData.geo_location,
-      //   raw_userData: userData
-      // });
-
       setBannerImage(userData.store_banner || null);
       setUpiId(userData.upi_id || "");
       setPlaceId(userData.place_id || "");
@@ -263,12 +251,9 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (userData?.role === "partner") {
-      console.log("User Data:", userData?.role, userData?.feature_flags);
-
       const feature = getFeatures(userData?.feature_flags as string);
 
       setUserFeatures(feature);
-      console.log(feature);
     }
   }, [userData]);
 
@@ -278,7 +263,6 @@ export default function ProfilePage() {
     }
   }, [userData, features?.captainordering.enabled]);
 
-  // Add effect to log state changes
   useEffect(() => {
     console.log("Debug - Current state:", {
       deliveryRate,
@@ -295,7 +279,6 @@ export default function ProfilePage() {
     isEditing.geoLocation,
   ]);
 
-  // Add effect to fetch captain orders
   useEffect(() => {
     if (userData?.role === "partner" && features?.captainordering.enabled) {
       const fetchCaptainOrders = async () => {
@@ -340,7 +323,6 @@ export default function ProfilePage() {
 
       fetchCaptainOrders();
 
-      // Subscribe to new orders
       const unsubscribe = subscribeOrders((orders: Order[]) => {
         const captainOrders = orders
           .filter(order => order.orderedby === "captain")
@@ -359,7 +341,9 @@ export default function ProfilePage() {
                 name: item.name,
                 price: item.price,
                 category: {
-                  name: typeof item.category === 'string' ? item.category : (item.category as any)?.name || ""
+                  name: typeof item.category === 'string'
+                    ? item.category
+                    : (item.category && 'name' in item.category ? item.category.name : "")
                 }
               }
             }))
@@ -373,7 +357,6 @@ export default function ProfilePage() {
     }
   }, [userData, features?.captainordering.enabled, subscribeOrders]);
 
-  // Also add this effect to watch store changes
   useEffect(() => {
     console.log("Store changed:", {
       coords,
@@ -466,7 +449,6 @@ export default function ProfilePage() {
     }
   };
 
-  // Also add this effect to watch store changes
   useEffect(() => {
     console.log("Store changed:", {
       coords,
@@ -496,13 +478,11 @@ export default function ProfilePage() {
 
       console.log("Saving geoLocation:", geoLocation);
 
-      // Validate coordinates are present
       if (!latitude || !longitude) {
         toast.error("Please enter both latitude and longitude");
         return;
       }
 
-      // Convert to numbers and validate ranges
       const lat = latitude;
       const lng = longitude;
 
@@ -511,7 +491,6 @@ export default function ProfilePage() {
         return;
       }
 
-      // Validate coordinate ranges
       if (lat < -90 || lat > 90) {
         toast.error("Latitude must be between -90 and 90 degrees");
         return;
@@ -522,8 +501,6 @@ export default function ProfilePage() {
         return;
       }
 
-      // Create the correct format for geography type
-      // Using SRID=4326;POINT(longitude latitude) format
       const geographyFormat = {
         type: "Point",
         coordinates: [lng, lat],
@@ -532,15 +509,14 @@ export default function ProfilePage() {
       setIsSaving((prev) => ({ ...prev, geoLocation: true }));
       toast.loading("Updating location...");
 
-      // First verify the mutation
       const mutation = updatePartnerMutation;
-      console.log("Mutation:", mutation); // Debug log
+      console.log("Mutation:", mutation);
       console.log("Update data:", {
         id: userData?.id,
         updates: {
           geo_location: geographyFormat,
         },
-      }); // Debug log
+      });
 
       const response = await fetchFromHasura(mutation, {
         id: userData?.id,
@@ -549,13 +525,12 @@ export default function ProfilePage() {
         },
       });
 
-      console.log("Hasura response:", response); // Debug log
+      console.log("Hasura response:", response);
 
       if (!response) {
         throw new Error("No response from server");
       }
 
-      // Update local state
       revalidateTag(userData?.id as string);
       setState({ geo_location: geographyFormat });
       toast.dismiss();
@@ -614,7 +589,6 @@ export default function ProfilePage() {
       if (!files || !files[0]) return;
       const file = files[0];
 
-      //convert to local blob
       const blobUrl = URL.createObjectURL(file);
       setBannerImage(blobUrl);
 
@@ -639,14 +613,12 @@ export default function ProfilePage() {
       const prevImgUrl =
         userData.role === "partner" ? userData?.store_banner : "";
 
-      //Has previous uploaded image delete it
       if (prevImgUrl?.includes("cravingsbucket")) {
         await deleteFileFromS3(prevImgUrl);
       }
 
       let nextVersion = "v0";
 
-      // Check if the image URL already has a version number
       if (prevImgUrl) {
         const onlyImageName = prevImgUrl
           .split(
@@ -666,7 +638,6 @@ export default function ProfilePage() {
         }
       }
 
-      // Upload to S3
       const imgUrl = await uploadFileToS3(
         webpBase64WithPrefix,
         `hotel_banners/${userData.id + "_" + nextVersion}.webp`
@@ -678,9 +649,7 @@ export default function ProfilePage() {
       if (!imgUrl) {
         throw new Error("Failed to upload image to S3");
       }
-      // // console.log("Image uploaded to S3:", imgUrl);
 
-      // Update user data
       await fetchFromHasura(updatePartnerMutation, {
         id: userData?.id,
         updates: {
@@ -933,7 +902,6 @@ export default function ProfilePage() {
 
   const handleSaveWhatsappNumbers = async () => {
     try {
-      // Validate all numbers
       for (const item of whatsappNumbers) {
         if (!item.number || item.number.length !== 10) {
           toast.error(
@@ -1129,16 +1097,12 @@ export default function ProfilePage() {
       });
     }
   };
-  // (Delivery Rate)
 
   const handleSaveDeliverySettings = async () => {
     try {
       if (!userData) return;
       toast.loading("Updating delivery settings...");
 
-      setIsSaving((prev) => ({ ...prev, deliveryRate: true }));
-
-      // Validate delivery rate is a positive number
       const rate = deliveryRate;
       if (isNaN(rate) || rate < 0) {
         toast.dismiss();
@@ -1148,9 +1112,8 @@ export default function ProfilePage() {
         return;
       }
 
-      // Prepare delivery rules object with defaults if not set
       const rules = {
-        delivery_radius: deliveryRules?.delivery_radius || 5, // default 5km
+        delivery_radius: deliveryRules?.delivery_radius || 5,
         first_km_range: {
           km: deliveryRules?.first_km_range?.km || 0,
           rate: deliveryRules?.first_km_range?.rate || 0,
@@ -1233,13 +1196,11 @@ export default function ProfilePage() {
         throw new Error("Password must be at least 6 characters long");
       }
 
-      // Basic email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(captainEmail)) {
         throw new Error("Please enter a valid email address");
       }
 
-      // Check if email already exists
       const checkEmail = await fetchFromHasura(`
         query CheckCaptainEmail($email: String!) {
           captain(where: {email: {_eq: $email}}) {
@@ -1255,7 +1216,6 @@ export default function ProfilePage() {
         throw new Error("This email is already registered. Please use a different email address.");
       }
 
-      // Check if name already exists
       const checkName = await fetchFromHasura(`
         query CheckCaptainName($name: String!) {
           captain(where: {name: {_eq: $name}}) {
@@ -1301,7 +1261,6 @@ export default function ProfilePage() {
         throw new Error("Failed to create captain account - no response from server");
       }
 
-      // Verify the captain was created
       const verifyCaptain = await fetchFromHasura(`
         query VerifyCaptain($partner_id: uuid!) {
           captain(where: {partner_id: {_eq: $partner_id}}) {
@@ -1354,7 +1313,6 @@ export default function ProfilePage() {
   const handleDeleteCaptain = async (id: string) => {
     setIsDeletingCaptain(id);
     try {
-      // First, update any orders that reference this captain
       const updateOrdersMutation = `
         mutation UpdateOrdersWithCaptain($captain_id: uuid!) {
           update_orders(
@@ -1369,17 +1327,14 @@ export default function ProfilePage() {
         }
       `;
 
-      // Update orders to remove captain reference
       await fetchFromHasura(updateOrdersMutation, {
         captain_id: id
       });
 
-      // Now delete the captain using the imported mutation
       await fetchFromHasura(deleteCaptainMutation, {
         id
       });
 
-      // Refresh the captains list
       await fetchCaptains();
       toast.success("Captain deleted successfully");
     } catch (error) {
@@ -1389,11 +1344,6 @@ export default function ProfilePage() {
       setIsDeletingCaptain(null);
     }
   };
-
-
-  
-
-  
 
   const handleSaveLocation = async () => {
     try {
@@ -1438,6 +1388,7 @@ export default function ProfilePage() {
       setIsSaving((prev) => ({ ...prev, location: false }));
     }
   };
+
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
   }
@@ -1445,7 +1396,6 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen w-full bg-orange-50 p-2">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Welcome Section */}
         <Card className="overflow-hidden hover:shadow-xl transition-shadow">
           <CardHeader>
             <div className="flex justify-between">
@@ -1468,14 +1418,6 @@ export default function ProfilePage() {
             <div className="flex md:flex-row flex-col gap-4">
               {userData?.role === "user" && (
                 <>
-                  {/* <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
-                    <Tag className="sm:size-4 size-8 mr-2" />
-                    {profile.offersClaimed} Offers Claimed
-                  </Badge> */}
-                  {/* <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
-                    <UtensilsCrossed className="sm:size-4 size-8 mr-2" />
-                    {profile.restaurantsSubscribed} Restaurants Subscribed
-                  </Badge> */}
                 </>
               )}
               {userData?.role === "partner" && (
@@ -1507,46 +1449,6 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Claimed Offers Section */}
-        {/* {userData?.role === "user" && (
-          <Card className="overflow-hidden hover:shadow-xl transition-shadow">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold">
-                Your Claimed Offers
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {profile.claimedOffers.map((offer) => (
-                <div
-                  key={offer.id}
-                  className="p-4 border border-orange-300 rounded-lg hover:shadow-md transition-shadow"
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className=" sm:text-xl font-semibold">
-                        {offer.foodName}
-                      </h3>
-                      <p className="text-sm text-gray-600 flex items-center gap-2">
-                        <UtensilsCrossed className="w-4 h-4" />
-                        {offer.restaurant}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-gray-500 line-through text-sm">
-                        ₹{offer?.originalPrice?.toFixed(0)}
-                      </p>
-                      <p className="text-xl font-bold text-orange-600">
-                        ₹{offer?.newPrice?.toFixed(0)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )} */}
-
-        {/* Account Settings Section (Only for hotel) */}
         {userData?.role === "partner" && (
           <Card className="overflow-hidden hover:shadow-xl transition-shadow">
             <CardHeader>
@@ -1555,7 +1457,6 @@ export default function ProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 divide-y-2">
-              {/* //your hotel banner  */}
               <div>
                 <h3 className="text-lg font-semibold">Your Hotel Banner</h3>
                 <p className="text-sm text-gray-500 mb-2">
@@ -1623,7 +1524,6 @@ export default function ProfilePage() {
                       >
                         {isSaving.description ? (
                           <>
-                            {/* <span className="animate-spin mr-2">⏳</span>/ */}
                             Saving...
                           </>
                         ) : (
@@ -1656,57 +1556,6 @@ export default function ProfilePage() {
                   This Bio will be used for your restaurant profile
                 </p>
               </div>
-              {/* <div className="space-y-2 pt-4">
-                <label htmlFor="upiId" className="text-lg font-semibold">
-                  UPI ID
-                </label>
-                <div className="flex gap-2">
-                  {isEditing.upiId ? (
-                    <>
-                      <Input
-                        id="upiId"
-                        type="text"
-                        placeholder="Enter your UPI ID"
-                        value={upiId}
-                        onChange={(e) => setUpiId(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button
-                        onClick={handleSaveUpiId}
-                        disabled={isSaving.upiId || !upiId}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.upiId ? (
-                          <>
-                            Saving...
-                          </>
-                        ) : (
-                          "Save"
-                        )}
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="flex justify-between items-center w-full">
-                      <span className="text-gray-700">
-                        {upiId ? upiId : "No UPI ID set"}
-                      </span>
-                      <Button
-                        onClick={() => {
-                          setIsEditing((prev) => ({ ...prev, upiId: true }));
-                          setUpiId(upiId ? upiId : "");
-                        }}
-                        variant="ghost"
-                        className="hover:bg-orange-100"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500">
-                  This UPI ID will be used for receiving payments from customers
-                </p>
-              </div> */}
               <div className="space-y-2 pt-4">
                 <label htmlFor="placeId" className="text-lg font-semibold">
                   Place ID
@@ -1799,7 +1648,6 @@ export default function ProfilePage() {
                 </label>
 
                 {userFeatures?.multiwhatsapp.enabled ? (
-                  // Multi-whatsapp UI
                   <>
                     {isEditing.whatsappNumber ? (
                       <div className="space-y-4">
@@ -1913,7 +1761,6 @@ export default function ProfilePage() {
                     )}
                   </>
                 ) : (
-                  // Single whatsapp number UI (original code)
                   <div className="flex gap-2">
                     {isEditing.whatsappNumber ? (
                       <>
@@ -2378,7 +2225,6 @@ export default function ProfilePage() {
           </Card>
         )}
 
-        {/* Danger Area */}
         {userData?.role === "user" && (
           <Card className="overflow-hidden hover:shadow-xl transition-shadow border-red-500">
             <CardHeader>
@@ -2392,7 +2238,6 @@ export default function ProfilePage() {
                 including claimed offers, will be permanently deleted.
               </p>
 
-              {/* Confirmation Modal */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" disabled={isDeleting}>

@@ -635,6 +635,7 @@ const MapModal = ({
     } else {
       document.body.style.overflowY = "auto";
       document.body.style.maxHeight = "auto";
+      setOpenPlaceOrderModal(true);
     }
   }, [showMapModal]);
 
