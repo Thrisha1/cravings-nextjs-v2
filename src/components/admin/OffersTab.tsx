@@ -27,12 +27,19 @@ import Image from "next/image";
 import { formatDate } from "@/lib/formatDate";
 import Img from "../Img";
 
-export function OffersTab() {
+interface CreateOfferFormProps {
+  onSubmit: (offer: {
+    menu_id: string;
+    offer_price: number;
+    items_available: number;
+    start_time: string;
+    end_time: string;
+  }) => Promise<void>;
+  onCancel: () => void;
+}
+
+export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
   const { items } = useMenuStore();
-  const { addOffer, fetchPartnerOffers, offers, deleteOffer } = useOfferStore();
-  const { userData } = useAuthStore();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isOfferFetched, setIsOfferFetched] = useState(false);
   const [newOffer, setNewOffer] = useState({
     menuItemId: "",
     newPrice: "",
@@ -40,8 +47,7 @@ export function OffersTab() {
     fromTime: "",
     toTime: "",
   });
-  const [isAdding, setAdding] = useState(false);
-  const [isDeleting, setDeleting] = useState<Record<string, boolean>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const formContainerRef = useRef<HTMLDivElement>(null);
 
@@ -81,29 +87,6 @@ export function OffersTab() {
     }, 100);
   };
 
-  const handleOfferDelete = (id: string) => async () => {
-    setDeleting({
-      ...isDeleting,
-      [id]: true,
-    });
-    await deleteOffer(id);
-    setDeleting({
-      ...isDeleting,
-      [id]: false,
-    });
-  };
-
-  useEffect(() => {
-    (async () => {
-      if (userData) {
-        await fetchPartnerOffers();
-        setTimeout(() => {
-          setIsOfferFetched(true);
-        }, 2000);
-      }
-    })();
-  }, [userData]);
-
   // Add listener for visual viewport resize (keyboard opening/closing)
   useEffect(() => {
     const handleResize = () => {
@@ -135,7 +118,7 @@ export function OffersTab() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAdding(true);
+    setIsSubmitting(true);
 
     if (
       !newOffer.menuItemId ||
@@ -144,8 +127,8 @@ export function OffersTab() {
       !newOffer.fromTime ||
       !newOffer.toTime
     ) {
-      alert("Please fill all the fields");
-      setAdding(false);
+      toast.error("Please fill all the fields");
+      setIsSubmitting(false);
       return;
     }
 
@@ -153,8 +136,8 @@ export function OffersTab() {
       new Date(newOffer.fromTime) <
       new Date(new Date().getTime() - 1000 * 60 * 15)
     ) {
-      alert("From time cannot be in the past");
-      setAdding(false);
+      toast.error("From time cannot be in the past");
+      setIsSubmitting(false);
       return;
     }
 
@@ -162,20 +145,20 @@ export function OffersTab() {
       new Date(newOffer.toTime) <
       new Date(new Date().getTime() + 1000 * 60 * 15)
     ) {
-      alert("To time cannot be in the past");
-      setAdding(false);
+      toast.error("To time cannot be in the past");
+      setIsSubmitting(false);
       return;
     }
 
     if (new Date(newOffer.fromTime) > new Date(newOffer.toTime)) {
-      alert("From time cannot be greater than to time");
-      setAdding(false);
+      toast.error("From time cannot be greater than to time");
+      setIsSubmitting(false);
       return;
     }
 
     if (new Date(newOffer.toTime) < new Date(newOffer.fromTime)) {
-      alert("To time cannot be less than from time");
-      setAdding(false);
+      toast.error("To time cannot be less than from time");
+      setIsSubmitting(false);
       return;
     }
 
@@ -184,8 +167,8 @@ export function OffersTab() {
         new Date(newOffer.fromTime).getTime() <
       1000 * 60 * 15
     ) {
-      alert("Offer duration should be atleast 15 minutes");
-      setAdding(false);
+      toast.error("Offer duration should be at least 15 minutes");
+      setIsSubmitting(false);
       return;
     }
 
@@ -195,12 +178,12 @@ export function OffersTab() {
 
     if (correspondingItem?.image_url === "") {
       toast.error("Please upload an image for the menu item");
-      setAdding(false);
+      setIsSubmitting(false);
       return;
     }
 
     try {
-      await addOffer({
+      await onSubmit({
         menu_id: newOffer.menuItemId,
         offer_price: parseFloat(newOffer.newPrice),
         items_available: parseInt(newOffer.itemsAvailable),
@@ -210,36 +193,180 @@ export function OffersTab() {
     } catch (error) {
       toast.error("Failed to create offer");
       console.error(error);
-      setAdding(false);
-      return;
-    }
-
-    setNewOffer({
-      menuItemId: "",
-      newPrice: "",
-      itemsAvailable: "",
-      fromTime: "",
-      toTime: "",
-    });
-    setIsOpen(false);
-    setAdding(false);
-  };
-
-  const handleCancel = () => {
-    // Blur any focused inputs to dismiss the keyboard
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
     }
     
-    setNewOffer({
-      menuItemId: "",
-      newPrice: "",
-      itemsAvailable: "",
-      fromTime: "",
-      toTime: "",
+    setIsSubmitting(false);
+  };
+
+  return (
+    <div className="max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 mb-8">
+      <h2 className="text-2xl font-bold mb-4">Create New Offer</h2>
+      <div ref={formContainerRef}>
+        <form id="create-offer-form" onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="menuItem">Select Menu Item</Label>
+            <Select
+              required
+              value={newOffer.menuItemId}
+              onValueChange={(value) => {
+                setNewOffer({ ...newOffer, menuItemId: value });
+                // Force close keyboard if open
+                if (document.activeElement instanceof HTMLElement) {
+                  document.activeElement.blur();
+                }
+              }}
+            >
+              <SelectTrigger id="menuItem">
+                <SelectValue placeholder="Select a product" />
+              </SelectTrigger>
+              <SelectContent>
+                {items.map((item) => (
+                  <SelectItem key={item.id} value={item.id as string}>
+                    {item.name} - ₹{item.price.toFixed(2)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="newPrice">New Price in ₹</Label>
+            <Input
+              required
+              ref={priceInputRef}
+              id="newPrice"
+              type="number"
+              placeholder="Enter new price"
+              value={newOffer.newPrice}
+              onChange={(e) =>
+                setNewOffer({ ...newOffer, newPrice: e.target.value })
+              }
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="itemsAvailable">
+              Number of Items Available
+            </Label>
+            <Input
+              required
+              ref={itemsInputRef}
+              id="itemsAvailable"
+              type="number"
+              placeholder="Enter quantity"
+              value={newOffer.itemsAvailable}
+              onChange={(e) =>
+                setNewOffer({ ...newOffer, itemsAvailable: e.target.value })
+              }
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fromTime">From Time</Label>
+            <Input
+              required
+              ref={fromTimeInputRef}
+              id="fromTime"
+              type="datetime-local"
+              value={newOffer.fromTime}
+              onChange={(e) =>
+                setNewOffer({ ...newOffer, fromTime: e.target.value })
+              }
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="toTime">To Time</Label>
+            <Input
+              required
+              ref={toTimeInputRef}
+              id="toTime"
+              type="datetime-local"
+              value={newOffer.toTime}
+              onChange={(e) =>
+                setNewOffer({ ...newOffer, toTime: e.target.value })
+              }
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+            />
+          </div>
+          
+          <div className="flex justify-end gap-2 mt-6">
+            <Button
+              variant="outline"
+              onClick={onCancel}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={
+                isSubmitting ||
+                !newOffer.menuItemId ||
+                !newOffer.newPrice ||
+                !newOffer.itemsAvailable ||
+                !newOffer.fromTime ||
+                !newOffer.toTime
+              }
+              type="submit"
+              form="create-offer-form"
+              className="bg-orange-600"
+            >
+              {isSubmitting ? "Creating..." : "Create Offer"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export function OffersTab() {
+  const { items } = useMenuStore();
+  const { addOffer, fetchPartnerOffers, offers, deleteOffer } = useOfferStore();
+  const { userData } = useAuthStore();
+  const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
+  const [isOfferFetched, setIsOfferFetched] = useState(false);
+  const [isDeleting, setDeleting] = useState<Record<string, boolean>>({});
+
+  const handleOfferDelete = (id: string) => async () => {
+    setDeleting({
+      ...isDeleting,
+      [id]: true,
     });
-    setIsOpen(false);
-    setKeyboardOpen(false);
+    await deleteOffer(id);
+    setDeleting({
+      ...isDeleting,
+      [id]: false,
+    });
+  };
+
+  useEffect(() => {
+    (async () => {
+      if (userData) {
+        await fetchPartnerOffers();
+        setTimeout(() => {
+          setIsOfferFetched(true);
+        }, 2000);
+      }
+    })();
+  }, [userData]);
+
+  const handleCreateOffer = async (offer: {
+    menu_id: string;
+    offer_price: number;
+    items_available: number;
+    start_time: string;
+    end_time: string;
+  }) => {
+    await addOffer(offer);
+    setIsCreateOfferOpen(false);
   };
 
   return (
@@ -249,208 +376,77 @@ export function OffersTab() {
         <Button 
           variant="outline" 
           size="icon" 
-          onClick={() => setIsOpen(true)}
+          onClick={() => setIsCreateOfferOpen(true)}
         >
           <Plus className="h-4 w-4" />
         </Button>
-        
-        <FullModal open={isOpen} onOpenChange={setIsOpen}>
-          <FullModalContent>
-            <FullModalHeader>
-              <FullModalTitle>Create New Offer</FullModalTitle>
-            </FullModalHeader>
-            <FullModalBody>
-              <div ref={formContainerRef} className="pb-20">
-                <form id="create-offer-form" onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="menuItem">Select Menu Item</Label>
-                    <Select
-                      required
-                      value={newOffer.menuItemId}
-                      onValueChange={(value) => {
-                        setNewOffer({ ...newOffer, menuItemId: value });
-                        // Force close keyboard if open
-                        if (document.activeElement instanceof HTMLElement) {
-                          document.activeElement.blur();
-                        }
-                      }}
-                    >
-                      <SelectTrigger id="menuItem">
-                        <SelectValue placeholder="Select a product" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {items.map((item) => (
-                          <SelectItem key={item.id} value={item.id as string}>
-                            {item.name} - ₹{item.price.toFixed(2)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="newPrice">New Price in ₹</Label>
-                    <Input
-                      required
-                      ref={priceInputRef}
-                      id="newPrice"
-                      type="number"
-                      placeholder="Enter new price"
-                      value={newOffer.newPrice}
-                      onChange={(e) =>
-                        setNewOffer({ ...newOffer, newPrice: e.target.value })
-                      }
-                      onFocus={handleInputFocus}
-                      onBlur={handleInputBlur}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="itemsAvailable">
-                      Number of Items Available
-                    </Label>
-                    <Input
-                      required
-                      ref={itemsInputRef}
-                      id="itemsAvailable"
-                      type="number"
-                      placeholder="Enter quantity"
-                      value={newOffer.itemsAvailable}
-                      onChange={(e) =>
-                        setNewOffer({ ...newOffer, itemsAvailable: e.target.value })
-                      }
-                      onFocus={handleInputFocus}
-                      onBlur={handleInputBlur}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="fromTime">From Time</Label>
-                    <Input
-                      required
-                      ref={fromTimeInputRef}
-                      id="fromTime"
-                      type="datetime-local"
-                      value={newOffer.fromTime}
-                      onChange={(e) =>
-                        setNewOffer({ ...newOffer, fromTime: e.target.value })
-                      }
-                      onFocus={handleInputFocus}
-                      onBlur={handleInputBlur}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="toTime">To Time</Label>
-                    <Input
-                      required
-                      ref={toTimeInputRef}
-                      id="toTime"
-                      type="datetime-local"
-                      value={newOffer.toTime}
-                      onChange={(e) =>
-                        setNewOffer({ ...newOffer, toTime: e.target.value })
-                      }
-                      onFocus={handleInputFocus}
-                      onBlur={handleInputBlur}
-                    />
-                  </div>
-                </form>
-              </div>
-            </FullModalBody>
-            <FullModalFooter 
-              className={`${keyboardOpen ? 'keyboard-visible' : ''} sticky-footer`}
-              style={{
-                // Use style to ensure the footer stays above the keyboard
-                bottom: keyboardOpen ? `${window.visualViewport?.offsetTop || 0}px` : '0',
-                position: 'fixed',
-                width: '100%',
-              }}
-            >
-              <Button
-                variant="outline"
-                onClick={handleCancel}
-                type="button"
-              >
-                Cancel
-              </Button>
-              <Button
-                disabled={
-                  isAdding ||
-                  !newOffer.menuItemId ||
-                  !newOffer.newPrice ||
-                  !newOffer.itemsAvailable ||
-                  !newOffer.fromTime ||
-                  !newOffer.toTime
-                }
-                type="submit"
-                form="create-offer-form"
-                className="bg-orange-600"
-              >
-                {isAdding ? "Creating..." : "Create Offer"}
-              </Button>
-            </FullModalFooter>
-          </FullModalContent>
-        </FullModal>
       </div>
 
-      <>
-        {offers.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {offers.map((offer) => {
-              return (
-                <Card key={offer.id}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{offer.menu.name}</CardTitle>
-                    <div className="relative w-32 h-32 rounded-md overflow-hidden">
-                      <Img
-                        src={offer.menu.image_url}
-                        alt={offer.menu.name}
-                        className="object-cover w-full h-full "
-                      />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <p className="text-lg">
-                        Original Price: ₹{offer.menu.price.toFixed(2)}
-                      </p>
-                      <p className="text-2xl font-bold text-green-600">
-                        Offer Price: ₹{offer.offer_price.toFixed(2)}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        From: {formatDate(offer.start_time)}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        To: {formatDate(offer.end_time)}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Created At: {formatDate(offer.created_at)}
-                      </p>
-                      <Button
-                        disabled={isDeleting[offer.id]}
-                        variant="destructive"
-                        className="w-full mt-2"
-                        onClick={
-                          isDeleting[offer.id]
-                            ? undefined
-                            : handleOfferDelete(offer.id)
-                        }
-                      >
-                        {isDeleting[offer.id] ? "Deleting..." : "Delete Offer"}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center mt-4">
-            {isOfferFetched ? "No Offers Found!" : "Loading Offers...."}
-          </div>
-        )}
-      </>
+      {/* Tab switch: show create offer form or offer list */}
+      {isCreateOfferOpen ? (
+        <CreateOfferForm
+          onSubmit={handleCreateOffer}
+          onCancel={() => setIsCreateOfferOpen(false)}
+        />
+      ) : (
+        <>
+          {offers.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {offers.map((offer) => {
+                return (
+                  <Card key={offer.id}>
+                    <CardHeader>
+                      <CardTitle className="text-lg">{offer.menu.name}</CardTitle>
+                      <div className="relative w-32 h-32 rounded-md overflow-hidden">
+                        <Img
+                          src={offer.menu.image_url}
+                          alt={offer.menu.name}
+                          className="object-cover w-full h-full "
+                        />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <p className="text-lg">
+                          Original Price: ₹{offer.menu.price.toFixed(2)}
+                        </p>
+                        <p className="text-2xl font-bold text-green-600">
+                          Offer Price: ₹{offer.offer_price.toFixed(2)}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          From: {formatDate(offer.start_time)}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          To: {formatDate(offer.end_time)}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Created At: {formatDate(offer.created_at)}
+                        </p>
+                        <Button
+                          disabled={isDeleting[offer.id]}
+                          variant="destructive"
+                          className="w-full mt-2"
+                          onClick={
+                            isDeleting[offer.id]
+                              ? undefined
+                              : handleOfferDelete(offer.id)
+                          }
+                        >
+                          {isDeleting[offer.id] ? "Deleting..." : "Delete Offer"}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center mt-4">
+              {isOfferFetched ? "No Offers Found!" : "Loading Offers...."}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
