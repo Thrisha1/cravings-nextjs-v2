@@ -8,6 +8,7 @@ import OfferCardsLoading from "@/components/OfferCardsLoading";
 import SearchBox from "@/components/SearchBox";
 import { CommonOffer } from "@/components/superAdmin/OfferUploadSuperAdmin";
 import { fetchFromHasura } from "@/lib/hasuraClient";
+import { MapPin } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
@@ -57,7 +58,6 @@ const Explore = ({
   }, [initialDistrict, hasUserLocation]);
 
   const loadMore = async () => {
-
     if (!inView || isLoadingMore || offers.length >= totalOffers) return;
 
     setIsLoadingMore(true);
@@ -65,7 +65,7 @@ const Explore = ({
     try {
       const variables: Record<string, any> = {
         limit_count: limit,
-        offset_count: offers.length + 1
+        offset_count: offers.length + 1,
       };
 
       if (currentDistrict) {
@@ -79,8 +79,8 @@ const Explore = ({
       const locationCookie = await getLocationCookie();
 
       // if (locationCookie) {
-        variables.user_lat = locationCookie?.lat || 0;
-        variables.user_lng = locationCookie?.lng || 0;
+      variables.user_lat = locationCookie?.lat || 0;
+      variables.user_lng = locationCookie?.lng || 0;
       // }
 
       const response = await fetchFromHasura(
@@ -118,6 +118,32 @@ const Explore = ({
       toast.dismiss();
     };
   }, [isLoadingMore]);
+
+  const handleRequestLocationAccess = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            if (latitude && longitude) {
+              await setLocationCookie(latitude, longitude);
+              window.location.reload();
+            }
+          } catch (error) {
+            console.error("Error setting location:", error);
+            toast.error("Failed to set location");
+          }
+        }
+        ,
+        (error) => {
+          console.error("Geolocation error:", error);
+          toast.error("Failed to access your location");
+        }
+      );
+    } else {
+      toast.error("Geolocation is not supported by your browser");
+    }
+  };
 
   return (
     <div className="min-h-[100dvh] w-full bg-orange-50 px-3 py-3 relative pb-24">

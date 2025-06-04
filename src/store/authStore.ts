@@ -16,6 +16,7 @@ import {
   getAuthCookie,
   setAuthCookie,
   removeAuthCookie,
+  removeLocationCookie,
 } from "@/app/auth/actions";
 import { sendRegistrationWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
@@ -228,6 +229,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signOut: async() => {
     await removeAuthCookie();
+    await removeLocationCookie();
     localStorage.clear();
     window.location.href = "/";
     set({ userData: null, error: null });

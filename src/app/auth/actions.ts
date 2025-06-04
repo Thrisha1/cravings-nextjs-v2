@@ -55,3 +55,7 @@ export const getLocationCookie = async () => {
   const cookie = (await cookies()).get('location')?.value;
   return cookie ? JSON.parse(cookie) as { lat: number; lng: number } : null;
 };
+
+export const removeLocationCookie = async () => {
+  (await cookies()).delete('location');
+};
