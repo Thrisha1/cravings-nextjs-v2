@@ -209,9 +209,6 @@ export function Navbar() {
       ...(userData.role === "superadmin"
         ? [{ href: "/superadmin", label: "Super Admin" }]
         : []),
-      ...(userData.role === "user"
-        ? [{ href: "/my-orders", label: "My Orders" }]
-        : []),
     ];
 
     return roleBasedLinks.map((link) => (
