@@ -10,7 +10,12 @@ export async function GET(request: Request) {
   }
 
   try {
+    console.log('Fetching image from URL:', url);
+    
     const response = await fetch(url);
+    
+    console.log('response' , response);
+    
     
     if (!response.ok) {
       throw new Error(`Failed to fetch image: ${response.statusText}`);
