@@ -397,7 +397,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         userId,
         isCaptainOrder,
         createdAt,
-        totalPrice: grandTotal,
+        totalPrice: foodSubtotal,
         type: "pos",
         status: "completed" as "completed",
         tableNumber: get().tableNumber,
@@ -409,7 +409,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
       // Create order in database
       const orderResponse = await fetchFromHasura(createOrderMutation, {
         id: orderId,
-        totalPrice: grandTotal,
+        totalPrice: foodSubtotal,
         gst_included: gstPercentage,
         extra_charges: extraCharges.length > 0 ? extraCharges : null,
         createdAt,
@@ -430,7 +430,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
           errors: orderResponse.errors,
           sentData: {
             id: orderId,
-            totalPrice: grandTotal,
+            totalPrice: foodSubtotal,
             partnerId,
             type: "pos",
             status: "completed" as "completed",
