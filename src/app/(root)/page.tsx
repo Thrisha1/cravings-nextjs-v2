@@ -38,20 +38,24 @@ const page = async ({
   const getCommonOffers = async () => {
     const variables: Record<string, any> = {
       limit_count: limit,
-      offset_count: 0,
-      max_distance: 1000000, 
+      offset_count: 0
     };
 
     if (district) variables.district_filter = district;
     if (searchQuery) variables.search_query = `%${searchQuery}%`;
 
-    if (location && location.lat != null && location.lng != null) {
-      variables.user_lat = location.lat;
-      variables.user_lng = location.lng;
-    }
+
+      variables.user_lat = location?.lat || 0;
+      variables.user_lng = location?.lng || 0; 
+
+      const loc = {
+        lat: location?.lat || 0,
+        lng: location?.lng || 0,
+      }
+    
 
     const response = await fetchFromHasura(
-      getAllCommonOffers(district, searchQuery, location || undefined),
+      getAllCommonOffers( location || undefined ),
       variables
     );
 

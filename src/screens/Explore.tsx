@@ -57,7 +57,6 @@ const Explore = ({
   }, [initialDistrict, hasUserLocation]);
 
   const loadMore = async () => {
-    console.log(offers.length, totalOffers);
 
     if (!inView || isLoadingMore || offers.length >= totalOffers) return;
 
@@ -66,8 +65,7 @@ const Explore = ({
     try {
       const variables: Record<string, any> = {
         limit_count: limit,
-        offset_count: offers.length + 1,
-        max_distance: 1000000,
+        offset_count: offers.length + 1
       };
 
       if (currentDistrict) {
@@ -80,13 +78,13 @@ const Explore = ({
 
       const locationCookie = await getLocationCookie();
 
-      if (locationCookie) {
-        variables.user_lat = locationCookie.lat;
-        variables.user_lng = locationCookie.lng;
-      }
+      // if (locationCookie) {
+        variables.user_lat = locationCookie?.lat || 0;
+        variables.user_lng = locationCookie?.lng || 0;
+      // }
 
       const response = await fetchFromHasura(
-        getAllCommonOffers(currentDistrict, currentSearchQuery),
+        getAllCommonOffers(locationCookie || undefined),
         variables
       );
 

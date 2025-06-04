@@ -41,20 +41,15 @@ mutation InsertCommonOffer(
   }
 }`;
 
-export const getAllCommonOffers = (
-  district: string | null,
-  searchQuery: string | null,
-  location?: { lat: number; lng: number }
-) => {
-  const hasLocation = location && location.lat != null && location.lng != null;
-
-  return `
+export const getAllCommonOffers = (location?: { lat: number; lng: number }) => {
+  // if (location) {
+    return `
   query GetAllCommonOffers(
     $user_lat: float8,
     $user_lng: float8,
     $limit_count: Int,
     $offset_count: Int,
-    $max_distance: Int = 1000000,
+    $max_distance: Int = 100000000,
     $district_filter: String,
     $search_query: String
   ) {
@@ -94,6 +89,26 @@ export const getAllCommonOffers = (
     }
   }
   `;
+//   } else {
+//     return `
+//    query GetAllCommonOffers($limit_count: Int, $offset_count: Int, $district: String = "", $search_query: String = "") {
+//     common_offers: common_offers(order_by: {created_at: desc}, limit: $limit_count, offset: $offset_count, where: {district: {_ilike: $district}, _or: [{partner_name: {_ilike: $search_query}}, {item_name: {_ilike: $search_query}}]}) {
+//       id
+//       partner_name
+//       item_name
+//       price
+//       image_url
+//       district
+//       created_at
+//     }
+//     common_offers_aggregate: common_offers_aggregate(where: {district: {_eq: $district}, _or: [{partner_name: {_ilike: $search_query}}, {item_name: {_ilike: $search_query}}]}) {
+//       aggregate {
+//         count
+//       }
+//     }
+//   }
+// `;
+//   }
 };
 
 export const getCommonOffersWithDistance = `
