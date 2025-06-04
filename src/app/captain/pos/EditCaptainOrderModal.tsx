@@ -61,8 +61,9 @@ export const EditCaptainOrderModal = () => {
   const [totalPrice, setTotalPrice] = useState(0);
   const [tableNumber, setTableNumber] = useState<number | null>(null);
   const [phone, setPhone] = useState<string | null>(null);
-  const [newItemId, setNewItemId] = useState<string>("");
+  const [newItemId, setNewItemId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showExtraItems, setShowExtraItems] = useState(false);
 
   const currency = partnerData?.currency || "$";
   const gstPercentage = partnerData?.gst_percentage || 0;
@@ -90,8 +91,9 @@ export const EditCaptainOrderModal = () => {
     setTotalPrice(0);
     setTableNumber(null);
     setPhone(null);
-    setNewItemId("");
+    setNewItemId(null);
     setSearchQuery("");
+    setShowExtraItems(false);
   };
 
   useEffect(() => {
@@ -263,7 +265,7 @@ export const EditCaptainOrderModal = () => {
       setTotalPrice(calculateTotal(updatedItems));
     }
 
-    setNewItemId("");
+    setNewItemId(null);
   };
 
   const handleUpdateOrder = async () => {
@@ -458,74 +460,83 @@ export const EditCaptainOrderModal = () => {
                 </div>
               </div>
 
-              {/* Add New Item */}
+              {/* Add Extra Items Section */}
               <div>
-                <h3 className="font-medium mb-4">Add New Item</h3>
-                <div className="space-y-3">
-                  <Input
-                    placeholder="Search menu items..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-9"
-                  />
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExtraItems(!showExtraItems)}
+                  className="w-full mb-4"
+                >
+                  {showExtraItems ? "Hide Extra Items" : "Add Extra Item"}
+                </Button>
 
-                  <div className="border rounded-lg max-h-48 overflow-y-auto">
-                    {menuLoading ? (
-                      <div className="p-3 text-center">
-                        <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                        <div className="text-muted-foreground">Loading menu items...</div>
-                      </div>
-                    ) : menuItems.length === 0 ? (
-                      <div className="p-3 text-center text-muted-foreground">
-                        No menu items available
-                      </div>
-                    ) : filteredMenuItems.length === 0 ? (
-                      <div className="p-3 text-center text-muted-foreground">
-                        {searchQuery ? "No items found" : "No menu items available"}
-                      </div>
-                    ) : (
-                      <div className="divide-y">
-                        {filteredMenuItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className="p-2.5 flex justify-between items-center hover:bg-accent cursor-pointer"
-                            onClick={() => {
-                              console.log("Selected menu item:", {
-                                id: item.id,
-                                name: item.name,
-                                price: item.price
-                              });
-                              setNewItemId(item.id!);
-                              setSearchQuery("");
-                            }}
-                          >
-                            <div>
-                              <div className="font-medium text-sm">{item.name}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {currency}
-                                {item.price.toFixed(2)}
+                {showExtraItems && (
+                  <div className="space-y-3">
+                    <Input
+                      placeholder="Search menu items..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="h-9"
+                    />
+
+                    <div className="border rounded-lg max-h-48 overflow-y-auto">
+                      {menuLoading ? (
+                        <div className="p-3 text-center">
+                          <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                          <div className="text-muted-foreground">Loading menu items...</div>
+                        </div>
+                      ) : menuItems.length === 0 ? (
+                        <div className="p-3 text-center text-muted-foreground">
+                          No menu items available
+                        </div>
+                      ) : filteredMenuItems.length === 0 ? (
+                        <div className="p-3 text-center text-muted-foreground">
+                          {searchQuery ? "No items found" : "No menu items available"}
+                        </div>
+                      ) : (
+                        <div className="divide-y">
+                          {filteredMenuItems.map((item) => (
+                            <div
+                              key={item.id}
+                              className="p-2.5 flex justify-between items-center hover:bg-accent cursor-pointer"
+                              onClick={() => {
+                                console.log("Selected menu item:", {
+                                  id: item.id,
+                                  name: item.name,
+                                  price: item.price
+                                });
+                                setNewItemId(item.id!);
+                                setSearchQuery("");
+                              }}
+                            >
+                              <div>
+                                <div className="font-medium text-sm">{item.name}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {currency}
+                                  {item.price.toFixed(2)}
+                                </div>
                               </div>
+                              <Plus className="h-4 w-4" />
                             </div>
-                            <Plus className="h-4 w-4" />
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {newItemId && (
+                      <div className="flex gap-2">
+                        <div className="flex-1 border rounded-lg p-2.5 text-sm">
+                          {menuItems.find((item) => item.id === newItemId)?.name} -{" "}
+                          {currency}
+                          {menuItems
+                            .find((item) => item.id === newItemId)
+                            ?.price.toFixed(2)}
+                        </div>
+                        <Button onClick={handleAddItem} size="sm">Add</Button>
                       </div>
                     )}
                   </div>
-
-                  {newItemId && (
-                    <div className="flex gap-2">
-                      <div className="flex-1 border rounded-lg p-2.5 text-sm">
-                        {menuItems.find((item) => item.id === newItemId)?.name} -{" "}
-                        {currency}
-                        {menuItems
-                          .find((item) => item.id === newItemId)
-                          ?.price.toFixed(2)}
-                      </div>
-                      <Button onClick={handleAddItem} size="sm">Add</Button>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
 
               {/* Current Items */}

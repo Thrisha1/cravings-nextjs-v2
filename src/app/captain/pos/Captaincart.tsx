@@ -32,7 +32,9 @@ export const Captaincart = () => {
     order,
     removeFromCart,
     setLoading,
-    setPostCheckoutModalOpen
+    setPostCheckoutModalOpen,
+    addToCart,
+    setIsCaptainOrder,
   } = usePOSStore();
   
   const { userData } = useAuthStore();
@@ -46,11 +48,14 @@ export const Captaincart = () => {
     return (price * gstPercentage) / 100;
   };
 
-  // Calculate totals including extra charges
+  // Calculate totals
+  const foodSubtotal = totalAmount; // This is the subtotal of food items only
   const extraChargesTotal = extraCharges.amount || 0;
-  const subtotalWithExtraCharges = totalAmount + extraChargesTotal;
-  const gstAmount = getGstAmount(subtotalWithExtraCharges, captainData?.gst_percentage || 0);
-  const grandTotal = subtotalWithExtraCharges + gstAmount;
+  const gstAmount = getGstAmount(foodSubtotal, captainData?.gst_percentage || 0); // GST only on food items
+  const grandTotal = foodSubtotal + gstAmount + extraChargesTotal; // Total including GST and extra charges
+
+  // Check if table selection is made
+  const isTableSelected = tableNumber !== undefined;
 
   useEffect(() => {
     const fetchTableNumbers = async () => {
@@ -157,6 +162,9 @@ export const Captaincart = () => {
                     No Table
                   </Button>
                 </div>
+                {!isTableSelected && (
+                  <p className="text-sm text-red-500 mt-1">Please select a table or choose "No Table"</p>
+                )}
               </div>
 
               {/* Phone Number */}
@@ -193,14 +201,56 @@ export const Captaincart = () => {
                 <h3 className="font-semibold mb-2">Order Summary</h3>
                 <div className="space-y-2">
                   {/* Food Items */}
-                  {cartItems.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span>{item.quantity}x {item.name}</span>
-                      <span>{captainData?.currency || "$"}{(item.price * item.quantity).toFixed(2)}</span>
+                  {cartItems.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{item.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {captainData?.currency || "$"}
+                          {item.price.toFixed(2)} each
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 ml-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => decreaseQuantity(item.id!)}
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </Button>
+
+                        <span className="w-6 text-center text-sm">
+                          {item.quantity}
+                        </span>
+
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => addToCart(item)}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                   
-                  {/* Extra Charges - Show even while typing */}
+                  {/* Subtotal (Food only) */}
+                  <div className="flex justify-between text-sm border-t pt-2">
+                    <span>Subtotal</span>
+                    <span>{captainData?.currency || "$"}{foodSubtotal.toFixed(2)}</span>
+                  </div>
+
+                  {/* GST (on food only) */}
+                  {(captainData?.gst_percentage || 0) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>{`GST (${captainData?.gst_percentage || 0}%)`}</span>
+                      <span>{captainData?.currency || "$"}{gstAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  {/* Extra Charges */}
                   {(extraCharges.name || extraCharges.amount > 0) && (
                     <div className="flex justify-between text-sm border-t pt-2">
                       <span>{extraCharges.name || "Extra Charge"}</span>
@@ -208,22 +258,10 @@ export const Captaincart = () => {
                     </div>
                   )}
 
-                  {/* Totals */}
-                  <div className="border-t pt-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Subtotal</span>
-                      <span>{captainData?.currency || "$"}{subtotalWithExtraCharges.toFixed(2)}</span>
-                    </div>
-                    {(captainData?.gst_percentage || 0) > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span>{`GST (${captainData?.gst_percentage || 0}%)`}</span>
-                        <span>{captainData?.currency || "$"}{gstAmount.toFixed(2)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between font-semibold mt-2">
-                      <span>Total</span>
-                      <span>{captainData?.currency || "$"}{grandTotal.toFixed(2)}</span>
-                    </div>
+                  {/* Grand Total */}
+                  <div className="flex justify-between font-semibold mt-2 border-t pt-2">
+                    <span>Total</span>
+                    <span>{captainData?.currency || "$"}{grandTotal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -239,7 +277,7 @@ export const Captaincart = () => {
               </Button>
               <Button
                 onClick={handleConfirmOrder}
-                disabled={loading}
+                disabled={loading || !isTableSelected}
                 className="flex-1"
               >
                 {loading ? (
