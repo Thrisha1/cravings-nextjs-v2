@@ -13,7 +13,7 @@ import { useAdminOfferStore } from "@/store/useAdminOfferStore";
 import { Partner, useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { AddMenuItemForm } from "../bulkMenuUpload/AddMenuItemModal";
-import { EditMenuItemForm } from "./EditMenuItemModal";
+import { EditMenuItemForm, EditMenuItemModal } from "./EditMenuItemModal";
 import { CategoryManagementModal, CategoryManagementForm } from "./CategoryManagementModal";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
@@ -334,14 +334,14 @@ export function MenuTab() {
         />
       </div>
 
-      {editingItem && (
+      {/* {editingItem && (
         <EditMenuItemModal
           isOpen={isEditModalOpen}
           onOpenChange={setIsEditModalOpen}
           item={editingItem}
           onSubmit={handleEditItem}
         />
-      )}
+      )} */}
 
       {isCategoryEditing && (
         <CategoryManagementModal
