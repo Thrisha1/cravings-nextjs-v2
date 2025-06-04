@@ -73,13 +73,13 @@ const CommonOfferCard = ({ commonOffer }: { commonOffer: CommonOffer }) => {
             )}
 
             <div className="flex flex-col items-end justify-start">
-              {commonOffer.distance_meters ? (
+              {(commonOffer.distance_meters ?? 0) < 3000 ? (
                 <div className="text-white/80 font-black text-right uppercase mt-2 text-lg">
                   {((commonOffer.distance_meters ?? 0) / 1000).toFixed(0)}
                   <span className="font-bold text-sm">KM</span>
                 </div>
               ) : null}
-              <p className="text-white/80 font-bold text-right uppercase text-xs">
+              <p className={`text-white/80 font-bold text-right uppercase ${(commonOffer.distance_meters ?? 0) < 3000 ? 'text-xs' : 'text-base'}`}>
                 {districtToShortForm[
                   commonOffer.district.toLowerCase() as DistrictKeys
                 ] || commonOffer.district.toLowerCase()}
