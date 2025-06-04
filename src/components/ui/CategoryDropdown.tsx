@@ -12,7 +12,7 @@ import { Label } from "./label";
 import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
 import { Category, formatDisplayName, useCategoryStore } from "@/store/categoryStore_hasura";
-import { ScrollArea } from "@radix-ui/react-scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChevronLeft } from "lucide-react";
 
 interface CategoryDropdownProps {
@@ -84,6 +84,7 @@ export const CategoryDropdown = ({
               onChange={(e) => setNewCategory(e.target.value)}
               placeholder="Enter new category name"
               autoFocus
+              className="h-12 text-base"
             />
           </div>
         </div>
@@ -92,7 +93,7 @@ export const CategoryDropdown = ({
             variant="outline" 
             type="button" 
             onClick={handleCancel}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 h-12 px-4"
           >
             <ChevronLeft className="h-4 w-4" /> Back
           </Button>
@@ -100,6 +101,7 @@ export const CategoryDropdown = ({
             type="button"
             disabled={!newCategory.trim() || isLoading}
             onClick={handleCreateCategory}
+            className="h-12 px-4"
           >
             {isLoading ? "Creating..." : "Create Category"}
           </Button>
@@ -110,21 +112,21 @@ export const CategoryDropdown = ({
 
   return (
     <Select value={value} onValueChange={handleSelectChange}>
-      <SelectTrigger className="capitalize">
+      <SelectTrigger className="capitalize h-12 text-base">
         <SelectValue placeholder="Select category" />
       </SelectTrigger>
-      <SelectContent>
-        <ScrollArea className="h-48">
+      <SelectContent className="max-w-[95vw]">
+        <ScrollArea className="h-64 md:h-48">
           <SelectItem
             value="new-cat"
-            className="bg-green-100 font-semibold cursor-pointer"
+            className="bg-green-100 font-semibold cursor-pointer py-3 px-3"
           >
             Create New Category
           </SelectItem>
           {categories.length > 0
             ? categories?.map((category) => (
               <SelectItem
-                className="capitalize"
+                className="capitalize py-3 px-3"
                 key={`${category.id}`}
                 value={category.name}
               >
