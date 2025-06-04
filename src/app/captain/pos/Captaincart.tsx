@@ -86,16 +86,8 @@ export const Captaincart = () => {
   }, [captainData?.partner_id, getPartnerTables]);
 
   const handleCheckoutFlow = async () => {
-    try {
-      setLoading(true);
-      console.log("Starting checkout flow. Available table numbers:", tableNumbers);
-      setIsTableModalOpen(true);
-    } catch (error) {
-      console.error("Error in checkout flow:", error);
-      toast.error("Failed to start checkout");
-    } finally {
-      setLoading(false);
-    }
+    console.log("Starting checkout flow. Available table numbers:", tableNumbers);
+    setIsTableModalOpen(true);
   };
 
   const handleTableSelect = (table: number) => {
@@ -137,7 +129,6 @@ export const Captaincart = () => {
 
   const performCheckout = async () => {
     try {
-      setLoading(true);
       await checkout();
       toast.success("Checkout successful");
       setIsOpen(false);
@@ -146,8 +137,6 @@ export const Captaincart = () => {
     } catch (error) {
       console.error("Checkout failed:", error);
       toast.error("Checkout failed");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -294,6 +283,7 @@ export const Captaincart = () => {
                 className="w-full h-12 text-lg font-semibold"
                 onClick={handleCheckoutFlow}
                 disabled={loading}
+                // className="w-full bg-black hover:bg-black/90 text-white py-3 text-base font-semibold"
               >
                 {loading ? (
                   <>
