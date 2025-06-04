@@ -1,8 +1,8 @@
 import { getAllCommonOffers } from "@/api/common_offers";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import Explore from "@/screens/Explore";
-import { unstable_cache } from "next/cache";
 import React from "react";
+import { getLocationCookie } from "../auth/actions";
 
 interface CommonOffer {
   id: string;
@@ -12,11 +12,13 @@ interface CommonOffer {
   image_url: string;
   district: string;
   created_at: string;
+  coordinates: any;
+  distance_meters: number;
 }
 
 interface CommonOffersResponse {
-  common_offers: CommonOffer[];
-  common_offers_aggregate: {
+  get_offers_near_location: CommonOffer[];
+  get_offers_near_location_aggregate: {
     aggregate: {
       count: number;
     };
@@ -31,51 +33,46 @@ const page = async ({
   const limit = 8;
   const district = (await searchParams)?.location?.toLowerCase() || "";
   const searchQuery = (await searchParams)?.query || "";
+  const location = await getLocationCookie();
 
-  const getCommonOffers = unstable_cache(
-    async () => {
-      const variables: Record<string, any> = {
-        limit: limit,
-        offset: 0,
-      };
+  const getCommonOffers = async () => {
+    const variables: Record<string, any> = {
+      limit_count: limit,
+      offset_count: 0,
+      max_distance: 1000000, 
+    };
 
-      if (district) variables.district = district;
-      if (searchQuery) variables.searchQuery = `%${searchQuery}%`;
+    if (district) variables.district_filter = district;
+    if (searchQuery) variables.search_query = `%${searchQuery}%`;
 
-      const response = await fetchFromHasura(
-        getAllCommonOffers(district, searchQuery),
-        variables
-      );
-      return (
-        response || {
-          common_offers: [],
-          common_offers_aggregate: { aggregate: { count: 0 } },
-        }
-      );
-    },
-    [
-      "all-common-offers",
-      "common-offers",
-      district || "all",
-      searchQuery || "all",
-    ],
-    {
-      tags: [
-        "all-common-offers",
-        "common-offers",
-        "district:" + (district || "all"),
-        "searchQuery:" + (searchQuery || "all"),
-      ],
+    if (location && location.lat != null && location.lng != null) {
+      variables.user_lat = location.lat;
+      variables.user_lng = location.lng;
     }
-  );
 
-  const { common_offers, common_offers_aggregate } = await getCommonOffers();
+    const response = await fetchFromHasura(
+      getAllCommonOffers(district, searchQuery, location || undefined),
+      variables
+    );
+
+    return (
+      response || {
+        get_offers_near_location: [],
+        get_offers_near_location_aggregate: { aggregate: { count: 0 } },
+      }
+    );
+  };
+
+  const { get_offers_near_location, get_offers_near_location_aggregate } =
+    await getCommonOffers();
+
 
   return (
     <Explore
-      commonOffers={common_offers}
+      hasUserLocation={!!location}
+      commonOffers={get_offers_near_location}
       limit={limit}
-      totalOffers={common_offers_aggregate.aggregate.count}
+      totalOffers={get_offers_near_location_aggregate.aggregate.count}
       initialDistrict={district}
       initialSearchQuery={searchQuery}
     />

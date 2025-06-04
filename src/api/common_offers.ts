@@ -41,22 +41,35 @@ mutation InsertCommonOffer(
   }
 }`;
 
-export const getAllCommonOffers = (district : string | null , searchQuery : string | null) => {
-  return  `
-  query GetAllCommonOffers($limit: Int, $offset: Int, $district: String, $searchQuery: String) {
-    common_offers: common_offers(
-      order_by: {created_at: desc}, 
-      limit: $limit, 
-      offset: $offset,
-      where: {
-        ${district ? 'district: {_eq: $district}' : ''}
-        ${district && searchQuery ? ',' : ''}
-        ${searchQuery ? `_or: [
-          {partner_name: {_ilike: $searchQuery}},
-          {item_name: {_ilike: $searchQuery}}
-        ]` : ''}
+export const getAllCommonOffers = (
+  district: string | null,
+  searchQuery: string | null,
+  location?: { lat: number; lng: number }
+) => {
+  const hasLocation = location && location.lat != null && location.lng != null;
+
+  return `
+  query GetAllCommonOffers(
+    $user_lat: float8,
+    $user_lng: float8,
+    $limit_count: Int,
+    $offset_count: Int,
+    $max_distance: Int = 1000000,
+    $district_filter: String,
+    $search_query: String
+  ) {
+    get_offers_near_location(
+      args: {
+        user_lat: $user_lat,
+        user_lng: $user_lng,
+        max_distance: $max_distance,
+        limit_count: $limit_count,
+        offset_count: $offset_count
+        district_filter: $district_filter,
+        search_query: $search_query
       }
     ) {
+      distance_meters(args: {user_lat: $user_lat, user_lng: $user_lng})
       id
       partner_name
       item_name
@@ -64,15 +77,15 @@ export const getAllCommonOffers = (district : string | null , searchQuery : stri
       image_url
       district
       created_at
+      coordinates
     }
-    common_offers_aggregate: common_offers_aggregate(
-      where: {
-        ${district ? 'district: {_eq: $district}' : ''}
-        ${district && searchQuery ? ',' : ''}
-        ${searchQuery ? `_or: [
-          {partner_name: {_ilike: $searchQuery}},
-          {item_name: {_ilike: $searchQuery}}
-        ]` : ''}
+    get_offers_near_location_aggregate(
+      args: {
+        user_lat: $user_lat,
+        user_lng: $user_lng,
+        max_distance: $max_distance
+        district_filter: $district_filter,
+        search_query: $search_query
       }
     ) {
       aggregate {
@@ -80,8 +93,8 @@ export const getAllCommonOffers = (district : string | null , searchQuery : stri
       }
     }
   }
-`;
-}
+  `;
+};
 
 export const getCommonOffersWithDistance = `
   query GetCommonOffersWithDistance(
@@ -158,7 +171,6 @@ export const deleteCommonOffer = `
     }
 }`;
 
-
 export const updateCommonOffer = `
   mutation UpdateCommonOffer( $object: common_offers_set_input!, $id: uuid!) {
     update_common_offers_by_pk(pk_columns: {id: $id}, _set: $object) {
@@ -177,7 +189,7 @@ export const updateCommonOffer = `
     }
   }`;
 
-  export const searchCommonOffers = `
+export const searchCommonOffers = `
   query SearchCommonOffers($searchTerm: String!, $limit: Int!, $offset: Int!) {
     common_offers(
       where: {

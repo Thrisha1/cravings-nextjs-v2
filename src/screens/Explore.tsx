@@ -1,5 +1,6 @@
 "use client";
 import { getAllCommonOffers } from "@/api/common_offers";
+import { getLocationCookie, setLocationCookie } from "@/app/auth/actions";
 import CommonOfferCard from "@/components/explore/CommonOfferCard";
 import LocationSelection from "@/components/LocationSelection";
 import NoOffersFound from "@/components/NoOffersFound";
@@ -17,65 +18,96 @@ const Explore = ({
   limit,
   totalOffers,
   initialDistrict,
-  initialSearchQuery
+  initialSearchQuery,
+  hasUserLocation = false,
 }: {
   commonOffers: CommonOffer[];
   limit: number;
   totalOffers: number;
   initialDistrict: string | null;
   initialSearchQuery: string;
+  hasUserLocation?: boolean;
 }) => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const searchParams = useSearchParams();
   const [offers, setOffers] = useState<CommonOffer[]>(commonOffers);
-  const [currentDistrict, setCurrentDistrict] = useState(initialDistrict);
-  const [currentSearchQuery, setCurrentSearchQuery] = useState(initialSearchQuery);
+  const [currentDistrict] = useState(initialDistrict);
+  const [currentSearchQuery] = useState(initialSearchQuery);
+  const { ref, inView } = useInView();
+  const searchParams = useSearchParams();
 
-  const { ref, inView, entry } = useInView({
-    threshold: 0,
-  });
+  useEffect(() => {
+    if (navigator.geolocation && !initialDistrict && !hasUserLocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            if (latitude && longitude) {
+              await setLocationCookie(latitude, longitude);
+              window.location.reload();
+            }
+          } catch (error) {
+            console.error("Error setting location:", error);
+          }
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+        }
+      );
+    }
+  }, [initialDistrict, hasUserLocation]);
 
   const loadMore = async () => {
+    console.log(offers.length, totalOffers);
+
+    if (!inView || isLoadingMore || offers.length >= totalOffers) return;
+
+    setIsLoadingMore(true);
+
     try {
-      if (!inView || isLoadingMore || offers.length >= totalOffers) return;
-      
-      setIsLoadingMore(true);
-      
-      // Prepare variables object conditionally
-      const variables: any = {
-        limit: limit,
-        offset: offers.length + 1
+      const variables: Record<string, any> = {
+        limit_count: limit,
+        offset_count: offers.length + 1,
+        max_distance: 1000000,
       };
-      
+
       if (currentDistrict) {
-        variables.district = currentDistrict;
+        variables.district_filter = currentDistrict;
       }
-      
+
       if (currentSearchQuery) {
-        variables.searchQuery = `%${currentSearchQuery}%`;
+        variables.search_query = `%${currentSearchQuery}%`;
       }
-      
-      const newOffers = await fetchFromHasura(getAllCommonOffers(currentDistrict, currentSearchQuery), variables);
-      
-      const { common_offers } = newOffers;
-      if (common_offers?.length) {
-        setOffers(prev => [...prev, ...common_offers]);
+
+      const locationCookie = await getLocationCookie();
+
+      if (locationCookie) {
+        variables.user_lat = locationCookie.lat;
+        variables.user_lng = locationCookie.lng;
+      }
+
+      const response = await fetchFromHasura(
+        getAllCommonOffers(currentDistrict, currentSearchQuery),
+        variables
+      );
+
+      if (response?.get_offers_near_location?.length) {
+        setOffers((prev) => [...prev, ...response.get_offers_near_location]);
       }
     } catch (error) {
       console.error("Error loading more offers:", error);
+      toast.error("Failed to load more offers");
     } finally {
       setIsLoadingMore(false);
     }
   };
 
-
   useEffect(() => {
     loadMore();
-  }, [inView, entry]);
+  }, [inView]);
 
   useEffect(() => {
     setOffers(commonOffers);
-  },[commonOffers]);
+  }, [commonOffers]);
 
   useEffect(() => {
     if (isLoadingMore) {
@@ -83,6 +115,10 @@ const Explore = ({
     } else {
       toast.dismiss();
     }
+
+    return () => {
+      toast.dismiss();
+    };
   }, [isLoadingMore]);
 
   return (
@@ -102,19 +138,15 @@ const Explore = ({
         <section className="mt-5">
           {offers.length > 0 ? (
             <>
-              {/* offer list  */}
               <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
-                {offers.map((offer, index) => {
-                  const isLast = index === offers.length - 1;
-                  return (
-                    <div
-                      key={offer.id}
-                      ref={isLast ? ref : null}
-                    >
-                      <CommonOfferCard commonOffer={offer} />
-                    </div>
-                  );
-                })}
+                {offers.map((offer, index) => (
+                  <div
+                    key={offer.id}
+                    ref={index === offers.length - 1 ? ref : null}
+                  >
+                    <CommonOfferCard commonOffer={offer} />
+                  </div>
+                ))}
               </div>
               {isLoadingMore && <OfferCardsLoading />}
             </>

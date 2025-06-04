@@ -3,6 +3,7 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import Explore from "@/screens/Explore";
 import { unstable_cache } from "next/cache";
 import React from "react";
+import { getLocationCookie } from "../auth/actions";
 
 interface CommonOffer {
   id: string;
@@ -31,6 +32,7 @@ const page = async ({
   const limit = 8;
   const district = (await searchParams)?.location?.toLowerCase() || "";
   const searchQuery = (await searchParams)?.query || "";
+
 
   const getCommonOffers = unstable_cache(
     async () => {
@@ -70,6 +72,7 @@ const page = async ({
   );
 
   const { common_offers, common_offers_aggregate } = await getCommonOffers();
+
 
   return (
     <Explore
