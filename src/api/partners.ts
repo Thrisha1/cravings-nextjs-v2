@@ -1,8 +1,19 @@
 /*...........query...........*/
 
 export const getAllPartnersQuery = `
-query GetAllPartners($limit: Int, $offset: Int) {
-  partners(limit: $limit, offset: $offset , where: {status: {_eq: "active"}}) {
+query GetAllPartners($limit: Int, $offset: Int, $district: String = "%") {
+  partners(
+    where: {
+      status: {_eq: "active"}, 
+      _or: [
+        {district: {_ilike: $district}},
+        {district: {_is_null: true}}
+      ]
+    }, 
+    order_by: {store_name: asc}, 
+    limit: $limit, 
+    offset: $offset
+  ) {
     id 
     store_name
     location
@@ -10,7 +21,15 @@ query GetAllPartners($limit: Int, $offset: Int) {
     district
     store_banner
   }
-  partners_aggregate {
+  partners_aggregate(
+    where: {
+      status: {_eq: "active"}, 
+      _or: [
+        {district: {_ilike: $district}},
+        {district: {_is_null: true}}
+      ]
+    }
+  ) {
     aggregate {
       count
     }
