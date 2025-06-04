@@ -198,45 +198,55 @@ export const CaptainPOS = () => {
             )}
 
             {/* Menu Items */}
-            {Object.entries(filteredGroupedItems).map(([category, items]) => (
-                <div key={category} className="space-y-4">
-                    <h2 className="text-lg font-semibold">{category}</h2>
-                    <div className="grid grid-cols-1 gap-4">
-                        {items.map((item) => {
-                            const cartItem = cartItems.find(
-                                (cartItem) => cartItem.id === item.id
-                            );
-                            return (
-                                <Card
-                                    key={item.id}
-                                    className="cursor-pointer hover:shadow-md transition-shadow"
-                                    onClick={() => addToCart(item)}
-                                >
-                                    <CardContent className="p-4">
-                                        <div className="flex justify-between items-center">
-                                            <div>
-                                                <h3 className="font-medium">{item.name}</h3>
-                                                <p className="text-lg font-bold mt-2">
-                                                    {partnerData?.currency || "$"}
-                                                    {item.price}
-                                                </p>
-                                            </div>
-                                            <div
-                                                className="flex items-center gap-2"
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                {cartItem ? (
-                                                    <>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            onClick={() => decreaseQuantity(item.id!)}
-                                                        >
-                                                            <Minus className="h-4 w-4" />
-                                                        </Button>
-                                                        <span className="w-8 text-center">
-                                                            {cartItem.quantity}
-                                                        </span>
+            <div className="px-6 pb-6 space-y-6">
+                {Object.entries(filteredGroupedItems).map(([category, items]) => (
+                    <div key={category} className="space-y-4">
+                        <h2 className="text-lg font-semibold">{category}</h2>
+                        <div className="grid grid-cols-1 gap-4">
+                            {items.map((item) => {
+                                const cartItem = cartItems.find(
+                                    (cartItem) => cartItem.id === item.id
+                                );
+                                return (
+                                    <Card
+                                        key={item.id}
+                                        className="cursor-pointer hover:shadow-md transition-shadow"
+                                        onClick={() => addToCart(item)}
+                                    >
+                                        <CardContent className="p-4">
+                                            <div className="flex justify-between items-center">
+                                                <div>
+                                                    <h3 className="font-medium">{item.name}</h3>
+                                                    <p className="text-lg font-bold mt-2">
+                                                        {partnerData?.currency || "$"}
+                                                        {item.price}
+                                                    </p>
+                                                </div>
+                                                <div
+                                                    className="flex items-center gap-2"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    {cartItem ? (
+                                                        <>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="icon"
+                                                                onClick={() => decreaseQuantity(item.id!)}
+                                                            >
+                                                                <Minus className="h-4 w-4" />
+                                                            </Button>
+                                                            <span className="w-8 text-center">
+                                                                {cartItem.quantity}
+                                                            </span>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="icon"
+                                                                onClick={() => addToCart(item)}
+                                                            >
+                                                                <Plus className="h-4 w-4" />
+                                                            </Button>
+                                                        </>
+                                                    ) : (
                                                         <Button
                                                             variant="outline"
                                                             size="icon"
@@ -244,25 +254,17 @@ export const CaptainPOS = () => {
                                                         >
                                                             <Plus className="h-4 w-4" />
                                                         </Button>
-                                                    </>
-                                                ) : (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        onClick={() => addToCart(item)}
-                                                    >
-                                                        <Plus className="h-4 w-4" />
-                                                    </Button>
-                                                )}
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
-            ))}
+                ))}
+            </div>
         </div>
     );
 };
