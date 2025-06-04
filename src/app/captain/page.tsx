@@ -4,7 +4,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, PlusCircle, X } from "lucide-react";
+import { LogOut, PlusCircle, X, Trash2 } from "lucide-react";
 import Link from "next/link";
 import CaptainOrdersTab from "./CaptainOrdertab";
 import { CaptainPOS } from "./pos/CaptainPOS";
@@ -25,11 +25,20 @@ export default function CaptainDashboard() {
   const router = useRouter();
   const { signOut } = useAuthStore();
   const [isPOSOpen, setIsPOSOpen] = useState(false);
-  const { cartItems } = usePOSStore();
+  const { cartItems, clearCart } = usePOSStore();
 
   const handleSignOut = () => {
     signOut();
     router.push("/captainlogin");
+  };
+
+  const handleClearCart = () => {
+    if (cartItems.length === 0) {
+      toast.error("Cart is already empty");
+      return;
+    }
+    clearCart();
+    toast.success("Cart cleared successfully");
   };
 
   return (
@@ -83,20 +92,31 @@ export default function CaptainDashboard() {
           <div className="flex-none p-4 border-b">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Create New Order</h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  if (cartItems.length > 0) {
-                    toast.error("Please complete or cancel the current order first");
-                    return;
-                  }
-                  setIsPOSOpen(false);
-                }}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleClearCart}
+                  className="h-8 w-8"
+                  title="Clear Cart"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    if (cartItems.length > 0) {
+                      toast.error("Please complete or cancel the current order first");
+                      return;
+                    }
+                    setIsPOSOpen(false);
+                  }}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
           <div className="flex-1 overflow-hidden flex flex-col">
@@ -106,21 +126,6 @@ export default function CaptainDashboard() {
             <div className="flex-none border-t">
               <Captaincart />
             </div>
-          </div>
-          <div className="flex-none flex justify-end gap-2 px-4 py-3 border-t">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                if (cartItems.length > 0) {
-                  toast.error("Please complete or cancel the current order first");
-                  return;
-                }
-                setIsPOSOpen(false);
-              }}
-              className="px-6 py-2 text-base font-semibold min-w-[120px] border-2 hover:bg-gray-100"
-            >
-              Cancel
-            </Button>
           </div>
         </div>
       )}
