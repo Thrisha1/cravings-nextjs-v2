@@ -37,7 +37,7 @@ const Explore = ({
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (navigator.geolocation && !initialDistrict && !hasUserLocation) {
+    if (navigator.geolocation && !hasUserLocation) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
@@ -133,8 +133,7 @@ const Explore = ({
             console.error("Error setting location:", error);
             toast.error("Failed to set location");
           }
-        }
-        ,
+        },
         (error) => {
           console.error("Geolocation error:", error);
           toast.error("Failed to access your location");
