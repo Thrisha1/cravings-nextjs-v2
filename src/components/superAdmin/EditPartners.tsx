@@ -369,6 +369,7 @@ const EditPartners = () => {
                     <SelectContent>
                       <SelectItem value="restaurant">Restaurant</SelectItem>
                       <SelectItem value="resort">Resort</SelectItem>
+                      <SelectItem value="test">Test</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

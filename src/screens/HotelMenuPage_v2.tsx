@@ -21,6 +21,7 @@ import SocialLinkList from "@/components/SocialLinkList";
 import { getFeatures } from "@/lib/getFeatures";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import ShopClosedModalWarning from "@/components/admin/ShopClosedModalWarning";
+import { addToRecent } from "@/lib/addToRecent";
 // import { fetchFromHasura } from "@/lib/hasuraClient";
 // import { usePartnerStore } from "@/store/usePartnerStore";
 
@@ -88,6 +89,14 @@ const HotelMenuPage = ({
       genOrderId();
     }
   }, [hoteldata, setHotelId, genOrderId]);
+
+  useEffect(() => {
+
+    if(hoteldata?.id) {
+      addToRecent(hoteldata?.id);
+    }
+
+  }, [hoteldata?.id]);
 
   const getCategories = () => {
     const uniqueCategoriesMap = new Map<string, Category>();

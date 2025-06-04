@@ -2,7 +2,13 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { UtensilsCrossed, ChevronLeft, Download } from "lucide-react";
+import {
+  UtensilsCrossed,
+  ChevronLeft,
+  Download,
+  ShoppingBag,
+  UserCircle,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
@@ -127,13 +133,15 @@ export function Navbar() {
       className="flex items-center space-x-2 cursor-pointer"
       onClick={() => (isHomePage ? null : router.back())}
     >
-      {isHomePage ? (
-        <UtensilsCrossed className="h-6 w-6 text-orange-600" />
-      ) : (
-        <ChevronLeft className="h-6 w-6 text-orange-600" />
-      )}
+      {/* {isHomePage ? ( */}
+      <UtensilsCrossed className="h-6 w-6 text-orange-600" />
+      {/* ) : ( */}
+      {/* <ChevronLeft className="h-6 w-6 text-orange-600" /> */}
+      {/* )} */}
       <span className="text-xl font-bold text-gray-900">
-        {isHomePage ? "Cravings" : "Back"}
+        {/* {isHomePage ? "Cravings" : "Back"}
+         */}
+        Cravings
       </span>
     </div>
   );
@@ -176,20 +184,7 @@ export function Navbar() {
         href="/profile"
         className="flex text-sm items-center gap-2 text-gray-500"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth="1.5"
-          stroke="currentColor"
-          className="h-6 w-6 text-gray-500 hover:text-gray-700 cursor-pointer"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-          />
-        </svg>
+        <UserCircle className="h-6 w-6 text-gray-500" />
         <span className="hidden sm:inline">{displayName}</span>
       </Link>
     );
@@ -245,6 +240,11 @@ export function Navbar() {
             {renderAuthButtons()}
             <div className="flex items-center space-x-4 md:space-x-8">
               {renderNavigationLinks()}
+              {userData?.role === "user" ? (
+                <Link href="/my-orders">
+                  <ShoppingBag className="text-gray-500" />
+                </Link>
+              ) : null}
               {renderUserProfile()}
               {userData ? (
                 <button
@@ -252,7 +252,7 @@ export function Navbar() {
                   className="inline-flex items-center h-fit text-nowrap text-xs gap-2 px-3 md:px-4 py-2 font-medium text-white bg-orange-600 rounded-full hover:bg-orange-700 transition-colors"
                 >
                   <Download className="w-4 h-4" />
-                  <span className="">Install</span>
+                  {/* <span className="">Install</span> */}
                 </button>
               ) : null}
             </div>

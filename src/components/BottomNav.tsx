@@ -1,7 +1,18 @@
 "use client";
 import { getFeatures } from "@/lib/getFeatures";
 import { Partner, useAuthStore } from "@/store/authStore";
-import { BadgePercent, Telescope, ShoppingBag, User, LayoutDashboard, Package, Shield, Home, Info, CreditCard } from "lucide-react";
+import {
+  BadgePercent,
+  Telescope,
+  ShoppingBag,
+  User,
+  LayoutDashboard,
+  Package,
+  Shield,
+  Home,
+  Info,
+  CreditCard,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -17,31 +28,67 @@ const BottomNav = () => {
     // Default navigation for non-logged-in users
     if (!userData?.role) {
       return [
-        { href: "/", name: "Explore", icon: <Telescope size={20} />, exactMatch: false },
-        { href: "/offers", name: "Offers", icon: <BadgePercent size={20} />, exactMatch: false },
-        { href: "/login", name: "Account", icon: <User size={20} />, exactMatch: false },
-        { href: "/about-us", name: "About Us", icon: <Info size={20} />, exactMatch: false },
+        {
+          href: "/",
+          name: "Explore",
+          icon: <Telescope size={20} />,
+          exactMatch: false,
+        },
+        {
+          href: "/offers",
+          name: "Offers",
+          icon: <BadgePercent size={20} />,
+          exactMatch: false,
+        },
+        {
+          href: "/hotels",
+          name: "Hotels",
+          icon: <Home size={20} />,
+          exactMatch: false,
+        },
+        {
+          href: "/about-us",
+          name: "About Us",
+          icon: <Info size={20} />,
+          exactMatch: false,
+        },
       ];
     }
 
     const features = getFeatures((userData as Partner)?.feature_flags || "");
 
     switch (userData.role) {
-      case 'user':
+      case "user":
         return [
-          { href: "/", name: "Explore", icon: <Telescope size={20} />, exactMatch: true },
-          { href: "/offers", name: "Offers", icon: <BadgePercent size={20} />, exactMatch: false },
-          { href: "/my-orders", name: "Orders", icon: <ShoppingBag size={20} />, exactMatch: false },
-          { href: "/profile", name: "Profile", icon: <User size={20} />, exactMatch: false }
+          {
+            href: "/",
+            name: "Explore",
+            icon: <Telescope size={20} />,
+            exactMatch: true,
+          },
+          {
+            href: "/offers",
+            name: "Offers",
+            icon: <BadgePercent size={20} />,
+            exactMatch: false,
+          },
+          {
+            href: "/hotels",
+            name: "Hotels",
+            icon: <Home size={20} />,
+            exactMatch: false,
+          },
+          
+          
         ];
-      case 'partner':
+      case "partner":
         const partnerItems = [
-          { 
-            href: "/admin", 
-            name: "Dashboard", 
+          {
+            href: "/admin",
+            name: "Dashboard",
             icon: <LayoutDashboard size={20} />,
-            exactMatch: true
-          }
+            exactMatch: true,
+          },
         ];
 
         // Add Orders if ordering is enabled
@@ -50,7 +97,7 @@ const BottomNav = () => {
             href: "/admin/orders",
             name: "Orders",
             icon: <ShoppingBag size={20} />,
-            exactMatch: false
+            exactMatch: false,
           });
         }
 
@@ -60,7 +107,7 @@ const BottomNav = () => {
             href: "/admin/stock-management",
             name: "Stock",
             icon: <Package size={20} />,
-            exactMatch: false
+            exactMatch: false,
           });
         }
 
@@ -70,23 +117,20 @@ const BottomNav = () => {
             href: "/admin/pos",
             name: "POS",
             icon: <CreditCard size={20} />,
-            exactMatch: false
+            exactMatch: false,
           });
         }
 
-        // Always add Profile
-        partnerItems.push({
-          href: "/profile",
-          name: "Profile",
-          icon: <User size={20} />,
-          exactMatch: false
-        });
-
+        
         return partnerItems;
-      case 'superadmin':
+      case "superadmin":
         return [
-          { href: "/superadmin", name: "Admin", icon: <Shield size={20} />, exactMatch: false },
-          { href: "/profile", name: "Profile", icon: <User size={20} />, exactMatch: false }
+          {
+            href: "/superadmin",
+            name: "Admin",
+            icon: <Shield size={20} />,
+            exactMatch: false,
+          }
         ];
       default:
         return [];
@@ -98,7 +142,7 @@ const BottomNav = () => {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
+
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         // Scrolling down - hide navbar
         setIsVisible(false);
@@ -106,12 +150,12 @@ const BottomNav = () => {
         // Scrolling up - show navbar
         setIsVisible(true);
       }
-      
+
       setLastScrollY(currentScrollY);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
   // Don't show on /captain* routes, otherwise show if items exist
@@ -124,9 +168,9 @@ const BottomNav = () => {
       {/* Spacer to prevent content from being hidden behind the fixed nav */}
       <div className="h-[64px] w-full" aria-hidden="true"></div>
       {/* Bottom Navigation Bar */}
-      <div 
+      <div
         className={`fixed bottom-0 left-0 w-full bg-white px-4 py-3 flex justify-around z-[500] border-t border-gray-200 transition-transform duration-300 ${
-          isVisible ? 'translate-y-0' : 'translate-y-full'
+          isVisible ? "translate-y-0" : "translate-y-full"
         }`}
       >
         {items.map((item) => {
@@ -135,15 +179,15 @@ const BottomNav = () => {
           if (item.href === "/") {
             isActive = pathname === "/";
           } else {
-            isActive = item.exactMatch 
-              ? pathname === item.href 
+            isActive = item.exactMatch
+              ? pathname === item.href
               : pathname.startsWith(item.href);
           }
-            
+
           return (
-            <Link 
-              key={`${item.href}-${item.name}`} 
-              href={item.href} 
+            <Link
+              key={`${item.href}-${item.name}`}
+              href={item.href}
               className="text-center flex-1 min-w-[60px]"
             >
               <div

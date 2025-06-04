@@ -38,7 +38,7 @@ const LocationSelection= () => {
         <SelectTrigger className="bg-white focus:ring-orange-600">
           <SelectValue placeholder="Select location" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="z-[500]">
           <SelectItem value="all">All locations</SelectItem>
           {locations.map((location) => (
             <SelectItem key={location} value={location}>
