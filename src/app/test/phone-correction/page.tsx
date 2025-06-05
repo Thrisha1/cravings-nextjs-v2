@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 
 // Country codes for phone numbers (copy from RegistrationForm)
-const countryCodes = [
+export const countryCodes = [
   { country: "Afghanistan", code: "+93" },
   { country: "Albania", code: "+355" },
   { country: "Algeria", code: "+213" },
