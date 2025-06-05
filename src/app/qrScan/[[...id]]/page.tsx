@@ -1,6 +1,13 @@
-import { getPartnerAndOffersQuery, getPartnerSubscriptionQuery } from "@/api/partners";
-import { GET_QR_TABLE } from "@/api/qrcodes";
-import { getAuthCookie } from "@/app/auth/actions";
+import {
+  getPartnerAndOffersQuery,
+  getPartnerSubscriptionQuery,
+} from "@/api/partners";
+import { GET_QR_TABLE, INCREMENT_QR_CODE_SCAN_COUNT } from "@/api/qrcodes";
+import {
+  getAuthCookie,
+  getQrScanCookie,
+  setQrScanCookie,
+} from "@/app/auth/actions";
 import { HotelData } from "@/app/hotels/[...id]/page";
 import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
 import { getFeatures } from "@/lib/getFeatures";
@@ -11,6 +18,7 @@ import QrPayment from "@/screens/QrPayment";
 import { Offer } from "@/store/offerStore_hasura";
 import { AlertTriangle } from "lucide-react";
 import { unstable_cache } from "next/cache";
+import { cookies } from "next/headers";
 import React from "react";
 
 const isUUID = (str: string) =>
@@ -23,6 +31,9 @@ const page = async ({
   params: Promise<{ [key: string]: string | undefined }>;
   searchParams: Promise<{ query: string; qrScan: string }>;
 }) => {
+
+
+
   const { id: qrId } = await params;
 
   // Validate and find the correct UUID from the path segments
@@ -91,13 +102,6 @@ const page = async ({
       </div>
     );
   }
-
-  console.log("🔍 QR Code Data:", {
-    qrCode: qr_codes[0],
-    hasGroup: !!qr_codes[0].qr_group,
-    groupData: qr_codes[0].qr_group,
-    tableNumber: qr_codes[0].table_number,
-  });
 
   const tableNumber = qr_codes?.[0].table_number;
 
