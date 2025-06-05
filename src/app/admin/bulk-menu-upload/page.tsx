@@ -148,42 +148,48 @@ const BulkUploadPage = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-          {menuItems.map((item, index) => (
-            <MenuItemCard
-              key={index}
-              item={item}
-              index={index}
-              isUploading={isUploading[index]}
-              onSelect={() => handleSelectItem(index)}
-              onAddToMenu={() =>
-                handleAddToMenu(item, index, userData?.id as string)
-              }
-              onEdit={() => handleEdit(index, item)}
-              onDelete={() => handleDelete(index)}
-              onImageClick={(index, url) => handleImageClick(index, url)}
-              onCategoryChange={(category) => handleCategoryChange(index, { name: category, priority: 0, id: item.category.id })}
-            />
-          ))}
-        </div>
-      </div>
-
-      <EditItemModal
-        isOpen={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
-        editingItem={editingItem}
-        onSave={handleSaveEdit}
-        onEdit={(field, value) =>
-          setEditingItem(
-            editingItem
-              ? {
-                  ...editingItem,
-                  item: { ...editingItem.item, [field]: value },
+        {menuItems.length > 0 && !isEditModalOpen && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {menuItems.map((item, index) => (
+              <MenuItemCard
+                key={index}
+                item={item}
+                index={index}
+                isUploading={isUploading[index]}
+                onSelect={() => handleSelectItem(index)}
+                onAddToMenu={() =>
+                  handleAddToMenu(item, index, userData?.id as string)
                 }
-              : null
-          )
-        }
-      />
+                onEdit={() => handleEdit(index, item)}
+                onDelete={() => handleDelete(index)}
+                onImageClick={(index, url) => handleImageClick(index, url)}
+                onCategoryChange={(category) => handleCategoryChange(index, { name: category, priority: 0, id: item.category.id })}
+              />
+            ))}
+          </div>
+        )}
+
+        {isEditModalOpen && editingItem && (
+          <div className="w-full max-w-2xl mx-auto">
+            <EditItemModal
+              isOpen={isEditModalOpen}
+              onOpenChange={setIsEditModalOpen}
+              editingItem={editingItem}
+              onSave={handleSaveEdit}
+              onEdit={(field, value) =>
+                setEditingItem(
+                  editingItem
+                    ? {
+                        ...editingItem,
+                        item: { ...editingItem.item, [field]: value },
+                      }
+                    : null
+                )
+              }
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };
