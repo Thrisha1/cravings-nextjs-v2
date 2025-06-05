@@ -82,7 +82,7 @@ export default function ProfilePage() {
     geoString,
     error: geoError,
     getLocation,
-  } = useGeolocationStore();
+  } = useLocationStore();
   const { countries, locationData } = useLocationStore();
   const [deliveryRate, setDeliveryRate] = useState(0);
   const [geoLocation, setGeoLocation] = useState({
