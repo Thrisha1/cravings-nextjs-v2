@@ -60,9 +60,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useLocationStore as useLocationStore } from "@/store/locationStore";
-import { useGeolocationStore } from "@/store/geolocationStore";
-// import { useLocationStore as useGeoLocationStore } from "@/store/geolocationStore";
 
 const Currencies = [
   { label: "INR", value: "₹" },
