@@ -71,6 +71,12 @@ export const Captaincart = () => {
 
   const handleConfirmOrder = async () => {
     try {
+      // Check if cart is empty
+      if (cartItems.length === 0) {
+        toast.error("Cart is empty. Please add items before confirming the order.");
+        return;
+      }
+
       setUserPhone(phoneInput || null);
       if (extraCharges.name && extraCharges.amount) {
         addExtraCharge(extraCharges);
@@ -110,7 +116,13 @@ export const Captaincart = () => {
             </div>
 
             <Button 
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                if (cartItems.length === 0) {
+                  toast.error("Cart is empty. Please add items before viewing the order.");
+                  return;
+                }
+                setIsModalOpen(true);
+              }}
               className="bg-black hover:bg-black/90 text-white font-semibold text-sm sm:text-base flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg min-w-[140px] justify-center"
             >
               <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" /> 
@@ -264,30 +276,31 @@ export const Captaincart = () => {
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-4 border-t flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsModalOpen(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleConfirmOrder}
-                disabled={loading || !isTableSelected}
-                className="flex-1"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  "Confirm Order"
-                )}
-              </Button>
+              {/* Modal Footer */}
+              <div className="p-4 border-t flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmOrder}
+                  disabled={loading || !isTableSelected || cartItems.length === 0}
+                  className="flex-1"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Confirm Order"
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
