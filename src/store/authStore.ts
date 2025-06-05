@@ -95,6 +95,7 @@ export interface SuperAdmin extends BaseUser {
 }
 
 export interface Captain extends BaseUser {
+  id: string;
   role: "captain";
   partner_id: string;
   password: string;

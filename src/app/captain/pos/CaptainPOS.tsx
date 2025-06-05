@@ -66,13 +66,7 @@ export const CaptainPOS = () => {
             }
 
             try {
-                /* console.log("Fetching menu for partner:", captainData.partner_id); */
                 const menuItems = await fetchMenu(captainData.partner_id);
-                // console.log("Fetched menu items:", {
-                //     totalItems: menuItems.length,
-                //     categories: Object.keys(groupedItems),
-                //     groupedItems
-                // });
             } catch (error) {
                 console.error("Error fetching menu:", error);
             } finally {
@@ -99,7 +93,6 @@ export const CaptainPOS = () => {
             console.log("Setting default category:", firstCategory);
             setSelectedCategory(firstCategory);
         } else {
-            /* console.log("No categories found in groupedItems"); */
             return;
         }
     }, [groupedItems, captainData?.partner_id]);
@@ -110,13 +103,6 @@ export const CaptainPOS = () => {
             console.log("No groupedItems available for filtering");
             return;
         }
-
-        // console.log("Filtering items:", {
-        //     searchQuery,
-        //     selectedCategory,
-        //     totalCategories: Object.keys(groupedItems).length,
-        //     categories: Object.keys(groupedItems)
-        // });
 
         // If there's a search query, filter across all categories
         if (searchQuery) {
@@ -218,7 +204,7 @@ export const CaptainPOS = () => {
                                                 <div>
                                                     <h3 className="font-medium">{item.name}</h3>
                                                     <p className="text-lg font-bold mt-2">
-                                                        {partnerData?.currency || "$"}
+                                                        {captainData?.currency || "$"}
                                                         {item.price}
                                                     </p>
                                                 </div>

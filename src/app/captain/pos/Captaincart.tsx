@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/table";
 import { Captain, useAuthStore } from "@/store/authStore";
 import { Input } from "@/components/ui/input";
-import { fetchFromHasura } from "@/lib/hasuraClient";
 
 export const Captaincart = () => {
   const {
