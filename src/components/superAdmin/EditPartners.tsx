@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { countryCodes } from "@/app/test/phone-correction/page";
+import { countryCodes } from "@/utils/countryCodes";
 import { useLocationStore } from "@/store/locationStore";
 
 interface PartnerWithDetails extends Partner {

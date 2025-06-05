@@ -52,7 +52,7 @@ import { updateAuthCookie } from "../auth/actions";
 import { DeliveryRules } from "@/store/orderStore";
 import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/DeliveryAndGeoLocationSettings";
 import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
-import { countryCodes } from "../test/phone-correction/page";
+import { countryCodes } from "@/utils/countryCodes";
 import {
   Select,
   SelectContent,
@@ -152,8 +152,9 @@ export default function ProfilePage() {
   const [footNote, setFootNote] = useState<string>("");
   const [instaLink, setInstaLink] = useState<string>("");
   const [isEditingCountryCode, setIsEditingCountryCode] = useState(false);
-  const [countryCode, setCountryCode] = useState(userData?.country_code || "+91");
+  const [countryCode, setCountryCode] = useState( userData?.role === "partner" ? userData?.country_code || "+91" : "+91");
   const [countryCodeSearch, setCountryCodeSearch] = useState("");
+  const [showPricing, setShowPricing] = useState(true);
 
   const isLoading = authLoading;
 
