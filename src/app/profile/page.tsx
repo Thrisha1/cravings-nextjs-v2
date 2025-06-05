@@ -11,7 +11,7 @@ import {
   // Loader2,
 } from "lucide-react";
 import { GeoLocation, Partner, useAuthStore } from "@/store/authStore";
-import { useLocationStore } from "@/store/geolocationStore";
+// import { useLocationStore } from "@/store/geolocationStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -60,6 +60,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useLocationStore as useLocationStore } from "@/store/locationStore";
+import { useGeolocationStore } from "@/store/geolocationStore";
 
 const Currencies = [
   { label: "INR", value: "₹" },
@@ -80,7 +82,8 @@ export default function ProfilePage() {
     geoString,
     error: geoError,
     getLocation,
-  } = useLocationStore();
+  } = useGeolocationStore();
+  const { countries, locationData } = useLocationStore();
   const [deliveryRate, setDeliveryRate] = useState(0);
   const [geoLocation, setGeoLocation] = useState({
     latitude: 0,
@@ -92,7 +95,6 @@ export default function ProfilePage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [upiId, setUpiId] = useState("");
   const [isSaving, setIsSaving] = useState({
     upiId: false,
     placeId: false,
@@ -155,11 +157,20 @@ export default function ProfilePage() {
   const [countryCode, setCountryCode] = useState( userData?.role === "partner" ? userData?.country_code || "+91" : "+91");
   const [countryCodeSearch, setCountryCodeSearch] = useState("");
   const [showPricing, setShowPricing] = useState(true);
+  const [country, setCountry] = useState(userData?.role === "partner" ? userData?.country || "" : "");
+  const [state, setStateVal] = useState(userData?.role === "partner" ? userData?.state || "" : "");
+  const [district, setDistrict] = useState(userData?.role === "partner" ? userData?.district || "" : "");
+  const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
+  const [isEditingGmapLocation, setIsEditingGmapLocation] = useState(false);
+  const [gmapLocationDraft, setGmapLocationDraft] = useState( userData?.role === "partner" ? userData?.location || "" : "");
 
   const isLoading = authLoading;
 
   useEffect(() => {
     if (userData?.role === "partner") {
+
+      console.log("User Data:", userData);
       // console.log("Debug - UserData:", {
       //   delivery_rate: userData.delivery_rate,
       //   geo_location: userData.geo_location,
@@ -167,7 +178,6 @@ export default function ProfilePage() {
       // });
 
       setBannerImage(userData.store_banner || null);
-      setUpiId(userData.upi_id || "");
       setPlaceId(userData.place_id || "");
       setDescription(userData.description || "");
       setDeliveryRate(userData.delivery_rate || 0);
@@ -426,33 +436,6 @@ export default function ProfilePage() {
       }
     } finally {
       setIsSaving((prev) => ({ ...prev, geoLocation: false }));
-    }
-  };
-
-  const handleSaveUpiId = async () => {
-    if (!userData) return;
-
-    setIsSaving((prev) => {
-      return { ...prev, upiId: true };
-    });
-    try {
-      await fetchFromHasura(updatePartnerMutation, {
-        id: userData?.id,
-        updates: upiId,
-      });
-      revalidateTag(userData?.id as string);
-      setState({ upi_id: upiId });
-      toast.success("UPI ID updated successfully!");
-      setIsEditing((prev) => {
-        return { ...prev, upiId: false };
-      });
-    } catch (error) {
-      console.error("Error updating UPI ID:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update UPI ID"
-      );
-    } finally {
-      setIsSaving((prev) => ({ ...prev, upiId: false }));
     }
   };
 
@@ -1128,6 +1111,44 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSaveLocationFields = async () => {
+    if (!userData) return;
+    setIsSaving((prev) => ({ ...prev, location: true }));
+    try {
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData.id,
+        updates: { country, state, district },
+      });
+      revalidateTag(userData.id);
+      setState({ country, state, district });
+      toast.success("Location updated successfully!");
+      setIsEditingLocation(false);
+    } catch {
+      toast.error("Failed to update location");
+    } finally {
+      setIsSaving((prev) => ({ ...prev, location: false }));
+    }
+  };
+
+  const handleSaveGmapLocation = async () => {
+    if (!userData) return;
+    setIsSaving((prev) => ({ ...prev, location: true }));
+    try {
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData.id,
+        updates: { location: gmapLocationDraft },
+      });
+      revalidateTag(userData.id);
+      setState({ location: gmapLocationDraft });
+      setIsEditingGmapLocation(false);
+      toast.success("Location link updated successfully!");
+    } catch {
+      toast.error("Failed to update location link");
+    } finally {
+      setIsSaving((prev) => ({ ...prev, location: false }));
+    }
+  };
+
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
   }
@@ -1500,7 +1521,161 @@ export default function ProfilePage() {
                 handleSaveDeliverySettings={handleSaveDeliverySettings}
               />
 
-              
+              <div className="space-y-2 pt-4">
+                <label className="text-lg font-semibold">Location Details</label>
+                {isEditingLocation ? (
+                  <>
+                    {/* Country Select */}
+                    <Select
+                      value={country}
+                      onValueChange={(val) => {
+                        setCountry(val);
+                        if (val !== "India") {
+                          setStateVal("");
+                          setDistrict("");
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="flex-1 border rounded p-2">
+                        <SelectValue placeholder="Select country" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        <div className="p-2 sticky top-0 bg-white z-10">
+                          <input
+                            type="text"
+                            placeholder="Search country..."
+                            value={countrySearch}
+                            onChange={e => setCountrySearch(e.target.value)}
+                            className="w-full border rounded p-2"
+                          />
+                        </div>
+                        {countries.filter(c => c.toLowerCase().includes(countrySearch.toLowerCase())).map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {/* State Select (if India) */}
+                    {country === "India" && (
+                      <Select
+                        value={state}
+                        onValueChange={(val) => {
+                          setStateVal(val);
+                          setDistrict("");
+                        }}
+                      >
+                        <SelectTrigger className="flex-1 border rounded p-2 mt-2">
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          {locationData.map(s => (
+                            <SelectItem key={s.state} value={s.state}>{s.state}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    {/* District Select (if state selected) */}
+                    {country === "India" && state && (
+                      <Select
+                        value={district}
+                        onValueChange={setDistrict}
+                      >
+                        <SelectTrigger className="flex-1 border rounded p-2 mt-2">
+                          <SelectValue placeholder="Select district" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          {locationData.find(s => s.state === state)?.districts.map(d => (
+                            <SelectItem key={d} value={d}>{d}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        onClick={handleSaveLocationFields}
+                        disabled={isSaving.location}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {isSaving.location ? "Saving..." : "Save"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditingLocation(false);
+                          setCountry(userData?.country || "");
+                          setStateVal(userData?.state || "");
+                          setDistrict(userData?.district || "");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between items-center w-full">
+                    <span className="text-gray-700">
+                      {country || "No country set"}
+                      {country === "India" && state && `, ${state}`}
+                      {country === "India" && state && district && `, ${district}`}
+                    </span>
+                    <Button
+                      onClick={() => setIsEditingLocation(true)}
+                      variant="ghost"
+                      className="hover:bg-orange-100"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+                <p className="text-sm text-gray-500">
+                  These details will be used for your business location.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <label className="text-lg font-semibold">Gmap Location Link</label>
+                {isEditingGmapLocation ? (
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      type="text"
+                      value={gmapLocationDraft}
+                      onChange={e => setGmapLocationDraft(e.target.value)}
+                      className="flex-1"
+                      placeholder="Enter Google Maps location link"
+                    />
+                    <Button
+                      onClick={handleSaveGmapLocation}
+                      disabled={isSaving.location}
+                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                    >
+                      {isSaving.location ? "Saving..." : "Save"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsEditingGmapLocation(false);
+                        setGmapLocationDraft(userData.location || "");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center w-full">
+                    <span className="text-gray-700 break-all">{userData.location || "No location set"}</span>
+                    <Button
+                      onClick={() => {
+                        setIsEditingGmapLocation(true);
+                        setGmapLocationDraft(userData.location || "");
+                      }}
+                      variant="ghost"
+                      className="hover:bg-orange-100"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+                <p className="text-sm text-gray-500">This is your Google Maps location link for your business.</p>
+              </div>
 
               <div className="space-y-2 pt-4">
                 <label htmlFor="whatsNum" className="text-lg font-semibold">

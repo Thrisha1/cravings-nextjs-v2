@@ -79,6 +79,8 @@ export interface Partner extends BaseUser {
   business_type?: string; 
   is_shop_open: boolean;
   country_code?: string;
+  country?: string;
+  state?: string;
 }
 
 export interface SuperAdmin extends BaseUser {
