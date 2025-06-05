@@ -236,7 +236,7 @@ const OrdersTab = () => {
   };
 
   const handleCreateNewOrder = () => {
-    setIsCreateOrderOverlayOpen(true);
+    router.push("/admin/pos");
   };
 
   return (
@@ -528,45 +528,6 @@ const OrdersTab = () => {
       </Tabs>
 
       <EditOrderModal />
-
-      {isCreateOrderOverlayOpen && (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col">
-          <div className="flex-none p-4 border-b">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Create New Order</h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  // Optionally, check for cart items before closing
-                  setIsCreateOrderOverlayOpen(false);
-                }}
-                className="h-8 w-8"
-              >
-                <span className="sr-only">Close</span>
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </Button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <div className="flex-1 overflow-y-auto p-4">
-              <POSMenuItems />
-            </div>
-            <div className="flex-none border-t">
-              <POSCart />
-            </div>
-          </div>
-          <div className="flex-none flex justify-end gap-2 px-4 py-3 border-t">
-            <Button 
-              variant="outline" 
-              onClick={() => setIsCreateOrderOverlayOpen(false)}
-              className="px-6 py-2 text-base font-semibold min-w-[120px] border-2 hover:bg-gray-100"
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

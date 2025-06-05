@@ -317,7 +317,7 @@ const OrderDrawer = ({
 
         <div
           onClick={handlePlaceOrder}
-          style={{ color: styles.accent }}
+          style={{ color: styles.accent }} 
           className="font-black relative cursor-pointer"
         >
           View Order
