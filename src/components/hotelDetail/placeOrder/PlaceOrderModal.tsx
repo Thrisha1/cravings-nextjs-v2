@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 import { Loader2, ArrowLeft, MapPin, LocateFixed, X } from "lucide-react";
-import { useLocationStore } from "@/store/geolocationStore";
+import { useGeolocationStore } from "@/store/geolocationStore";
 import mapboxgl, { LngLatLike, IControl } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Textarea } from "@/components/ui/textarea";
@@ -577,7 +577,7 @@ const MapModal = ({
         updateMarker(lng, lat);
         reverseGeocode(lng, lat);
 
-        const setCoords = useLocationStore.getState().setCoords;
+        const setCoords = useGeolocationStore.getState().setCoords;
         setCoords({ lat, lng });
       });
 
@@ -742,7 +742,7 @@ const PlaceOrderModal = ({
     error: geoError,
     getLocation,
     isLoading: isGeoLoading,
-  } = useLocationStore();
+  } = useGeolocationStore();
 
   const [showMapModal, setShowMapModal] = useState(false);
   const [showLoginDrawer, setShowLoginDrawer] = useState(false);
@@ -832,7 +832,7 @@ const PlaceOrderModal = ({
         });
 
         if (permissionStatus.state === "denied") {
-          useLocationStore.setState({
+          useGeolocationStore.setState({
             error:
               "Location permission is denied. Please enable it in your browser settings.",
             isLoading: false,

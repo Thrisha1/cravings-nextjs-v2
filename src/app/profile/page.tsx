@@ -61,6 +61,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useLocationStore as useLocationStore } from "@/store/locationStore";
+import { useGeolocationStore } from "@/store/geolocationStore";
 // import { useLocationStore as useGeoLocationStore } from "@/store/geolocationStore";
 
 const Currencies = [
@@ -82,7 +83,7 @@ export default function ProfilePage() {
     geoString,
     error: geoError,
     getLocation,
-  } = useLocationStore();
+  } = useGeolocationStore();
   const { countries, locationData } = useLocationStore();
   const [deliveryRate, setDeliveryRate] = useState(0);
   const [geoLocation, setGeoLocation] = useState({
