@@ -7,7 +7,7 @@ type Coords = {
   lng: number;
 };
 
-type GeoLocationStore = {
+type LocationStore = {
   coords: Coords | null;
   error: string | null;
   geoString: string | null;
@@ -20,7 +20,7 @@ type GeoLocationStore = {
   setCoords: (coords: Coords) => void;
 };
 
-export const useGeolocationStore = create<GeoLocationStore>()(
+export const useLocationStore = create<LocationStore>()(
   persist(
     (set, get) => ({
       coords: null,
