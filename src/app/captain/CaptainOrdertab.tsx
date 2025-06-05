@@ -33,6 +33,10 @@ const CaptainOrdersTab = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [partnerData, setPartnerData] = useState<Partner | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 10;
+  const [hasMoreOrders, setHasMoreOrders] = useState(true);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [newOrderAlert, setNewOrderAlert] = useState({
     show: false,
     count: 0,
@@ -119,14 +123,38 @@ const CaptainOrdersTab = () => {
     const fetchInitialOrders = async () => {
       if (captainData?.partner_id) {
         try {
-          const ordersResponse = await fetchFromHasura(
-            `query GetOrders($partner_id: uuid!, $captain_id: uuid!) {
-              orders(where: {
+          // First, get total count of orders
+          const countResponse = await fetchFromHasura(
+            `query GetOrdersCount($partner_id: uuid!, $captain_id: uuid!) {
+              orders_aggregate(where: {
                 partner_id: {_eq: $partner_id}, 
                 orderedby: {_eq: "captain"},
                 captain_id: {_eq: $captain_id},
                 status: {_eq: "completed"}
               }) {
+                aggregate {
+                  count
+                }
+              }
+            }`,
+            {
+              partner_id: captainData.partner_id,
+              captain_id: captainData.id
+            }
+          );
+
+          const totalCount = countResponse.orders_aggregate.aggregate.count;
+          setTotalOrders(totalCount);
+
+          // Then fetch first page of orders
+          const ordersResponse = await fetchFromHasura(
+            `query GetOrders($partner_id: uuid!, $captain_id: uuid!, $limit: Int!, $offset: Int!) {
+              orders(where: {
+                partner_id: {_eq: $partner_id}, 
+                orderedby: {_eq: "captain"},
+                captain_id: {_eq: $captain_id},
+                status: {_eq: "completed"}
+              }, order_by: {created_at: desc}, limit: $limit, offset: $offset) {
                 id
                 status
                 created_at
@@ -152,7 +180,9 @@ const CaptainOrdersTab = () => {
             }`,
             {
               partner_id: captainData.partner_id,
-              captain_id: captainData.id
+              captain_id: captainData.id,
+              limit: ordersPerPage,
+              offset: 0
             }
           );
 
@@ -163,7 +193,8 @@ const CaptainOrdersTab = () => {
           }
 
           const processedOrders = processOrders(ordersResponse.orders);
-          setOrders(sortOrders(processedOrders));
+          setOrders(processedOrders);
+          setHasMoreOrders(processedOrders.length === ordersPerPage);
         } catch (error) {
           toast.error("Failed to load orders");
         } finally {
@@ -175,90 +206,83 @@ const CaptainOrdersTab = () => {
     fetchInitialOrders();
   }, [captainData?.partner_id, captainData?.id]);
 
-  // Subscribe to new orders
-  useEffect(() => {
-    if (!captainData?.partner_id || !captainData?.id) return;
+  const fetchNextPage = async () => {
+    if (!captainData?.partner_id || !hasMoreOrders) return;
 
-    const unsubscribe = subscribeOrders((allOrders: any[]) => {
-      // Only process orders for the current captain
-      const captainOrders = allOrders.filter(order => 
-        order.orderedby === "captain" && 
-        order.captain_id === captainData.id &&
-        order.status === "completed"
+    try {
+      setLoading(true);
+      const offset = currentPage * ordersPerPage;
+      
+      const ordersResponse = await fetchFromHasura(
+        `query GetOrders($partner_id: uuid!, $captain_id: uuid!, $limit: Int!, $offset: Int!) {
+          orders(where: {
+            partner_id: {_eq: $partner_id}, 
+            orderedby: {_eq: "captain"},
+            captain_id: {_eq: $captain_id},
+            status: {_eq: "completed"}
+          }, order_by: {created_at: desc}, limit: $limit, offset: $offset) {
+            id
+            status
+            created_at
+            total_price
+            partner_id
+            orderedby
+            captain_id
+            table_number
+            extra_charges
+            order_items {
+              id
+              quantity
+              menu {
+                id
+                name
+                price
+                category {
+                  name
+                }
+              }
+            }
+          }
+        }`,
+        {
+          partner_id: captainData.partner_id,
+          captain_id: captainData.id,
+          limit: ordersPerPage,
+          offset: offset
+        }
       );
 
-      if (!Array.isArray(captainOrders)) {
-        setOrders([]);
-        return;
-      }
+      if (!ordersResponse.orders) return;
 
-      const processNewOrders = async () => {
-        const currentOrders = orders;
-        const existingOrderIds = new Set(currentOrders.map(o => o.id));
-        const newOrders = captainOrders.filter(order => !existingOrderIds.has(order.id));
+      const processedOrders = processOrders(ordersResponse.orders);
+      setOrders(prevOrders => [...prevOrders, ...processedOrders]);
+      setHasMoreOrders(processedOrders.length === ordersPerPage);
+      setCurrentPage(prev => prev + 1);
+    } catch (error) {
+      toast.error("Failed to load more orders");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        if (newOrders.length === 0) return;
+  const handleNextPage = () => {
+    if (hasMoreOrders) {
+      fetchNextPage();
+    }
+  };
 
-        const processedNewOrders = await Promise.all(newOrders.map(async (order) => {
-          try {
-            const orderDetails = await fetchFromHasura(
-              `query GetOrderDetails($orderId: uuid!) {
-                orders_by_pk(id: $orderId) {
-                  id
-                  status
-                  created_at
-                  total_price
-                  partner_id
-                  orderedby
-                  captain_id
-                  table_number
-                  extra_charges
-                  order_items {
-                    id
-                    quantity
-                    menu {
-                      id
-                      name
-                      price
-                      category {
-                        name
-                      }
-                    }
-                  }
-                }
-              }`,
-              { 
-                orderId: order.id
-              }
-            );
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+      // Calculate the start index for the previous page
+      const startIndex = (currentPage - 2) * ordersPerPage;
+      // Show the previous page's orders
+      setOrders(prevOrders => prevOrders.slice(startIndex, startIndex + ordersPerPage));
+    }
+  };
 
-            const orderData = orderDetails.orders_by_pk;
-            if (!orderData || orderData.captain_id !== captainData.id) return null;
-
-            return processOrders([orderData])[0];
-          } catch (error) {
-            return null;
-          }
-        }));
-
-        const validNewOrders = processedNewOrders.filter((order): order is Order => order !== null);
-        if (validNewOrders.length > 0) {
-          setOrders(prevOrders => {
-            // Create a map of existing orders by ID to prevent duplicates
-            const orderMap = new Map(prevOrders.map(order => [order.id, order]));
-            // Add new orders to the map
-            validNewOrders.forEach(order => orderMap.set(order.id, order));
-            // Convert map back to array and sort
-            return sortOrders(Array.from(orderMap.values()));
-          });
-        }
-      };
-
-      processNewOrders();
-    });
-
-    return () => unsubscribe();
-  }, [captainData?.partner_id, captainData?.id]);
+  // Calculate total pages based on total orders count
+  const totalPages = Math.ceil(totalOrders / ordersPerPage);
 
   const updateOrderStatus = async (
     orderId: string,
@@ -386,6 +410,29 @@ const CaptainOrdersTab = () => {
           </div>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex-none p-4 border-t flex items-center justify-between">
+          <Button
+            variant="outline"
+            onClick={handlePrevPage}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            onClick={handleNextPage}
+            disabled={!hasMoreOrders}
+          >
+            Next
+          </Button>
+        </div>
+      )}
 
       {/* New Order Alert Dialog */}
       <AlertDialog
