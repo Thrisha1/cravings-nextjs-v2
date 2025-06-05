@@ -1073,22 +1073,21 @@ export default function ProfilePage() {
         /^https:\/\/(maps\.app\.goo\.gl\/[a-zA-Z0-9]+|www\.google\.[a-z.]+\/maps\/.+)$/i.test(
           location.trim()
         );
-  
+
       if (!isValid) {
         throw new Error("Invalid Google Maps URL");
       }
-  
+
       setIsSaving((prev) => ({ ...prev, location: true }));
       toast.loading("Updating location...");
-  
+
       const response = await getCoordinatesFromLink(location.trim());
       const geoLoc = (await response).coordinates;
 
       if (!geoLoc) {
         throw new Error("Failed to extract coordinates from the link");
       }
-  
-  
+
       await fetchFromHasura(updatePartnerMutation, {
         id: userData?.id,
         updates: {
@@ -1096,8 +1095,8 @@ export default function ProfilePage() {
           geo_location: geoLoc,
         },
       });
-  
-      toast.success("Location updated successfully!");  
+
+      toast.success("Location updated successfully!");
       revalidateTag(userData?.id as string);
       setState({
         location: location.trim(),
@@ -2008,6 +2007,86 @@ export default function ProfilePage() {
                   </Link>
                 </div>
               )}
+
+              <div className="space-y-2 pt-4">
+                <div className="text-lg font-semibold">Price Settings</div>
+
+                {/* show pricing  */}
+                <div className="flex gap-2">
+                  <label htmlFor="show-pricing">Show Pricing : </label>
+                  <Switch
+                    checked={showPricing}
+                    onCheckedChange={handleShowPricingChange}
+                  />
+                </div>
+
+                {/* currency  */}
+                {userData.currency !== "🚫" && (
+                  <div className="flex gap-2 items-center">
+                    <label htmlFor="currency">Currency : </label>
+                    <div className="flex gap-2 flex-1">
+                      {isEditing.currency ? (
+                        <>
+                          <Select
+                            value={currency.label} // Use label as the value for selection
+                            onValueChange={(selectedLabel) => {
+                              const selectedCurrency = Currencies.find(
+                                (curr) => curr.label === selectedLabel
+                              );
+                              if (selectedCurrency) {
+                                setCurrency(selectedCurrency);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Select currency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Currencies.map((curr) => (
+                                <SelectItem key={curr.label} value={curr.label}>
+                                  {curr.value} - {curr.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            onClick={handleSaveCurrency}
+                            disabled={isSaving.currency || !currency}
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                          >
+                            {isSaving.currency ? <>Saving...</> : "Save"}
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="flex justify-between items-center w-full">
+                          <span className="text-gray-700">
+                            {currency ? (
+                              <>
+                                {currency.value} - {currency.label}
+                              </>
+                            ) : (
+                              "No currency selected"
+                            )}
+                          </span>
+                          <Button
+                            onClick={() => {
+                              setIsEditing((prev) => ({
+                                ...prev,
+                                currency: true,
+                              }));
+                              setCurrency(currency || Currencies[0]);
+                            }}
+                            variant="ghost"
+                            className="hover:bg-orange-100"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}

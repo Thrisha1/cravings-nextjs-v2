@@ -267,7 +267,7 @@ export function DeliveryAndGeoLocationSettings({
         <div className="space-y-2">
           <Label>
             Delivery Rate {deliveryRules.is_fixed_rate ? "" : "(Per Km)"} (
-            {currency.value})
+            {currency?.value})
           </Label>
           {isEditingDelivery ? (
             <Input
@@ -367,7 +367,7 @@ export function DeliveryAndGeoLocationSettings({
                 )}
               </div>
               <div className="space-y-2">
-                <Label>Amount ({currency.value})</Label>
+                <Label>Amount ({currency?.value})</Label>
                 {isEditingDelivery ? (
                   <Input
                     type="number"
@@ -399,7 +399,7 @@ export function DeliveryAndGeoLocationSettings({
         {!isEditingDelivery && (
           <p className="text-sm text-muted-foreground">
             {deliveryRules.is_fixed_rate
-              ? `Flat rate of ${currency.value}${deliveryRate.toFixed(
+              ? `Flat rate of ${currency?.value}${deliveryRate.toFixed(
                   2
                 )} will be applied for deliveries within ${
                   deliveryRules.delivery_radius
@@ -408,13 +408,13 @@ export function DeliveryAndGeoLocationSettings({
               ? `First ${
                   deliveryRules.first_km_range.km
                 } km will be charged at ${
-                  currency.value
+                  currency?.value
                 }${deliveryRules.first_km_range.rate.toFixed(2)}, then ${
-                  currency.value
+                  currency?.value
                 }${deliveryRate.toFixed(2)} per km for deliveries within ${
                   deliveryRules.delivery_radius
                 } km`
-              : `${currency.value}${deliveryRate.toFixed(
+              : `${currency?.value}${deliveryRate.toFixed(
                   2
                 )} per km will be applied for deliveries within ${
                   deliveryRules.delivery_radius
