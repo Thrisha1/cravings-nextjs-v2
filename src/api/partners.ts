@@ -72,6 +72,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     delivery_rate
     business_type
     delivery_rules
+    country_code
     menus(where: {deletion_status: {_eq: 0}}) {
       category {
         name

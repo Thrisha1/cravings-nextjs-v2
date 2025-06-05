@@ -16,13 +16,8 @@ import { Button } from "@/components/ui/button";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { toast } from "sonner";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  // DialogHeader,
+  // DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -33,6 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { countryCodes } from "@/app/test/phone-correction/page";
+import { useLocationStore } from "@/store/locationStore";
 
 interface PartnerWithDetails extends Partner {
   place_id?: string;
@@ -40,6 +37,8 @@ interface PartnerWithDetails extends Partner {
   show_price_data?: boolean;
   razorpay_linked_account_id?: string;
   business_type?: string;
+  country?: string;
+  state?: string;
 }
 
 const EditPartners = () => {
@@ -47,7 +46,8 @@ const EditPartners = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedPartner, setSelectedPartner] = useState<PartnerWithDetails | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { countries, locationData } = useLocationStore();
+  const [countryCodeSearch, setCountryCodeSearch] = useState("");
 
   const getAllPartners = async () => {
     setLoading(true);
@@ -71,6 +71,9 @@ const EditPartners = () => {
             show_price_data
             razorpay_linked_account_id
             business_type
+            country_code
+            state
+            country
           }
         }`
       );
@@ -117,13 +120,11 @@ const EditPartners = () => {
 
   const handleEdit = (partner: PartnerWithDetails) => {
     setSelectedPartner(partner);
-    setIsDialogOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPartner) return;
-
     const updates = {
       name: selectedPartner.name,
       email: selectedPartner.email,
@@ -140,10 +141,16 @@ const EditPartners = () => {
       show_price_data: selectedPartner.show_price_data,
       razorpay_linked_account_id: selectedPartner.razorpay_linked_account_id,
       business_type: selectedPartner.business_type,
+      country: selectedPartner.country,
+      country_code: selectedPartner.country_code,
+      state: selectedPartner.state,
     };
-
     updatePartner(selectedPartner.id, updates);
-    setIsDialogOpen(false);
+    setSelectedPartner(null);
+  };
+
+  const handleCancel = () => {
+    setSelectedPartner(null);
   };
 
   useEffect(() => {
@@ -153,66 +160,18 @@ const EditPartners = () => {
   const filteredPartners = searchPartner();
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <Input
-          placeholder="Search partners by name..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-md"
-        />
-      </div>
+    <div className="p-0 md:p-6">
+      
 
-      {loading ? (
-        <div>Loading partners...</div>
-      ) : (
-        <Table>
-          <TableCaption>A list of partners and their details.</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Store Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>District</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredPartners.map((partner) => (
-              <TableRow key={partner.id}>
-                <TableCell>{partner.store_name}</TableCell>
-                <TableCell>{partner.email}</TableCell>
-                <TableCell>{partner.location}</TableCell>
-                <TableCell>{partner.status}</TableCell>
-                <TableCell>{partner.phone}</TableCell>
-                <TableCell>{partner.district}</TableCell>
-                <TableCell>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleEdit(partner)}
-                  >
-                    Edit
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Partner Details</DialogTitle>
-            <DialogDescription>
-              Make changes to the partners information here.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedPartner && (
+      {selectedPartner ? (
+        <div className="flex items-center justify-center">
+          <div className="bg-[#FFF7EC] rounded-lg shadow-lg w-full mx-auto p-5 md:p-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold mb-2">Edit Partner Details</h2>
+              <p className="text-gray-600">Make changes to the partners information here.</p>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
                   <Input
@@ -373,7 +332,7 @@ const EditPartners = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
+                <div className="flex justify-normal items-center gap-3">
                   <Label htmlFor="show_price_data">Show Price Data</Label>
                   <Switch
                     id="show_price_data"
@@ -386,14 +345,171 @@ const EditPartners = () => {
                     }
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="country">Country</Label>
+                  <Select
+                    value={selectedPartner.country || ""}
+                    onValueChange={(value) => {
+                      setSelectedPartner({
+                        ...selectedPartner,
+                        country: value,
+                        state: value === "India" ? selectedPartner.state : "",
+                        district: value === "India" ? selectedPartner.district : "",
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select country" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      {countries.map((country) => (
+                        <SelectItem key={country} value={country}>
+                          {country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="country_code">Country Code</Label>
+                  <Select
+                    value={selectedPartner.country_code || ""}
+                    onValueChange={(value) => setSelectedPartner({ ...selectedPartner, country_code: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select country code" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      <div className="p-2 sticky top-0 bg-white z-10">
+                        <input
+                          type="text"
+                          placeholder="Search country or code..."
+                          value={countryCodeSearch}
+                          onChange={e => setCountryCodeSearch(e.target.value)}
+                          className="w-full border rounded p-2"
+                        />
+                      </div>
+                      {countryCodes
+                        .filter(item =>
+                          item.country.toLowerCase().includes(countryCodeSearch.toLowerCase()) ||
+                          item.code.includes(countryCodeSearch)
+                        )
+                        .map(item => (
+                          <SelectItem key={item.code} value={item.code}>
+                            {item.code} ({item.country})
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {selectedPartner.country === "India" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="state">State</Label>
+                      <Select
+                        value={selectedPartner.state || ""}
+                        onValueChange={(value) => {
+                          setSelectedPartner({
+                            ...selectedPartner,
+                            state: value,
+                            district: "",
+                          });
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px]">
+                          {locationData.map((stateData) => (
+                            <SelectItem key={stateData.state} value={stateData.state}>
+                              {stateData.state}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {selectedPartner.state && (
+                      <div className="space-y-2">
+                        <Label htmlFor="district">District</Label>
+                        <Select
+                          value={selectedPartner.district || ""}
+                          onValueChange={(value) => setSelectedPartner({ ...selectedPartner, district: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select district" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            {locationData
+                              .find((state) => state.state === selectedPartner.state)
+                              ?.districts.map((district) => (
+                                <SelectItem key={district} value={district}>
+                                  {district}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-              <DialogFooter>
+              <div className="flex justify-end pt-4 gap-2">
+                <Button type="button" variant="outline" onClick={handleCancel}>
+                  Cancel
+                </Button>
                 <Button type="submit">Save Changes</Button>
-              </DialogFooter>
+              </div>
             </form>
-          )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      ) : loading ? (
+        <div>Loading partners...</div>
+      ) : (
+        <>
+        <div className="mb-6">
+        <Input
+          placeholder="Search partners by name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="max-w-md"
+        />
+      </div>
+        <Table>
+          <TableCaption>A list of partners and their details.</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Store Name</TableHead>
+              <TableHead className="hidden md:table-cell">Email</TableHead>
+              {/* <TableHead>Location</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>District</TableHead> */}
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredPartners.map((partner) => (
+              <TableRow key={partner.id}>
+                <TableCell>{partner.store_name}</TableCell>
+                <TableCell className="hidden md:table-cell">{partner.email}</TableCell>
+                {/* <TableCell>{partner.location}</TableCell>
+                <TableCell>{partner.status}</TableCell>
+                <TableCell>{partner.phone}</TableCell>
+                <TableCell>{partner.district}</TableCell> */}
+                <TableCell>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleEdit(partner)}
+                  >
+                    Edit
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        </>
+      )}
     </div>
   );
 };

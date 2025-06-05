@@ -78,6 +78,7 @@ export interface Partner extends BaseUser {
   gst_percentage?: number;
   business_type?: string; 
   is_shop_open: boolean;
+  country_code?: string;
 }
 
 export interface SuperAdmin extends BaseUser {
