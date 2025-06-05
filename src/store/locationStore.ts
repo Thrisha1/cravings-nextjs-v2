@@ -805,6 +805,7 @@ export const useLocationStore = create<LocationState>(() => ({
     }
   ],
   countries : [
+    "India",
     "Afghanistan",
     "Albania",
     "Algeria",
