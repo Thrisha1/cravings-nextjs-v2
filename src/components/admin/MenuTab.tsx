@@ -13,8 +13,8 @@ import { useAdminOfferStore } from "@/store/useAdminOfferStore";
 import { Partner, useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { AddMenuItemForm } from "../bulkMenuUpload/AddMenuItemModal";
-import { EditMenuItemModal } from "./EditMenuItemModal";
-import { CategoryManagementModal } from "./CategoryManagementModal";
+import { EditMenuItemForm, EditMenuItemModal } from "./EditMenuItemModal";
+import { CategoryManagementModal, CategoryManagementForm } from "./CategoryManagementModal";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
 import { toast } from "sonner";
@@ -38,6 +38,7 @@ export function MenuTab() {
     updateItem,
     deleteItem,
     groupedItems,
+    updateCategoriesAsBatch,
   } = useMenuStore();
   const [isCategoryEditing, setIsCategoryEditing] = useState(false);
   const { adminOffers, fetchAdminOffers } = useAdminOfferStore();
@@ -244,7 +245,7 @@ export function MenuTab() {
         </div>
       </div>
 
-      {/* Tab switch: show add form or menu */}
+      {/* Tab switch: show add form, edit form, category management, or menu */}
       {isAddModalOpen ? (
         <AddMenuItemForm
           onSubmit={(item) => {
@@ -252,6 +253,35 @@ export function MenuTab() {
             setIsAddModalOpen(false);
           }}
           onCancel={() => setIsAddModalOpen(false)}
+        />
+      ) : isEditModalOpen && editingItem ? (
+        <EditMenuItemForm
+          item={editingItem}
+          onSubmit={(item) => {
+            handleEditItem(item);
+            setIsEditModalOpen(false);
+          }}
+          onCancel={() => setIsEditModalOpen(false)}
+        />
+      ) : isCategoryEditing ? (
+        <CategoryManagementForm
+          categories={Object.entries(groupedItems).map(([category, items]) => ({
+            id: items[0].category.id,
+            name: category,
+            priority: items[0].category.priority || 0,
+          }))}
+          onSubmit={async (updatedCategories) => {
+            try {
+              // Use updateCategoriesAsBatch to update both names and priorities
+              await updateCategoriesAsBatch(updatedCategories);
+              setIsCategoryEditing(false);
+              fetchMenu(); // Refresh the menu to get the new categories
+            } catch (error) {
+              console.error("Failed to update categories:", error);
+              toast.error("Failed to update categories");
+            }
+          }}
+          onCancel={() => setIsCategoryEditing(false)}
         />
       ) : (
         <>
@@ -304,14 +334,14 @@ export function MenuTab() {
         />
       </div>
 
-      {editingItem && (
+      {/* {editingItem && (
         <EditMenuItemModal
           isOpen={isEditModalOpen}
           onOpenChange={setIsEditModalOpen}
           item={editingItem}
           onSubmit={handleEditItem}
         />
-      )}
+      )} */}
 
       {isCategoryEditing && (
         <CategoryManagementModal

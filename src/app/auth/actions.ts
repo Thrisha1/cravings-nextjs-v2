@@ -38,3 +38,24 @@ export const updateAuthCookie = async (updates: Partial<{ id: string; role: stri
   await setAuthCookie(updatedData);
   return updatedData;
 };
+
+export const setLocationCookie = async (lat : number , lng : number) => {
+
+  const locationData = { lat, lng };
+  const stringified = JSON.stringify(locationData);
+
+  (await cookies()).set('location', stringified, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 7,
+  });
+}
+
+export const getLocationCookie = async () => {
+  const cookie = (await cookies()).get('location')?.value;
+  return cookie ? JSON.parse(cookie) as { lat: number; lng: number } : null;
+};
+
+export const removeLocationCookie = async () => {
+  (await cookies()).delete('location');
+};

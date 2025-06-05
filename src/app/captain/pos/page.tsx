@@ -47,8 +47,10 @@ const Page = async () => {
             </div>
           </div>
         </div>
-        <CaptainPOS />
-        <Captaincart />
+        <div className="pb-[500px]">
+          <CaptainPOS />
+          <Captaincart />
+        </div>
         <CaptainCheckoutModal />
         <EditCaptainOrderModal />
       </div>

@@ -184,7 +184,7 @@ export const CaptainPOS = () => {
             )}
 
             {/* Menu Items */}
-            <div className="px-6 pb-6 space-y-6">
+            <div className="px-6 pb-[150px] space-y-6">
                 {Object.entries(filteredGroupedItems).map(([category, items]) => (
                     <div key={category} className="space-y-4">
                         <h2 className="text-lg font-semibold">{category}</h2>
