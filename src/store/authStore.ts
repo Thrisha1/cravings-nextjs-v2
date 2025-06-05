@@ -259,18 +259,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const partnerResponse = await fetchFromHasura(`
             query GetPartnerData($partner_id: uuid!) {
               partners_by_pk(id: $partner_id) {
+                id
                 currency
                 gst_percentage
+                store_name
+                store_banner
+                location
+                status
+                upi_id
+                description
+                phone
+                district
+                delivery_status
+                geo_location
+                delivery_rate
+                delivery_rules
+                place_id
+                theme
+                gst_no
+                business_type
               }
             }
           `, { partner_id: captain.partner_id });
 
           if (partnerResponse?.partners_by_pk) {
+            const partnerData = partnerResponse.partners_by_pk;
             set({
               userData: {
                 ...captain,
-                currency: partnerResponse.partners_by_pk.currency || "$",
-                gst_percentage: partnerResponse.partners_by_pk.gst_percentage || 0
+                currency: partnerData.currency || "₹",
+                gst_percentage: partnerData.gst_percentage || 0,
+                partner: partnerData // Store full partner data
               },
               loading: false
             });
@@ -278,7 +297,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({
               userData: {
                 ...captain,
-                currency: "$",
+                currency: "₹",
                 gst_percentage: 0
               },
               loading: false
@@ -455,13 +474,67 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const captain = response.captain[0];
-      await setAuthCookie({ 
-        id: captain.id, 
-        role: "captain",
-        feature_flags: "",
-        status: "active"
-      });
-      set({ userData: { ...captain, role: "captain" } as Captain });
+
+      // Fetch partner data immediately
+      const partnerResponse = await fetchFromHasura(`
+        query GetPartnerData($partner_id: uuid!) {
+          partners_by_pk(id: $partner_id) {
+            id
+            currency
+            gst_percentage
+            store_name
+            store_banner
+            location
+            status
+            upi_id
+            description
+            phone
+            district
+            delivery_status
+            geo_location
+            delivery_rate
+            delivery_rules
+            place_id
+            theme
+            gst_no
+            business_type
+          }
+        }
+      `, { partner_id: captain.partner_id });
+
+      if (partnerResponse?.partners_by_pk) {
+        const partnerData = partnerResponse.partners_by_pk;
+        await setAuthCookie({ 
+          id: captain.id, 
+          role: "captain",
+          feature_flags: "",
+          status: "active"
+        });
+        set({ 
+          userData: { 
+            ...captain, 
+            role: "captain",
+            currency: partnerData.currency || "₹",
+            gst_percentage: partnerData.gst_percentage || 0,
+            partner: partnerData
+          } as Captain 
+        });
+      } else {
+        await setAuthCookie({ 
+          id: captain.id, 
+          role: "captain",
+          feature_flags: "",
+          status: "active"
+        });
+        set({ 
+          userData: { 
+            ...captain, 
+            role: "captain",
+            currency: "₹",
+            gst_percentage: 0
+          } as Captain 
+        });
+      }
     } catch (error) {
       console.error("Captain login failed:", error);
       throw error;
