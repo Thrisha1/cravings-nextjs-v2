@@ -10,22 +10,31 @@ export async function addToRecent(partnerId: string) {
       return;
     }
 
-
     await fetchFromHasura(
       `
         mutation InsertRecent($userId: uuid!, $partnerId: uuid!) {
-            insert_followers_one(
-                object: { user_id: $userId, partner_id: $partnerId, created_at: "now()" },
-                on_conflict: { constraint: followers_user_id_partner_id_key, update_columns: [] }
-            ) {
-                id
+          insert_followers_one(
+            object: { 
+              user_id: $userId, 
+              partner_id: $partnerId, 
+              created_at: "now()"
+            },
+            on_conflict: {
+              constraint: followers_user_id_partner_id_key,
+              update_columns: [created_at]
             }
+          ) {
+            id
+            created_at
+          }
         }`,
       {
         userId: userData.id,
         partnerId: partnerId,
       }
     );
+
+
   } catch {
     console.error("Error adding to recent");
   }
