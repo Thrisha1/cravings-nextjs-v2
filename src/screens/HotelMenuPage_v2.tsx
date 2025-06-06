@@ -222,7 +222,7 @@ const HotelMenuPage = ({
               {hoteldata?.id === auth?.id && (
                 <ThemeChangeButton hotelData={hoteldata} theme={theme} />
               )}
-              <SocialLinkList styles={styles} socialLinks={socialLinks} hotelId={hoteldata?.id} countryCode={hoteldata?.country_code || "+91"} />
+              <SocialLinkList styles={styles} socialLinks={socialLinks} hotelId={hoteldata?.id} />
             </div>
           </section>
 
