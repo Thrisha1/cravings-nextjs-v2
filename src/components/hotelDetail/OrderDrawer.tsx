@@ -30,6 +30,7 @@ import Link from "next/link";
 import { log, table } from "console";
 import { usePathname } from "next/navigation";
 import { getFeatures } from "@/lib/getFeatures";
+import Script from "next/script";
 
 export const getGstAmount = (price: number, gstPercentage: number) => {
   const gstAmount = (price * gstPercentage) / 100;
@@ -184,224 +185,224 @@ const OrderDrawer = ({
   };
 
   return (
-    <Drawer open={isOpen} onOpenChange={setIsOpen}>
-      {/* Bottom bar */}
-      <div
-        style={{
-          ...styles.border,
-        }}
-        className="fixed bottom-0 z-[51] bg-white text-black w-full px-[8%] py-6 rounded-t-[35px] bottom-bar-shadow flex items-center justify-between"
-      >
-        {order ? (
-          <div className="flex items-center gap-4 w-full justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle
-                style={{ color: styles.accent }}
-                className="w-5 h-5"
-              />
-              <span className="font-medium">Order #{order.id.slice(0, 8)}</span>
-            </div>
-            <div
-              onClick={handleViewOrder}
-              style={{
-                color: styles.accent,
-              }}
-              className="font-black"
-            >
-              View Order
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="z-[51]">
-              <div className="flex gap-2 items-center font-black text-xl ">
-                <div>PRICE : </div>
-                <div style={{ color: styles.accent }}>
-                  {hotelData.currency}
-                  {totalPrice}
-                </div>
-              </div>
-              <div className="flex gap-2 items-center text-sm text-black/70">
-                <div>Items :</div>
-                <div>{items?.length}</div>
-              </div>
-            </div>
-
-            <div
-              onClick={handleViewOrder}
-              style={{
-                color: styles.accent,
-              }}
-              className="font-black relative"
-            >
-              View Order
-            </div>
-          </>
-        )}
-      </div>
-
-      <DrawerContent className="max-h-[80vh] z-[52]">
-        <DrawerHeader>
-          <DrawerTitle>
-            <HeadingWithAccent
-              accent={styles.accent}
-              className="font-black text-xl tracking-wide"
-            >
-              {order ? "Order Details" : "Your Order"}
-            </HeadingWithAccent>
-          </DrawerTitle>
-          <DrawerDescription>
-            {order
-              ? `Order #${order.id.slice(0, 8)} - ${order.status}`
-              : "Review your items before placing order"}
-          </DrawerDescription>
-        </DrawerHeader>
-
-        <div className="px-4 overflow-y-auto flex-1">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[50%] font-semibold text-sm text-gray-500">
-                  ITEM
-                </TableHead>
-                <TableHead className="text-right font-semibold text-sm text-gray-500">
-                  PRICE
-                </TableHead>
-                <TableHead className="text-center font-semibold text-sm text-gray-500">
-                  QTY
-                </TableHead>
-                <TableHead className="text-right font-semibold text-sm text-gray-500">
-                  TOTAL
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(items || []).map((item) => (
-                <TableRow
-                  key={`order-item-${item.id}`}
-                  className="hover:bg-transparent border-b border-gray-100"
-                >
-                  <TableCell className="font-medium py-3">
-                    {item.name}
-                  </TableCell>
-                  <TableCell className="text-right py-3">
-                    {hotelData.currency}
-                    {item.price}
-                  </TableCell>
-                  <TableCell className="text-center py-3">
-                    {order ? (
-                      item.quantity
-                    ) : (
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => {
-                            if (item.quantity > 1) {
-                              decreaseQuantity(item.id as string);
-                            } else {
-                              removeItem(item.id as string);
-                            }
-                          }}
-                          className="w-6 h-6 rounded-full flex items-center justify-center border"
-                        >
-                          -
-                        </button>
-                        <span>{item.quantity}</span>
-                        <button
-                          onClick={() => increaseQuantity(item.id as string)}
-                          className="w-6 h-6 rounded-full flex items-center justify-center border"
-                        >
-                          +
-                        </button>
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right py-3">
-                    {hotelData.currency}
-                    {(item.price * item.quantity).toFixed(2)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        <DrawerFooter className="border-t">
-          {hotelData?.gst_percentage ? (
-            <>
-              <div className="flex justify-between items-center mb-4 text-sm">
-                <span className="font-bold">Total:</span>
-                <span className="font-bold" style={{ color: styles.accent }}>
-                  {hotelData.currency}
-                  {(order?.totalPrice ?? totalPrice ?? 0).toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center mb-4">
-                <span className="font-bold">{`Grand Total (+ GST (${hotelData.gst_percentage}%)):`}</span>
-                <span
-                  className="font-bold text-lg"
+    <>
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" />
+      <Drawer open={isOpen} onOpenChange={setIsOpen}>
+        {/* Bottom bar */}
+        <div
+          style={{
+            ...styles.border,
+          }}
+          className="fixed bottom-0 z-[51] bg-white text-black w-full px-[8%] py-6 rounded-t-[35px] bottom-bar-shadow flex items-center justify-between"
+        >
+          {order ? (
+            <div className="flex items-center gap-4 w-full justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle
                   style={{ color: styles.accent }}
-                >
-                  {hotelData.currency}
-                  {(
-                    getGstAmount(
-                      order?.totalPrice ?? totalPrice ?? 0,
-                      hotelData.gst_percentage
-                    ) + (order?.totalPrice ?? totalPrice ?? 0)
-                  ).toFixed(2)}
-                </span>
+                  className="w-5 h-5"
+                />
+                <span className="font-medium">Order #{order.id.slice(0, 8)}</span>
               </div>
-            </>
+              <div
+                onClick={handleViewOrder}
+                style={{
+                  color: styles.accent,
+                }}
+                className="font-black"
+              >
+                View Order
+              </div>
+            </div>
           ) : (
             <>
-              <div className="flex justify-between items-center mb-4">
-                <span className="font-bold">Grand Total:</span>
-                <span
-                  className="font-bold text-lg"
-                  style={{ color: styles.accent }}
-                >
-                  {hotelData.currency}
-                  {(order?.totalPrice ?? totalPrice ?? 0).toFixed(2)}
-                </span>
+              <div className="z-[51]">
+                <div className="flex gap-2 items-center font-black text-xl ">
+                  <div>PRICE : </div>
+                  <div style={{ color: styles.accent }}>
+                    {hotelData.currency}
+                    {totalPrice}
+                  </div>
+                </div>
+                <div className="flex gap-2 items-center text-sm text-black/70">
+                  <div>Items :</div>
+                  <div>{items?.length}</div>
+                </div>
+              </div>
+
+              <div
+                onClick={handleViewOrder}
+                style={{
+                  color: styles.accent,
+                }}
+                className="font-black relative"
+              >
+                View Order
               </div>
             </>
           )}
+        </div>
 
-          <>
-            {items && items.length > 0 && (
-              <>
-                {!order ? (
-                  <>
-                    <Link
-                      href={getWhatsapLink()}
-                      onClick={handlePlaceOrder}
-                      target="_blank"
-                      // onClick={handlePlaceOrder}
-                      style={{ backgroundColor: styles.accent }}
-                      className="flex-1 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Placing Order...
-                        </>
+        <DrawerContent className="max-h-[80vh] z-[52]">
+          <DrawerHeader>
+            <DrawerTitle>
+              <HeadingWithAccent
+                accent={styles.accent}
+                className="font-black text-xl tracking-wide"
+              >
+                {order ? "Order Details" : "Your Order"}
+              </HeadingWithAccent>
+            </DrawerTitle>
+            <DrawerDescription>
+              {order
+                ? `Order #${order.id.slice(0, 8)} - ${order.status}`
+                : "Review your items before placing order"}
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <div className="px-4 overflow-y-auto flex-1">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[50%] font-semibold text-sm text-gray-500">
+                    ITEM
+                  </TableHead>
+                  <TableHead className="text-right font-semibold text-sm text-gray-500">
+                    PRICE
+                  </TableHead>
+                  <TableHead className="text-center font-semibold text-sm text-gray-500">
+                    QTY
+                  </TableHead>
+                  <TableHead className="text-right font-semibold text-sm text-gray-500">
+                    TOTAL
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(items || []).map((item) => (
+                  <TableRow
+                    key={`order-item-${item.id}`}
+                    className="hover:bg-transparent border-b border-gray-100"
+                  >
+                    <TableCell className="font-medium py-3">
+                      {item.name}
+                    </TableCell>
+                    <TableCell className="text-right py-3">
+                      {hotelData.currency}
+                      {item.price}
+                    </TableCell>
+                    <TableCell className="text-center py-3">
+                      {order ? (
+                        item.quantity
                       ) : (
-                        <>Place Order</>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => {
+                              if (item.quantity > 1) {
+                                decreaseQuantity(item.id as string);
+                              } else {
+                                removeItem(item.id as string);
+                              }
+                            }}
+                            className="w-6 h-6 rounded-full flex items-center justify-center border"
+                          >
+                            -
+                          </button>
+                          <span>{item.quantity}</span>
+                          <button
+                            onClick={() => increaseQuantity(item.id as string)}
+                            className="w-6 h-6 rounded-full flex items-center justify-center border"
+                          >
+                            +
+                          </button>
+                        </div>
                       )}
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-full text-center text-sm text-gray-500">
-                      Your order has been placed. Please wait for confirmation.
-                    </div>
-                  </>
-                )}
+                    </TableCell>
+                    <TableCell className="text-right py-3">
+                      {hotelData.currency}
+                      {(item.price * item.quantity).toFixed(2)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <DrawerFooter className="border-t">
+            {hotelData?.gst_percentage ? (
+              <>
+                <div className="flex justify-between items-center mb-4 text-sm">
+                  <span className="font-bold">Total:</span>
+                  <span className="font-bold" style={{ color: styles.accent }}>
+                    {hotelData.currency}
+                    {(order?.totalPrice ?? totalPrice ?? 0).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-bold">{`Grand Total (+ GST (${hotelData.gst_percentage}%)):`}</span>
+                  <span
+                    className="font-bold text-lg"
+                    style={{ color: styles.accent }}
+                  >
+                    {hotelData.currency}
+                    {(
+                      getGstAmount(
+                        order?.totalPrice ?? totalPrice ?? 0,
+                        hotelData.gst_percentage
+                      ) + (order?.totalPrice ?? totalPrice ?? 0)
+                    ).toFixed(2)}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-bold">Grand Total:</span>
+                  <span
+                    className="font-bold text-lg"
+                    style={{ color: styles.accent }}
+                  >
+                    {hotelData.currency}
+                    {(order?.totalPrice ?? totalPrice ?? 0).toFixed(2)}
+                  </span>
+                </div>
               </>
             )}
-          </>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+
+            <>
+              {items && items.length > 0 && (
+                <>
+                  {!order ? (
+                    <>
+                      <button
+                        onClick={handlePlaceOrder}
+                        style={{ backgroundColor: styles.accent }}
+                        className="flex-1 active:brightness-75 text-white font-bold text-center py-3 px-5 rounded-lg"
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>Pay and Confirm Order</>
+                        )}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-full text-center text-sm text-gray-500">
+                        Your order has been placed. Please wait for confirmation.
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    </>
   );
 };
 

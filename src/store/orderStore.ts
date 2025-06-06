@@ -7,6 +7,7 @@ import { createOrderItemsMutation, createOrderMutation, subscriptionQuery, userS
 import { toast } from "sonner";
 import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
 import { subscribeToHasura } from "@/lib/hasuraSubscription";
+import { createRazorpayOrder, verifyPayment, type RazorpayResponseType } from "@/app/actions/razorpay";
 
 export interface OrderItem extends HotelDataMenus {
   quantity: number;
@@ -28,6 +29,37 @@ export interface Order {
   };
   type?: "table_order" | "delivery" | "pos";
   deliveryAddress?: string | null;
+}
+
+interface HasuraOrder {
+  id: string;
+  total_price: number;
+  created_at: string;
+  table_number: number | null;
+  qr_id: string | null;
+  status: string;
+  type: string;
+  phone: string | null;
+  delivery_address: string | null;
+  partner_id: string;
+  user_id: string;
+  user: {
+    full_name: string;
+    phone: string;
+    email: string;
+  };
+  order_items: Array<{
+    id: string;
+    quantity: number;
+    menu: {
+      id: string;
+      name: string;
+      price: number;
+      category: {
+        name: string;
+      };
+    };
+  }>;
 }
 
 interface HotelOrderState {
@@ -89,14 +121,13 @@ const useOrderStore = create(
 
 
       subscribeUserOrders: (callback) => {
-
         const userId = useAuthStore.getState().userData?.id;
 
         const unsubscribe = subscribeToHasura({
           query: userSubscriptionQuery,
           variables: { user_id: userId },
           onNext: (data) => {
-            const allOrders = data.data?.orders.map((order: any) => ({
+            const allOrders = data.data?.orders.map((order: HasuraOrder) => ({
               id: order.id,
               totalPrice: order.total_price,
               createdAt: order.created_at,
@@ -109,7 +140,7 @@ const useOrderStore = create(
               partnerId: order.partner_id,
               userId: order.user_id,
               user: order.user,
-              items: order.order_items.map((item: any) => ({
+              items: order.order_items.map((item) => ({
                 id: item.id,
                 quantity: item.quantity,
                 name: item.menu?.name || "Unknown",
@@ -132,14 +163,13 @@ const useOrderStore = create(
       },
 
       subscribeOrders: (callback) => {
-
         const partnerId = useAuthStore.getState().userData?.id;
 
         const unsubscribe = subscribeToHasura({
           query: subscriptionQuery,
           variables: { partner_id: partnerId },
           onNext: (data) => {
-            const allOrders = data.data?.orders.map((order: any) => ({
+            const allOrders = data.data?.orders.map((order: HasuraOrder) => ({
               id: order.id,
               totalPrice: order.total_price,
               createdAt: order.created_at,
@@ -152,7 +182,7 @@ const useOrderStore = create(
               partnerId: order.partner_id,
               userId: order.user_id,
               user: order.user,
-              items: order.order_items.map((item: any) => ({
+              items: order.order_items.map((item) => ({
                 id: item.id,
                 quantity: item.quantity,
                 name: item.menu?.name || "Unknown",
@@ -403,21 +433,49 @@ const useOrderStore = create(
           }
 
           const type = tableNumber ? "table_order" : "delivery";
-
           const createdAt = new Date().toISOString();
+          const totalAmount = hotelData?.gst_percentage
+            ? currentOrder.totalPrice +
+              getGstAmount(currentOrder.totalPrice, hotelData.gst_percentage)
+            : currentOrder.totalPrice;
+
+          let orderId = currentOrder.orderId || crypto.randomUUID();
+
+          // Check if order already exists
+          if (orderId) {
+            const existingOrderResponse = await fetchFromHasura(
+              `query GetOrder($id: uuid!) {
+                orders_by_pk(id: $id) {
+                  id
+                  status
+                }
+              }`,
+              { id: orderId }
+            );
+
+            if (existingOrderResponse.data?.orders_by_pk) {
+              const existingOrder = existingOrderResponse.data.orders_by_pk;
+              if (existingOrder.status === "pending") {
+                // Use existing order
+                orderId = existingOrder.id;
+              } else {
+                // Generate new order ID if existing order is not pending
+                orderId = crypto.randomUUID();
+              }
+            }
+          }
+
+          // Create or update order in Hasura
           const orderResponse = await fetchFromHasura(createOrderMutation, {
-            id: currentOrder.orderId,
-            totalPrice: hotelData?.gst_percentage
-              ? currentOrder.totalPrice +
-                getGstAmount(currentOrder.totalPrice, hotelData.gst_percentage)
-              : currentOrder.totalPrice,
+            id: orderId,
+            totalPrice: totalAmount,
             createdAt,
             tableNumber: tableNumber || null,
             qrId: qrId || null,
             partnerId: hotelData.id,
             userId: userData.id,
             type,
-            status : "pending",
+            status: "pending",
             delivery_address: tableNumber ? null : get().userAddress,
           });
 
@@ -427,14 +485,14 @@ const useOrderStore = create(
             );
           }
 
-          const orderId = orderResponse.insert_orders_one.id;
+          // Add order items
           const itemsResponse = await fetchFromHasura(
             createOrderItemsMutation,
             {
               orderItems: currentOrder.items.map((item) => ({
                 order_id: orderId,
                 menu_id: item.id,
-                quantity: item.quantity,
+                quantity: item.quantity
               })),
             }
           );
@@ -445,40 +503,123 @@ const useOrderStore = create(
             );
           }
 
-          const newOrder: Order = {
-            id: orderId,
-            items: currentOrder.items,
-            totalPrice: currentOrder.totalPrice,
-            createdAt,
-            tableNumber: tableNumber || null,
-            qrId: qrId || null,
-            status: "pending",
-            partnerId: hotelData.id,
-            userId: userData.id,
-            user: {
-              phone: userData?.role === "user" ? userData.phone : "N/A",
+          // Now create Razorpay order
+          const razorpayOrder = await createRazorpayOrder(orderId, totalAmount, hotelData.id);
+
+          const options = {
+            key: razorpayOrder.key,
+            amount: razorpayOrder.amount,
+            currency: 'INR',
+            name: hotelData.name,
+            description: `Order #${orderId.slice(0, 8)}`,
+            order_id: razorpayOrder.orderId,
+            prefill: {
+              contact: userData?.role === "user" ? userData.phone : undefined,
+              email: userData?.email || undefined
             },
+            theme: {
+              color: "#00ffbb",
+            },
+            modal: {
+              ondismiss: async function() {
+                // Update order status to cancelled when payment is dismissed
+                await fetchFromHasura(
+                  `mutation UpdateOrderStatus($id: uuid!, $status: String!) {
+                    update_orders_by_pk(pk_columns: {id: $id}, _set: {status: $status}) {
+                      id
+                      status
+                    }
+                  }`,
+                  { id: orderId, status: "cancelled" }
+                );
+                toast.error("Payment cancelled");
+              }
+            },
+            handler: async function (obj: RazorpayResponseType) {
+              try {
+                console.log('Payment response:', obj);
+                const result = await verifyPayment(razorpayOrder.orderId, obj);
+                console.log('Verification result:', result);
+                if(result) {
+                  // Update order status to completed
+                  await fetchFromHasura(
+                    `mutation UpdateOrderStatus($id: uuid!, $status: String!) {
+                      update_orders_by_pk(pk_columns: {id: $id}, _set: {status: $status}) {
+                        id
+                        status
+                      }
+                    }`,
+                    { id: orderId, status: "completed" }
+                  );
+
+                  const newOrder: Order = {
+                    id: orderId,
+                    items: currentOrder.items,
+                    totalPrice: totalAmount,
+                    createdAt,
+                    tableNumber: tableNumber || null,
+                    qrId: qrId || null,
+                    status: "completed",
+                    partnerId: hotelData.id,
+                    userId: userData.id,
+                    user: {
+                      phone: userData?.role === "user" ? userData.phone : "N/A",
+                    },
+                  };
+
+                  set((state) => {
+                    const hotelOrders = { ...state.hotelOrders };
+                    hotelOrders[state.hotelId!] = {
+                      items: [],
+                      totalPrice: 0,
+                      order: newOrder,
+                      orderId: null,
+                    };
+                    return {
+                      hotelOrders,
+                      order: newOrder,
+                      items: [],
+                      orderId: null,
+                      totalPrice: 0,
+                    };
+                  });
+
+                  toast.success("Payment successful! Order placed successfully!");
+                } else {
+                  // Update order status to failed
+                  await fetchFromHasura(
+                    `mutation UpdateOrderStatus($id: uuid!, $status: String!) {
+                      update_orders_by_pk(pk_columns: {id: $id}, _set: {status: $status}) {
+                        id
+                        status
+                      }
+                    }`,
+                    { id: orderId, status: "failed" }
+                  );
+                  toast.error("Payment verification failed");
+                }
+              } catch (error) {
+                console.error("Payment verification error:", error);
+                // Update order status to failed
+                await fetchFromHasura(
+                  `mutation UpdateOrderStatus($id: uuid!, $status: String!) {
+                    update_orders_by_pk(pk_columns: {id: $id}, _set: {status: $status}) {
+                      id
+                      status
+                    }
+                  }`,
+                  { id: orderId, status: "failed" }
+                );
+                toast.error("Payment verification failed");
+              }
+            }
           };
 
-          set((state) => {
-            const hotelOrders = { ...state.hotelOrders };
-            hotelOrders[state.hotelId!] = {
-              items: [],
-              totalPrice: 0,
-              order: newOrder,
-              orderId: null,
-            };
-            return {
-              hotelOrders,
-              order: newOrder,
-              items: [],
-              orderId: null,
-              totalPrice: 0,
-            };
-          });
+          // @ts-expect-error This is razorpay direct javascript calls
+          const rzp = new window.Razorpay(options);
+          rzp.open();
 
-          toast.success("Order placed successfully!");
-          return newOrder;
+          return null;
         } catch (error) {
           toast.error(
             error instanceof Error ? error.message : "Failed to place order"
@@ -533,7 +674,7 @@ const useOrderStore = create(
             );
           }
 
-          return response.orders.map((order: any) => ({
+          return response.orders.map((order: HasuraOrder) => ({
             id: order.id,
             totalPrice: order.total_price,
             createdAt: order.created_at,
@@ -545,7 +686,7 @@ const useOrderStore = create(
             partnerId: order.partner_id,
             userId: order.user_id,
             user: order.user,
-            items: order.order_items.map((item: any) => ({
+            items: order.order_items.map((item) => ({
               id: item.id,
               quantity: item.quantity,
               name: item.menu?.name || "Unknown",

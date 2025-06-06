@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { useAuthStore } from "@/store/authStore";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { UtensilsCrossed, Menu, X, Banknote, ChevronLeft } from "lucide-react";
+import { UtensilsCrossed, Menu, X, Banknote, ChevronLeft, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 // import { useClaimedOffersStore } from "@/store/claimedOffersStore";
@@ -192,37 +192,18 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-5">
-              {/* cravings cash button  */}
-              {/* <>
-                {userData && (
-                  <div
-                    onClick={() => {
-                      router.push("/coupons");
-                      setIsTooltipOpen(false);
-                    }}
-                    className="text-orange-500 gap-1 cursor-pointer font-bold flex items-center text-lg rounded-full relative"
-                  >
-                    <span>{offersClaimable}</span>
-                    <Banknote className="w-8 h-8" />
-
-                    {offersClaimable == 0 && isTooltipOpen && (
-                      <>
-
-                        <div className="absolute top-0 -right-1 rounded-full w-2 aspect-square bg-red-600 animate-pulse" />
-
-                        <div className="transition-all animate-tooltip duration-500 absolute bottom-0 translate-y-14 z-[10] left-1/2 -translate-x-1/2  rounded-xl  bg-white shadow-xl border-[1px]  border-black/10">
-                          <div className="text-center relative z-[8] px-3 py-2 rounded-xl text-nowrap leading-[17px] bg-white text-[10px] text-black">
-                            Click Here For More <br /> Cravings Cash
-                          </div>
-                          <span className="absolute bg-white border-[1px] border-black/10 rotate-45 w-3 h-3 -top-1 rounded-[2px] z-[7] left-1/2 -translate-x-1/2"></span>
-                        </div>
-                      </>
-                    )}
-
-                    <div></div>
-                  </div>
-                )}
-              </> */}
+              {/* Print button */}
+              {userData && (
+                <Button
+                  onClick={() => router.push("/print-test")}
+                  variant="ghost"
+                  size="icon"
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <Printer className="h-6 w-6" />
+                  <span className="sr-only">Print</span>
+                </Button>
+              )}
 
               {!userData && (
                 <Button
