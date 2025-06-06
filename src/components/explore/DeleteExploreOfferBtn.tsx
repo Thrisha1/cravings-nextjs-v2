@@ -2,6 +2,7 @@
 
 import { deleteCommonOffer } from "@/api/common_offers";
 import { deleteFileFromS3 } from "@/app/actions/aws-s3";
+import { revalidateTag } from "@/app/actions/revalidate";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { Trash } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -29,6 +30,8 @@ const DeleteExploreOfferBtn = ({
 
       toast.dismiss();
       toast.success("Offer deleted successfully!");
+      revalidateTag("all-common-offers");
+      revalidateTag(id);
       router.push("/explore");
     } catch (error) {
       toast.dismiss();

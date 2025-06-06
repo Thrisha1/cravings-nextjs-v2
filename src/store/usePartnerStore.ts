@@ -8,6 +8,8 @@ export interface Partner {
   location: string;
   status: string;
   upi_id: string;
+  geo_location: string;
+  delivery_rate: string; // Keep as number
   description: string;
   phone?: string;
   district?: string;

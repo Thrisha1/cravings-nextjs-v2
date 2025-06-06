@@ -11,7 +11,7 @@ const KOTTemplate = ({ ref , order} : {ref : React.RefObject<HTMLDivElement | nu
       <div className="border-b border-black my-2"></div>
       <div className="flex justify-between mb-2">
         <span className="font-medium">Order #:</span>
-        <span>{order.id}</span>
+        <span>{order.id.slice(0,8)}</span>
       </div>
       <div className="flex justify-between mb-4">
         <span className="font-medium">Table:</span>
@@ -31,7 +31,11 @@ const KOTTemplate = ({ ref , order} : {ref : React.RefObject<HTMLDivElement | nu
       </ul>
       <div className="border-b border-black my-2"></div>
       <div className="text-center text-sm mt-4">
-        {new Date(order.createdAt).toLocaleString()}
+        {new Date(order.createdAt).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "2-digit",
+        })}
       </div>
     </div>
   );

@@ -1,8 +1,17 @@
 "use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { UtensilsCrossed, Tag, LogOutIcon, Pencil, Trash2 } from "lucide-react";
-import { Partner, useAuthStore } from "@/store/authStore";
+// import { Badge } from "@/components/ui/badge";
+import {
+  // UtensilsCrossed,
+  Tag,
+  LogOutIcon,
+  Pencil,
+  Trash2,
+  ArrowRight,
+  // Loader2,
+} from "lucide-react";
+import { GeoLocation, Partner, useAuthStore } from "@/store/authStore";
+import { useLocationStore } from "@/store/geolocationStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -31,22 +40,26 @@ import { revalidateTag } from "../actions/revalidate";
 import { processImage } from "@/lib/processImage";
 import { Textarea } from "@/components/ui/textarea";
 import Img from "@/components/Img";
-import { Select } from "@radix-ui/react-select";
+import { Switch } from "@/components/ui/switch";
+import { HotelData } from "../hotels/[...id]/page";
+import { getSocialLinks } from "@/lib/getSocialLinks";
 import {
+  FeatureFlags,
+  getFeatures,
+  revertFeatureToString,
+} from "@/lib/getFeatures";
+import { updateAuthCookie } from "../auth/actions";
+import { DeliveryRules } from "@/store/orderStore";
+import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/DeliveryAndGeoLocationSettings";
+import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
+import { countryCodes } from "@/utils/countryCodes";
+import {
+  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import {
-  FeatureFlags,
-  revertFeatureToString,
-} from "@/screens/HotelMenuPage_v2";
-import { HotelData, SocialLinks } from "../hotels/[id]/page";
-import { getSocialLinks } from "@/lib/getSocialLinks";
-import { getFeatures } from "@/lib/getFeatures";
-import { updateAuthCookie } from "../auth/actions";
 
 const Currencies = [
   { label: "INR", value: "₹" },
@@ -62,10 +75,22 @@ const Currencies = [
 
 export default function ProfilePage() {
   const { userData, loading: authLoading, signOut, setState } = useAuthStore();
+  const {
+    coords,
+    geoString,
+    error: geoError,
+    getLocation,
+  } = useLocationStore();
+  const [deliveryRate, setDeliveryRate] = useState(0);
+  const [geoLocation, setGeoLocation] = useState({
+    latitude: 0,
+    longitude: 0,
+  });
+  const [location, setLocation] = useState("");
   const { claimedOffers } = useClaimedOffersStore();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
-
+  const [isShopOpen, setIsShopOpen] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [upiId, setUpiId] = useState("");
   const [isSaving, setIsSaving] = useState({
@@ -75,8 +100,13 @@ export default function ProfilePage() {
     currency: false,
     whatsappNumber: false,
     footNote: false,
+    geoLocation: false,
+    location: false,
+    deliveryRate: false,
     instaLink: false,
     gst: false,
+    deliverySettings: false,
+    countryCode: false,
   });
   const [isEditing, setIsEditing] = useState({
     upiId: false,
@@ -85,15 +115,28 @@ export default function ProfilePage() {
     whatsappNumber: false,
     currency: false,
     footNote: false,
+    geoLocation: false,
+    location: false,
+    deliveryRate: false,
     instaLink: false,
     gst: false,
+    deliverySettings: false,
   });
   const [placeId, setPlaceId] = useState("");
   const [gst, setGst] = useState({
     gst_no: "",
     gst_percentage: 0,
+    enabled: false,
   });
   const [description, setDescription] = useState("");
+  const [deliveryRules, setDeliveryRules] = useState<DeliveryRules>({
+    delivery_radius: 5,
+    first_km_range: {
+      km: 0,
+      rate: 0,
+    },
+    is_fixed_rate: false,
+  });
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [whatsappNumbers, setWhatsappNumbers] = useState<
     { number: string; area: string }[]
@@ -104,26 +147,35 @@ export default function ProfilePage() {
   );
   const [isBannerUploading, setBannerUploading] = useState(false);
   const [isBannerChanged, setIsBannerChanged] = useState(false);
-  const [showPricing, setShowPricing] = useState(true);
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
   const [userFeatures, setUserFeatures] = useState<FeatureFlags | null>(null);
   const [footNote, setFootNote] = useState<string>("");
   const [instaLink, setInstaLink] = useState<string>("");
+  const [isEditingCountryCode, setIsEditingCountryCode] = useState(false);
+  const [countryCode, setCountryCode] = useState( userData?.role === "partner" ? userData?.country_code || "+91" : "+91");
+  const [countryCodeSearch, setCountryCodeSearch] = useState("");
+  const [showPricing, setShowPricing] = useState(true);
 
   const isLoading = authLoading;
 
   useEffect(() => {
     if (userData?.role === "partner") {
+      // console.log("Debug - UserData:", {
+      //   delivery_rate: userData.delivery_rate,
+      //   geo_location: userData.geo_location,
+      //   raw_userData: userData
+      // });
+
       setBannerImage(userData.store_banner || null);
       setUpiId(userData.upi_id || "");
       setPlaceId(userData.place_id || "");
       setDescription(userData.description || "");
+      setDeliveryRate(userData.delivery_rate || 0);
       setCurrency(
         Currencies.find(
           (curr) => curr.value === userData.currency
         ) as (typeof Currencies)[0]
       );
-      setShowPricing(userData.currency === "🚫" ? false : true);
       setFeatures(
         userData?.role === "partner"
           ? getFeatures(userData.feature_flags || "")
@@ -143,7 +195,22 @@ export default function ProfilePage() {
       setGst({
         gst_no: userData.gst_no || "",
         gst_percentage: userData.gst_percentage || 0,
+        enabled: (userData.gst_percentage || 0) > 0 ? true : false,
       });
+      setIsShopOpen(userData.is_shop_open);
+      setDeliveryRules({
+        delivery_radius: userData.delivery_rules?.delivery_radius || 5,
+        first_km_range: {
+          km: userData.delivery_rules?.first_km_range?.km || 0,
+          rate: userData.delivery_rules?.first_km_range?.rate || 0,
+        },
+        is_fixed_rate: userData.delivery_rules?.is_fixed_rate || false,
+      });
+      setGeoLocation({
+        latitude: userData?.geo_location?.coordinates?.[1] || 0,
+        longitude: userData?.geo_location?.coordinates?.[0] || 0,
+      });
+      setLocation(userData?.location || "");
     }
   }, [userData]);
 
@@ -157,6 +224,23 @@ export default function ProfilePage() {
       console.log(feature);
     }
   }, [userData]);
+
+  // Add effect to log state changes
+  useEffect(() => {
+    console.log("Debug - Current state:", {
+      deliveryRate,
+      geoLocation,
+      isEditing: {
+        deliveryRate: isEditing.deliveryRate,
+        geoLocation: isEditing.geoLocation,
+      },
+    });
+  }, [
+    deliveryRate,
+    geoLocation,
+    isEditing.deliveryRate,
+    isEditing.geoLocation,
+  ]);
 
   const profile = {
     name:
@@ -199,6 +283,149 @@ export default function ProfilePage() {
       setError("Failed to delete account. Please try again.");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleGetCurrentLocation = async () => {
+    try {
+      console.log("Fetching location...");
+
+      const newCoords = await getLocation();
+
+      if (newCoords) {
+        console.log("Location received:", newCoords);
+        setGeoLocation({
+          latitude: newCoords.lat,
+          longitude: newCoords.lng,
+        });
+
+        return {
+          latitude: newCoords.lat,
+          longitude: newCoords.lng,
+        };
+      }
+    } catch (error) {
+      console.error("Error getting location:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to get location"
+      );
+
+      return null;
+    }
+  };
+
+  // Also add this effect to watch store changes
+  useEffect(() => {
+    console.log("Store changed:", {
+      coords,
+      geoString,
+      error,
+    });
+
+    if (coords && isEditing.geoLocation) {
+      console.log("Updating geoLocation from store:", {
+        lat: coords.lat,
+        lng: coords.lng,
+      });
+
+      setGeoLocation({
+        latitude: coords.lat,
+        longitude: coords.lng,
+      });
+    }
+  }, [coords, geoString, error, isEditing.geoLocation]);
+
+  const handleSaveGeoLocation = async (location?: {
+    latitude: number;
+    longitude: number;
+  }) => {
+    try {
+      const { latitude, longitude } = location || geoLocation;
+
+      console.log("Saving geoLocation:", geoLocation);
+
+      // Validate coordinates are present
+      if (!latitude || !longitude) {
+        toast.error("Please enter both latitude and longitude");
+        return;
+      }
+
+      // Convert to numbers and validate ranges
+      const lat = latitude;
+      const lng = longitude;
+
+      if (isNaN(lat) || isNaN(lng)) {
+        toast.error("Please enter valid numeric coordinates");
+        return;
+      }
+
+      // Validate coordinate ranges
+      if (lat < -90 || lat > 90) {
+        toast.error("Latitude must be between -90 and 90 degrees");
+        return;
+      }
+
+      if (lng < -180 || lng > 180) {
+        toast.error("Longitude must be between -180 and 180 degrees");
+        return;
+      }
+
+      // Create the correct format for geography type
+      // Using SRID=4326;POINT(longitude latitude) format
+      const geographyFormat = {
+        type: "Point",
+        coordinates: [lng, lat],
+      } as GeoLocation;
+
+      setIsSaving((prev) => ({ ...prev, geoLocation: true }));
+      toast.loading("Updating location...");
+
+      // First verify the mutation
+      const mutation = updatePartnerMutation;
+      console.log("Mutation:", mutation); // Debug log
+      console.log("Update data:", {
+        id: userData?.id,
+        updates: {
+          geo_location: geographyFormat,
+        },
+      }); // Debug log
+
+      const response = await fetchFromHasura(mutation, {
+        id: userData?.id,
+        updates: {
+          geo_location: geographyFormat,
+        },
+      });
+
+      console.log("Hasura response:", response); // Debug log
+
+      if (!response) {
+        throw new Error("No response from server");
+      }
+
+      // Update local state
+      revalidateTag(userData?.id as string);
+      setState({ geo_location: geographyFormat });
+      toast.dismiss();
+      toast.success("Location updated successfully!");
+      setIsEditing((prev) => ({ ...prev, geoLocation: false }));
+    } catch (error) {
+      console.error("Error updating location:", error);
+      toast.dismiss();
+
+      if (error instanceof Error) {
+        if (error.message.includes("permission denied")) {
+          toast.error("You don't have permission to update the location");
+        } else if (error.message.includes("invalid input syntax")) {
+          toast.error("Invalid coordinate format. Please check your input");
+        } else {
+          toast.error(`Failed to update location: ${error.message}`);
+        }
+      } else {
+        toast.error("Failed to update location. Please try again.");
+      }
+    } finally {
+      setIsSaving((prev) => ({ ...prev, geoLocation: false }));
     }
   };
 
@@ -338,7 +565,7 @@ export default function ProfilePage() {
         return { ...prev, placeId: true };
       });
       await fetchFromHasura(updatePartnerMutation, {
-        userId: userData?.id,
+        id: userData?.id,
         updates: {
           place_id: placeId,
         },
@@ -490,7 +717,7 @@ export default function ProfilePage() {
         },
       });
       revalidateTag(userData?.id as string);
-      updateAuthCookie({ feature_flags : stringedFeature});
+      updateAuthCookie({ feature_flags: stringedFeature });
       toast.dismiss();
       toast.success("Feature flags updated successfully!");
     } catch (error) {
@@ -587,6 +814,10 @@ export default function ProfilePage() {
       setState({
         whatsapp_numbers: whatsappNumbers,
       });
+      setIsEditing((prev) => ({
+        ...prev,
+        whatsappNumber: false,
+      }));
 
       toast.dismiss("whatsapp-nums");
       toast.success("Whatsapp Numbers updated successfully!");
@@ -600,6 +831,10 @@ export default function ProfilePage() {
           : "Failed to update Whatsapp Numbers"
       );
       setIsSaving((prev) => ({ ...prev, whatsappNumber: false }));
+      setIsEditing((prev) => ({
+        ...prev,
+        whatsappNumber: false,
+      }));
     }
   };
 
@@ -690,11 +925,16 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveGst = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveGst = async (
+    e?: React.FormEvent | null,
+    isDisabled?: boolean
+  ) => {
+    e?.preventDefault();
+
+    const gstPercent = !isDisabled ? gst.gst_percentage : 0;
 
     try {
-      if (gst.gst_percentage <= 0) {
+      if (gstPercent < 0) {
         toast.error("Please enter a valid GST");
         return;
       }
@@ -710,11 +950,11 @@ export default function ProfilePage() {
         id: userData?.id,
         updates: {
           gst_no: gst.gst_no,
-          gst_percentage: gst.gst_percentage,
+          gst_percentage: gstPercent,
         },
       });
       revalidateTag(userData?.id as string);
-      setState({ gst_no: gst.gst_no, gst_percentage: gst.gst_percentage });
+      setState({ gst_no: gst.gst_no, gst_percentage: gstPercent });
       toast.dismiss("gst");
       toast.success("GST updated successfully!");
       setIsSaving((prev) => {
@@ -737,13 +977,163 @@ export default function ProfilePage() {
       });
     }
   };
+  // (Delivery Rate)
+
+  const handleSaveDeliverySettings = async () => {
+    try {
+      if (!userData) return;
+      toast.loading("Updating delivery settings...");
+
+      setIsSaving((prev) => ({ ...prev, deliveryRate: true }));
+
+      // Validate delivery rate is a positive number
+      const rate = deliveryRate;
+      if (isNaN(rate) || rate < 0) {
+        toast.dismiss();
+        toast.error(
+          "Please enter a valid delivery rate (must be a positive number)"
+        );
+        return;
+      }
+
+      // Prepare delivery rules object with defaults if not set
+      const rules = {
+        delivery_radius: deliveryRules?.delivery_radius || 5, // default 5km
+        first_km_range: {
+          km: deliveryRules?.first_km_range?.km || 0,
+          rate: deliveryRules?.first_km_range?.rate || 0,
+        },
+        is_fixed_rate: deliveryRules?.is_fixed_rate || false,
+      } as DeliveryRules;
+
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          delivery_rate: deliveryRate,
+          delivery_rules: rules,
+        },
+      });
+
+      revalidateTag(userData?.id as string);
+      setState({ delivery_rate: deliveryRate, delivery_rules: rules });
+      toast.dismiss();
+      toast.success("Delivery settings updated successfully!");
+      setIsEditing((prev) => ({ ...prev, deliveryRate: false }));
+    } catch (error) {
+      console.error("Error updating delivery settings:", error);
+      toast.dismiss();
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update delivery settings"
+      );
+    } finally {
+      setIsSaving((prev) => ({ ...prev, deliveryRate: false }));
+    }
+  };
+
+  const handleShopOpenClose = async () => {
+    try {
+      if (!userData) return;
+
+      setIsShopOpen((prev) => !prev);
+
+      const isShopOpen = (userData as Partner)?.is_shop_open;
+
+      toast.loading(`Setting shop to ${isShopOpen ? "close" : "open"}...`, {
+        id: "shop-status",
+      });
+
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          is_shop_open: !isShopOpen,
+        },
+      });
+      revalidateTag(userData?.id as string);
+      setState({ is_shop_open: !isShopOpen });
+      toast.dismiss("shop-status");
+      toast.success(
+        `Shop status updated to ${!isShopOpen ? "open" : "close"} successfully!`
+      );
+    } catch (error) {
+      setIsShopOpen((prev) => !prev);
+      console.error("Error updating shop status:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update shop status"
+      );
+    }
+  };
+
+  const handleSaveLocation = async () => {
+    try {
+      const isValid =
+        /^https:\/\/(maps\.app\.goo\.gl\/[a-zA-Z0-9]+|www\.google\.[a-z.]+\/maps\/.+)$/i.test(
+          location.trim()
+        );
+
+      if (!isValid) {
+        throw new Error("Invalid Google Maps URL");
+      }
+
+      setIsSaving((prev) => ({ ...prev, location: true }));
+      toast.loading("Updating location...");
+
+      const response = await getCoordinatesFromLink(location.trim());
+      const geoLoc = (await response).coordinates;
+
+      if (!geoLoc) {
+        throw new Error("Failed to extract coordinates from the link");
+      }
+
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          location: location.trim(),
+          geo_location: geoLoc,
+        },
+      });
+
+      toast.success("Location updated successfully!");
+      revalidateTag(userData?.id as string);
+      setState({
+        location: location.trim(),
+        geo_location: geoLoc,
+      });
+      setIsEditing((prev) => ({ ...prev, location: false }));
+    } catch (error) {
+      toast.error("Enter a valid Google Maps location link");
+      console.error(error);
+    } finally {
+      setIsSaving((prev) => ({ ...prev, location: false }));
+    }
+  };
+
+  const handleSaveCountryCode = async () => {
+    if (!userData) return;
+    setIsSaving((prev) => ({ ...prev, countryCode: true }));
+    try {
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData.id,
+        updates: { country_code: countryCode },
+      });
+      revalidateTag(userData.id);
+      setState({ country_code: countryCode });
+      toast.success("Country code updated successfully!");
+      setIsEditingCountryCode(false);
+    } catch (error) {
+      toast.error("Failed to update country code");
+    } finally {
+      setIsSaving((prev) => ({ ...prev, countryCode: false }));
+    }
+  };
 
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-8">
+    <div className="min-h-screen w-full bg-orange-50 p-2">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Welcome Section */}
         <Card className="overflow-hidden hover:shadow-xl transition-shadow">
@@ -755,7 +1145,6 @@ export default function ProfilePage() {
               <div
                 onClick={() => {
                   signOut();
-                  router.push("/offers");
                 }}
                 className="cursor-pointer hover:text-red-500 transition-all rounded-full flex flex-col items-center justify-center gap-1 text-gray-500"
               >
@@ -766,29 +1155,49 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex md:flex-row flex-col gap-4">
-              <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
-                <Tag className="sm:size-4 size-8 mr-2" />
-                {profile.offersClaimed} Offers Claimed
-              </Badge>
-              <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
-                <UtensilsCrossed className="sm:size-4 size-8 mr-2" />
-                {profile.restaurantsSubscribed} Restaurants Subscribed
-              </Badge>
+              {userData?.role === "user" && (
+                <>
+                  {/* <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
+                    <Tag className="sm:size-4 size-8 mr-2" />
+                    {profile.offersClaimed} Offers Claimed
+                  </Badge> */}
+                  {/* <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
+                    <UtensilsCrossed className="sm:size-4 size-8 mr-2" />
+                    {profile.restaurantsSubscribed} Restaurants Subscribed
+                  </Badge> */}
+                </>
+              )}
               {userData?.role === "partner" && (
-                <Link
-                  href={`/hotels/${userData?.id}`}
-                  className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
-                >
-                  <Tag className="sm:size-4 size-8 mr-2" />
-                  View My Restaurant
-                </Link>
+                <>
+                  <Link
+                    href={`${
+                      userData?.business_type === "restaurant"
+                        ? "/hotels"
+                        : "/business"
+                    }/${userData?.store_name?.replace(/\s+/g, "-")}/${
+                      userData?.id
+                    }`}
+                    className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
+                  >
+                    <Tag className="sm:size-4 size-8 mr-2" />
+                    View My Business Website
+                  </Link>
+                  <Button
+                    onClick={handleShopOpenClose}
+                    className={`flex items-center h-[60px] font-semibold rounded-lg text-sm  sm:text-lg  sm:p-4 p-2  transition-colors ${
+                      isShopOpen ? "bg-red-500" : "bg-green-600"
+                    }`}
+                  >
+                    {isShopOpen ? "Close Shop" : "Open Shop"}
+                  </Button>
+                </>
               )}
             </div>
           </CardContent>
         </Card>
 
         {/* Claimed Offers Section */}
-        {userData?.role === "user" && (
+        {/* {userData?.role === "user" && (
           <Card className="overflow-hidden hover:shadow-xl transition-shadow">
             <CardHeader>
               <CardTitle className="text-2xl font-bold">
@@ -824,7 +1233,7 @@ export default function ProfilePage() {
               ))}
             </CardContent>
           </Card>
-        )}
+        )} */}
 
         {/* Account Settings Section (Only for hotel) */}
         {userData?.role === "partner" && (
@@ -882,7 +1291,6 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="bio" className="text-lg font-semibold">
                   Bio
@@ -897,20 +1305,28 @@ export default function ProfilePage() {
                         onChange={(e) => setDescription(e.target.value)}
                         className="flex-1"
                       />
-                      <Button
-                        onClick={handleSaveDescription}
-                        disabled={isSaving.description || !description}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.description ? (
-                          <>
-                            {/* <span className="animate-spin mr-2">⏳</span>/ */}
-                            Saving...
-                          </>
-                        ) : (
-                          "Save"
-                        )}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleSaveDescription}
+                          disabled={isSaving.description || !description}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isSaving.description ? (
+                            <>Saving...</>
+                          ) : (
+                            "Save"
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditing((prev) => ({ ...prev, description: false }));
+                            setDescription(userData?.description || "");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex justify-between items-center w-full">
@@ -937,7 +1353,6 @@ export default function ProfilePage() {
                   This Bio will be used for your restaurant profile
                 </p>
               </div>
-
               {/* <div className="space-y-2 pt-4">
                 <label htmlFor="upiId" className="text-lg font-semibold">
                   UPI ID
@@ -989,7 +1404,6 @@ export default function ProfilePage() {
                   This UPI ID will be used for receiving payments from customers
                 </p>
               </div> */}
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="placeId" className="text-lg font-semibold">
                   Place ID
@@ -1005,13 +1419,24 @@ export default function ProfilePage() {
                         onChange={(e) => setPlaceId(e.target.value)}
                         className="flex-1"
                       />
-                      <Button
-                        onClick={handleSavePlaceId}
-                        disabled={isSaving.placeId || !placeId}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.placeId ? <>Saving...</> : "Save"}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleSavePlaceId}
+                          disabled={isSaving.placeId || !placeId}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isSaving.placeId ? <>Saving...</> : "Save"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditing((prev) => ({ ...prev, placeId: false }));
+                            setPlaceId(userData?.place_id || "");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </>
                   ) : (
                     <div className="flex justify-between items-center w-full">
@@ -1021,7 +1446,7 @@ export default function ProfilePage() {
                       <Button
                         onClick={() => {
                           setIsEditing((prev) => ({ ...prev, placeId: true }));
-                          setPlaceId(placeId ? placeId : "");
+                          setPlaceId(userData?.place_id || "");
                         }}
                         variant="ghost"
                         className="hover:bg-orange-100"
@@ -1046,6 +1471,37 @@ export default function ProfilePage() {
                 </p>
               </div>
 
+              <DeliveryAndGeoLocationSettings
+                handleSaveLocation={handleSaveLocation}
+                locationSaving={isSaving.location}
+                locationEditing={isEditing.location}
+                location={location}
+                setLocation={setLocation}
+                setIsEditingLocation={(value) =>
+                  setIsEditing({ ...isEditing, location: value })
+                }
+                geoLocation={geoLocation}
+                setGeoLocation={setGeoLocation}
+                geoLoading={isLoading}
+                geoSaving={isSaving.geoLocation}
+                geoError={geoError}
+                handleGetCurrentLocation={handleGetCurrentLocation}
+                handleSaveGeoLocation={handleSaveGeoLocation}
+                currency={currency}
+                deliveryRate={deliveryRate}
+                setDeliveryRate={setDeliveryRate}
+                deliveryRules={deliveryRules}
+                setDeliveryRules={setDeliveryRules}
+                isEditingDelivery={isEditing.deliveryRate}
+                setIsEditingDelivery={(value) =>
+                  setIsEditing({ ...isEditing, deliveryRate: value })
+                }
+                deliverySaving={isSaving.deliverySettings}
+                handleSaveDeliverySettings={handleSaveDeliverySettings}
+              />
+
+              
+
               <div className="space-y-2 pt-4">
                 <label htmlFor="whatsNum" className="text-lg font-semibold">
                   Whatsapp Number
@@ -1054,69 +1510,118 @@ export default function ProfilePage() {
 
                 {userFeatures?.multiwhatsapp.enabled ? (
                   // Multi-whatsapp UI
-                  <div className="space-y-4">
-                    {whatsappNumbers.map((item, index) => (
-                      <div key={index} className="flex gap-2 items-center">
-                        <div className="flex-1 grid grid-cols-2 gap-2">
-                          <Input
-                            placeholder="Area (e.g. North, South)"
-                            value={item.area}
-                            onChange={(e) => {
-                              const newNumbers = [...whatsappNumbers];
-                              newNumbers[index].area = e.target.value;
-                              setWhatsappNumbers(newNumbers);
-                            }}
-                          />
-                          <Input
-                            type="text"
-                            placeholder="Whatsapp Number"
-                            minLength={10}
-                            maxLength={10}
-                            value={item.number}
-                            onChange={(e) => {
-                              const newNumbers = [...whatsappNumbers];
-                              newNumbers[index].number = e.target.value;
-                              setWhatsappNumbers(newNumbers);
-                            }}
-                          />
-                        </div>
-                        <Button
-                          variant="ghost"
-                          onClick={() => {
-                            const newNumbers = [...whatsappNumbers];
-                            newNumbers.splice(index, 1);
-                            setWhatsappNumbers(newNumbers);
-                          }}
-                          className="text-red-500 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
+                  <>
+                    {isEditing.whatsappNumber ? (
+                      <div className="space-y-4">
+                        {whatsappNumbers.map((item, index) => (
+                          <div key={index} className="flex gap-2 items-center">
+                            <div className="flex-1 grid grid-cols-2 gap-2">
+                              <Input
+                                placeholder="Area (e.g. North, South)"
+                                value={item.area}
+                                onChange={(e) => {
+                                  const newNumbers = [...whatsappNumbers];
+                                  newNumbers[index].area = e.target.value;
+                                  setWhatsappNumbers(newNumbers);
+                                }}
+                              />
+                              <Input
+                                type="text"
+                                placeholder="Whatsapp Number"
+                                minLength={10}
+                                maxLength={10}
+                                value={item.number}
+                                onChange={(e) => {
+                                  const newNumbers = [...whatsappNumbers];
+                                  newNumbers[index].number = e.target.value;
+                                  setWhatsappNumbers(newNumbers);
+                                }}
+                              />
+                            </div>
+                            <Button
+                              variant="ghost"
+                              onClick={() => {
+                                const newNumbers = [...whatsappNumbers];
+                                newNumbers.splice(index, 1);
+                                setWhatsappNumbers(newNumbers);
+                              }}
+                              className="text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
 
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() =>
-                          setWhatsappNumbers([
-                            ...whatsappNumbers,
-                            { number: "", area: "" },
-                          ])
-                        }
-                        variant="outline"
-                      >
-                        Add Another Number
-                      </Button>
-                      <Button
-                        onClick={handleSaveWhatsappNumbers}
-                        disabled={
-                          isSaving.whatsappNumber || !whatsappNumbers.length
-                        }
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
-                      </Button>
-                    </div>
-                  </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() =>
+                              setWhatsappNumbers([
+                                ...whatsappNumbers,
+                                { number: "", area: "" },
+                              ])
+                            }
+                            variant="outline"
+                          >
+                            Add Another Number
+                          </Button>
+                          <Button
+                            onClick={handleSaveWhatsappNumbers}
+                            disabled={
+                              isSaving.whatsappNumber || !whatsappNumbers.length
+                            }
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                          >
+                            {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="grid gap-2">
+                          {whatsappNumbers.map((item, index) => (
+                            <div
+                              key={index}
+                              className="flex gap-2 items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                              <div className="flex-1 grid grid-cols-2 gap-4">
+                                <div className="flex flex-col">
+                                  <span className="text-sm text-gray-500">
+                                    Area
+                                  </span>
+                                  <span className="font-medium">
+                                    {item.area || "Default"}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-sm text-gray-500">
+                                    Number
+                                  </span>
+                                  <span className="font-medium">
+                                    {item.number}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex justify-end">
+                          <Button
+                            onClick={() =>
+                              setIsEditing((prev) => ({
+                                ...prev,
+                                whatsappNumber: true,
+                              }))
+                            }
+                            variant="ghost"
+                            className="mt-4"
+                          >
+                            <Pencil className="w-4 h-4 " />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   // Single whatsapp number UI (original code)
                   <div className="flex gap-2">
@@ -1132,13 +1637,24 @@ export default function ProfilePage() {
                           onChange={(e) => setWhatsappNumber(e.target.value)}
                           className="flex-1"
                         />
-                        <Button
-                          onClick={handleSaveWhatsappNumber}
-                          disabled={isSaving.whatsappNumber || !whatsappNumber}
-                          className="bg-orange-600 hover:bg-orange-700 text-white"
-                        >
-                          {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleSaveWhatsappNumber}
+                            disabled={isSaving.whatsappNumber || !whatsappNumber}
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                          >
+                            {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setIsEditing((prev) => ({ ...prev, whatsappNumber: false }));
+                              setWhatsappNumber(whatsappNumber ? whatsappNumber : "");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
                       </>
                     ) : (
                       <div className="flex justify-between items-center w-full">
@@ -1173,8 +1689,79 @@ export default function ProfilePage() {
                     ? "These Whatsapp Numbers will be used for receiving messages from customers in different areas"
                     : "This Whatsapp Number will be used for receiving messages from customers"}
                 </p>
+                {userData?.role === "partner" && (
+                  <div className="space-y-2 pt-4">
+                    <label className="text-lg font-semibold">Country Code</label>
+                    <div className="flex gap-2 items-center">
+                      {isEditingCountryCode ? (
+                        <>
+                          <Select
+                            value={countryCode}
+                            onValueChange={setCountryCode}
+                          >
+                            <SelectTrigger className="flex-1 border rounded p-2">
+                              <SelectValue placeholder="Select country code" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[300px]">
+                              <div className="p-2 sticky top-0 bg-white z-10">
+                                <input
+                                  type="text"
+                                  placeholder="Search country or code..."
+                                  value={countryCodeSearch}
+                                  onChange={e => setCountryCodeSearch(e.target.value)}
+                                  className="w-full border rounded p-2"
+                                />
+                              </div>
+                              {countryCodes
+                                .filter(item =>
+                                  item.country.toLowerCase().includes(countryCodeSearch.toLowerCase()) ||
+                                  item.code.includes(countryCodeSearch)
+                                )
+                                .map(item => (
+                                  <SelectItem key={item.code} value={item.code}>
+                                    {item.code} ({item.country})
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="flex gap-2 mt-2">
+                            <Button
+                              onClick={handleSaveCountryCode}
+                              disabled={isSaving.countryCode}
+                              className="bg-orange-600 hover:bg-orange-700 text-white"
+                            >
+                              {isSaving.countryCode ? "Saving..." : "Save"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setIsEditingCountryCode(false);
+                                setCountryCode(userData?.country_code || "+91");
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between items-center w-full">
+                          <span className="text-gray-700 font-mono">{userData.country_code || countryCode}</span>
+                          <Button
+                            onClick={() => setIsEditingCountryCode(true)}
+                            variant="ghost"
+                            className="hover:bg-orange-100"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      This country code will be used for WhatsApp and phone links.
+                    </p>
+                  </div>
+                )}
               </div>
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="instaLink" className="text-lg font-semibold">
                   Instagram Link
@@ -1190,13 +1777,24 @@ export default function ProfilePage() {
                         onChange={(e) => setInstaLink(e.target.value)}
                         className="flex-1"
                       />
-                      <Button
-                        onClick={handleSaveInstaLink}
-                        disabled={isSaving.instaLink || !instaLink}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.instaLink ? <>Saving...</> : "Save"}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleSaveInstaLink}
+                          disabled={isSaving.instaLink || !instaLink}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isSaving.instaLink ? <>Saving...</> : "Save"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditing((prev) => ({ ...prev, instaLink: false }));
+                            setInstaLink(instaLink ? instaLink : "");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </>
                   ) : (
                     <div className="flex justify-between items-center w-full">
@@ -1223,7 +1821,6 @@ export default function ProfilePage() {
                   This Instagram Link will be used for your restaurant profile
                 </p>
               </div>
-
               <div className="space-y-2 pt-4">
                 <label htmlFor="footNote" className="text-lg font-semibold">
                   Footnote
@@ -1239,13 +1836,24 @@ export default function ProfilePage() {
                         onChange={(e) => setFootNote(e.target.value)}
                         className="flex-1"
                       />
-                      <Button
-                        onClick={handleSaveFootNote}
-                        disabled={isSaving.footNote}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.footNote ? <>Saving...</> : "Save"}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleSaveFootNote}
+                          disabled={isSaving.footNote}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isSaving.footNote ? <>Saving...</> : "Save"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditing((prev) => ({ ...prev, footNote: false }));
+                            setFootNote(footNote ? footNote : "");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </>
                   ) : (
                     <div className="flex justify-between items-center w-full">
@@ -1271,86 +1879,6 @@ export default function ProfilePage() {
                 <p className="text-sm text-gray-500">
                   This Footnote will be used for your restaurant profile
                 </p>
-              </div>
-
-              <div className="space-y-2 pt-4">
-                <div className="text-lg font-semibold">Price Settings</div>
-
-                {/* show pricing  */}
-                <div className="flex gap-2">
-                  <label htmlFor="show-pricing">Show Pricing : </label>
-                  <Switch
-                    checked={showPricing}
-                    onCheckedChange={handleShowPricingChange}
-                  />
-                </div>
-
-                {/* currency  */}
-                {userData.currency !== "🚫" && (
-                  <div className="flex gap-2 items-center">
-                    <label htmlFor="currency">Currency : </label>
-                    <div className="flex gap-2 flex-1">
-                      {isEditing.currency ? (
-                        <>
-                          <Select
-                            value={currency.label} // Use label as the value for selection
-                            onValueChange={(selectedLabel) => {
-                              const selectedCurrency = Currencies.find(
-                                (curr) => curr.label === selectedLabel
-                              );
-                              if (selectedCurrency) {
-                                setCurrency(selectedCurrency);
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="Select currency" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Currencies.map((curr) => (
-                                <SelectItem key={curr.label} value={curr.label}>
-                                  {curr.value} - {curr.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            onClick={handleSaveCurrency}
-                            disabled={isSaving.currency || !currency}
-                            className="bg-orange-600 hover:bg-orange-700 text-white"
-                          >
-                            {isSaving.currency ? <>Saving...</> : "Save"}
-                          </Button>
-                        </>
-                      ) : (
-                        <div className="flex justify-between items-center w-full">
-                          <span className="text-gray-700">
-                            {currency ? (
-                              <>
-                                {currency.value} - {currency.label}
-                              </>
-                            ) : (
-                              "No currency selected"
-                            )}
-                          </span>
-                          <Button
-                            onClick={() => {
-                              setIsEditing((prev) => ({
-                                ...prev,
-                                currency: true,
-                              }));
-                              setCurrency(currency || Currencies[0]);
-                            }}
-                            variant="ghost"
-                            className="hover:bg-orange-100"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="space-y-2 pt-4">
@@ -1448,13 +1976,9 @@ export default function ProfilePage() {
                     {features.pos.access && (
                       <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
-                          <div className="font-medium">
-                            POS
-                          </div>
+                          <div className="font-medium">POS</div>
                           <div className="text-sm text-gray-500">
-                            {features.pos.enabled
-                              ? "Enabled"
-                              : "Disabled"}
+                            {features.pos.enabled ? "Enabled" : "Disabled"}
                           </div>
                         </div>
                         <Switch
@@ -1480,12 +2004,32 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-2 pt-4">
-                <h1 className="text-lg font-semibold">Gst Settings</h1>
+                <div className="flex justify-between items-center">
+                  <h1 className="text-lg font-semibold">Gst Settings</h1>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600">Enable GST</span>
+                    <Switch
+                      checked={gst.enabled}
+                      onCheckedChange={(checked) => {
+                        setGst((prev) => ({
+                          ...prev,
+                          enabled: checked,
+                          gst_percentage: checked ? prev.gst_percentage : 0,
+                        }));
+                        if (!checked) {
+                          handleSaveGst(null, true);
+                        }
+                      }}
+                      className="data-[state=checked]:bg-black"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex gap-2">
                   {isEditing.gst ? (
-                    <form onSubmit={handleSaveGst} className="space-y-2">
+                    <form onSubmit={handleSaveGst} className="space-y-2 w-full">
                       <div>
-                        <label htmlFor="gst_no" className=" font-semibold">
+                        <label htmlFor="gst_no" className="font-semibold">
                           Gst No.
                         </label>
                         <Input
@@ -1500,12 +2044,13 @@ export default function ProfilePage() {
                             })
                           }
                           className="flex-1"
+                          disabled={!gst.enabled}
                         />
                       </div>
                       <div>
                         <label
                           htmlFor="gst_percentage"
-                          className=" font-semibold"
+                          className="font-semibold"
                         >
                           Gst Percentage
                         </label>
@@ -1523,29 +2068,53 @@ export default function ProfilePage() {
                             })
                           }
                           className="flex-1"
+                          disabled={!gst.enabled}
                         />
                       </div>
 
-                      <Button
-                        disabled={isSaving.gst}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.gst ? <>Saving...</> : "Save"}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          disabled={isSaving.gst}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isSaving.gst ? <>Saving...</> : "Save"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditing((prev) => ({ ...prev, gst: false }));
+                            setGst({
+                              gst_no: gst.gst_no,
+                              gst_percentage: gst.gst_percentage,
+                              enabled: gst.enabled,
+                            });
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </form>
                   ) : (
                     <div className="flex justify-between items-center w-full">
                       <div className="flex flex-col gap-2">
-                        <div className="text-gray-700">
-                          {gst.gst_no
-                            ? `GST no: ${gst.gst_no}`
-                            : "No Gst no. set"}
-                        </div>
-                        <div className="text-gray-700">
-                          {gst.gst_percentage
-                            ? `GST percentage: ${gst.gst_percentage}%`
-                            : "No Gst percentage set"}
-                        </div>
+                        {gst.enabled ? (
+                          <>
+                            <div className="text-gray-700">
+                              {gst.gst_no
+                                ? `GST no: ${gst.gst_no}`
+                                : "No Gst no. set"}
+                            </div>
+                            <div className="text-gray-700">
+                              {gst.gst_percentage
+                                ? `GST percentage: ${gst.gst_percentage}%`
+                                : "No Gst percentage set"}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-gray-700">
+                            GST is currently disabled
+                          </div>
+                        )}
                       </div>
                       <Button
                         onClick={() => {
@@ -1556,6 +2125,7 @@ export default function ProfilePage() {
                         }}
                         variant="ghost"
                         className="hover:bg-orange-100"
+                        disabled={!gst.enabled}
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -1563,8 +2133,118 @@ export default function ProfilePage() {
                   )}
                 </div>
                 <p className="text-sm text-gray-500">
-                  This Gst will be used for your restaurant profile and billing
+                  {gst.enabled
+                    ? "This Gst will be used for your restaurant profile and billing"
+                    : "GST is currently disabled for your restaurant"}
                 </p>
+              </div>
+
+              <div className="space-y-2 pt-4">
+                <div className="text-lg font-semibold mb-4">
+                  QrCode Settings
+                </div>
+                <Link
+                  href={"/admin/qr-management"}
+                  className=" hover:underline bg-gray-100 px-3 py-2 rounded-lg w-full flex items-center justify-between"
+                >
+                  Manage QrCode
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </div>
+              {getFeatures(userData.feature_flags as string)?.stockmanagement
+                .enabled && (
+                <div className="space-y-2 pt-4">
+                  <div className="text-lg font-semibold mb-4">
+                    Stock Management
+                  </div>
+                  <Link
+                    href={"/admin/stock-management"}
+                    className=" hover:underline bg-gray-100 px-3 py-2 rounded-lg w-full flex items-center justify-between"
+                  >
+                    Manage Stocks
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Link>
+                </div>
+              )}
+
+              <div className="space-y-2 pt-4">
+                <div className="text-lg font-semibold">Price Settings</div>
+
+                {/* show pricing  */}
+                <div className="flex gap-2">
+                  <label htmlFor="show-pricing">Show Pricing : </label>
+                  <Switch
+                    checked={showPricing}
+                    onCheckedChange={handleShowPricingChange}
+                  />
+                </div>
+
+                {/* currency  */}
+                {userData.currency !== "🚫" && (
+                  <div className="flex gap-2 items-center">
+                    <label htmlFor="currency">Currency : </label>
+                    <div className="flex gap-2 flex-1">
+                      {isEditing.currency ? (
+                        <>
+                          <Select
+                            value={currency.label} // Use label as the value for selection
+                            onValueChange={(selectedLabel) => {
+                              const selectedCurrency = Currencies.find(
+                                (curr) => curr.label === selectedLabel
+                              );
+                              if (selectedCurrency) {
+                                setCurrency(selectedCurrency);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Select currency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Currencies.map((curr) => (
+                                <SelectItem key={curr.label} value={curr.label}>
+                                  {curr.value} - {curr.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            onClick={handleSaveCurrency}
+                            disabled={isSaving.currency || !currency}
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                          >
+                            {isSaving.currency ? <>Saving...</> : "Save"}
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="flex justify-between items-center w-full">
+                          <span className="text-gray-700">
+                            {currency ? (
+                              <>
+                                {currency.value} - {currency.label}
+                              </>
+                            ) : (
+                              "No currency selected"
+                            )}
+                          </span>
+                          <Button
+                            onClick={() => {
+                              setIsEditing((prev) => ({
+                                ...prev,
+                                currency: true,
+                              }));
+                              setCurrency(currency || Currencies[0]);
+                            }}
+                            variant="ghost"
+                            className="hover:bg-orange-100"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

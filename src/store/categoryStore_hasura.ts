@@ -13,6 +13,19 @@ export interface Category {
   priority?: number;
 }
 
+// Helper function to format category name for display
+export const formatDisplayName = (name: string): string => {
+  return name
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
+// Helper function to format category name for storage
+export const formatStorageName = (name: string): string => {
+  return name.toLowerCase().trim().replace(/ /g, "_");
+};
+
 interface CategoryState {
   categories: Category[];
   fetchCategories: (addedBy: string) => Promise<Category[] | void>;
@@ -29,12 +42,20 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         return get().categories as Category[];
       }
 
-      const categories = await fetchFromHasura(getPartnerCategories, {
+      const allCategories = await fetchFromHasura(getPartnerCategories, {
         partner_id: addedBy,
-      }).then((res) => res.category);
+      }).then((res) =>
+        res.category.map((cat: Category) => ({
+          ...cat,
+          name: cat.name,
+        }))
+      );
 
-      set({ categories });
-      return categories as Category[];
+      set({ categories : allCategories.map((cat : Category) => ({
+        ...cat,
+        name: formatDisplayName(cat.name),
+      })) });
+      return allCategories as Category[];
     } catch (error: unknown) {
       console.error(
         "Fetch categories error:",
@@ -50,30 +71,50 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const userData = useAuthStore.getState().userData;
 
-      const category = await fetchFromHasura(getCategory, {
-        name: cat.toLowerCase().trim(),
+      const formattedName = formatStorageName(cat);
+
+      const existingCategories = await fetchFromHasura(getCategory, {
+        name: cat,
+        name_with_space: formattedName.replace(/_/g, " "),
+        name_with_underscore: formattedName.replace(/ /g, "_"),
         partner_id: userData?.id,
-      }).then((res) => res.category[0]);
+      }).then((res) => res.category);
 
-      if (category) {
-        return category;
+      const existingCategory = existingCategories[0];
+
+      if (existingCategory) {
+
+        const isAlredyInCategories = get().categories.some(
+          (category) => category.id === existingCategory.id
+        );
+
+        if (!isAlredyInCategories) {
+          set({
+            categories: [
+              ...get().categories,
+              { name: formatDisplayName(existingCategory.name), id: existingCategory.id },
+            ],
+          });
+        }
+
+        return existingCategory as Category;
+      } else {
+        const addedCat = await fetchFromHasura(addCategory, {
+          category: {
+            name: formattedName,
+            partner_id: userData?.id,
+          },
+        }).then((res) => res.insert_category.returning[0]);
+
+        set({
+          categories: [
+            ...get().categories,
+            { name: formatDisplayName(formattedName), id: addedCat.id },
+          ],
+        });
+
+        return addedCat as Category;
       }
-
-      const addedCat = await fetchFromHasura(addCategory, {
-        category: {
-          name: cat?.toLowerCase().trim(),
-          partner_id: userData?.id,
-        },
-      }).then((res) => res.insert_category.returning[0]);
-
-      set({
-        categories: [
-          ...get().categories,
-          { name: cat.toLowerCase().trim(), id: addedCat.id },
-        ],
-      });
-
-      return addedCat as Category;
     } catch (error: unknown) {
       console.error(error);
     }
@@ -86,7 +127,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const updatedCat = {
         id: cat.id,
-        name: cat.name.toLowerCase().trim(),
+        name: cat.name,
         priority: cat.priority,
       };
 
@@ -109,7 +150,6 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       // to update categorys of menu items
       revalidateTag(user?.id as string);
       updatedCategories(get().categories);
-
     } catch (error) {
       console.error(error);
     }

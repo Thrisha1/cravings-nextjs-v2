@@ -9,7 +9,7 @@ export default function Admin({ userData }: { userData: Partner }) {
 
   // Main dashboard for active partners
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100">
+    <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 pb-20">
       <div className="max-w-7xl mx-auto p-8">
         <h1 className="text-4xl font-bold text-gray-900 capitalize mb-8">
           {(userData as Partner)?.store_name} Admin Dashboard

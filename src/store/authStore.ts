@@ -16,16 +16,27 @@ import {
   getAuthCookie,
   setAuthCookie,
   removeAuthCookie,
+  removeLocationCookie,
 } from "@/app/auth/actions";
 import { sendRegistrationWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
-import { FeatureFlags } from "@/screens/HotelMenuPage_v2";
-import { getFeatures } from "@/lib/getFeatures";
+import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
+import { DeliveryRules } from "./orderStore";
 
 // Interfaces remain the same
 interface BaseUser {
   id: string;
   email: string;
   role: "user" | "partner" | "superadmin";
+}
+export interface GeoLocation {
+  type: "Point"; // likely always "Point" in your case
+  coordinates: [number, number]; // [longitude, latitude]
+  crs?: {
+    type: string;
+    properties: {
+      name: string;
+    };
+  };
 }
 
 export interface User extends BaseUser {
@@ -54,6 +65,9 @@ export interface Partner extends BaseUser {
   phone: string;
   district: string;
   delivery_status: boolean;
+  geo_location: GeoLocation ;
+  delivery_rate: number;
+  delivery_rules: DeliveryRules;
   place_id?: string;
   theme?: string;
   currency: string;
@@ -62,6 +76,10 @@ export interface Partner extends BaseUser {
   social_links?: string;
   gst_no?: string;
   gst_percentage?: number;
+  business_type?: string; 
+  is_shop_open: boolean;
+  country?: string;
+  country_code?: string;
 }
 
 export interface SuperAdmin extends BaseUser {
@@ -83,10 +101,22 @@ interface AuthState {
     password: string,
     hotelName: string,
     area: string,
+    phone: string,
+    upiId: string,
+    country: string,
+    state: string
+  ) => Promise<void>;
+  createPartner: (
+    email: string,
+    password: string,
+    hotelName: string,
+    area: string,
     location: string,
     phone: string,
-    upiId: string
-  ) => Promise<void>;
+    upiId: string,
+    country: string,
+    state: string
+  ) => Promise<Partner>;
   signInWithPhone: (phone: string, partnerId?: string) => Promise<User | null>;
   signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
   signInSuperAdminWithEmail: (email: string, password: string) => Promise<void>;
@@ -168,6 +198,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               password: "",
               currency: partner.currency,
               whatsapp_numbers : partner.whatsapp_numbers,
+              geo_location : {
+                type : partner.geo_location?.type,
+                coordinates : partner.geo_location?.coordinates,
+              },
               role: "partner",
             } as Partner,
             features : getFeatures(partner.feature_flags)
@@ -195,9 +229,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signOut: () => {
-    removeAuthCookie();
-    localStorage.removeItem("userAddress");
+  signOut: async() => {
+    await removeAuthCookie();
+    await removeLocationCookie();
+    localStorage.clear();
+    window.location.href = "/";
     set({ userData: null, error: null });
   },
 
@@ -206,9 +242,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     phone: string,
     upiId: string,
     area: string,
-    location: string,
     email: string,
-    password: string
+    password: string,
+    country: string,
+    state: string
   ) => {
     set({ loading: true, error: null });
     try {
@@ -223,10 +260,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           password,
           name: hotelName,
           store_name: hotelName,
-          location,
           district: area,
           status: "inactive",
           upi_id: upiId,
+          country,
+          state,
           phone,
           description: "",
           role: "partner",
@@ -338,5 +376,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         ...udpatedUser,
       } as AuthUser,
     });
+  },
+
+  createPartner: async (
+    hotelName: string,
+    phone: string,
+    upiId: string,
+    area: string,
+    location: string,
+    email: string,
+    password: string
+  ) => {
+    try {
+      const existingPartner = await fetchFromHasura(partnerQuery, { email });
+      if (existingPartner?.partners?.length > 0) {
+        throw new Error("A partner account with this email already exists");
+      }
+
+      const response = (await fetchFromHasura(partnerMutation, {
+        object: {
+          email,
+          password,
+          name: hotelName,
+          store_name: hotelName,
+          location,
+          district: area,
+          status: "active",
+          upi_id: upiId,
+          phone,
+          description: "",
+          role: "partner",
+        },
+      })) as { insert_partners_one: Partner };
+
+      if (!response?.insert_partners_one) {
+        throw new Error("Failed to create partner account");
+      }
+
+      return response.insert_partners_one;
+    } catch (error) {
+      console.error("Partner creation failed:", error);
+      throw error;
+    }
   },
 }));

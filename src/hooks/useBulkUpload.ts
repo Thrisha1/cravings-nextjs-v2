@@ -7,8 +7,10 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
 import { useMenuStore } from "@/store/menuStore_hasura";
 import { getImageSource } from "@/lib/getImageSource";
+import axios from "axios";
 
 export const useBulkUpload = () => {
+  const [loading, setLoading] = useState(false);
   const [jsonInput, setJsonInput] = useState("");
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -240,6 +242,7 @@ export const useBulkUpload = () => {
   };
 
   const handleEdit = (index: number, item: MenuItem) => {
+    console.log("item", item);
     setEditingItem({ index, item });
     setIsEditModalOpen(true);
   };
@@ -327,7 +330,108 @@ export const useBulkUpload = () => {
     }
   };
 
+  const BATCH_SIZE = 20;
+
+  const processBatch = async (
+    endpoint: string,
+    items: any[],
+    successMessage: string
+  ) => {
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/api/image-gen/${endpoint}`,
+        items,
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      }
+      throw new Error(`Invalid response from ${endpoint} server`);
+    } catch (err) {
+      console.error(
+        `${endpoint} error: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
+      throw err;
+    }
+  };
+
+  const handleBatchImageGeneration = async (
+    endpoint: string,
+    successMessage: string
+  ) => {
+    if (!menuItems) return;
+
+    setLoading(true);
+    const totalItems = menuItems.length;
+    let updatedItems = [...menuItems];
+    let processedCount = 0;
+
+    try {
+      // Process in batches
+      for (let i = 0; i < totalItems; i += BATCH_SIZE) {
+        const batch = menuItems.slice(i, i + BATCH_SIZE);
+
+        toast.info(
+          `Processing items ${i + 1}-${Math.min(
+            i + BATCH_SIZE,
+            totalItems
+          )} of ${totalItems}...`
+        );
+
+        const batchResults = await processBatch(
+          endpoint,
+          batch,
+          successMessage
+        );
+        updatedItems = updatedItems.map((item, index) =>
+          index >= i && index < i + BATCH_SIZE ? batchResults[index - i] : item
+        );
+
+        processedCount += batch.length;
+        setMenuItems([...updatedItems]);
+        localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+      }
+
+      toast.success(successMessage);
+    } catch (err) {
+      console.error(
+        `Batch processing error: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
+      toast.error(
+        `Failed to generate images. Processed ${processedCount} of ${totalItems} items.`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Updated handlers
+  const handleGenerateImages = () =>
+    handleBatchImageGeneration(
+      "fullImages",
+      "Full images generated successfully!"
+    );
+  const handlePartialImageGeneration = () =>
+    handleBatchImageGeneration(
+      "partialImages",
+      "Partial images generated successfully!"
+    );
+  const handleGenerateAIImages = () =>
+    handleBatchImageGeneration(
+      "generateAIImages",
+      "AI images generated successfully!"
+    );
+
   return {
+    loading,
+    setLoading,
     jsonInput,
     setJsonInput,
     menuItems,
@@ -350,5 +454,8 @@ export const useBulkUpload = () => {
     handleImageClick,
     handleHotelSelect,
     handleCategoryChange,
+    handleGenerateImages,
+    handlePartialImageGeneration,
+    handleGenerateAIImages,
   };
 };

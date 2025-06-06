@@ -48,6 +48,7 @@ import {
 import { toast } from "sonner";
 import { formatDate } from "@/lib/formatDate";
 import convertLocToCoord from "@/app/actions/convertLocToCoord";
+import { revalidateTag } from "@/app/actions/revalidate";
 
 const ExploreOfferManage = () => {
   const [offers, setOffers] = useState<CommonOffer[]>([]);
@@ -119,6 +120,8 @@ const ExploreOfferManage = () => {
       await fetchFromHasura(deleteCommonOffer, { id });
       setOffers(offers.filter((offer) => offer.id !== id));
       toast.success("Offer deleted successfully");
+      revalidateTag("all-common-offers"); 
+      revalidateTag(id);
     } catch (error) {
       toast.error("Failed to delete offer");
     } finally {
@@ -174,6 +177,8 @@ const ExploreOfferManage = () => {
       setEditingId(null);
       toast.dismiss(editingId);
       toast.success("Offer updated successfully");
+      revalidateTag("all-common-offers");
+      revalidateTag(editingId);
     } catch (error) {
       toast.dismiss(editingId);
       toast.error("Failed to update offer");

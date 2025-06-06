@@ -2,6 +2,7 @@ import AssignQrPartners from "@/components/superAdmin/AssignQrPartners";
 import ExploreOfferManage from "@/components/superAdmin/ExploreOfferManage";
 import FeatureFlagManagement from "@/components/superAdmin/FeatureFlagManagement";
 import OfferUploadSuperAdmin from "@/components/superAdmin/OfferUploadSuperAdmin";
+import EditPartners from "@/components/superAdmin/EditPartners";
 // import BulkUpload from "@/components/superAdmin/BulkUpload";
 // import OfferDetails from "@/components/superAdmin/OfferDetails";
 import PartnerVerification from "@/components/superAdmin/PartnerVerification";
@@ -9,6 +10,7 @@ import UpdateHotelUpiId from "@/components/superAdmin/UpdateHotelUpiId";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import React from "react";
+import SubscriptionManagement from "@/components/superAdmin/SubscriptionManagement";
 
 type SearchParams = Promise<{ [key: string]: string | undefined }>;
 
@@ -53,8 +55,18 @@ const page = async (props: { searchParams: SearchParams }) => {
     {
       name: "Feature Flag Management",
       component: <FeatureFlagManagement />,
-      id: "feature-flag-management",  
-    }
+      id: "feature-flag-management",
+    },
+    {
+      name: "Edit Partners",
+      component: <EditPartners />,
+      id: "edit-partners",
+    },
+    {
+      name: "Subscription Management",
+      component: <SubscriptionManagement />,
+      id: "subscription-management",
+    },
   ];
 
   if (page) {

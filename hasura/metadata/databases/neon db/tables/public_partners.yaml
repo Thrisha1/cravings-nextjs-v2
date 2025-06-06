@@ -2,6 +2,13 @@ table:
   name: partners
   schema: public
 array_relationships:
+  - name: captains
+    using:
+      foreign_key_constraint_on:
+        column: partner_id
+        table:
+          name: captain
+          schema: public
   - name: categories
     using:
       foreign_key_constraint_on:
@@ -44,6 +51,20 @@ array_relationships:
         table:
           name: orders
           schema: public
+  - name: partner_payments
+    using:
+      foreign_key_constraint_on:
+        column: partner_id
+        table:
+          name: partner_payments
+          schema: public
+  - name: partner_subscriptions
+    using:
+      foreign_key_constraint_on:
+        column: partner_id
+        table:
+          name: partner_subscriptions
+          schema: public
   - name: payments
     using:
       foreign_key_constraint_on:
@@ -51,12 +72,26 @@ array_relationships:
         table:
           name: payments
           schema: public
+  - name: pos
+    using:
+      foreign_key_constraint_on:
+        column: partner_id
+        table:
+          name: pos
+          schema: public
   - name: qr_codes
     using:
       foreign_key_constraint_on:
         column: partner_id
         table:
           name: qr_codes
+          schema: public
+  - name: qr_groups
+    using:
+      foreign_key_constraint_on:
+        column: partner_id
+        table:
+          name: qr_groups
           schema: public
   - name: reviews
     using:

@@ -9,12 +9,10 @@ import OfferLoadinPage from "@/components/OfferLoadinPage";
 import { getAuthCookie } from "@/app/auth/actions";
 import { redirect } from "next/navigation";
 import { getFeatures } from "@/lib/getFeatures";
+import ShopClosedModalWarning from "@/components/admin/ShopClosedModalWarning";
 
 const Page = async () => {
   const cookies = await getAuthCookie();
-
-  console.log(cookies);
-  
 
   if (!getFeatures(cookies?.feature_flags || "")?.pos?.enabled) {
     redirect("/admin");
@@ -40,6 +38,7 @@ const Page = async () => {
       <POSCart />
       <PostCheckoutModal />
       <EditOrderModal />
+
     </div>
   );
 };

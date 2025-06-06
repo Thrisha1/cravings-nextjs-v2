@@ -1,11 +1,11 @@
 import { GraphQLClient } from "graphql-request";
 
 export const client = new GraphQLClient(
-  "https://curious-ferret-93.hasura.app/v1/graphql" as string,
+  process.env.NEXT_PUBLIC_HASURA_GRAPHQL_ENDPOINT as string,
   {
     headers: {
       "x-hasura-admin-secret":
-        "grK3WUtZW9mXGtYtjEqU44QfmFkWOMga9qQoa1uBvR03n7DXLkTodHH9cWDcN6cn" as string,
+        process.env.NEXT_PUBLIC_HASURA_GRAPHQL_ADMIN_SECRET as string,
     },
   }
 );
@@ -24,7 +24,8 @@ export function fetchFromHasura(
 ): Promise<any> {
   return client.request(query, variables)
     .then((result) => {
-      // console.log("Result from Hasura: ", result);
+      
+      // console.log("Result from Hasura: ", result , variables);
       return result;
     })
     .catch((error: any) => {

@@ -23,7 +23,7 @@ const OfferCardMin = ({
     >
       <Card
         key={offer.id}
-        className="overflow-hidden hover:shadow-xl relative h-full "
+        className="overflow-hidden hover:shadow-xl relative h-full rounded-3xl"
       >
         {/* image container  */}
         <div className="relative">

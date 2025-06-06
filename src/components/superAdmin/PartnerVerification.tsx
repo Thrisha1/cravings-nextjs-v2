@@ -1,6 +1,7 @@
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { getInactivePartnersQuery, Partner } from "@/api/partners";
+import { getInactivePartnersQuery } from "@/api/partners";
 import PartnerList from "../partnerVerification/PartnerList";
+import { Partner } from "@/store/usePartnerStore";
 
 export default async function PartnerVerificationPage() {
   const response = await fetchFromHasura(getInactivePartnersQuery);

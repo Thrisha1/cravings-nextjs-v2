@@ -1,5 +1,5 @@
 "use client";
-import { HotelData, HotelDataMenus } from "@/app/hotels/[id]/page";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import React, { useEffect, useState } from "react";
 import {
   Dialog,
@@ -78,7 +78,7 @@ const SearchMenu = ({
         <SearchIcon />
         <span>Search</span>
       </DialogTrigger>
-      <DialogContent className="w-full h-full flex flex-col z-[50]">
+      <DialogContent className="w-full h-full flex flex-col z-[65]">
         {/* header  */}
         <div className="flex gap-3 justify-between items-center px-[3%] py-4">
           <DialogTitle className="hidden">Search Menu</DialogTitle>

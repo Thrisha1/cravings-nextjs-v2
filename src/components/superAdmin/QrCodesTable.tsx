@@ -23,6 +23,8 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import ExcelJS from 'exceljs';
+import QRCode from 'qrcode';
 
 interface QrCode {
   id: string;
@@ -34,9 +36,11 @@ interface QrCode {
 export function QrCodesTable({
   qrCodes: initialQrCodes,
   partnerId,
+  store_name,
 }: {
   qrCodes: QrCode[];
   partnerId: string;
+  store_name: string;
 }) {
   const [qrCodes, setQrCodes] = useState<QrCode[]>(initialQrCodes);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -170,7 +174,7 @@ export function QrCodesTable({
 
   const handleCopyAllLinks = () => {
     const links = qrCodes
-      .map(qr => `https://cravings.live/qrScan/${qr.id}`)
+      .map(qr => `https://cravings.live/qrScan/${store_name.replace(/\s+/g, '-')}/${qr.id}`)
       .join('\n');
     
     navigator.clipboard.writeText(links)
@@ -183,11 +187,69 @@ export function QrCodesTable({
       });
   };
 
+  const generateTableSheet = async () => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Table QR Codes");
+
+      // Add header
+      worksheet.columns = [
+        { header: 'Table No', key: 'table_no', width: 15 },
+        { header: 'QR Code', key: 'qr_code', width: 30 }
+      ];
+
+      for (let i = 0; i < qrCodes.length; i++) {
+        const qr = qrCodes[i];
+        const qrUrl = `https://cravings.live/qrScan/${store_name.replace(/\s+/g, '-')}/${qr.id}`;
+        
+        // Generate QR code as base64
+        const base64 = await QRCode.toDataURL(qrUrl);
+
+        // Add row
+        const row = worksheet.addRow([qr.table_number, '']);
+
+        // Add image to workbook
+        const imageId = workbook.addImage({
+          base64: base64,
+          extension: 'png',
+        });
+
+        // Adjust image position in the worksheet (column B, starting at row index + 1)
+        worksheet.addImage(imageId, {
+          tl: { col: 1, row: i + 1 }, // top-left: column 2 (B), current row
+          ext: { width: 100, height: 100 }
+        });
+
+        // Set row height to fit the image
+        worksheet.getRow(i + 2).height = 80;
+      }
+
+      // Write to file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '1.xlsx';
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Table sheet with QR codes generated!");
+
+    } catch (error) {
+      console.error("Error generating Excel sheet:", error);
+      toast.error("Failed to generate table sheet");
+    }
+  };
+
   return (
     <div className="space-y-4">
+      <div className="text-xl font-bold">
+        {store_name}
+      </div>
       <div className="flex justify-end space-x-2">
         <Button onClick={() => setIsBulkGenerateOpen(true)}>Bulk QR Generate</Button>
         <Button onClick={handleCopyAllLinks}>Copy All Links</Button>
+        <Button onClick={generateTableSheet}>Generate Table Sheet</Button>
         <Button onClick={() => setIsCreateDialogOpen(true)}>Create New QR Code</Button>
       </div>
 

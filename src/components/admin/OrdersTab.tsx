@@ -1,52 +1,70 @@
 "use client";
 import { Partner, useAuthStore } from "@/store/authStore";
-import useOrderStore, { Order, OrderItem } from "@/store/orderStore";
+import useOrderStore, { Order } from "@/store/orderStore";
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
-import { Loader2, Printer, Edit } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { HotelData } from "@/app/hotels/[id]/page";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { formatDate } from "@/lib/formatDate";
 import { Howl } from "howler";
 import { useRouter } from "next/navigation";
-import { useReactToPrint } from "react-to-print";
-import BillTemplate from "./pos/BillTemplate";
-import KOTTemplate from "./pos/KOTTemplate";
 import { EditOrderModal } from "./pos/EditOrderModal";
 import { usePOSStore } from "@/store/posStore";
+import { getGstAmount } from "../hotelDetail/OrderDrawer";
+import OrderItemCard from "./OrderItemCard";
+import TodaysEarnings from "./orders/TodaysEarnings";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { revalidateTag } from "@/app/actions/revalidate";
+import { update } from "firebase/database";
 
 const OrdersTab = () => {
   const router = useRouter();
   const { userData, features } = useAuthStore();
   const prevOrdersRef = useRef<Order[]>([]);
-  const { subscribeOrders, partnerOrders } = useOrderStore();
+  const {
+    subscribeOrders,
+    partnerOrders,
+    deleteOrder,
+    updateOrderStatus,
+    updateOrderStatusHistory,
+  } = useOrderStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showOnlyPending, setShowOnlyPending] = useState<boolean>(false);
-  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("oldest");
-  const [activeTab, setActiveTab] = useState<"table" | "delivery">("table");
-  const [newOrders, setNewOrders] = useState({ table: false, delivery: false });
-  const prevPendingOrdersCount = useRef({ table: 0, delivery: 0 });
+  const [activeTab, setActiveTab] = useState<"table" | "delivery" | "pos">(
+    "delivery"
+  );
+  const [newOrders, setNewOrders] = useState({
+    table: false,
+    delivery: false,
+    pos: false,
+  });
+  const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
+  const [displayedOrders, setDisplayedOrders] = useState<Order[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const ordersPerPage = 10;
+  
+  const [newOrderAlert, setNewOrderAlert] = useState({
+    show: false,
+    tableCount: 0,
+    deliveryCount: 0,
+    posCount: 0,
+  });
   const soundRef = useRef<Howl | null>(null);
-  const billRef = useRef<HTMLDivElement>(null);
-  const kotRef = useRef<HTMLDivElement>(null);
-  const {
-    order,
-    setOrder,
-    editOrderModalOpen: isOpen,
-    setEditOrderModalOpen,
-  } = usePOSStore();
+  const { setOrder, setEditOrderModalOpen } = usePOSStore();
+  const orderAlertRef = useRef<boolean>(false);
 
-  const handlePrintBill = useReactToPrint({
-    contentRef: billRef,
-  });
-
-  const handlePrintKOT = useReactToPrint({
-    contentRef: kotRef,
-  });
-
+  // Preload sound effect immediately
   useEffect(() => {
     soundRef.current = new Howl({
       src: ["/audio/tone.wav"],
@@ -59,6 +77,68 @@ const OrdersTab = () => {
     };
   }, []);
 
+  // Priority subscription for new orders - runs before other effects
+  useEffect(() => {
+    if (!userData?.id) return;
+
+    // Set up subscription immediately
+    const unsubscribe = subscribeOrders((allOrders) => {
+      const prevOrders = prevOrdersRef.current;
+
+      // Count new pending orders
+      const newTableOrders = allOrders.filter(
+        (order) =>
+          order.status === "pending" &&
+          order.type === "table_order" &&
+          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      );
+
+      const newDeliveryOrders = allOrders.filter(
+        (order) =>
+          order.status === "pending" &&
+          order.type === "delivery" &&
+          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      );
+
+      const newPOSOrders = allOrders.filter(
+        (order) =>
+          order.status === "pending" &&
+          order.type === "pos" &&
+          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      );
+
+      const totalNewOrders =
+        newTableOrders.length + newDeliveryOrders.length + newPOSOrders.length;
+
+      if (totalNewOrders > 0 && !orderAlertRef.current) {
+        // Play sound immediately
+        soundRef.current?.play();
+        orderAlertRef.current = true;
+
+        // Show alert dialog with highest priority
+        setNewOrderAlert({
+          show: true,
+          tableCount: newTableOrders.length,
+          deliveryCount: newDeliveryOrders.length,
+          posCount: newPOSOrders.length,
+        });
+
+        // Update new order indicators
+        setNewOrders({
+          table: newTableOrders.length > 0,
+          delivery: newDeliveryOrders.length > 0,
+          pos: newPOSOrders.length > 0,
+        });
+      }
+
+      prevOrdersRef.current = allOrders;
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [userData?.id]);
+
   useEffect(() => {
     if (partnerOrders) {
       setOrders(partnerOrders);
@@ -66,176 +146,188 @@ const OrdersTab = () => {
     }
   }, [partnerOrders]);
 
-  useEffect(() => {
-    const storedFilter = localStorage.getItem("ordersFilter");
-    const orderFilter = localStorage.getItem("ordersSortOrder");
-    const storedTab = localStorage.getItem("ordersActiveTab");
-
-    if (storedTab === "delivery") {
-      setActiveTab("delivery");
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      const success = await deleteOrder(orderId);
+      if (success) {
+        setOrders((prevOrders) =>
+          prevOrders.filter((order) => order.id !== orderId)
+        );
+        toast.success("Order deleted successfully");
+        return true;
+      } else {
+        toast.error("Failed to delete order");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      toast.error("Failed to delete order");
+      return false;
     }
+  };
 
-    if (storedFilter === "pending") {
-      setShowOnlyPending(true);
-    } else {
-      setShowOnlyPending(false);
-    }
-
-    if (orderFilter === "newest") {
-      setSortOrder("newest");
-    } else {
-      setSortOrder("oldest");
-    }
-  }, []);
-
-  const updateOrderStatus = async (
+  const handleUpdateOrderStatus = async (
     orderId: string,
-    newStatus: "completed" | "cancelled"
+    status: "pending" | "completed" | "cancelled"
   ) => {
     try {
-      const response = await fetchFromHasura(
-        `mutation UpdateOrderStatus($orderId: uuid!, $status: String!) {
-          update_orders_by_pk(pk_columns: {id: $orderId}, _set: {status: $status}) {
-            id
-            status
-          }
-        }`,
-        { orderId, status: newStatus }
-      );
-
-      if (response.errors) throw new Error(response.errors[0].message);
-
-      setOrders((prev) =>
-        prev.map((order) =>
-          order.id === orderId ? { ...order, status: newStatus } : order
-        )
-      );
-      toast.success(`Order marked as ${newStatus}`);
+      await updateOrderStatus(orders, orderId, status, setOrders);
+      toast.success("Order status updated successfully");
     } catch (error) {
-      console.error(error);
-      toast.error(`Failed to update order status`);
+      console.error("Error updating order status:", error);
+      toast.error("Failed to update order status");
     }
-  };
-
-  const togglePendingFilter = () => {
-    const newValue = !showOnlyPending;
-    setShowOnlyPending(newValue);
-    localStorage.setItem("ordersFilter", newValue ? "pending" : "all");
-  };
-
-  const toggleSortOrder = () => {
-    setSortOrder(sortOrder === "newest" ? "oldest" : "newest");
-    localStorage.setItem(
-      "ordersSortOrder",
-      sortOrder === "newest" ? "oldest" : "newest"
-    );
   };
 
   const handleTabChange = (value: string) => {
-    if (value === "table" || value === "delivery") {
+    if (value === "table" || value === "delivery" || value === "pos") {
       setActiveTab(value);
       setNewOrders((prev) => ({ ...prev, [value]: false }));
       localStorage.setItem("ordersActiveTab", value);
+      // Reset pagination when tab changes
+      setPage(1);
+      setHasMore(true);
     }
   };
 
-  const filteredByTypeOrders = orders.filter((order) =>
-    activeTab === "table"
-      ? order.type === "table_order"
-      : order.type === "delivery"
-  );
-
-  const filteredOrders = showOnlyPending
-    ? filteredByTypeOrders.filter((order) => order.status === "pending")
-    : filteredByTypeOrders;
-
-  const sortedOrders = [...filteredOrders].sort((a, b) => {
-    const dateA = new Date(a.createdAt).getTime();
-    const dateB = new Date(b.createdAt).getTime();
-    return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
-  });
-
   useEffect(() => {
-    if (!userData?.id) return;
-
-    const unsubscribe = subscribeOrders((allOrders) => {
-      const prevOrders = prevOrdersRef.current;
-
-      const newPendingOrders = allOrders.filter(
-        (order) =>
-          order.status === "pending" &&
-          ((activeTab === "table" && order.type === "table_order") ||
-            (activeTab === "delivery" && order.type === "delivery")) &&
-          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
-      );
-
-      if (newPendingOrders.length > 0) {
-        soundRef.current?.play();
-
-        if (Notification.permission === "granted") {
-          newPendingOrders.forEach((order) => {
-            new Notification(
-              `New ${activeTab === "table" ? "Table Order" : "Delivery"}`,
-              {
-                body: `Order #${order.id.slice(0, 8)} received`,
-              }
-            );
-          });
-        }
-
-        setNewOrders((prev) => ({
-          ...prev,
-          [activeTab]: true,
-        }));
-      }
-
-      prevOrdersRef.current = allOrders;
+    const filteredByTypeOrders = orders.filter((order) => {
+      if (activeTab === "table") return order.type === "table_order";
+      if (activeTab === "delivery") return order.type === "delivery";
+      if (activeTab === "pos") return order.type === "pos";
+      return false;
+    }).sort((a, b) => {
+      // Sort by created date, most recent first
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
-    return () => {
-      // unsubscribe();
-    };
-  }, [userData?.id, activeTab]);
+    setSortedOrders(filteredByTypeOrders);
+    // Reset pagination when filtered orders change
+    setPage(1);
+    setHasMore(true);
+  }, [orders, activeTab]);
 
   useEffect(() => {
-    if ("Notification" in window && Notification.permission !== "denied") {
-      Notification.requestPermission().then((permission) => {
-        console.log("Notification permission:", permission);
-      });
+    // Update displayed orders based on current page
+    if (sortedOrders.length > 0) {
+      const startIndex = 0;
+      const endIndex = page * ordersPerPage;
+      const currentDisplayedOrders = sortedOrders.slice(startIndex, endIndex);
+      
+      setDisplayedOrders(currentDisplayedOrders);
+      // Check if we have more orders to load
+      setHasMore(endIndex < sortedOrders.length);
+    } else {
+      setDisplayedOrders([]);
+      setHasMore(false);
     }
-  }, []);
+  }, [sortedOrders, page]);
+
+  const loadMoreOrders = () => {
+    setLoadingMore(true);
+    // Small delay to show loading state
+    setTimeout(() => {
+      setPage(prevPage => prevPage + 1);
+      setLoadingMore(false);
+    }, 500);
+  };
 
   const handleCreateNewOrder = () => {
     router.push("/admin/pos");
   };
 
-  const calculateGst = (amount: number) => {
-    const gstPercentage = (userData as HotelData)?.gst_percentage || 0;
-    return (amount * gstPercentage) / 100;
-  };
-
   return (
-    <div className="py-10 px-[8%]">
+    <div className="py-6 px-4 sm:px-[8%] max-w-7xl mx-auto">
+      {/* High Priority New Order Alert Dialog */}
+      <AlertDialog
+        open={newOrderAlert.show}
+        onOpenChange={(open) => {
+          setNewOrderAlert((prev) => ({ ...prev, show: open }));
+          if (!open) {
+            orderAlertRef.current = false;
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>New Orders Received!</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have {newOrderAlert.tableCount} new table order(s),{" "}
+              {newOrderAlert.deliveryCount} new delivery order(s), and{" "}
+              {newOrderAlert.posCount} new POS order(s).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setNewOrderAlert({
+                  show: false,
+                  tableCount: 0,
+                  deliveryCount: 0,
+                  posCount: 0,
+                });
+                orderAlertRef.current = false;
+                // Switch to the tab with most new orders
+                const maxCount = Math.max(
+                  newOrderAlert.tableCount,
+                  newOrderAlert.deliveryCount,
+                  newOrderAlert.posCount
+                );
+                if (newOrderAlert.tableCount === maxCount) {
+                  setActiveTab("table");
+                } else if (newOrderAlert.deliveryCount === maxCount) {
+                  setActiveTab("delivery");
+                } else {
+                  setActiveTab("pos");
+                }
+              }}
+            >
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <TodaysEarnings orders={orders} />
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold mb-5 sm:mb-0">Orders Management</h2>
-        <div className="flex gap-2">
+        <h2 className="text-2xl font-bold mb-4 sm:mb-0">Orders Management</h2>
+        <div className="flex gap-2 w-full sm:w-auto">
           {features?.pos.enabled && (
-            <Button size="sm" onClick={handleCreateNewOrder}>
+            <Button
+              variant={"outline"}
+              size="sm"
+              className="flex-1 sm:flex-none"
+              onClick={handleCreateNewOrder}
+            >
               Create New Order
             </Button>
           )}
-          <Button size="sm" onClick={togglePendingFilter}>
-            {showOnlyPending ? "Show All Orders" : "Show Only Pending"}
-          </Button>
-          <Button size="sm" variant="outline" onClick={toggleSortOrder}>
-            {sortOrder === "newest" ? "Show Oldest First" : "Show Newest First"}
+          <Button 
+            size="sm"
+            className="flex-1 sm:flex-none"
+            onClick={() => router.push("/admin/orders/all")}
+          >
+            Show All Orders
           </Button>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-2 mb-6 relative">
-          <TabsTrigger value="table" className="relative">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList
+          className="flex w-full gap-1 mb-6 rounded-lg p-1 overflow-x-auto"
+        >
+          {features?.delivery.enabled && (
+            <TabsTrigger value="delivery" className="relative flex-1 min-w-[100px] py-2">
+              Deliveries
+              {newOrders.delivery && (
+                <span className="absolute -top-1 -right-1 h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+              )}
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="table" className="relative flex-1 min-w-[100px] py-2">
             Table Orders
             {newOrders.table && (
               <span className="absolute -top-1 -right-1 h-3 w-3">
@@ -244,15 +336,17 @@ const OrdersTab = () => {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="delivery" className="relative">
-            Deliveries
-            {newOrders.delivery && (
-              <span className="absolute -top-1 -right-1 h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-              </span>
-            )}
-          </TabsTrigger>
+          {features?.pos.enabled && (
+            <TabsTrigger value="pos" className="relative flex-1 min-w-[100px] py-2">
+              POS Orders
+              {newOrders.pos && (
+                <span className="absolute -top-1 -right-1 h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+              )}
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {loading ? (
@@ -260,186 +354,173 @@ const OrdersTab = () => {
             <Loader2 className="animate-spin h-8 w-8" />
           </div>
         ) : (
-          <TabsContent value={activeTab}>
-            <div className="space-y-4">
-              {sortedOrders.length === 0 ? (
-                <p className="text-gray-500">
-                  No {activeTab === "table" ? "table orders" : "deliveries"}{" "}
-                  found
-                </p>
-              ) : (
-                sortedOrders.map((order) => {
-                  const gstAmount = calculateGst(order.totalPrice);
-                  const grandTotal = order.totalPrice + gstAmount;
-
-                  return (
-                    <div
-                      key={order.id}
-                      className="border rounded-lg p-4 relative"
-                    >
-                      {order.status === "pending" && (
-                        <span className="absolute -top-1 -left-1 h-3 w-3">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                        </span>
-                      )}
-
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="font-medium">
-                            Order #{order.id.slice(0, 8)}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            {formatDate(order.createdAt)}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-2 py-1 rounded text-xs ${
-                              order.status === "completed"
-                                ? "bg-green-100 text-green-800"
-                                : order.status === "cancelled"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}
-                          >
-                            {order.status}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="mt-2 flex justify-between">
-                        <div>
-                          {order.type === "table_order" && (
-                            <p className="text-sm">
-                              Table: {order.tableNumber || "N/A"}
-                            </p>
-                          )}
-                          <p className="text-sm">
-                            Customer:{" "}
-                            {order.user?.phone || order.phone
-                              ? `+91${order.user?.phone || order.phone}`
-                              : "Unknown"}
-                          </p>
-                          {order.type === "delivery" && (
-                            <p className="text-sm mt-3">
-                              Delivery Address:{" "}
-                              {order.deliveryAddress || "Unknown"}
-                            </p>
-                          )}
-                        </div>
-                        <p className="font-medium">
-                          Total: {(userData as HotelData)?.currency}
-                          {order?.totalPrice?.toFixed(2)}
-                        </p>
-                      </div>
-
-                      <div className="mt-4 border-t pt-4">
-                        <h4 className="font-medium mb-2">Order Items</h4>
-                        <div className="space-y-2">
-                          {order.items?.length ? (
-                            order.items.map((item: OrderItem) => (
-                              <div
-                                key={item.id}
-                                className="flex justify-between text-sm"
-                              >
-                                <div>
-                                  <span className="font-medium">
-                                    {item.name}
-                                  </span>
-                                  <span className="text-gray-500 ml-2">
-                                    x{item.quantity}
-                                  </span>
-                                  {item.category && (
-                                    <span className="text-gray-400 text-xs ml-2 capitalize">
-                                      ({item.category.name.trim()})
-                                    </span>
-                                  )}
-                                </div>
-                                <span>
-                                  {(userData as HotelData)?.currency}
-                                  {(item.price * item.quantity).toFixed(2)}
-                                </span>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-gray-500 text-sm">
-                              No items found
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="mt-4 flex gap-2 flex-wrap">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handlePrintKOT}
-                          >
-                            <Printer className="h-4 w-4 mr-2" />
-                            Print KOT
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handlePrintBill}
-                          >
-                            <Printer className="h-4 w-4 mr-2" />
-                            Print Bill
-                          </Button>
-
-                          {order.status === "pending" && (
+          <>
+            <TabsContent value="delivery">
+              <div className="space-y-4">
+                {displayedOrders.length === 0 ? (
+                  <div className="text-center py-12 border rounded-lg bg-gray-50">
+                    <p className="text-gray-500">No deliveries found</p>
+                  </div>
+                ) : (
+                  <>
+                    {displayedOrders.map((order, index) => (
+                      <OrderItemCard
+                        gstAmount={getGstAmount(
+                          order.items.reduce((sum, item) => {
+                            return sum + item.price * item.quantity;
+                          }, 0),
+                          (userData as Partner)?.gst_percentage || 0
+                        )}
+                        grantTotal={order.totalPrice || 0}
+                        key={`delivery-${order.id}-${index}`}
+                        order={order}
+                        deleteOrder={handleDeleteOrder}
+                        updateOrderStatus={(status) => {
+                          handleUpdateOrderStatus(order.id, status);
+                        }}
+                        setOrder={setOrder}
+                        setEditOrderModalOpen={setEditOrderModalOpen}
+                        gstPercentage={(userData as Partner)?.gst_percentage || 0}
+                      />
+                    ))}
+                    
+                    {hasMore && (
+                      <div className="flex justify-center mt-6">
+                        <Button 
+                          variant="outline" 
+                          onClick={loadMoreOrders}
+                          disabled={loadingMore}
+                          className="w-full max-w-xs"
+                        >
+                          {loadingMore ? (
                             <>
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  setOrder(order);
-                                  setEditOrderModalOpen(true);
-                                }}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit Order
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() =>
-                                  updateOrderStatus(order.id, "completed")
-                                }
-                              >
-                                Mark Completed
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() =>
-                                  updateOrderStatus(order.id, "cancelled")
-                                }
-                              >
-                                Cancel Order
-                              </Button>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Loading...
                             </>
+                          ) : (
+                            `Load More (${sortedOrders.length - displayedOrders.length} remaining)`
                           )}
-                        </div>
+                        </Button>
                       </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </TabsContent>
+            <TabsContent value="table">
+              <div className="space-y-4">
+                {displayedOrders.length === 0 ? (
+                  <div className="text-center py-12 border rounded-lg bg-gray-50">
+                    <p className="text-gray-500">No table orders found</p>
+                  </div>
+                ) : (
+                  <>
+                    {displayedOrders.map((order, index) => (
+                      <OrderItemCard
+                        key={`table-${order.id}-${index}`}
+                        gstAmount={getGstAmount(
+                          order.items.reduce((sum, item) => {
+                            return sum + item.price * item.quantity;
+                          }, 0),
+                          (userData as Partner)?.gst_percentage || 0
+                        )}
+                        grantTotal={order.totalPrice || 0}
+                        order={order}
+                        deleteOrder={handleDeleteOrder}
+                        updateOrderStatus={(status) => {
+                          handleUpdateOrderStatus(order.id, status);
+                        }}
+                        setOrder={setOrder}
+                        setEditOrderModalOpen={setEditOrderModalOpen}
+                        gstPercentage={(userData as Partner)?.gst_percentage || 0}
+                      />
+                    ))}
+                    
+                    {hasMore && (
+                      <div className="flex justify-center mt-6">
+                        <Button 
+                          variant="outline" 
+                          onClick={loadMoreOrders}
+                          disabled={loadingMore}
+                          className="w-full max-w-xs"
+                        >
+                          {loadingMore ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            `Load More (${sortedOrders.length - displayedOrders.length} remaining)`
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </TabsContent>
+            <TabsContent value="pos">
+              <div className="space-y-4">
+                {displayedOrders.length === 0 ? (
+                  <div className="text-center py-12 border rounded-lg bg-gray-50">
+                    <p className="text-gray-500">No POS orders found</p>
+                  </div>
+                ) : (
+                  <>
+                    {displayedOrders.map((order, index) => {
+                      const gstPercentage =
+                        (userData as Partner)?.gst_percentage || 0;
+                      const foodSubtotal = order.items.reduce((sum, item) => {
+                        return sum + item.price * item.quantity;
+                      }, 0);
+                      const gstAmount = getGstAmount(foodSubtotal, gstPercentage);
+                      const totalPriceWithGst = foodSubtotal + gstAmount;
+                      const extraChargesTotal = (
+                        order?.extraCharges ?? []
+                      ).reduce((acc, charge) => acc + charge.amount, 0);
+                      const grandTotal = totalPriceWithGst + extraChargesTotal;
 
-                      {/* Hidden elements for printing */}
-                      <div className="hidden">
-                        {/* KOT Template */}
-                        <KOTTemplate ref={kotRef} order={order} />
-
-                        {/* Bill Template */}
-                        <BillTemplate
-                          ref={billRef}
+                      return (
+                        <OrderItemCard
+                          key={`pos-${order.id}-${index}`}
                           order={order}
-                          userData={userData as Partner}
+                          deleteOrder={handleDeleteOrder}
+                          updateOrderStatus={(status) => {
+                            handleUpdateOrderStatus(order.id, status);
+                          }}
+                          setOrder={setOrder}
+                          setEditOrderModalOpen={setEditOrderModalOpen}
+                          gstPercentage={gstPercentage}
+                          gstAmount={gstAmount}
+                          grantTotal={grandTotal}
                         />
+                      );
+                    })}
+                    
+                    {hasMore && (
+                      <div className="flex justify-center mt-6">
+                        <Button 
+                          variant="outline" 
+                          onClick={loadMoreOrders}
+                          disabled={loadingMore}
+                          className="w-full max-w-xs"
+                        >
+                          {loadingMore ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            `Load More (${sortedOrders.length - displayedOrders.length} remaining)`
+                          )}
+                        </Button>
                       </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </TabsContent>
+                    )}
+                  </>
+                )}
+              </div>
+            </TabsContent>
+          </>
         )}
       </Tabs>
 

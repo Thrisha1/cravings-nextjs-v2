@@ -1,5 +1,5 @@
 "use client";
-import { MenuItem } from "@/screens/HotelMenuPage";
+import { MenuItem } from "@/screens/HotelMenuPage_v2";
 import React, { useEffect, useState } from "react";
 import { Card } from "./ui/card";
 import Image from "next/image";

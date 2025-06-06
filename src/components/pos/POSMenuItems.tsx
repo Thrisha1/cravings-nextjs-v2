@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Minus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Partner, useAuthStore } from "@/store/authStore";
+import ShopClosedModalWarning from "../admin/ShopClosedModalWarning";
 
 export const POSMenuItems = () => {
   const { items, groupedItems, fetchMenu } = useMenuStore();
@@ -78,6 +79,10 @@ export const POSMenuItems = () => {
 
   return (
     <div className="grid gap-6">
+      <ShopClosedModalWarning
+        hotelId={userData?.id}
+        isShopOpen={(userData as Partner)?.is_shop_open}
+      />
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
         <Input

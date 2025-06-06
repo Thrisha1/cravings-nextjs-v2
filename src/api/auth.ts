@@ -40,10 +40,16 @@ export const partnerIdQuery = `
       phone
       district
       theme
+      is_shop_open
       currency
       place_id
       gst_no
       gst_percentage
+      business_type
+      geo_location
+      delivery_rate
+      delivery_rules
+      country_code
     }
   }
 `;
@@ -59,14 +65,27 @@ export const partnerLoginQuery = `
       email
       password
       store_name
-      feature_flags
-      location
+      store_banner
       whatsapp_numbers
+      footnote
+      location
       status
+      social_links
       upi_id
+      feature_flags
       description
       phone
       district
+      theme
+      is_shop_open
+      currency
+      place_id
+      gst_no
+      gst_percentage
+      geo_location
+      delivery_rate
+      delivery_rules
+      country_code
     }
   }
 `;
@@ -125,12 +144,13 @@ export const partnerMutation = `
     password
     whatsapp_numbers
     store_name
-    location
     status
     upi_id
     description
     phone
     district
+    country
+    state
   }
 }`;
 
@@ -143,6 +163,3 @@ export const deleteUserMutation = `
     }
   }
 `;
-
-
-

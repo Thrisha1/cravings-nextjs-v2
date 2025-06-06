@@ -5,9 +5,8 @@ import {
   DialogClose,
   DialogContent,
   DialogTitle,
-  DialogTrigger,
 } from "../ui/dialog";
-import { HotelDataMenus } from "@/app/hotels/[id]/page";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import HeadingWithAccent from "../HeadingWithAccent";
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import { X } from "lucide-react";
@@ -18,11 +17,15 @@ const ItemDetailsModal = ({
   setOpen,
   item,
   styles,
+  currency,
+  hotelData
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
   item: HotelDataMenus;
   styles: Styles;
+  currency: string;
+  hotelData: HotelData  ;
 }) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -50,7 +53,17 @@ const ItemDetailsModal = ({
                 }}
                 className="font-black text-3xl"
               >
-                ₹{item.price}
+                {currency !== "🚫" && (
+                  <div
+                    style={{
+                      color: !item.is_available ? styles.color : styles.accent,
+                    }}
+                    className={`font-black text-2xl`}
+                  >
+                    {currency}{" "}
+                    {hotelData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09" ? item.price.toFixed(3) : item.price}
+                  </div>
+                )}
               </div>
             </div>
             <div className="text-sm opacity-50 mt-1">{item.description}</div>

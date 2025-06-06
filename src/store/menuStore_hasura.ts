@@ -9,7 +9,7 @@ import {
   updateMenu,
 } from "@/api/menu";
 import { AuthUser, Partner, useAuthStore } from "./authStore";
-import { Category, useCategoryStore } from "./categoryStore_hasura";
+import { Category, formatDisplayName, useCategoryStore } from "./categoryStore_hasura";
 import { processImage } from "@/lib/processImage";
 import { uploadFileToS3 } from "@/app/actions/aws-s3";
 import { revalidateTag } from "@/app/actions/revalidate";
@@ -32,6 +32,33 @@ export interface MenuItem {
   is_top: boolean;
   is_available: boolean;
   priority: number;
+  stocks?: {
+    stock_quantity: number;
+    stock_type: string;
+    show_stock: boolean;
+    id?: string;
+  }[];
+}
+
+interface MenuItem_withOffer_price {
+  id?: string;
+  name: string;
+  category: {
+    id: string;
+    name: string;
+    priority: number;
+  };
+  image_url: string;
+  image_source: string;
+  partner_id: string;
+  priority: number;
+  price: number;
+  offers: {
+    offer_price: number;
+  }[];
+  description: string;
+  is_top: boolean;
+  is_available: boolean;
 }
 
 interface CategoryImages {
@@ -84,7 +111,9 @@ interface MenuState {
   updatedCategories: (categories: Category[]) => void;
   updateCategoriesAsBatch: (categories: Category[]) => Promise<Category[]>;
   deleteCategoryAndItems: (categoryId: string) => Promise<void>;
-  updateItemsAsBatch: (items: { id: string; priority: number }[]) => Promise<void>;
+  updateItemsAsBatch: (
+    items: { id: string; priority: number }[]
+  ) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -108,9 +137,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         (await fetchFromHasura(getMenu, {
           partner_id: targetId,
         }).then((res) =>
-          res.menu.map((mi: any) => {
+          res.menu.map((mi: MenuItem_withOffer_price) => {
             return {
               ...mi,
+              price: (mi.offers[0]?.offer_price || mi.price) ?? 0,
               category: {
                 id: mi.category.id,
                 name: mi.category.name,
@@ -137,7 +167,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       if (!userData) throw new Error("User data not found");
 
-      const category = await addCategory(item.category.name.trim().toLowerCase());
+      const category = await addCategory(
+        item.category.name.trim().toLowerCase()
+      );
+
       const category_id = category?.id;
 
       if (!category_id) throw new Error("Category ID not found");
@@ -173,7 +206,16 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       });
 
       set({
-        items: [...get().items, insert_menu.returning[0]],
+        items: [
+          ...get().items,
+          {
+            ...insert_menu.returning[0],
+            category: {
+              ...insert_menu.returning[0].category,
+              name: insert_menu.returning[0].category.name,
+            },
+          },
+        ],
       });
       revalidateTag(userData?.id);
       get().groupItems();
@@ -189,20 +231,26 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   updateItem: async (id, updatedItem) => {
     try {
       toast.loading("Updating item...");
-      const categories = useCategoryStore.getState().categories;
-      const { category, ...otherItems } = updatedItem;
       const userData = useAuthStore.getState().userData as AuthUser;
+      const fetchCategories = useCategoryStore.getState().fetchCategories;
+      const allCategories = await fetchCategories(userData.id) || [];
+      const { category, ...otherItems } = updatedItem;
+
 
       let catid;
       let changedItem = { ...otherItems };
 
+      let cat = null;
+
       if (category?.id !== undefined) {
-        const cat = categories.find(
-          (cat) =>
-            cat.name.toLowerCase().trim() === category.name.toLowerCase().trim()
-        );
+        cat = allCategories.find((cat) => formatDisplayName(cat.name) === formatDisplayName(category.name));
+        
         catid = cat?.id;
-        changedItem = { ...changedItem, category_id: catid };
+        changedItem = {
+          ...changedItem,
+          category_id: catid,
+          
+        };
       }
 
       if (updatedItem.image_url) {
@@ -230,11 +278,21 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         id,
         menu: changedItem,
       });
+      
 
       const items = get().items.map((item) =>
-        item.id === id ? { ...item, ...updatedItem } : item
+        item.id === id ? {
+          ...item,
+          ...updatedItem,
+          category: {
+            id : cat?.id || item.category.id,
+            name: cat?.name || item.category.name,
+            priority: cat?.priority || item.category.priority,
+          },
+        } : item
       );
       set({ items });
+      
       revalidateTag(userData?.id);
       get().groupItems();
       toast.dismiss();
@@ -298,7 +356,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
     // 1. Group items by category name (case-insensitive)
     const groupedByName: GroupedItems = items.reduce((acc, item) => {
-      const categoryName = item.category.name.toLowerCase();
+      const categoryName = formatDisplayName(item.category.name).toLowerCase();
       if (!acc[categoryName]) {
         acc[categoryName] = [];
       }
@@ -388,12 +446,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         if (errors) {
           throw new Error(`Failed to update chunk starting at index ${i}`);
         }
-
       }
 
       const updatedItems = get().items.map((item: MenuItem) => {
         const category = updates.find((cat) => cat.id === item.category.id);
-        
+
         return category
           ? {
               ...item,
@@ -423,35 +480,39 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     }
   },
 
-  deleteCategoryAndItems: async (categoryId : string) => {
+  deleteCategoryAndItems: async (categoryId: string) => {
     try {
       toast.loading("Deleting category and its items...");
       const userData = useAuthStore.getState().userData as AuthUser;
-      
+
       if (!userData) throw new Error("User data not found");
-  
+
       // Execute the deletion
       await fetchFromHasura(delCategoryAndItems, {
         categoryId,
         partnerId: userData.id,
       });
-  
+
       // Update local state
-      const items = get().items.filter(item => item.category.id !== categoryId);
+      const items = get().items.filter(
+        (item) => item.category.id !== categoryId
+      );
       set({ items });
-      
+
       // Also update categories in category store
       const { categories, fetchCategories } = useCategoryStore.getState();
-      const updatedCategories = categories.filter(cat => cat.id !== categoryId);
+      const updatedCategories = categories.filter(
+        (cat) => cat.id !== categoryId
+      );
       useCategoryStore.setState({ categories: updatedCategories });
-      
+
       // Re-fetch to ensure consistency
       await fetchCategories(userData.id);
-      
+
       // Re-group items
       get().groupItems();
       revalidateTag(userData.id);
-      
+
       toast.dismiss();
       toast.success("Category and its items deleted successfully");
     } catch (error) {
@@ -461,16 +522,14 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       throw error;
     }
   },
-  updateItemsAsBatch: async (items : {
-    id : string;
-    priority : number;
-  }[]) => {
+
+  updateItemsAsBatch: async (items: { id: string; priority: number }[]) => {
     try {
       toast.loading("Updating item priorities...");
       const user = useAuthStore.getState().userData as Partner;
-      
+
       if (!user) throw new Error("User data not found");
-  
+
       // Create the batch mutation
       const mutation = `
         mutation UpdateItemsPriorityBatch {
@@ -491,7 +550,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
             .join("\n")}
         }
       `;
-  
+
       // Execute in chunks to avoid hitting Hasura limits
       const CHUNK_SIZE = 20;
       for (let i = 0; i < items.length; i += CHUNK_SIZE) {
@@ -515,10 +574,10 @@ export const useMenuStore = create<MenuState>((set, get) => ({
               .join("\n")}
           }
         `;
-  
+
         await fetchFromHasura(chunkMutation, {});
       }
-  
+
       // Update local state
       const updatedItems = get().items.map((currentItem) => {
         const updatedItem = items.find((item) => item.id === currentItem.id);
@@ -526,11 +585,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           ? { ...currentItem, priority: updatedItem.priority }
           : currentItem;
       });
-  
+
       set({ items: updatedItems });
       get().groupItems();
       revalidateTag(user?.id);
-  
+
       toast.dismiss();
       toast.success("Item priorities updated successfully");
     } catch (error) {
@@ -540,5 +599,4 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       throw error;
     }
   },
-  
 }));

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Pen, Plus, Search, Upload, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,10 +12,9 @@ import { Input } from "@/components/ui/input";
 import { useAdminOfferStore } from "@/store/useAdminOfferStore";
 import { Partner, useAuthStore } from "@/store/authStore";
 import Link from "next/link";
-import { AddMenuItemModal } from "../bulkMenuUpload/AddMenuItemModal";
-import { EditMenuItemModal } from "./EditMenuItemModal";
-import { CategoryManagementModal } from "./CategoryManagementModal";
-import Image from "next/image";
+import { AddMenuItemForm } from "../bulkMenuUpload/AddMenuItemModal";
+import { EditMenuItemForm, EditMenuItemModal } from "./EditMenuItemModal";
+import { CategoryManagementModal, CategoryManagementForm } from "./CategoryManagementModal";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
 import { toast } from "sonner";
@@ -30,7 +29,7 @@ import {
   Draggable,
   DropResult,
 } from "@hello-pangea/dnd";
-
+import { formatDisplayName } from "@/store/categoryStore_hasura";
 export function MenuTab() {
   const {
     items: menu,
@@ -39,11 +38,11 @@ export function MenuTab() {
     updateItem,
     deleteItem,
     groupedItems,
+    updateCategoriesAsBatch,
   } = useMenuStore();
   const [isCategoryEditing, setIsCategoryEditing] = useState(false);
   const { adminOffers, fetchAdminOffers } = useAdminOfferStore();
   const { userData } = useAuthStore();
-  const [catUpdated, setCatUpdated] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,7 +69,7 @@ export function MenuTab() {
       fetchAdminOffers(userData?.id);
       fetchMenu();
     }
-  }, [userData, fetchAdminOffers, fetchMenu, catUpdated]);
+  }, [userData, fetchAdminOffers, fetchMenu]);
 
   useEffect(() => {
     if (!isEditModalOpen) {
@@ -121,6 +120,7 @@ export function MenuTab() {
       is_top: false,
       is_available: true,
       priority: 0,
+      
     });
   };
 
@@ -165,7 +165,7 @@ export function MenuTab() {
       price: item.price.toString(),
       image: item.image,
       description: item.description || "",
-      category: item.category,
+      category: formatDisplayName(item.category),
     });
     setIsEditModalOpen(true);
   };
@@ -245,6 +245,46 @@ export function MenuTab() {
         </div>
       </div>
 
+      {/* Tab switch: show add form, edit form, category management, or menu */}
+      {isAddModalOpen ? (
+        <AddMenuItemForm
+          onSubmit={(item) => {
+            handleAddItem(item);
+            setIsAddModalOpen(false);
+          }}
+          onCancel={() => setIsAddModalOpen(false)}
+        />
+      ) : isEditModalOpen && editingItem ? (
+        <EditMenuItemForm
+          item={editingItem}
+          onSubmit={(item) => {
+            handleEditItem(item);
+            setIsEditModalOpen(false);
+          }}
+          onCancel={() => setIsEditModalOpen(false)}
+        />
+      ) : isCategoryEditing ? (
+        <CategoryManagementForm
+          categories={Object.entries(groupedItems).map(([category, items]) => ({
+            id: items[0].category.id,
+            name: category,
+            priority: items[0].category.priority || 0,
+          }))}
+          onSubmit={async (updatedCategories) => {
+            try {
+              // Use updateCategoriesAsBatch to update both names and priorities
+              await updateCategoriesAsBatch(updatedCategories);
+              setIsCategoryEditing(false);
+              fetchMenu(); // Refresh the menu to get the new categories
+            } catch (error) {
+              console.error("Failed to update categories:", error);
+              toast.error("Failed to update categories");
+            }
+          }}
+          onCancel={() => setIsCategoryEditing(false)}
+        />
+      ) : (
+        <>
       <div className="flex justify-end gap-2 mb-4">
         {isEditingPriority ? (
           <>
@@ -294,27 +334,21 @@ export function MenuTab() {
         />
       </div>
 
-      <AddMenuItemModal
-        isOpen={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-        onSubmit={handleAddItem}
-      />
-
-      {editingItem && (
+      {/* {editingItem && (
         <EditMenuItemModal
           isOpen={isEditModalOpen}
           onOpenChange={setIsEditModalOpen}
           item={editingItem}
           onSubmit={handleEditItem}
         />
-      )}
+      )} */}
 
       {isCategoryEditing && (
         <CategoryManagementModal
           open={isCategoryEditing}
           categories={Object.entries(groupedItems).map(([category, items]) => ({
             id: items[0].category.id,
-            name: category,
+            name: (category),
             priority: items[0].category.priority,
           }))}
           onOpenChange={setIsCategoryEditing}
@@ -336,7 +370,7 @@ export function MenuTab() {
                   <AccordionItem value={category} key={category + index}>
                     <AccordionTrigger className="flex items-center gap-2 group max-w-fit">
                       <h1 className="text-xl lg:text-3xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent flex items-center gap-2">
-                        <div className="left-marker">▶</div> {category}
+                        <div className="left-marker">▶</div> {formatDisplayName(category)}
                       </h1>
                     </AccordionTrigger>
                     <AccordionContent>
@@ -419,7 +453,7 @@ export function MenuTab() {
                                       </CardHeader>
                                       <CardContent className="relative">
                                         <p className="text-2xl font-bold">
-                                          {(userData as Partner)?.currency || "₹"}{item.price.toFixed(3)}
+                                          {(userData as Partner)?.currency || "₹"}{userData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09" ? item.price.toFixed(3) : item.price}
                                         </p>
                                         {item.description && (
                                           <p className="text-gray-600 mt-2">
@@ -549,6 +583,8 @@ export function MenuTab() {
           </div>
         )}
       </>
+        </>
+      )}
     </div>
   );
 }

@@ -1,20 +1,7 @@
 "use client";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import {
-  FeatureFlags,
-  revertFeatureToString,
-} from "@/screens/HotelMenuPage_v2";
 import { Partner } from "@/store/authStore";
 import React, { useEffect, useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -30,7 +17,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { toast } from "sonner";
-import { getFeatures } from "@/lib/getFeatures";
+import { FeatureFlags, getFeatures, revertFeatureToString } from "@/lib/getFeatures";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Info, Menu, Search } from "lucide-react";
 
 interface PartnerWithFeatureFlags extends Partner {
   featureFlag: FeatureFlags;
@@ -40,19 +37,15 @@ const FeatureFlagManagement = () => {
   const [partners, setPartners] = useState<PartnerWithFeatureFlags[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [activeFeature, setActiveFeature] = useState<{
-    name: string;
-    description: string;
-  } | null>(null);
+  const [selectedPartner, setSelectedPartner] = useState<PartnerWithFeatureFlags | null>(null);
 
-  const featureDescriptions = {
-    ordering:
-      "Enables ordering feature in QR Scan page. When enabled, customers can place orders by scanning the QR code.",
-    delivery:
-      "Enables ordering feature in Hotel Details page. When enabled, customers can place delivery orders from the hotel details page.",
-    multiwhatsapp:
-      "Enables multiple WhatsApp numbers for a partner. When enabled, partners can add and manage multiple WhatsApp numbers for customer communication.",
-    pos: "Enables POS feature for a partner. When enabled, partners can use the POS system for managing orders.",
+  // Define all possible features with their descriptions
+  const allFeatures = {
+    ordering: "Enables ordering feature in QR Scan page.",
+    delivery: "Enables ordering feature in Hotel Details page.",
+    multiwhatsapp: "Enables multiple WhatsApp numbers for a partner.",
+    pos: "Enables POS feature for a partner.",
+    stockmanagement: "Enables stock management feature for a partner."
   };
 
   const getAllPartners = async () => {
@@ -71,27 +64,31 @@ const FeatureFlagManagement = () => {
       if (res) {
         const partnersWithFeatureFlags = res.partners.map(
           (partner: Partner) => {
+            // Ensure all features are present in the featureFlag object
             const featureFlag = getFeatures(partner.feature_flags || "");
+            
+            // Add stockmanagement if it's missing
+            if (!featureFlag.stockmanagement) {
+              featureFlag.stockmanagement = {
+                access: false,
+                enabled: false
+              };
+            }
+            
             return {
               ...partner,
-              featureFlag,
-            } as PartnerWithFeatureFlags;
+              featureFlag
+            };
           }
         );
         setPartners(partnersWithFeatureFlags);
       }
     } catch (error) {
       console.error("Error fetching partners:", error);
+      toast.error("Failed to load partners");
     } finally {
       setLoading(false);
     }
-  };
-
-  const searchPartner = () => {
-    if (!searchQuery) return partners;
-    return partners.filter((partner) =>
-      partner.store_name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
   };
 
   const updateFeatureFlag = async (
@@ -100,28 +97,19 @@ const FeatureFlagManagement = () => {
     type: "access" | "enabled",
     value: boolean
   ) => {
-    setPartners((prev) =>
-      prev.map((partner) => {
+    try {
+      setPartners(prev => prev.map(partner => {
         if (partner.id === partnerId) {
           const updatedFeatureFlag = {
             ...partner.featureFlag,
             [feature]: {
               ...partner.featureFlag[feature],
               [type]: value,
+              ...(type === "enabled" && value ? { access: true } : {}),
+              ...(type === "access" && !value ? { enabled: false } : {}),
             },
           };
 
-          // If enabling 'enabled', ensure 'access' is also true
-          if (type === "enabled" && value) {
-            updatedFeatureFlag[feature].access = true;
-          }
-
-          // If disabling 'access', also disable 'enabled'
-          if (type === "access" && !value) {
-            updatedFeatureFlag[feature].enabled = false;
-          }
-
-          // Update in backend
           updatePartnerFeatureFlags(partnerId, updatedFeatureFlag);
           return {
             ...partner,
@@ -129,8 +117,30 @@ const FeatureFlagManagement = () => {
           };
         }
         return partner;
-      })
-    );
+      }));
+
+      if (selectedPartner?.id === partnerId) {
+        setSelectedPartner(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            featureFlag: {
+              ...prev.featureFlag,
+              [feature]: {
+                ...prev.featureFlag[feature],
+                [type]: value,
+                ...(type === "enabled" && value ? { access: true } : {}),
+                ...(type === "access" && !value ? { enabled: false } : {}),
+              },
+            },
+          };
+        });
+      }
+    } catch (error) {
+      console.error("Error updating feature flag:", error);
+      toast.error("Failed to update feature flag");
+      getAllPartners();
+    }
   };
 
   const updatePartnerFeatureFlags = async (
@@ -146,338 +156,169 @@ const FeatureFlagManagement = () => {
             feature_flags
           }
         }`,
-        {
-          partnerId,
-          featureFlags: featureString,
-        }
+        { partnerId, featureFlags: featureString }
       );
       revalidateTag(partnerId);
+      toast.success("Feature flags updated");
     } catch (error) {
-      console.error("Error updating feature flags:", error);
-      // Revert changes if update fails
-      getAllPartners();
+      throw error;
     }
   };
 
-  const openFeatureDescription = (feature: keyof FeatureFlags) => {
-    setActiveFeature({
-      name: feature,
-      description: featureDescriptions[feature],
-    });
-  };
+  const filteredPartners = partners.filter(partner =>
+    partner.store_name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   useEffect(() => {
     getAllPartners();
   }, []);
 
-  const filteredPartners = searchPartner();
+  if (loading) {
+    return (
+      <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[...Array(6)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader>
+              <div className="h-6 w-32 bg-gray-200 rounded"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {[...Array(3)].map((_, j) => (
+                  <div key={j} className="h-4 bg-gray-100 rounded w-full"></div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <Input
-          placeholder="Search partners by name..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-md"
-        />
+    <div className="p-4 md:p-6 space-y-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative max-w-md w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search partners..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
       </div>
 
-      {loading ? (
-        <div>Loading partners...</div>
-      ) : (
-        <Table>
-          <TableCaption>
-            A list of partners and their feature flags.
-          </TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Partner Name</TableHead>
-
-              {/* Ordering Columns */}
-              <TableHead className="text-center">
-                <div className="flex items-center justify-center gap-2">
-                  Ordering Access
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4"
-                        onClick={() => openFeatureDescription("ordering")}
-                      >
-                        ℹ️
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Ordering Feature</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {featureDescriptions.ordering}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogAction>Close</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </TableHead>
-              <TableHead className="text-center">Ordering Enabled</TableHead>
-
-              {/* Delivery Columns */}
-              <TableHead className="text-center">
-                <div className="flex items-center justify-center gap-2">
-                  Delivery Access
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4"
-                        onClick={() => openFeatureDescription("delivery")}
-                      >
-                        ℹ️
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delivery Feature</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {featureDescriptions.delivery}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogAction>Close</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </TableHead>
-              <TableHead className="text-center">Delivery Enabled</TableHead>
-
-              {/* MultiWhatsapp Columns */}
-              <TableHead className="text-center">
-                <div className="flex items-center justify-center gap-2">
-                  MultiWhatsapp Access
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4"
-                        onClick={() => openFeatureDescription("multiwhatsapp")}
-                      >
-                        ℹ️
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          MultiWhatsapp Feature
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {featureDescriptions.multiwhatsapp}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogAction>Close</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </TableHead>
-              <TableHead className="text-center">
-                MultiWhatsapp Enabled
-              </TableHead>
-
-              {/* Pos Columns */}
-              <TableHead className="text-center">
-                <div className="flex items-center justify-center gap-2">
-                  Pos Access
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4"
-                        onClick={() => openFeatureDescription("pos")}
-                      >
-                        ℹ️
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Pos Feature</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {featureDescriptions.pos}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogAction>Close</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </TableHead>
-              <TableHead className="text-center">Pos Enabled</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredPartners.map((partner) => (
-              <TableRow key={partner.id}>
-                <TableCell>{partner.store_name}</TableCell>
-
-                {/* Ordering Access */}
-                <TableCell className="text-center">
-                  <Checkbox
-                    checked={partner.featureFlag.ordering.access}
-                    onCheckedChange={(checked) =>
-                      updateFeatureFlag(
-                        partner.id,
-                        "ordering",
-                        "access",
-                        checked as boolean
-                      )
-                    }
-                  />
-                </TableCell>
-
-                {/* Ordering Enabled */}
-                <TableCell className="text-center">
-                  <Checkbox
-                    checked={partner.featureFlag.ordering.enabled}
-                    disabled={!partner.featureFlag.ordering.access}
-                    onCheckedChange={(checked) =>
-                      updateFeatureFlag(
-                        partner.id,
-                        "ordering",
-                        "enabled",
-                        checked as boolean
-                      )
-                    }
-                  />
-                </TableCell>
-
-                {/* Delivery Access */}
-                <TableCell className="text-center">
-                  <Checkbox
-                    checked={partner.featureFlag.delivery.access}
-                    onCheckedChange={(checked) =>
-                      updateFeatureFlag(
-                        partner.id,
-                        "delivery",
-                        "access",
-                        checked as boolean
-                      )
-                    }
-                  />
-                </TableCell>
-
-                {/* Delivery Enabled */}
-                <TableCell className="text-center">
-                  <Checkbox
-                    checked={partner.featureFlag.delivery.enabled}
-                    disabled={!partner.featureFlag.delivery.access}
-                    onCheckedChange={(checked) =>
-                      updateFeatureFlag(
-                        partner.id,
-                        "delivery",
-                        "enabled",
-                        checked as boolean
-                      )
-                    }
-                  />
-                </TableCell>
-
-                {/* MultiWhatsapp Access */}
-                <TableCell className="text-center">
-                  <Checkbox
-                    checked={partner.featureFlag.multiwhatsapp?.access ?? false}
-                    onCheckedChange={(checked) =>
-                      updateFeatureFlag(
-                        partner.id,
-                        "multiwhatsapp",
-                        "access",
-                        checked as boolean
-                      )
-                    }
-                  />
-                </TableCell>
-
-                {/* MultiWhatsapp Enabled */}
-                <TableCell className="text-center">
-                  <Checkbox
-                    checked={
-                      partner.featureFlag.multiwhatsapp?.enabled ?? false
-                    }
-                    disabled={!partner.featureFlag.multiwhatsapp?.access}
-                    onCheckedChange={(checked) =>
-                      updateFeatureFlag(
-                        partner.id,
-                        "multiwhatsapp",
-                        "enabled",
-                        checked as boolean
-                      )
-                    }
-                  />
-                </TableCell>
-
-                {/* Pos Access */}
-                <TableCell className="text-center">
-                  <Checkbox
-                    checked={partner.featureFlag.pos.access}
-                    onCheckedChange={(checked) =>
-                      updateFeatureFlag(
-                        partner.id,
-                        "pos",
-                        "access",
-                        checked as boolean
-                      )
-                    }
-                  />
-                </TableCell>
-
-                {/* Pos Enabled */}
-                <TableCell className="text-center">
-                  <Checkbox
-                    checked={partner.featureFlag.pos.enabled}
-                    disabled={!partner.featureFlag.pos.access}
-                    onCheckedChange={(checked) =>
-                      updateFeatureFlag(
-                        partner.id,
-                        "pos",
-                        "enabled",
-                        checked as boolean
-                      )
-                    }
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-
-      {/* Feature Description Dialog */}
-      {activeFeature && (
-        <AlertDialog
-          open={!!activeFeature}
-          onOpenChange={() => setActiveFeature(null)}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{activeFeature.name} Feature</AlertDialogTitle>
-              <AlertDialogDescription>
-                {activeFeature.description}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogAction>Close</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredPartners.map((partner) => (
+          <Card key={partner.id}>
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-center">
+                <CardTitle>{partner.store_name}</CardTitle>
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedPartner(partner)}
+                    >
+                      <Menu className="h-4 w-4" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent className="w-full md:w-[500px]">
+                    {selectedPartner && (
+                      <>
+                        <SheetHeader className="mb-6">
+                          <SheetTitle>{selectedPartner.store_name}</SheetTitle>
+                        </SheetHeader>
+                        <div className="space-y-6">
+                          {Object.entries(selectedPartner.featureFlag).map(([feature, config]) => (
+                            <div key={feature} className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium capitalize">
+                                    {feature}
+                                  </span>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-4 w-4">
+                                        <Info className="h-3 w-3" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle className="capitalize">
+                                          {feature} Feature
+                                        </AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          {allFeatures[feature as keyof typeof allFeatures]}
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogAction>Close</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+                                <Badge variant={config.enabled ? "default" : "secondary"}>
+                                  {config.enabled ? "Enabled" : "Disabled"}
+                                </Badge>
+                              </div>
+                              <div className="space-y-3 pl-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm">Access</span>
+                                  <Checkbox
+                                    checked={config.access}
+                                    onCheckedChange={(checked) =>
+                                      updateFeatureFlag(
+                                        selectedPartner.id,
+                                        feature as keyof FeatureFlags,
+                                        "access",
+                                        checked as boolean
+                                      )
+                                    }
+                                  />
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm">Enabled</span>
+                                  <Checkbox
+                                    checked={config.enabled}
+                                    disabled={!config.access}
+                                    onCheckedChange={(checked) =>
+                                      updateFeatureFlag(
+                                        selectedPartner.id,
+                                        feature as keyof FeatureFlags,
+                                        "enabled",
+                                        checked as boolean
+                                      )
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </SheetContent>
+                </Sheet>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(partner.featureFlag).map(([feature, config]) => (
+                  <Badge
+                    key={feature}
+                    variant={config.enabled ? "default" : "outline"}
+                    className="capitalize"
+                  >
+                    {feature}: {config.enabled ? "ON" : "OFF"}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };

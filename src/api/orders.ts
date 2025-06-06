@@ -1,4 +1,3 @@
-
 //query
 
 export const getOrdersOfPartnerQuery = `
@@ -18,7 +17,6 @@ export const getOrdersOfPartnerQuery = `
 }
 }`;
 
-
 //mutation
 export const createOrderMutation = `
                   mutation CreateOrder(
@@ -31,8 +29,11 @@ export const createOrderMutation = `
                     $userId: uuid,
                     $type: String!,
                     $delivery_address: String,
-                    $phone: String
-                    $status: String
+                    $phone: String,
+                    $status: String,
+                    $gst_included: numeric,
+                    $extra_charges: jsonb,
+                    $delivery_location: geography
                   ) {
                     insert_orders_one(object: {
                       id: $id
@@ -46,6 +47,9 @@ export const createOrderMutation = `
                       type: $type
                       phone: $phone
                       delivery_address: $delivery_address
+                      gst_included: $gst_included
+                      extra_charges: $extra_charges
+                      delivery_location: $delivery_location
                     }) {
                       id
                       total_price
@@ -61,7 +65,6 @@ export const createOrderItemsMutation = `
                     }
                   }
 `;
-
 
 export const updateOrderMutation = `
   mutation UpdateOrder(
@@ -138,24 +141,28 @@ export const getOrderByIdQuery = `
   }
 `;
 
-// subscription 
-
+// subscription
 
 export const subscriptionQuery = `
 subscription GetPartnerOrders($partner_id: uuid!) {
   orders(
-    where: { partner_id: { _eq: $partner_id } }
+    where: { partner_id: { _eq: $partner_id }, _or: [{ status: { _eq: "pending" } }, { type: { _eq: "pos" } }] }
     order_by: { created_at: desc }
   ) {
     id
     total_price
     created_at
     table_number
+    notes
     qr_id
     type
     delivery_address
+    delivery_location
     status
+    status_history
     partner_id
+    gst_included
+    extra_charges
     phone
     user_id
     user {
@@ -166,21 +173,24 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     order_items {
       id
       quantity
+      item
       menu {
-        id
-        name
-        price
         category {
           name
+        }
+        stocks {
+          stock_quantity
+          id
+        }
+        stocks {
+          stock_quantity
+          id
         }
       }
     }
   }
 }
 `;
-
-
-
 
 export const userSubscriptionQuery = `
 subscription GetUserOrders($user_id: uuid!) {
@@ -195,8 +205,18 @@ subscription GetUserOrders($user_id: uuid!) {
     qr_id
     type
     delivery_address
+    delivery_location
+    notes
     status
+    status_history
     partner_id
+    partner {
+      gst_percentage
+      currency
+      store_name
+    }
+    gst_included
+    extra_charges
     phone
     user_id
     user {
@@ -204,13 +224,14 @@ subscription GetUserOrders($user_id: uuid!) {
       phone
       email
     }
+    partner {
+      name
+    }
     order_items {
       id
       quantity
+      item
       menu {
-        id
-        name
-        price
         category {
           name
         }

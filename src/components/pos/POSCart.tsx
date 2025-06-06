@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { usePOSStore } from "@/store/posStore";
+import { ExtraCharge, usePOSStore } from "@/store/posStore";
 import { Plus, Minus, ShoppingCart, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/table";
 import { Partner, useAuthStore } from "@/store/authStore";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 export const POSCart = () => {
   const {
@@ -41,19 +42,29 @@ export const POSCart = () => {
     decreaseQuantity,
     checkout,
     setUserPhone,
+    addExtraCharge,
     setTableNumber,
     tableNumbers,
     tableNumber,
     loading,
-    order
+    order,
+    setDeliveryAddress,
   } = usePOSStore();
   const { userData } = useAuthStore();
   const { getPartnerTables } = usePOSStore();
   const [isOpen, setIsOpen] = useState(false);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+  const [isExtraChargesModalOpen, setIsExtraChargesModalOpen] = useState(false);
+  const [isDeliveryAddressModalOpen, setIsDeliveryAddressModalOpen] =
+    useState(false);
+  const [extraCharges, setExtraCharges] = useState<ExtraCharge>({
+    name: "",
+    amount: 0,
+    id: "",
+  });
   const [phoneInput, setPhoneInput] = useState("");
-  
+  const [deliveryAddress, setDeliveryAddressInput] = useState("");
 
   const getGstAmount = (price: number, gstPercentage: number) => {
     return (price * gstPercentage) / 100;
@@ -69,7 +80,6 @@ export const POSCart = () => {
     }
   }, [userData]);
 
-
   const handleCheckoutFlow = async () => {
     setIsTableModalOpen(true);
   };
@@ -80,8 +90,26 @@ export const POSCart = () => {
     setIsPhoneModalOpen(true);
   };
 
+  const handleDeliverySelect = () => {
+    setIsTableModalOpen(false);
+    setIsDeliveryAddressModalOpen(true);
+  };
+
+  const handleDeliveryAddressSubmit = () => {
+    console.log("Delivery Address:", deliveryAddress);
+    setDeliveryAddress(deliveryAddress);
+    setIsDeliveryAddressModalOpen(false);
+    setIsPhoneModalOpen(true);
+  };
+
+  const handleSkipDeliveryAddress = () => {
+    setDeliveryAddressInput("");
+    setIsDeliveryAddressModalOpen(false);
+    setIsPhoneModalOpen(true);
+  };
+
   const handleSkipTable = () => {
-    setTableNumber(0);
+    setTableNumber(null);
     setIsTableModalOpen(false);
     setIsPhoneModalOpen(true);
   };
@@ -89,12 +117,25 @@ export const POSCart = () => {
   const handlePhoneSubmit = () => {
     setUserPhone(phoneInput || null);
     setIsPhoneModalOpen(false);
-    performCheckout();
+    setIsExtraChargesModalOpen(true);
   };
 
   const handleSkipPhone = () => {
     setUserPhone(null);
     setIsPhoneModalOpen(false);
+    setIsExtraChargesModalOpen(true);
+  };
+
+  const handleExtraChargesSubmit = () => {
+    setIsExtraChargesModalOpen(false);
+    if (extraCharges.name && extraCharges.amount) {
+      addExtraCharge(extraCharges);
+    }
+    performCheckout();
+  };
+
+  const handleSkipExtraCharges = () => {
+    setIsExtraChargesModalOpen(false);
     performCheckout();
   };
 
@@ -104,20 +145,23 @@ export const POSCart = () => {
       toast.success("Checkout successful");
       setIsOpen(false);
       setPhoneInput("");
+      setDeliveryAddressInput("");
+      setExtraCharges({ name: "", amount: 0, id: "" });
     } catch (error) {
       console.error("Checkout failed:", error);
       toast.error("Checkout failed");
     }
   };
 
-  // Filter out table number 0 if it exists
-  const filteredTableNumbers = tableNumbers.filter(table => table !== 0);
-
   return (
     <>
       <Drawer open={isOpen} onOpenChange={setIsOpen}>
         {/* order details */}
-        <div className={`fixed bottom-0 left-1/2 -translate-x-1/2 flex items-center justify-between gap-auto w-full sm:w-fit sm:gap-60 lg:gap-80 bg-white border-2 border-black/10 rounded-t-[35px] px-7 py-5 sm:py-7 shadow-2xl duration-500 transition-all ${totalAmount > 0 ? "translate-y-0" : "translate-y-full"}`}>
+        <div
+          className={`fixed bottom-0 left-1/2 -translate-x-1/2 flex items-center justify-between gap-auto w-full sm:w-fit sm:gap-60 lg:gap-80 bg-white border-2 border-black/10 rounded-t-[35px] px-7 py-5 sm:py-7 shadow-2xl duration-500 transition-all ${
+            totalAmount > 0 ? "translate-y-0" : "translate-y-full"
+          }`}
+        >
           <div className="flex flex-col gap-1">
             {/* price */}
             <div className="flex gap-2 text-nowrap font-extrabold text-xl lg:text-2xl">
@@ -131,7 +175,9 @@ export const POSCart = () => {
             {/* total Items */}
             <div className="inline-flex flex-nowrap text-nowrap gap-2 font-medium text-black/50 te text-sm">
               <div>Total Items :</div>
-              <div>{cartItems.reduce((acc, item) => acc + item.quantity, 0)}</div>
+              <div>
+                {cartItems.reduce((acc, item) => acc + item.quantity, 0)}
+              </div>
             </div>
           </div>
 
@@ -179,7 +225,8 @@ export const POSCart = () => {
                         {item.name}
                       </TableCell>
                       <TableCell className="text-right py-3">
-                        {(userData as Partner)?.currency}{item.price.toFixed(2)}
+                        {(userData as Partner)?.currency}
+                        {item.price.toFixed(2)}
                       </TableCell>
                       <TableCell className="text-center py-3">
                         <div className="flex items-center justify-center gap-2">
@@ -203,7 +250,8 @@ export const POSCart = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-right py-3">
-                        {(userData as Partner)?.currency}{(item.price * item.quantity).toFixed(2)}
+                        {(userData as Partner)?.currency}
+                        {(item.price * item.quantity).toFixed(2)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -222,16 +270,23 @@ export const POSCart = () => {
                 <>
                   <div className="flex justify-between items-center mb-2 text-sm">
                     <span>Subtotal:</span>
-                    <span>{(userData as Partner)?.currency}{totalAmount.toFixed(2)}</span>
+                    <span>
+                      {(userData as Partner)?.currency}
+                      {totalAmount.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center mb-2 text-sm">
                     <span>{`GST (${gstPercentage}%):`}</span>
-                    <span>{(userData as Partner)?.currency}{gstAmount.toFixed(2)}</span>
+                    <span>
+                      {(userData as Partner)?.currency}
+                      {gstAmount.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center mb-4 font-bold">
                     <span>Grand Total:</span>
                     <span className="text-lg">
-                      {(userData as Partner)?.currency}{grandTotal.toFixed(2)}
+                      {(userData as Partner)?.currency}
+                      {grandTotal.toFixed(2)}
                     </span>
                   </div>
                 </>
@@ -239,7 +294,8 @@ export const POSCart = () => {
                 <div className="flex justify-between items-center mb-4 font-bold">
                   <span>Grand Total:</span>
                   <span className="text-lg">
-                    {(userData as Partner)?.currency}{totalAmount.toFixed(2)}
+                    {(userData as Partner)?.currency}
+                    {totalAmount.toFixed(2)}
                   </span>
                 </div>
               )}
@@ -273,20 +329,62 @@ export const POSCart = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-3 gap-4 py-4">
-            {filteredTableNumbers.map((table) => (
-              <Button
-                key={table}
-                variant={tableNumber === table ? "default" : "outline"}
-                onClick={() => handleTableSelect(table)}
-                className="h-12"
-              >
-                Table {table}
-              </Button>
-            ))}
+            {tableNumbers
+              .filter((table) => table !== 0)
+              .map((table) => (
+                <Button
+                  key={table}
+                  variant={tableNumber === table ? "default" : "outline"}
+                  onClick={() => handleTableSelect(table)}
+                  className="h-12"
+                >
+                  Table {table}
+                </Button>
+              ))}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="secondary" onClick={handleDeliverySelect}>
+              Delivery
+            </Button>
+            <Button variant="default" onClick={handleSkipTable}>
+              Takeaway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delivery Address Modal */}
+      <Dialog
+        open={isDeliveryAddressModalOpen}
+        onOpenChange={setIsDeliveryAddressModalOpen}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delivery Address</DialogTitle>
+            <DialogDescription>
+              Please enter the delivery address
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="Enter full delivery address"
+              value={deliveryAddress}
+              onChange={(e) => setDeliveryAddressInput(e.target.value)}
+              className="w-full min-h-[120px]"
+            />
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={handleSkipTable}>
-              Skip (No Table)
+            <Button
+              onClick={handleSkipDeliveryAddress}
+              variant="secondary"
+            >
+              Skip
+            </Button>
+            <Button
+              onClick={handleDeliveryAddressSubmit}
+              disabled={!deliveryAddress}
+            >
+              Continue
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -315,6 +413,55 @@ export const POSCart = () => {
               Skip
             </Button>
             <Button onClick={handlePhoneSubmit}>Continue</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Extra Charges Modal */}
+      <Dialog
+        open={isExtraChargesModalOpen}
+        onOpenChange={setIsExtraChargesModalOpen}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Extra Charges</DialogTitle>
+            <DialogDescription>
+              Add any extra charges (optional)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className=" w-full">
+              <Input
+                id="charge-name"
+                placeholder="Charge name"
+                className="w-full"
+                value={extraCharges.name}
+                onChange={(e) =>
+                  setExtraCharges({ ...extraCharges, name: e.target.value })
+                }
+              />
+            </div>
+            <div className="w-full">
+              <Input
+                id="charge-amount"
+                type="number"
+                placeholder="Amount"
+                className="w-full"
+                value={extraCharges.amount || ""}
+                onChange={(e) =>
+                  setExtraCharges({
+                    ...extraCharges,
+                    amount: Number(e.target.value),
+                  })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="secondary" onClick={handleSkipExtraCharges}>
+              Skip
+            </Button>
+            <Button onClick={handleExtraChargesSubmit}>Complete Order</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

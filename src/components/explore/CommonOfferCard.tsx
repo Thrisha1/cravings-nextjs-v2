@@ -62,16 +62,29 @@ const CommonOfferCard = ({ commonOffer }: { commonOffer: CommonOffer }) => {
           <p className="text-white/80 text-sm capitalize ">
             {truncateWithEllipsis(commonOffer.partner_name.toLowerCase(), 30)}
           </p>
-          <div className="flex justify-between items-center mt-2">
-            <p className="text-orange-600 font-bold text-lg">
-              ₹{commonOffer.price}
-            </p>
 
-            <p className="text-white/80 font-bold text-right uppercase">
-              {districtToShortForm[
-                commonOffer.district.toLowerCase() as DistrictKeys
-              ] || commonOffer.district.toLowerCase()}
-            </p>
+          <div className="flex justify-between items-end ">
+            {commonOffer?.price > 0 ? (
+              <p className="text-orange-600 font-black text-xl">
+                ₹{commonOffer.price}
+              </p>
+            ) : (
+              <p className="text-orange-600 font-bold text-lg"></p>
+            )}
+
+            <div className="flex flex-col items-end justify-start">
+              {(commonOffer.distance_meters ?? 0) < 300000 ? (
+                <div className="text-white/80 font-black text-right uppercase mt-2 text-lg">
+                  {((commonOffer.distance_meters ?? 0) / 1000).toFixed(0)}
+                  <span className="font-bold text-sm">KM</span>
+                </div>
+              ) : null}
+              <p className={`text-white/80 font-bold text-right uppercase ${(commonOffer.distance_meters ?? 0) < 300000 ? 'text-xs' : 'text-base'}`}>
+                {districtToShortForm[
+                  commonOffer.district.toLowerCase() as DistrictKeys
+                ] || commonOffer.district.toLowerCase()}
+              </p>
+            </div>
           </div>
         </div>
       </div>
