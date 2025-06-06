@@ -55,7 +55,7 @@ const SocialLinkList = ({
               const whatsapp = socialLinks.whatsapp.trim();
               const isNumber = /^\d+$/.test(whatsapp);
               const link = isNumber
-                ? `https://wa.me/${countryCode.replace(/\+/g, '')}${whatsapp}`
+                ? `https://wa.me/${countryCode}${whatsapp}`
                 : whatsapp;
               return (
                 <a
