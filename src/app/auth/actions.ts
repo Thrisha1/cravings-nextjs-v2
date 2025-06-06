@@ -11,8 +11,8 @@ export const getAuthCookie = async () => {
 export const setAuthCookie = async (data: { id: string; role: string , feature_flags : string , status : string }) => {
   const encrypted = encryptText(data);
   (await cookies()).set('auth_token', encrypted, {
-    httpOnly: false,
-    secure: false,
+    httpOnly: true,
+    secure: true,
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
     sameSite: 'none',
