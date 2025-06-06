@@ -49,6 +49,7 @@ export const partnerIdQuery = `
       geo_location
       delivery_rate
       delivery_rules
+      country_code
     }
   }
 `;
@@ -84,6 +85,7 @@ export const partnerLoginQuery = `
       geo_location
       delivery_rate
       delivery_rules
+      country_code
     }
   }
 `;
