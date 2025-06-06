@@ -15,7 +15,7 @@ export const setAuthCookie = async (data: { id: string; role: string , feature_f
     secure: true,
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
-    sameSite: 'none',
+    sameSite: 'lax',
   });
 };
 
