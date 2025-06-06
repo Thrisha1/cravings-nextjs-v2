@@ -69,6 +69,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     gst_no
     gst_percentage
     geo_location
+    country_code
     delivery_rate
     business_type
     delivery_rules
