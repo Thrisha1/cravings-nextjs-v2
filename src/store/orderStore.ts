@@ -405,33 +405,15 @@ const useOrderStore = create(
 
       subscribeOrders: (callback) => {
         const userData = useAuthStore.getState().userData;
-        // console.log("Setting up subscription with user data:", {
-        //   userId: userData?.id,
-        //   role: userData?.role,
-        //   partnerId: userData?.role === "captain" ? (userData as Captain).partner_id : userData?.id,
-        //   hasUserData: !!userData,
-        //   timestamp: new Date().toISOString()
-        // });
 
-        // If user data is not available yet, set up a retry mechanism
         if (!userData?.id || !userData?.role) {
           console.log(
             "User data not available yet, will retry subscription setup"
           );
           const retryInterval = setInterval(() => {
             const retryUserData = useAuthStore.getState().userData;
-            console.log("Retrying subscription setup:", {
-              hasUserData: !!retryUserData,
-              userId: retryUserData?.id,
-              role: retryUserData?.role,
-              timestamp: new Date().toISOString(),
-            });
             if (retryUserData?.id && retryUserData?.role) {
               clearInterval(retryInterval);
-              console.log(
-                "User data now available, retrying subscription setup"
-              );
-              // Recursively call subscribeOrders with the new user data
               const unsubscribe = useOrderStore
                 .getState()
                 .subscribeOrders(callback);
@@ -440,9 +422,8 @@ const useOrderStore = create(
                 unsubscribe();
               };
             }
-          }, 1000); // Check every second
+          }, 1000);
 
-          // Return cleanup function
           return () => {
             clearInterval(retryInterval);
           };
@@ -458,13 +439,6 @@ const useOrderStore = create(
           return () => {};
         }
 
-        // console.log("Setting up subscription with partner ID:", {
-        //   partnerId,
-        //   role: userData.role,
-        //   isCaptain: userData.role === "captain",
-        //   timestamp: new Date().toISOString()
-        // });
-
         let subscriptionActive = true;
         const unsubscribe = subscribeToHasura({
           query: subscriptionQuery,
@@ -477,22 +451,6 @@ const useOrderStore = create(
               return;
             }
 
-            // Log captain orders specifically
-            const captainOrders =
-              data?.data?.orders?.filter(
-                (order: any) => order.orderedby === "captain"
-              ) || [];
-            // console.log("Captain orders in subscription:", {
-            //   count: captainOrders.length,
-            //   orders: captainOrders.map((order: any) => ({
-            //     id: order.id,
-            //     captainId: order.captain_id,
-            //     captain: order.captain,
-            //     hasCaptain: !!order.captain,
-            //     captainName: order.captain?.name
-            //   }))
-            // });
-
             if (!data?.data?.orders) {
               console.log("No orders data in subscription response");
               if (callback) callback([]);
@@ -501,18 +459,12 @@ const useOrderStore = create(
 
             const allOrders = data.data.orders
               .map((order: any) => {
-                // Add detailed logging for captain orders
-                // if (order.orderedby === "captain") {
-                //   console.log("Processing captain order:", {
-                //     orderId: order.id,
-                //     orderedby: order.orderedby,
-                //     captainId: order.captain_id,
-                //     captain: order.captain,
-                //     hasCaptain: !!order.captain,
-                //     captainName: order.captain?.name,
-                //     rawOrder: order
-                //   });
-                // }
+                // Ensure captain data is properly included
+                const captainData = order.captainid ? {
+                  id: order.captainid.id,
+                  name: order.captainid.name,
+                  email: order.captainid.email
+                } : null;
 
                 return {
                   id: order.id,
@@ -530,41 +482,24 @@ const useOrderStore = create(
                   userId: order.user_id,
                   orderedby: order.orderedby,
                   captain_id: order.captain_id,
-                  captain: order.captainid,
+                  captain: captainData,  // Use the properly structured captain data
                   user: order.user,
-                  items:
-                    order.order_items?.map((i: any) => ({
-                      id: i.menu?.id,
-                      quantity: i.quantity,
-                      name: i.menu?.name || "Unknown",
-                      price:
-                        i.menu?.offers?.[0]?.offer_price || i.menu?.price || 0,
-                      category: i.menu?.category?.name,
-                      description: i.menu?.description || "",
-                      image_url: i.menu?.image_url || "",
-                      is_top: i.menu?.is_top || false,
-                      is_available: i.menu?.is_available || false,
-                      priority: i.menu?.priority || 0,
-                      offers: i.menu?.offers || [],
-                    })) || [],
+                  items: order.order_items?.map((i: any) => ({
+                    id: i.menu?.id,
+                    quantity: i.quantity,
+                    name: i.menu?.name || "Unknown",
+                    price: i.menu?.offers?.[0]?.offer_price || i.menu?.price || 0,
+                    category: i.menu?.category?.name,
+                    description: i.menu?.description || "",
+                    image_url: i.menu?.image_url || "",
+                    is_top: i.menu?.is_top || false,
+                    is_available: i.menu?.is_available || false,
+                    priority: i.menu?.priority || 0,
+                    offers: i.menu?.offers || [],
+                  })) || [],
                 };
               })
-              .filter(
-                (order: any): order is NonNullable<typeof order> =>
-                  order !== null
-              );
-
-            // console.log("Setting partner orders:", {
-            //   totalOrders: allOrders.length,
-            //   captainOrders: allOrders.filter((o: Order) => o.orderedby === "captain").map((o: Order) => ({
-            //     id: o.id,
-            //     captainId: o.captain_id,
-            //     captain: o.captain,
-            //     hasCaptain: !!o.captain,
-            //     captainName: o.captain?.name
-            //   })),
-            //   timestamp: new Date().toISOString()
-            // });
+              .filter((order: any): order is NonNullable<typeof order> => order !== null);
 
             set({ partnerOrders: allOrders });
             if (callback) callback(allOrders);
@@ -1086,7 +1021,7 @@ const useOrderStore = create(
 
       fetchOrderOfPartner: async (partnerId: string) => {
         try {
-          // First fetch the orders
+          // First fetch the orders with captain data included
           const ordersResponse = await fetchFromHasura(
             `query GetPartnerOrders($partnerId: uuid!) {
               orders(
@@ -1101,19 +1036,20 @@ const useOrderStore = create(
                 type
                 delivery_address
                 delivery_location
-                delivery_location
                 status
                 status_history
                 partner_id
                 gst_included
                 extra_charges
                 phone
-                gst_included
-                extra_charges
-                phone
                 user_id
                 orderedby
                 captain_id
+                captainid {
+                  id
+                  name
+                  email
+                }
                 user {
                   full_name
                   phone
@@ -1122,8 +1058,6 @@ const useOrderStore = create(
                 order_items {
                   id
                   quantity
-                  item
-                  item
                   menu {
                     id
                     name
@@ -1155,75 +1089,45 @@ const useOrderStore = create(
             );
           }
 
-          // Get unique captain IDs from orders
-          const captainIds = ordersResponse.orders
-            .filter((order: any) => order.captain_id)
-            .map((order: any) => order.captain_id);
+          return ordersResponse.orders.map((order: any) => {
+            // Ensure captain data is properly structured
+            const captainData = order.captainid ? {
+              id: order.captainid.id,
+              name: order.captainid.name,
+              email: order.captainid.email
+            } : null;
 
-          // If there are captain orders, fetch captain details
-          let captainMap: Record<string, any> = {};
-          if (captainIds.length > 0) {
-            const captainsResponse = await fetchFromHasura(
-              `query GetCaptains($captainIds: [uuid!]!) {
-                captain(where: {id: {_in: $captainIds}}) {
-                  id
-                  name
-                  email
-                }
-              }`,
-              { captainIds }
-            );
-
-            if (captainsResponse.errors) {
-              console.error(
-                "Error fetching captains:",
-                captainsResponse.errors
-              );
-            } else {
-              // Create a map of captain data by ID
-              captainMap = captainsResponse.captain.reduce(
-                (acc: any, captain: any) => {
-                  acc[captain.id] = captain;
-                  return acc;
-                },
-                {}
-              );
-            }
-          }
-
-          console.log("Fetched orders:", ordersResponse);
-          console.log("Captain map:", captainMap);
-
-          return ordersResponse.orders.map((order: any) => ({
-            id: order.id,
-            totalPrice: order.total_price,
-            createdAt: order.created_at,
-            tableNumber: order.table_number,
-            qrId: order.qr_id,
-            status: order.status,
-            type: order.type,
-            phone: order.phone,
-            deliveryAddress: order.delivery_address,
-            partnerId: order.partner_id,
-            delivery_location: order.delivery_location,
-            gstIncluded: order.gst_included,
-            extraCharges: order.extra_charges || [],
-            delivery_charge: order.delivery_charge,
-            status_history: order.status_history,
-            userId: order.user_id,
-            user: order.user,
-            orderedby: order.orderedby,
-            captain_id: order.captain_id,
-            captain: order.captainid,
-            items: order.order_items.map((i: any) => ({
-              id: i.item.id,
-              quantity: i.quantity,
-              name: i.item.name || "Unknown",
-              price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
-              category: i.menu?.category,
-              stocks: i.menu?.stocks,
-            })),
-          }));
+            return {
+              id: order.id,
+              totalPrice: order.total_price,
+              createdAt: order.created_at,
+              tableNumber: order.table_number,
+              qrId: order.qr_id,
+              status: order.status,
+              type: order.type,
+              phone: order.phone,
+              deliveryAddress: order.delivery_address,
+              partnerId: order.partner_id,
+              delivery_location: order.delivery_location,
+              gstIncluded: order.gst_included,
+              extraCharges: order.extra_charges || [],
+              delivery_charge: order.delivery_charge,
+              status_history: order.status_history,
+              userId: order.user_id,
+              user: order.user,
+              orderedby: order.orderedby,
+              captain_id: order.captain_id,
+              captain: captainData,  // Use the properly structured captain data
+              items: order.order_items.map((i: any) => ({
+                id: i.menu?.id,
+                quantity: i.quantity,
+                name: i.menu?.name || "Unknown",
+                price: i.menu?.offers?.[0]?.offer_price || i.menu?.price || 0,
+                category: i.menu?.category,
+                stocks: i.menu?.stocks,
+              })),
+            };
+          });
         } catch (error) {
           console.error("Error fetching orders:", error);
           toast.error("Failed to load orders");

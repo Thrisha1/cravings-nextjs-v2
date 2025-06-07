@@ -4,10 +4,22 @@ import { format } from "date-fns";
 import { Clock, CheckCircle, XCircle, Printer, Edit } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useReactToPrint } from "react-to-print";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import Link from "next/link";
 // import BillTemplate from "@/components/captain/pos/BillTemplate";
 // import KOTTemplate from "@/components/captain/pos/KOTTemplate";
 import { Captain, useAuthStore } from "@/store/authStore";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface OrderItemCardProps {
   order: Order;
@@ -34,6 +46,8 @@ const OrderItemCard = ({
   const captainData = userData as Captain | null;
 //   const billRef = useRef<HTMLDivElement>(null);
 //   const kotRef = useRef<HTMLDivElement>(null);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
 //   const handlePrintBill = useReactToPrint({
 //     content: () => billRef.current,
@@ -65,6 +79,20 @@ const OrderItemCard = ({
   //   });
   // }
 
+  const handleCancel = async () => {
+    setIsCancelling(true);
+    try {
+      await updateOrderStatus(order.id, "cancelled");
+      setIsCancelDialogOpen(false);
+      toast.success("Order cancelled successfully");
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      toast.error("Failed to cancel order");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
@@ -93,6 +121,31 @@ const OrderItemCard = ({
 
   return (
     <>
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog
+        open={isCancelDialogOpen}
+        onOpenChange={setIsCancelDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Completed Order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this completed order? This action will mark the order as cancelled.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>No, keep it</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancel}
+              disabled={isCancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCancelling ? "Cancelling..." : "Yes, cancel order"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <Card className="p-3 sm:p-4 hover:bg-gray-50 transition-colors">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4">
           {/* Left section - Order details */}
@@ -153,52 +206,50 @@ const OrderItemCard = ({
               <div className="font-medium text-base sm:text-lg">
                 ₹{grantTotal.toFixed(2)}
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom section with buttons */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mt-4">
+          {/* Left side - KOT and Cancel buttons */}
+          <div className="flex gap-3">
+            <Link href={`/kot/${order.id}`} target="_blank" passHref>
               <Button
                 size="sm"
-                variant="ghost"
-                className="ml-4 sm:hidden"
-                onClick={() => {
-                  setOrder(order);
-                  setEditOrderModalOpen(true);
-                }}
+                variant="outline"
+                className="flex items-center gap-2 px-4"
               >
-                <Edit className="h-4 w-4" />
+                <Printer className="h-4 w-4" />
+                Print KOT
               </Button>
-            </div>
-            {order.status === "pending" ? (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="whitespace-nowrap"
-                  onClick={() => updateOrderStatus(order.id, "completed")}
-                >
-                  Complete
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="whitespace-nowrap"
-                  onClick={() => updateOrderStatus(order.id, "cancelled")}
-                >
-                  Cancel
-                </Button>
-              </div>
-            ) : (
-              <div className="mt-4 sm:mt-6">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="hidden sm:inline-flex"
-                  onClick={() => {
-                    setOrder(order);
-                    setEditOrderModalOpen(true);
-                  }}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-              </div>
+            </Link>
+            {order.status === "completed" && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setIsCancelDialogOpen(true)}
+                className="flex items-center gap-2 px-4"
+              >
+                Cancel Order
+              </Button>
             )}
+          </div>
+
+          {/* Right side - Edit button */}
+          <div className="hidden sm:flex">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOrder(order);
+                setEditOrderModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-1.5 text-sm"
+              disabled={!order.items || order.items.length === 0}
+            >
+              <Edit className="h-4 w-4" />
+              Edit Order
+            </Button>
           </div>
         </div>
       </Card>
