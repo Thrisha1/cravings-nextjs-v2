@@ -211,16 +211,16 @@ const OrderItemCard = ({
         </div>
 
         {/* Bottom section with buttons */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mt-4">
+        <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-between">
           {/* Left side - KOT and Cancel buttons */}
-          <div className="flex gap-3">
-            <Link href={`/kot/${order.id}`} target="_blank" passHref>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Link href={`/kot/${order.id}`} target="_blank" passHref className="flex-1 sm:flex-none">
               <Button
                 size="sm"
                 variant="outline"
-                className="flex items-center gap-2 px-4"
+                className="w-full sm:w-auto flex items-center gap-1.5 text-xs py-1 px-2.5 h-8"
               >
-                <Printer className="h-4 w-4" />
+                <Printer className="h-3 w-3" />
                 Print KOT
               </Button>
             </Link>
@@ -229,7 +229,7 @@ const OrderItemCard = ({
                 size="sm"
                 variant="destructive"
                 onClick={() => setIsCancelDialogOpen(true)}
-                className="flex items-center gap-2 px-4"
+                className="flex-1 sm:flex-none w-full sm:w-auto text-xs py-1 px-2.5 h-8"
               >
                 Cancel Order
               </Button>
@@ -237,17 +237,17 @@ const OrderItemCard = ({
           </div>
 
           {/* Right side - Edit button */}
-          <div className="hidden sm:flex">
+          <div className="w-full sm:w-auto mt-2 sm:mt-0">
             <Button
               variant="outline"
               onClick={() => {
                 setOrder(order);
                 setEditOrderModalOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-1.5 text-sm"
+              className="w-full sm:w-auto flex items-center justify-center gap-1.5 py-1 px-2.5 h-8 text-xs"
               disabled={!order.items || order.items.length === 0}
             >
-              <Edit className="h-4 w-4" />
+              <Edit className="h-3 w-3" />
               Edit Order
             </Button>
           </div>

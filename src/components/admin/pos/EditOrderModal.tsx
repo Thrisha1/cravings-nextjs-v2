@@ -194,6 +194,12 @@ export const EditOrderModal = () => {
 
   const handleUpdateOrder = async () => {
     try {
+      // Prevent updating if there are no items
+      if (!items || items.length === 0) {
+        toast.error("Cannot save order with no items");
+        return;
+      }
+
       setUpdating(true);
 
       // Calculate total with GST if applicable
@@ -485,7 +491,10 @@ export const EditOrderModal = () => {
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleUpdateOrder} disabled={updating || loading}>
+          <Button 
+            onClick={handleUpdateOrder} 
+            disabled={updating || loading || !items || items.length === 0}
+          >
             {updating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

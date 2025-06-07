@@ -132,11 +132,12 @@ export const getOrderByIdQuery = `
       status
       phone
       partner_id
-      order_number
+      notes
+      gst_included
+      extra_charges
       captainid {
         id
         name
-        phone
         email
       }
       order_items {

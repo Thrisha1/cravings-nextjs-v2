@@ -355,53 +355,51 @@ const OrderItemCard = ({
         </div>
 
         <div className="mt-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div className="flex gap-2 flex-wrap">
-            <Link href={`/kot/${localOrder.id}`} target="_blank" passHref>
-              <Button size="sm" variant="outline">
+          {/* Left side buttons */}
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <Link href={`/kot/${localOrder.id}`} target="_blank" passHref className="flex-1 sm:flex-none">
+              <Button size="sm" variant="outline" className="w-full sm:w-auto">
                 <Printer className="h-4 w-4 mr-2" />
                 Print KOT
               </Button>
             </Link>
-            <Link target="_blank" href={`/bill/${localOrder.id}`} passHref>
-              <Button size="sm" variant="outline">
+            <Link target="_blank" href={`/bill/${localOrder.id}`} passHref className="flex-1 sm:flex-none">
+              <Button size="sm" variant="outline" className="w-full sm:w-auto">
                 <Printer className="h-4 w-4 mr-2" />
                 Print Bill
               </Button>
             </Link>
 
-            {localOrder.status === "pending" && (
-              <>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setOrder(localOrder);
-                    setEditOrderModalOpen(true);
-                  }}
-                  disabled={!localOrder.items || localOrder.items.length === 0}
-                  className="px-3 py-1"
-                >
-                  <Edit className="h-3.5 w-3.5 mr-1.5" />
-                  Edit Order
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Order
-                </Button>
-              </>
-            )}
+            <Button
+              size="sm"
+              onClick={() => {
+                setOrder(localOrder);
+                setEditOrderModalOpen(true);
+              }}
+              disabled={!localOrder.items || localOrder.items.length === 0}
+              className="flex-1 sm:flex-none w-full sm:w-auto"
+            >
+              <Edit className="h-3.5 w-3.5 mr-1.5" />
+              Edit Order
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => updateOrderStatus("cancelled")}
+              className="flex-1 sm:flex-none w-full sm:w-auto"
+            >
+              Cancel Order
+            </Button>
           </div>
 
-          <div className="flex gap-2 flex-wrap mt-3 sm:mt-0 w-full sm:w-auto">
+          {/* Right side buttons */}
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
             {localOrder.status === "pending" && (
               <>
                 {!isAccepted && (
                   <Button
-                    size="sm"
-                    className="bg-green-600 text-white flex-1 sm:flex-auto"
+                    size="default"
+                    className="bg-green-600 text-white w-full sm:w-auto"
                     onClick={async () => {
                       await optimisticUpdateStatus("accepted", (orders) => {
                         setOrder(orders[0]);
@@ -414,8 +412,8 @@ const OrderItemCard = ({
 
                 {isAccepted && !isDispatched && (
                   <Button
-                    size="sm"
-                    className="bg-blue-600 text-white flex-1 sm:flex-auto"
+                    size="default"
+                    className="bg-blue-600 text-white w-full sm:w-auto"
                     onClick={async () => {
                       await optimisticUpdateStatus("dispatched", (orders) => {
                         setOrder(orders[0]);
@@ -429,9 +427,9 @@ const OrderItemCard = ({
                 {isDispatched && (
                   <>
                     <Button
-                      size="sm"
+                      size="default"
                       variant="outline"
-                      className="flex-1 sm:flex-auto"
+                      className="w-full sm:w-auto"
                       onClick={async () => {
                         // Rollback to accepted status
                         const updatedHistory = setStatusHistory(
@@ -463,10 +461,9 @@ const OrderItemCard = ({
                       Cancel Dispatch
                     </Button>
                     <Button
-                      size="sm"
-                      className="bg-purple-600 text-white flex-1 sm:flex-auto"
+                      size="default"
+                      className="bg-purple-600 text-white w-full sm:w-auto"
                       onClick={async () => {
-                        // First update status history to completed
                         await optimisticUpdateStatus("completed", (orders) => {
                           setOrder(orders[0]);
                         });
@@ -478,23 +475,25 @@ const OrderItemCard = ({
                 )}
 
                 <Button
-                  size="sm"
+                  size="default"
                   variant="destructive"
-                  className="flex-1 sm:flex-auto"
-                  onClick={() => updateOrderStatus("cancelled")}
+                  className="w-full sm:w-auto text-base py-2"
+                  onClick={() => setIsDeleteDialogOpen(true)}
                 >
-                  Cancel Order
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Order
                 </Button>
               </>
             )}
             {localOrder.status === "completed" && (
               <Button
-                size="sm"
+                size="default"
                 variant="destructive"
-                className="flex-1 sm:flex-auto"
-                onClick={() => setIsCancelDialogOpen(true)}
+                className="w-full sm:w-auto text-base py-2"
+                onClick={() => setIsDeleteDialogOpen(true)}
               >
-                Cancel Order
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Order
               </Button>
             )}
           </div>
