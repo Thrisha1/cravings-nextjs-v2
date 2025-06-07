@@ -27,6 +27,9 @@ export async function sendOrderNotification(
       token,
       title: "New Order Notification",
       body: `New order has been placed with ID: ${orderId}`,
+      data : {
+        url : "https://cravings.live/admin/orders"
+      }
     };    
 
     const response = await fetch(
