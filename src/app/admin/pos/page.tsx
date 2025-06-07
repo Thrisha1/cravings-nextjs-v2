@@ -9,10 +9,12 @@ import { usePOSStore } from "@/store/posStore";
 import Link from "next/link";
 import { RiBillLine } from "react-icons/ri";
 import AuthInitializer from "@/providers/AuthInitializer";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 
 export default function Page() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const { setPostCheckoutModalOpen } = usePOSStore();
+  const { setPostCheckoutModalOpen, cartItems, clearCart } = usePOSStore();
 
   return (
     <>
@@ -22,14 +24,27 @@ export default function Page() {
           <div className="container mx-auto">
             <div className="flex justify-between items-center">
               <h1 className="text-xl sm:text-2xl font-bold">POS System</h1>
-              <Link
-                href="/admin/orders"
-                className="bg-black text-white hover:text-black border-2 hover:border-black hover:bg-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 text-sm sm:text-base"
-              >
-                <RiBillLine className="w-4 h-4" />
-                <span className="hidden sm:inline">Show Orders</span>
-                <span className="sm:hidden">Orders</span>
-              </Link>
+              <div className="flex items-center gap-2">
+                {cartItems.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={clearCart}
+                    className="h-8 w-8"
+                    title="Clear Cart"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+                <Link
+                  href="/admin/orders"
+                  className="bg-black text-white hover:text-black border-2 hover:border-black hover:bg-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 text-sm sm:text-base"
+                >
+                  <RiBillLine className="w-4 h-4" />
+                  <span className="hidden sm:inline">Show Orders</span>
+                  <span className="sm:hidden">Orders</span>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
