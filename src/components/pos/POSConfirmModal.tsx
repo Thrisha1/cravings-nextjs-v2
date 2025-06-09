@@ -303,9 +303,12 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
             {/* Extra Charges */}
             {extraCharges.length > 0 && (
               <>
+                <div className="flex justify-between text-sm border-t pt-2">
+                  <span className="font-medium">Extra Charges</span>
+                </div>
                 {extraCharges.map((charge, index) => (
-                  <div key={index} className="flex justify-between text-sm border-t pt-2">
-                    <span>{charge.name}</span>
+                  <div key={index} className="flex justify-between text-sm">
+                    <span className="ml-4">{charge.name}</span>
                     <span>{partnerData?.currency || "$"}{charge.amount.toFixed(2)}</span>
                   </div>
                 ))}
