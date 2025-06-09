@@ -75,19 +75,22 @@ export const updateOrderMutation = `
     $id: uuid!,
     $totalPrice: float8,
     $phone: String,
-    $tableNumber: Int
+    $tableNumber: Int,
+    $extraCharges: jsonb
   ) {
     update_orders_by_pk(
       pk_columns: { id: $id }
       _set: {
         total_price: $totalPrice,
         phone: $phone,
-        table_number: $tableNumber
+        table_number: $tableNumber,
+        extra_charges: $extraCharges
       }
     ) {
       id
       total_price
       table_number
+      extra_charges
     }
   }
 `;

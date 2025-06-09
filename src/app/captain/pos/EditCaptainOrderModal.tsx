@@ -23,6 +23,12 @@ import { Captain, Partner, useAuthStore } from "@/store/authStore";
 import { Order } from "@/store/orderStore";
 import useOrderStore from "@/store/orderStore";
 
+interface ExtraCharge {
+  id?: string;
+  name: string;
+  amount: number;
+}
+
 export const EditCaptainOrderModal = () => {
   const {
     order,
@@ -64,6 +70,8 @@ export const EditCaptainOrderModal = () => {
   const [newItemId, setNewItemId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showExtraItems, setShowExtraItems] = useState(false);
+  const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
+  const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0 });
 
   const currency = partnerData?.currency || "$";
   const gstPercentage = partnerData?.gst_percentage || 0;
@@ -94,6 +102,8 @@ export const EditCaptainOrderModal = () => {
     setNewItemId(null);
     setSearchQuery("");
     setShowExtraItems(false);
+    setExtraCharges([]);
+    setNewExtraCharge({ name: "", amount: 0 });
   };
 
   useEffect(() => {
@@ -120,6 +130,11 @@ export const EditCaptainOrderModal = () => {
         setTotalPrice(foundOrder.totalPrice);
         setTableNumber(foundOrder.tableNumber || null);
         setPhone(foundOrder.phone || null);
+        
+        // Load extra charges if they exist
+        if (foundOrder.extraCharges) {
+          setExtraCharges(foundOrder.extraCharges);
+        }
       }
     }
   }, [isOpen, order?.id, partnerOrders]);
@@ -208,10 +223,13 @@ export const EditCaptainOrderModal = () => {
       };
     }>
   ) => {
-    return items.reduce(
+    const subtotal = items.reduce(
       (sum, item) => sum + item.menu.price * item.quantity,
       0
     );
+    const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
+    const gstAmount = gstPercentage > 0 ? (subtotal * gstPercentage) / 100 : 0;
+    return subtotal + extraChargesTotal + gstAmount;
   };
 
   const handleQuantityChange = (index: number, newQuantity: number) => {
@@ -257,7 +275,7 @@ export const EditCaptainOrderModal = () => {
           image_url: menuItem.image_url,
           is_top: menuItem.is_top,
           is_available: menuItem.is_available,
-          priority: menuItem.priority
+          priority: menuItem.priority,
         },
       };
       const updatedItems = [...items, newItem];
@@ -268,86 +286,95 @@ export const EditCaptainOrderModal = () => {
     setNewItemId(null);
   };
 
+  const handleAddExtraCharge = () => {
+    if (!newExtraCharge.name || newExtraCharge.amount <= 0) {
+      toast.error("Please enter a valid charge name and amount");
+      return;
+    }
+
+    const charge: ExtraCharge = {
+      id: Date.now().toString(),
+      name: newExtraCharge.name,
+      amount: newExtraCharge.amount,
+    };
+
+    setExtraCharges([...extraCharges, charge]);
+    setNewExtraCharge({ name: "", amount: 0 });
+    setTotalPrice(calculateTotal(items));
+  };
+
+  const handleRemoveExtraCharge = (index: number) => {
+    const updatedCharges = [...extraCharges];
+    updatedCharges.splice(index, 1);
+    setExtraCharges(updatedCharges);
+    setTotalPrice(calculateTotal(items));
+  };
+
   const handleUpdateOrder = async () => {
     try {
-      setUpdating(true);
-
-      if (!captainData?.partner_id || !order?.id) {
-        throw new Error("Partner ID or Order ID not available");
+      // Prevent updating if there are no items
+      if (!items || items.length === 0) {
+        toast.error("Cannot save order with no items");
+        return;
       }
 
+      setUpdating(true);
+
       // Calculate total with GST if applicable
-      const subtotal = calculateTotal(items);
-      const finalTotal =
-        gstPercentage > 0
-          ? subtotal + (subtotal * gstPercentage) / 100
-          : subtotal;
+      const subtotal = items.reduce(
+        (sum, item) => sum + item.menu.price * item.quantity,
+        0
+      );
+      const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
+      const gstAmount = gstPercentage > 0 ? (subtotal * gstPercentage) / 100 : 0;
+      const finalTotal = subtotal + extraChargesTotal + gstAmount;
 
       // Update order
       await fetchFromHasura(updateOrderMutation, {
-        id: order.id,
+        id: order?.id,
         totalPrice: finalTotal,
         phone: phone || "",
-        tableNumber: tableNumber || null
+        extraCharges: extraCharges.length > 0 ? extraCharges : null,
       });
 
       // Update order items
       await fetchFromHasura(updateOrderItemsMutation, {
-        orderId: order.id,
+        orderId: order?.id,
         items: items.map((item) => ({
-          order_id: order.id,
+          order_id: order?.id,
           menu_id: item.id,
           quantity: item.quantity,
         })),
       });
 
-      // Update local state with complete menu data
-      const updatedOrder = {
-        ...order,
-        totalPrice: finalTotal,
-        tableNumber: tableNumber || 0,
-        phone: phone || "",
-        partnerId: captainData.partner_id,
-        items: items.map((item) => ({
-          id: item.id,
-          name: item.menu.name,
-          price: item.menu.price,
-          quantity: item.quantity,
-          category: {
-            name: item.menu.category?.name || "Uncategorized",
-            id: item.menu.category?.id || crypto.randomUUID(),
-            priority: item.menu.category?.priority || 0
-          },
-          image_url: item.menu.image_url || "",
-          description: item.menu.description || "",
-          is_top: item.menu.is_top || false,
-          is_available: item.menu.is_available || false,
-          created_at: new Date().toISOString(),
-          priority: item.menu.priority || 0,
-          offers: [{
-            offer_price: item.menu.price,
+      // Update local state
+      if (order) {
+        setOrder({
+          ...order,
+          totalPrice: finalTotal,
+          tableNumber: tableNumber || 0,
+          phone: phone || "",
+          extraCharges: extraCharges,
+          items: items.map((item) => ({
+            id: item.id,
+            name: item.menu.name,
+            price: item.menu.price,
+            quantity: item.quantity,
+            category: item.menu.category || {
+              name: "",
+              id: "",
+              priority: 0,
+            },
+            image_url: item.menu.image_url || "",
+            description: item.menu.description || "",
+            is_top: item.menu.is_top || false,
+            is_available: item.menu.is_available || true,
             created_at: new Date().toISOString(),
-            end_time: new Date(Date.now() + 86400000).toISOString(),
-            start_time: new Date().toISOString(),
-            enquiries: 0,
-            items_available: 0,
-            id: crypto.randomUUID(),
-            menu: {
-              id: item.id,
-              name: item.menu.name,
-              price: item.menu.price,
-              category: {
-                name: item.menu.category?.name || "Uncategorized",
-                id: item.menu.category?.id || crypto.randomUUID(),
-                priority: item.menu.category?.priority || 0
-              },
-              description: item.menu.description || "",
-              image_url: item.menu.image_url || "",
-            }
-          }]
-        }))
-      } as Order;
-      setOrder(updatedOrder);
+            priority: item.menu.priority || 0,
+            offers: [],
+          })),
+        });
+      }
 
       toast.success("Order updated successfully");
       onClose();
@@ -359,275 +386,257 @@ export const EditCaptainOrderModal = () => {
     }
   };
 
-  // Add a loading state for menu items
-  const [menuLoading, setMenuLoading] = useState(false);
-
-  // Update the menu loading state
-  useEffect(() => {
-    if (isOpen && order?.partnerId) {
-      setMenuLoading(true);
-      fetchMenu(order.partnerId, true)
-        .finally(() => setMenuLoading(false));
-    }
-  }, [isOpen, order?.partnerId, fetchMenu]);
-
-  // Always fetch menu when modal opens and order?.partnerId is available
-  useEffect(() => {
-    if (isOpen && order?.partnerId) {
-      fetchMenu(order.partnerId, true);
-    }
-  }, [isOpen, order?.partnerId, fetchMenu]);
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="fixed inset-0 w-full h-full max-w-none max-h-none p-0 m-0 flex flex-col bg-white z-[9999] rounded-none border-none overflow-hidden"
-        style={{ 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0,
-          transform: 'none',
-          height: '100vh',
-          width: '100vw'
-        }}
-      >
-        <DialogHeader className="flex-shrink-0 p-4 border-b bg-white">
-          <DialogTitle className="text-lg font-semibold">
-            Edit Order #{order?.id?.split("-")[0] || ""}
-          </DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Order #{order?.id?.split("-")[0]}</DialogTitle>
+          <DialogDescription>
             {tableNumber ? `Table ${tableNumber}` : ""}
-            {partnerData?.store_name && (
-              <span className="ml-2">
-                - {partnerData.store_name}
-              </span>
-            )}
           </DialogDescription>
         </DialogHeader>
 
         {loading ? (
-          <div className="flex-1 flex justify-center items-center">
+          <div className="flex justify-center items-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : (
-          <>
-            <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto pb-[1000px] min-h-0">
-              {/* Order Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {userData?.role !== "user" && (
-                  <>
-                    <div className="space-y-1.5">
-                      <label className="block text-sm font-medium">
-                        Table Number
-                      </label>
-                      <Input
-                        type="number"
-                        value={tableNumber || ""}
-                        onChange={(e) =>
-                          setTableNumber(Number(e.target.value) || null)
-                        }
-                        placeholder="Table number"
-                        className="h-9"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="block text-sm font-medium">Phone</label>
-                      <Input
-                        type="tel"
-                        value={phone || ""}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="Customer phone"
-                        className="h-9"
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium">Total</label>
-                  <div className="flex items-center h-9 px-3 rounded-md border bg-background text-sm">
-                    {currency}
-                    {totalPrice.toFixed(2)}
-                    {gstPercentage > 0 && (
-                      <span className="text-xs text-muted-foreground ml-2">
-                        (incl. {gstPercentage}% GST: {currency}
-                        {((totalPrice * gstPercentage) / 100).toFixed(2)})
-                      </span>
-                    )}
-                  </div>
-                </div>
+          <div className="space-y-6">
+            {/* Order Details */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">
+                  Table Number
+                </label>
+                <Input
+                  type="number"
+                  value={tableNumber || ""}
+                  onChange={(e) =>
+                    setTableNumber(Number(e.target.value) || null)
+                  }
+                  placeholder="Table number"
+                />
               </div>
 
-              {/* Add Extra Items Section */}
-              <div>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowExtraItems(!showExtraItems)}
-                  className="w-full mb-4"
-                >
-                  {showExtraItems ? "Hide Extra Items" : "Add Extra Item"}
-                </Button>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">Phone</label>
+                <Input
+                  type="tel"
+                  value={phone || ""}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Customer phone"
+                />
+              </div>
 
-                {showExtraItems && (
-                  <div className="space-y-3">
-                    <Input
-                      placeholder="Search menu items..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="h-9"
-                    />
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">Total</label>
+                <div className="flex items-center h-10 px-3 py-2 rounded-md border bg-background text-sm">
+                  {currency}
+                  {totalPrice.toFixed(2)}
+                  {gstPercentage > 0 && (
+                    <span className="text-xs text-muted-foreground ml-2">
+                      (incl. {gstPercentage}% GST: {currency}
+                      {((items.reduce((sum, item) => sum + item.menu.price * item.quantity, 0) * gstPercentage) / 100).toFixed(2)})
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
 
-                    <div className="border rounded-lg max-h-48 overflow-y-auto">
-                      {menuLoading ? (
-                        <div className="p-3 text-center">
-                          <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                          <div className="text-muted-foreground">Loading menu items...</div>
-                        </div>
-                      ) : menuItems.length === 0 ? (
-                        <div className="p-3 text-center text-muted-foreground">
-                          No menu items available
-                        </div>
-                      ) : filteredMenuItems.length === 0 ? (
-                        <div className="p-3 text-center text-muted-foreground">
-                          {searchQuery ? "No items found" : "No menu items available"}
-                        </div>
-                      ) : (
-                        <div className="divide-y">
-                          {filteredMenuItems.map((item) => (
-                            <div
-                              key={item.id}
-                              className="p-2.5 flex justify-between items-center hover:bg-accent cursor-pointer"
-                              onClick={() => {
-                                console.log("Selected menu item:", {
-                                  id: item.id,
-                                  name: item.name,
-                                  price: item.price
-                                });
-                                setNewItemId(item.id!);
-                                setSearchQuery("");
-                              }}
-                            >
-                              <div>
-                                <div className="font-medium text-sm">{item.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {currency}
-                                  {item.price.toFixed(2)}
-                                </div>
-                              </div>
-                              <Plus className="h-4 w-4" />
+            {/* Extra Charges */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-medium mb-3">Extra Charges</h3>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Charge name"
+                    value={newExtraCharge.name}
+                    onChange={(e) => setNewExtraCharge({ ...newExtraCharge, name: e.target.value })}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Amount"
+                    value={newExtraCharge.amount || ""}
+                    onChange={(e) => setNewExtraCharge({ ...newExtraCharge, amount: Number(e.target.value) })}
+                  />
+                  <Button onClick={handleAddExtraCharge} className="whitespace-nowrap">
+                    Add Charge
+                  </Button>
+                </div>
+
+                {extraCharges.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="divide-y">
+                      {extraCharges.map((charge, index) => (
+                        <div
+                          key={charge.id || index}
+                          className="p-3 flex justify-between items-center"
+                        >
+                          <div>
+                            <div className="font-medium">{charge.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {currency}{charge.amount.toFixed(2)}
                             </div>
-                          ))}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => handleRemoveExtraCharge(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
-                      )}
+                      ))}
                     </div>
+                  </div>
+                )}
+              </div>
+            </div>
 
-                    {newItemId && (
-                      <div className="flex gap-2">
-                        <div className="flex-1 border rounded-lg p-2.5 text-sm">
-                          {menuItems.find((item) => item.id === newItemId)?.name} -{" "}
-                          {currency}
-                          {menuItems
-                            .find((item) => item.id === newItemId)
-                            ?.price.toFixed(2)}
-                        </div>
-                        <Button onClick={handleAddItem} size="sm">Add</Button>
+            {/* Add New Item */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-medium mb-3">Add New Item</h3>
+              <div className="space-y-3">
+                <Input
+                  placeholder="Search menu items..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+
+                {searchQuery && (
+                  <div className="border rounded-lg max-h-52 overflow-y-auto">
+                    {filteredMenuItems.length === 0 ? (
+                      <div className="p-3 text-center text-muted-foreground">
+                        No items found
+                      </div>
+                    ) : (
+                      <div className="divide-y">
+                        {filteredMenuItems.map((item) => (
+                          <div
+                            key={item.id}
+                            className="p-3 flex justify-between items-center hover:bg-accent cursor-pointer"
+                            onClick={() => {
+                              setNewItemId(item.id!);
+                              setSearchQuery("");
+                            }}
+                          >
+                            <div>
+                              <div className="font-medium">{item.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {currency}
+                                {item.price.toFixed(2)}
+                              </div>
+                            </div>
+                            <Plus className="h-4 w-4" />
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
                 )}
-              </div>
 
-              {/* Current Items */}
-              <div>
-                <h3 className="font-medium mb-2">Current Items</h3>
-                <div className="border rounded-lg overflow-hidden">
-                  {items.length === 0 ? (
-                    <div className="p-4 text-center text-muted-foreground">
-                      No items in this order
+                {newItemId && (
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex-1 border rounded-lg p-3">
+                      {menuItems.find((item) => item.id === newItemId)?.name} -{" "}
+                      {currency}
+                      {menuItems
+                        .find((item) => item.id === newItemId)
+                        ?.price.toFixed(2)}
                     </div>
-                  ) : (
-                    <div className="divide-y">
-                      {items.map((item, index) => (
-                        <div
-                          key={index}
-                          className="p-2.5 flex justify-between items-center"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm truncate">{item.menu.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {currency}
-                              {item.menu.price.toFixed(2)} each
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 ml-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() =>
-                                handleQuantityChange(index, item.quantity - 1)
-                              }
-                            >
-                              <Minus className="h-3.5 w-3.5" />
-                            </Button>
-
-                            <span className="w-6 text-center text-sm">
-                              {item.quantity}
-                            </span>
-
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() =>
-                                handleQuantityChange(index, item.quantity + 1)
-                              }
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                            </Button>
-
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive"
-                              onClick={() => handleRemoveItem(index)}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 mt-8 border-t pt-4">
-                <Button variant="outline" onClick={onClose} className="flex-1">
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleUpdateOrder} 
-                  disabled={updating || loading}
-                  className="flex-1"
-                >
-                  {updating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    "Update Order"
-                  )}
-                </Button>
+                    <Button onClick={handleAddItem} className="sm:w-auto w-full">Add to Order</Button>
+                  </div>
+                )}
               </div>
             </div>
-          </>
+
+            {/* Current Items */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-medium mb-3">Current Items</h3>
+              <div className="rounded-lg overflow-hidden border">
+                {items.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground">
+                    No items in this order
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {items.map((item, index) => (
+                      <div
+                        key={index}
+                        className="p-3 flex flex-col sm:flex-row justify-between gap-2"
+                      >
+                        <div className="flex-1">
+                          <div className="font-medium">{item.menu.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {currency}
+                            {item.menu.price.toFixed(2)} each
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() =>
+                              handleQuantityChange(index, item.quantity - 1)
+                            }
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+
+                          <span className="w-8 text-center">
+                            {item.quantity}
+                          </span>
+
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() =>
+                              handleQuantityChange(index, item.quantity + 1)
+                            }
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => handleRemoveItem(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
+
+        <div className="flex justify-end gap-2 pt-4">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleUpdateOrder} 
+            disabled={updating || loading || !items || items.length === 0}
+          >
+            {updating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              "Update Order"
+            )}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

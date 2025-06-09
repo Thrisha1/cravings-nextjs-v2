@@ -146,6 +146,11 @@ const OrderItemCard = ({
     setIsCancelling(true);
     try {
       await updateOrderStatus("cancelled");
+      // Update local order status immediately for optimistic UI update
+      setLocalOrder(prev => ({
+        ...prev,
+        status: "cancelled"
+      }));
       setIsCancelDialogOpen(false);
       toast.success("Order cancelled successfully");
     } catch (error) {
@@ -198,9 +203,9 @@ const OrderItemCard = ({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Completed Order?</AlertDialogTitle>
+            <AlertDialogTitle>Cancel Order?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel this completed order? This action will mark the order as cancelled.
+              Are you sure you want to cancel this order? This action will mark the order as cancelled and cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -385,10 +390,11 @@ const OrderItemCard = ({
             <Button
               size="sm"
               variant="destructive"
-              onClick={() => updateOrderStatus("cancelled")}
+              onClick={() => setIsCancelDialogOpen(true)}
+              disabled={localOrder.status === "cancelled"}
               className="flex-1 sm:flex-none w-full sm:w-auto"
             >
-              Cancel Order
+              {localOrder.status === "cancelled" ? "Cancelled" : "Cancel Order"}
             </Button>
           </div>
 
