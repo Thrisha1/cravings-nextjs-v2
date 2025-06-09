@@ -21,10 +21,12 @@ export async function sendOrderNotification(
       return;
     }
 
-    const token = device_tokens[0].device_token;
+    const tokens = device_tokens.map((token : {
+      device_token : string
+    }) => token.device_token);
 
     const data = {
-      token,
+      tokens,
       title: "New Order Notification",
       body: `New order has been placed with ID: ${orderId}`,
       data : {
@@ -33,7 +35,7 @@ export async function sendOrderNotification(
     };    
 
     const response = await fetch(
-      "https://notification-server-khaki.vercel.app/api/notifications/send-to-device",
+      "https://notification-server-khaki.vercel.app/api/notifications/send-to-devices",
       {
         method: "POST",
         headers: {
