@@ -23,6 +23,7 @@ import {
   setStatusHistory,
   toStatusDisplayFormat,
 } from "@/lib/statusHistory";
+import { sendOrderNotification } from "@/app/actions/sendOrderNotification";
 
 export interface OrderItem extends HotelDataMenus {
   id: string;
@@ -1009,6 +1010,7 @@ const useOrderStore = create(
           }));
 
           toast.success("Order placed successfully!");
+          await sendOrderNotification(orderId, hotelData.id);
           return newOrder;
         } catch (error) {
           console.error("Order placement error:", error);

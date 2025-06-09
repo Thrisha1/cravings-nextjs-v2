@@ -8,7 +8,7 @@ import OfferCardsLoading from "@/components/OfferCardsLoading";
 import SearchBox from "@/components/SearchBox";
 import { CommonOffer } from "@/components/superAdmin/OfferUploadSuperAdmin";
 import { fetchFromHasura } from "@/lib/hasuraClient";
-import { MapPin } from "lucide-react";
+import { MapPin, Navigation, RefreshCw } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
@@ -33,18 +33,25 @@ const Explore = ({
   const [offers, setOffers] = useState<CommonOffer[]>(commonOffers);
   const [currentDistrict] = useState(initialDistrict);
   const [currentSearchQuery] = useState(initialSearchQuery);
+  const [isRefreshingLocation, setIsRefreshingLocation] = useState(false);
   const { ref, inView } = useInView();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (navigator.geolocation && !hasUserLocation) {
+    const sessionKey = "location_session";
+    const currentSession = sessionStorage.getItem(sessionKey);
+
+    if (navigator.geolocation && (!currentSession || !hasUserLocation)) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
           try {
             if (latitude && longitude) {
               await setLocationCookie(latitude, longitude);
-              window.location.reload();
+              sessionStorage.setItem(sessionKey, "active");
+              if (!hasUserLocation) {
+                window.location.reload();
+              }
             }
           } catch (error) {
             console.error("Error setting location:", error);
@@ -78,10 +85,8 @@ const Explore = ({
 
       const locationCookie = await getLocationCookie();
 
-      // if (locationCookie) {
       variables.user_lat = locationCookie?.lat || 0;
       variables.user_lng = locationCookie?.lng || 0;
-      // }
 
       const response = await fetchFromHasura(
         getAllCommonOffers(locationCookie || undefined),
@@ -144,16 +149,69 @@ const Explore = ({
     }
   };
 
+  const refreshLocation = () => {
+    setIsRefreshingLocation(true);
+    toast.info("Updating your location...");
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            if (latitude && longitude) {
+              await setLocationCookie(latitude, longitude);
+              toast.success("Location updated successfully");
+              window.location.reload();
+            }
+          } catch (error) {
+            console.error("Error setting location:", error);
+            toast.error("Failed to update location");
+            setIsRefreshingLocation(false);
+          }
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          toast.error("Failed to access your location");
+          setIsRefreshingLocation(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0, // Force fresh location
+        }
+      );
+    } else {
+      toast.error("Geolocation is not supported by your browser");
+      setIsRefreshingLocation(false);
+    }
+  };
+
   return (
     <div className="min-h-[100dvh] w-full bg-orange-50 px-3 py-3 relative pb-24">
       <div className="max-w-7xl mx-auto">
+        <div className="flex justify-start">
+          <button
+            onClick={refreshLocation}
+            disabled={isRefreshingLocation}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs bg-white border border-orange-300 rounded-full hover:bg-orange-50 transition-colors disabled:opacity-50"
+          >
+            <Navigation
+              className={`w-4 h-4 ${
+                isRefreshingLocation ? "animate-spin" : ""
+              }`}
+            />
+            <span>Refresh Location</span>
+          </button>
+        </div>
         <div className="flex justify-between items-start md:items-center gap-3 my-4">
           <div className="flex flex-col">
             <h1 className="text-xl md:text-3xl font-bold text-gray-900">
               Explore Delicious Foods
             </h1>
           </div>
-          <LocationSelection />
+          <div className="flex items-center gap-2">
+            <LocationSelection />
+          </div>
         </div>
 
         <SearchBox />

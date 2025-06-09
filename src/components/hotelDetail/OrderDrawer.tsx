@@ -238,7 +238,7 @@ const OrderDrawer = ({
       hotelData?.phone ||
       "8590115462";
 
-    return `https://api.whatsapp.com/send?phone=+91${number}&text=${encodeURIComponent(
+    return `https://api.whatsapp.com/send?phone=${hotelData?.country_code || "+91"}${number}&text=${encodeURIComponent(
       whatsappMsg
     )}`;
   };

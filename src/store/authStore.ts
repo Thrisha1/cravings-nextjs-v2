@@ -88,6 +88,8 @@ export interface Partner extends BaseUser {
   gst_percentage?: number;
   business_type?: string; 
   is_shop_open: boolean;
+  country?: string;
+  country_code?: string;
 }
 
 export interface SuperAdmin extends BaseUser {
@@ -380,6 +382,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!partner) throw new Error("Invalid credentials");
 
       await setAuthCookie({ id: partner.id, role: "partner" , feature_flags: partner.feature_flags || "" , status: partner.status || "inactive" });
+      localStorage.setItem("userId", partner.id);
       set({ userData: { ...partner, role: "partner" } , features : getFeatures(partner?.feature_flags as string) });
     } catch (error) {
       console.error("Login failed:", error);
@@ -423,6 +426,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       setAuthCookie({ id: user.id, role: "user" , feature_flags: "" , status : "active"});
+      localStorage.setItem("userId", user.id);
+
       set({ userData: { ...user, role: "user" } });
       return {
         ...user,
@@ -447,6 +452,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       const superAdmin = response.super_admin[0];
       setAuthCookie({ id: superAdmin.id, role: "superadmin" , feature_flags: "" , status : "active" });
+      localStorage.setItem("userId", superAdmin.id);
       set({ userData: { ...superAdmin, role: "superadmin" } });
     } catch (error) {
       console.error("Super admin login failed:", error);

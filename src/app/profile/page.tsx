@@ -1,13 +1,15 @@
 "use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// import { Badge } from "@/components/ui/badge";
 import {
+  // UtensilsCrossed,
   Tag,
   LogOutIcon,
   Pencil,
   Trash2,
   ArrowRight,
   X,
-  Loader2,
+  // Loader2,
 } from "lucide-react";
 import { AuthUser, GeoLocation, Partner, useAuthStore } from "@/store/authStore";
 import { useLocationStore } from "@/store/geolocationStore";
@@ -39,6 +41,7 @@ import { processImage } from "@/lib/processImage";
 import { Textarea } from "@/components/ui/textarea";
 import Img from "@/components/Img";
 import { Switch } from "@/components/ui/switch";
+// import { HotelData } from "@/app/hotels/[...id]/page";
 import { getSocialLinks } from "@/lib/getSocialLinks";
 import {
   FeatureFlags,
@@ -48,7 +51,6 @@ import {
 import { updateAuthCookie } from "../auth/actions";
 import { DeliveryRules, Order } from "@/store/orderStore";
 import { createCaptainMutation, getCaptainsQuery, deleteCaptainMutation } from "@/api/captains";
-import { Label } from "@/components/ui/label";
 import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/DeliveryAndGeoLocationSettings";
 import useOrderStore from "@/store/orderStore";
 import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
@@ -88,11 +90,14 @@ interface HotelData extends Partner {
   offers: Offer[];
   menus: any[];
 }
-
-interface GeoJSONPoint {
-  type: "Point";
-  coordinates: [number, number];
-}
+import { countryCodes } from "@/utils/countryCodes";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Currencies = [
   { label: "INR", value: "₹" },
@@ -139,6 +144,7 @@ export default function ProfilePage() {
     instaLink: false,
     gst: false,
     deliverySettings: false,
+    countryCode: false,
   });
   const [isEditing, setIsEditing] = useState({
     upiId: false,
@@ -179,7 +185,6 @@ export default function ProfilePage() {
   );
   const [isBannerUploading, setBannerUploading] = useState(false);
   const [isBannerChanged, setIsBannerChanged] = useState(false);
-  const [showPricing, setShowPricing] = useState(true);
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
   const [userFeatures, setUserFeatures] = useState<FeatureFlags | null>(null);
   const [footNote, setFootNote] = useState<string>("");
@@ -195,6 +200,10 @@ export default function ProfilePage() {
   const [captainOrders, setCaptainOrders] = useState<CaptainOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const { subscribeOrders } = useOrderStore();
+  const [isEditingCountryCode, setIsEditingCountryCode] = useState(false);
+  const [countryCode, setCountryCode] = useState( userData?.role === "partner" ? userData?.country_code || "+91" : "+91");
+  const [countryCodeSearch, setCountryCodeSearch] = useState("");
+  const [showPricing, setShowPricing] = useState(true);
 
   const isLoading = authLoading;
 
@@ -210,7 +219,6 @@ export default function ProfilePage() {
           (curr) => curr.value === userData.currency
         ) as (typeof Currencies)[0]
       );
-      setShowPricing(userData.currency === "🚫" ? false : true);
       setFeatures(
         userData?.role === "partner"
           ? getFeatures(userData.feature_flags || "")
@@ -1351,14 +1359,14 @@ export default function ProfilePage() {
         /^https:\/\/(maps\.app\.goo\.gl\/[a-zA-Z0-9]+|www\.google\.[a-z.]+\/maps\/.+)$/i.test(
           location.trim()
         );
-  
+
       if (!isValid) {
         throw new Error("Invalid Google Maps URL");
       }
-  
+
       setIsSaving((prev) => ({ ...prev, location: true }));
       toast.loading("Updating location...");
-  
+
       const response = await getCoordinatesFromLink(location.trim());
       const geoLoc = (await response).coordinates;
 
@@ -1373,8 +1381,8 @@ export default function ProfilePage() {
           geo_location: geoLoc,
         },
       });
-  
-      toast.success("Location updated successfully!");  
+
+      toast.success("Location updated successfully!");
       revalidateTag(userData?.id as string);
       setState({
         location: location.trim(),
@@ -1386,6 +1394,25 @@ export default function ProfilePage() {
       console.error(error);
     } finally {
       setIsSaving((prev) => ({ ...prev, location: false }));
+    }
+  };
+
+  const handleSaveCountryCode = async () => {
+    if (!userData) return;
+    setIsSaving((prev) => ({ ...prev, countryCode: true }));
+    try {
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData.id,
+        updates: { country_code: countryCode },
+      });
+      revalidateTag(userData.id);
+      setState({ country_code: countryCode });
+      toast.success("Country code updated successfully!");
+      setIsEditingCountryCode(false);
+    } catch (error) {
+      toast.error("Failed to update country code");
+    } finally {
+      setIsSaving((prev) => ({ ...prev, countryCode: false }));
     }
   };
 
@@ -1517,19 +1544,28 @@ export default function ProfilePage() {
                         onChange={(e) => setDescription(e.target.value)}
                         className="flex-1"
                       />
-                      <Button
-                        onClick={handleSaveDescription}
-                        disabled={isSaving.description || !description}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.description ? (
-                          <>
-                            Saving...
-                          </>
-                        ) : (
-                          "Save"
-                        )}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleSaveDescription}
+                          disabled={isSaving.description || !description}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isSaving.description ? (
+                            <>Saving...</>
+                          ) : (
+                            "Save"
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditing((prev) => ({ ...prev, description: false }));
+                            setDescription(userData?.description || "");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex justify-between items-center w-full">
@@ -1571,13 +1607,24 @@ export default function ProfilePage() {
                         onChange={(e) => setPlaceId(e.target.value)}
                         className="flex-1"
                       />
-                      <Button
-                        onClick={handleSavePlaceId}
-                        disabled={isSaving.placeId || !placeId}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.placeId ? <>Saving...</> : "Save"}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleSavePlaceId}
+                          disabled={isSaving.placeId || !placeId}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isSaving.placeId ? <>Saving...</> : "Save"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditing((prev) => ({ ...prev, placeId: false }));
+                            setPlaceId(userData?.place_id || "");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </>
                   ) : (
                     <div className="flex justify-between items-center w-full">
@@ -1587,7 +1634,7 @@ export default function ProfilePage() {
                       <Button
                         onClick={() => {
                           setIsEditing((prev) => ({ ...prev, placeId: true }));
-                          setPlaceId(placeId ? placeId : "");
+                          setPlaceId(userData?.place_id || "");
                         }}
                         variant="ghost"
                         className="hover:bg-orange-100"
@@ -1640,6 +1687,8 @@ export default function ProfilePage() {
                 deliverySaving={isSaving.deliverySettings}
                 handleSaveDeliverySettings={handleSaveDeliverySettings}
               />
+
+              
 
               <div className="space-y-2 pt-4">
                 <label htmlFor="whatsNum" className="text-lg font-semibold">
@@ -1774,13 +1823,24 @@ export default function ProfilePage() {
                           onChange={(e) => setWhatsappNumber(e.target.value)}
                           className="flex-1"
                         />
-                        <Button
-                          onClick={handleSaveWhatsappNumber}
-                          disabled={isSaving.whatsappNumber || !whatsappNumber}
-                          className="bg-orange-600 hover:bg-orange-700 text-white"
-                        >
-                          {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleSaveWhatsappNumber}
+                            disabled={isSaving.whatsappNumber || !whatsappNumber}
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                          >
+                            {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setIsEditing((prev) => ({ ...prev, whatsappNumber: false }));
+                              setWhatsappNumber(whatsappNumber ? whatsappNumber : "");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
                       </>
                     ) : (
                       <div className="flex justify-between items-center w-full">
@@ -1815,6 +1875,78 @@ export default function ProfilePage() {
                     ? "These Whatsapp Numbers will be used for receiving messages from customers in different areas"
                     : "This Whatsapp Number will be used for receiving messages from customers"}
                 </p>
+                {userData?.role === "partner" && (
+                  <div className="space-y-2 pt-4">
+                    <label className="text-lg font-semibold">Country Code</label>
+                    <div className="flex gap-2 items-center">
+                      {isEditingCountryCode ? (
+                        <>
+                          <Select
+                            value={countryCode}
+                            onValueChange={setCountryCode}
+                          >
+                            <SelectTrigger className="flex-1 border rounded p-2">
+                              <SelectValue placeholder="Select country code" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[300px]">
+                              <div className="p-2 sticky top-0 bg-white z-10">
+                                <input
+                                  type="text"
+                                  placeholder="Search country or code..."
+                                  value={countryCodeSearch}
+                                  onChange={e => setCountryCodeSearch(e.target.value)}
+                                  className="w-full border rounded p-2"
+                                />
+                              </div>
+                              {countryCodes
+                                .filter(item =>
+                                  item.country.toLowerCase().includes(countryCodeSearch.toLowerCase()) ||
+                                  item.code.includes(countryCodeSearch)
+                                )
+                                .map(item => (
+                                  <SelectItem key={item.code} value={item.code}>
+                                    {item.code} ({item.country})
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                          <div className="flex gap-2 mt-2">
+                            <Button
+                              onClick={handleSaveCountryCode}
+                              disabled={isSaving.countryCode}
+                              className="bg-orange-600 hover:bg-orange-700 text-white"
+                            >
+                              {isSaving.countryCode ? "Saving..." : "Save"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setIsEditingCountryCode(false);
+                                setCountryCode(userData?.country_code || "+91");
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between items-center w-full">
+                          <span className="text-gray-700 font-mono">{userData.country_code || countryCode}</span>
+                          <Button
+                            onClick={() => setIsEditingCountryCode(true)}
+                            variant="ghost"
+                            className="hover:bg-orange-100"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      This country code will be used for WhatsApp and phone links.
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="space-y-2 pt-4">
                 <label htmlFor="instaLink" className="text-lg font-semibold">
@@ -1831,13 +1963,24 @@ export default function ProfilePage() {
                         onChange={(e) => setInstaLink(e.target.value)}
                         className="flex-1"
                       />
-                      <Button
-                        onClick={handleSaveInstaLink}
-                        disabled={isSaving.instaLink || !instaLink}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.instaLink ? <>Saving...</> : "Save"}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleSaveInstaLink}
+                          disabled={isSaving.instaLink || !instaLink}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isSaving.instaLink ? <>Saving...</> : "Save"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditing((prev) => ({ ...prev, instaLink: false }));
+                            setInstaLink(instaLink ? instaLink : "");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </>
                   ) : (
                     <div className="flex justify-between items-center w-full">
@@ -1879,13 +2022,24 @@ export default function ProfilePage() {
                         onChange={(e) => setFootNote(e.target.value)}
                         className="flex-1"
                       />
-                      <Button
-                        onClick={handleSaveFootNote}
-                        disabled={isSaving.footNote}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.footNote ? <>Saving...</> : "Save"}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleSaveFootNote}
+                          disabled={isSaving.footNote}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isSaving.footNote ? <>Saving...</> : "Save"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditing((prev) => ({ ...prev, footNote: false }));
+                            setFootNote(footNote ? footNote : "");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </>
                   ) : (
                     <div className="flex justify-between items-center w-full">
@@ -2142,12 +2296,27 @@ export default function ProfilePage() {
                         />
                       </div>
 
-                      <Button
-                        disabled={isSaving.gst}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.gst ? <>Saving...</> : "Save"}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          disabled={isSaving.gst}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isSaving.gst ? <>Saving...</> : "Save"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditing((prev) => ({ ...prev, gst: false }));
+                            setGst({
+                              gst_no: gst.gst_no,
+                              gst_percentage: gst.gst_percentage,
+                              enabled: gst.enabled,
+                            });
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </form>
                   ) : (
                     <div className="flex justify-between items-center w-full">
@@ -2221,6 +2390,86 @@ export default function ProfilePage() {
                   </Link>
                 </div>
               )}
+
+              <div className="space-y-2 pt-4">
+                <div className="text-lg font-semibold">Price Settings</div>
+
+                {/* show pricing  */}
+                <div className="flex gap-2">
+                  <label htmlFor="show-pricing">Show Pricing : </label>
+                  <Switch
+                    checked={showPricing}
+                    onCheckedChange={handleShowPricingChange}
+                  />
+                </div>
+
+                {/* currency  */}
+                {userData.currency !== "🚫" && (
+                  <div className="flex gap-2 items-center">
+                    <label htmlFor="currency">Currency : </label>
+                    <div className="flex gap-2 flex-1">
+                      {isEditing.currency ? (
+                        <>
+                          <Select
+                            value={currency.label} // Use label as the value for selection
+                            onValueChange={(selectedLabel) => {
+                              const selectedCurrency = Currencies.find(
+                                (curr) => curr.label === selectedLabel
+                              );
+                              if (selectedCurrency) {
+                                setCurrency(selectedCurrency);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Select currency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Currencies.map((curr) => (
+                                <SelectItem key={curr.label} value={curr.label}>
+                                  {curr.value} - {curr.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            onClick={handleSaveCurrency}
+                            disabled={isSaving.currency || !currency}
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                          >
+                            {isSaving.currency ? <>Saving...</> : "Save"}
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="flex justify-between items-center w-full">
+                          <span className="text-gray-700">
+                            {currency ? (
+                              <>
+                                {currency.value} - {currency.label}
+                              </>
+                            ) : (
+                              "No currency selected"
+                            )}
+                          </span>
+                          <Button
+                            onClick={() => {
+                              setIsEditing((prev) => ({
+                                ...prev,
+                                currency: true,
+                              }));
+                              setCurrency(currency || Currencies[0]);
+                            }}
+                            variant="ghost"
+                            className="hover:bg-orange-100"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
