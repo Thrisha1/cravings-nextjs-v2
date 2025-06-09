@@ -93,15 +93,17 @@ export default function CaptainDashboard() {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Create New Order</h2>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleClearCart}
-                  className="h-8 w-8"
-                  title="Clear Cart"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {cartItems.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleClearCart}
+                    className="h-8 w-8"
+                    title="Clear Cart"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"

@@ -40,7 +40,8 @@ export const Captaincart = () => {
   const captainData = userData as Captain;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [phoneInput, setPhoneInput] = useState("");
-  const [extraCharges, setExtraCharges] = useState<ExtraCharge>({ name: "", amount: 0, id: "" });
+  const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
+  const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0, id: "" });
   const { getPartnerTables } = usePOSStore();
 
   const getGstAmount = (price: number, gstPercentage: number) => {
@@ -49,7 +50,7 @@ export const Captaincart = () => {
 
   // Calculate totals
   const foodSubtotal = totalAmount; // This is the subtotal of food items only
-  const extraChargesTotal = extraCharges.amount || 0;
+  const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
   const gstAmount = getGstAmount(foodSubtotal, captainData?.gst_percentage || 0); // GST only on food items
   const grandTotal = foodSubtotal + gstAmount + extraChargesTotal; // Total including GST and extra charges
 
@@ -69,6 +70,28 @@ export const Captaincart = () => {
     fetchTableNumbers();
   }, [captainData?.partner_id, getPartnerTables]);
 
+  const handleAddExtraCharge = () => {
+    if (!newExtraCharge.name || newExtraCharge.amount <= 0) {
+      toast.error("Please enter a valid charge name and amount");
+      return;
+    }
+
+    const charge: ExtraCharge = {
+      id: Date.now().toString(),
+      name: newExtraCharge.name,
+      amount: newExtraCharge.amount,
+    };
+
+    setExtraCharges([...extraCharges, charge]);
+    setNewExtraCharge({ name: "", amount: 0, id: "" });
+  };
+
+  const handleRemoveExtraCharge = (index: number) => {
+    const updatedCharges = [...extraCharges];
+    updatedCharges.splice(index, 1);
+    setExtraCharges(updatedCharges);
+  };
+
   const handleConfirmOrder = async () => {
     try {
       // Check if cart is empty
@@ -78,14 +101,18 @@ export const Captaincart = () => {
       }
 
       setUserPhone(phoneInput || null);
-      if (extraCharges.name && extraCharges.amount) {
-        addExtraCharge(extraCharges);
-      }
+      
+      // Add all extra charges to the store
+      extraCharges.forEach(charge => {
+        addExtraCharge(charge);
+      });
+      
       await checkout();
       setIsModalOpen(false);
       setPostCheckoutModalOpen(true);
       setPhoneInput("");
-      setExtraCharges({ name: "", amount: 0, id: "" });
+      setExtraCharges([]);
+      setNewExtraCharge({ name: "", amount: 0, id: "" });
     } catch (error) {
       console.error("Checkout failed:", error);
       toast.error("Checkout failed");
@@ -192,18 +219,51 @@ export const Captaincart = () => {
               {/* Extra Charges */}
               <div>
                 <label className="block text-sm font-medium mb-2">Extra Charges (Optional)</label>
-                <div className="space-y-2">
-                  <Input
-                    placeholder="Charge name"
-                    value={extraCharges.name}
-                    onChange={(e) => setExtraCharges({...extraCharges, name: e.target.value})}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Amount"
-                    value={extraCharges.amount || ""}
-                    onChange={(e) => setExtraCharges({...extraCharges, amount: Number(e.target.value)})}
-                  />
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Charge name"
+                      value={newExtraCharge.name}
+                      onChange={(e) => setNewExtraCharge({...newExtraCharge, name: e.target.value})}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Amount"
+                      value={newExtraCharge.amount || ""}
+                      onChange={(e) => setNewExtraCharge({...newExtraCharge, amount: Number(e.target.value)})}
+                    />
+                    <Button onClick={handleAddExtraCharge} className="whitespace-nowrap">
+                      Add Charge
+                    </Button>
+                  </div>
+
+                  {extraCharges.length > 0 && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="divide-y">
+                        {extraCharges.map((charge, index) => (
+                          <div
+                            key={charge.id || index}
+                            className="p-3 flex justify-between items-center"
+                          >
+                            <div>
+                              <div className="font-medium">{charge.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {captainData?.currency || "$"}{charge.amount.toFixed(2)}
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => handleRemoveExtraCharge(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -262,11 +322,19 @@ export const Captaincart = () => {
                   )}
                   
                   {/* Extra Charges */}
-                  {(extraCharges.name || extraCharges.amount > 0) && (
-                    <div className="flex justify-between text-sm border-t pt-2">
-                      <span>{extraCharges.name || "Extra Charge"}</span>
-                      <span>{captainData?.currency || "$"}{extraCharges.amount.toFixed(2)}</span>
-                    </div>
+                  {extraCharges.length > 0 && (
+                    <>
+                      {extraCharges.map((charge, index) => (
+                        <div key={index} className="flex justify-between text-sm border-t pt-2">
+                          <span>{charge.name}</span>
+                          <span>{captainData?.currency || "$"}{charge.amount.toFixed(2)}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between text-sm">
+                        <span>Extra Charges Total:</span>
+                        <span>{captainData?.currency || "$"}{extraChargesTotal.toFixed(2)}</span>
+                      </div>
+                    </>
                   )}
 
                   {/* Grand Total */}

@@ -96,7 +96,7 @@ export const PostCheckoutModal = () => {
           <DialogHeader className="p-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] border-b sticky top-0 bg-white z-10">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between pt-1">
-                <DialogTitle className="text-xl sm:text-2xl">Order #{order.id}</DialogTitle>
+                <DialogTitle className="text-xl sm:text-2xl">Order #{order.id.slice(0, 8)}</DialogTitle>
                 <Button
                   variant="outline"
                   onClick={handleClose}
