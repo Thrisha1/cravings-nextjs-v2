@@ -43,6 +43,7 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
   const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0, id: "" });
   const [tableNumbers, setTableNumbers] = useState<number[]>([]);
   const [isLoadingTables, setIsLoadingTables] = useState(true);
+  const [isDelivery, setIsDelivery] = useState(false);
 
   useEffect(() => {
     const fetchTableNumbers = async () => {
@@ -84,8 +85,8 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
   const gstAmount = getGstAmount(foodSubtotal, partnerData?.gst_percentage || 0);
   const grandTotal = foodSubtotal + gstAmount + extraChargesTotal;
 
-  // Check if table selection is made
-  const isTableSelected = tableNumber !== undefined;
+  // Check if table selection is made (only required for dine-in)
+  const isTableSelected = isDelivery || tableNumber !== null;
 
   const handleAddExtraCharge = () => {
     if (!newExtraCharge.name || newExtraCharge.amount <= 0) {
@@ -151,38 +152,67 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Table Selection */}
+        {/* Delivery Toggle */}
         <div>
-          <label className="block text-sm font-medium mb-2">Table Number</label>
-          {isLoadingTables ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {tableNumbers.map((table) => (
+          <label className="block text-sm font-medium mb-2">Order Type</label>
+          <div className="flex items-center space-x-4">
+            <Button
+              variant={!isDelivery ? "default" : "outline"}
+              onClick={() => {
+                setIsDelivery(false);
+                setTableNumber(null);
+              }}
+              className="flex-1"
+            >
+              Dine-in
+            </Button>
+            <Button
+              variant={isDelivery ? "default" : "outline"}
+              onClick={() => {
+                setIsDelivery(true);
+                setTableNumber(null);
+              }}
+              className="flex-1"
+            >
+              Delivery
+            </Button>
+          </div>
+        </div>
+
+        {/* Table Selection - Only show for dine-in */}
+        {!isDelivery && (
+          <div>
+            <label className="block text-sm font-medium mb-2">Table Number</label>
+            {isLoadingTables ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {tableNumbers.map((table) => (
+                  <Button
+                    key={table}
+                    variant={tableNumber === table ? "default" : "outline"}
+                    onClick={() => setTableNumber(table)}
+                    className="h-10"
+                  >
+                    Table {table}
+                  </Button>
+                ))}
                 <Button
-                  key={table}
-                  variant={tableNumber === table ? "default" : "outline"}
-                  onClick={() => setTableNumber(table)}
+                  variant={tableNumber === 0 ? "default" : "outline"}
+                  onClick={() => setTableNumber(0)}
                   className="h-10"
                 >
-                  Table {table}
+                  No Table
                 </Button>
-              ))}
-              <Button
-                variant={tableNumber === 0 ? "default" : "outline"}
-                onClick={() => setTableNumber(0)}
-                className="h-10"
-              >
-                No Table
-              </Button>
-            </div>
-          )}
-          {!isTableSelected && (
-            <p className="text-sm text-red-500 mt-1">Please select a table or choose "No Table"</p>
-          )}
-        </div>
+              </div>
+            )}
+            {!isDelivery && !isTableSelected && (
+              <p className="text-sm text-red-500 mt-1">Please select a table or choose "No Table"</p>
+            )}
+          </div>
+        )}
 
         {/* Phone Number */}
         <div>

@@ -44,6 +44,13 @@ export const Captaincart = () => {
   const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0, id: "" });
   const { getPartnerTables } = usePOSStore();
 
+  // Set default table number to 0 (No Table)
+  useEffect(() => {
+    if (tableNumber === undefined) {
+      setTableNumber(0);
+    }
+  }, [tableNumber, setTableNumber]);
+
   const getGstAmount = (price: number, gstPercentage: number) => {
     return (price * gstPercentage) / 100;
   };
