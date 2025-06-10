@@ -717,6 +717,7 @@ const useOrderStore = create(
 
           const userData = useAuthStore.getState().userData;
 
+          // Check if user is a partner trying to order from their own hotel
           if (userData?.role === "partner" && userData.id === hotelData.id) {
             toast.error("Partners cannot place orders at their own hotels");
             return null;
@@ -735,6 +736,12 @@ const useOrderStore = create(
 
           const validQrId = qrId && isValidUUID(qrId) ? qrId : null;
           const type = (tableNumber ?? 0) > 0 ? "table_order" : "delivery";
+
+          // Check if delivery is properly configured for delivery orders
+          if (type === "delivery" && (!hotelData?.geo_location || !hotelData?.delivery_rate || hotelData?.delivery_rate <= 0)) {
+            toast.error("Delivery is not available for this hotel. Please contact the restaurant for delivery options.");
+            return null;
+          }
 
           const exCharges: {
             name: string;

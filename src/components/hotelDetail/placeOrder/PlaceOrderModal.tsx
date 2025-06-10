@@ -861,6 +861,12 @@ const PlaceOrderModal = ({
       return;
     }
 
+    // Check if delivery is properly configured for delivery orders
+    if (isDelivery && (!hotelData?.geo_location || !hotelData?.delivery_rate || hotelData?.delivery_rate <= 0)) {
+      toast.error("Delivery is not available for this hotel. Please contact the restaurant for delivery options.");
+      return;
+    }
+
     if (isDelivery && !address && !isQrScan) {
       toast.error("Please enter your delivery address");
       return;
@@ -1044,6 +1050,13 @@ const PlaceOrderModal = ({
                         return;
                       }
                       
+                      // Prevent WhatsApp from opening if delivery is not properly configured
+                      if (isDelivery && (!hotelData?.geo_location || !hotelData?.delivery_rate || hotelData?.delivery_rate <= 0)) {
+                        e.preventDefault();
+                        toast.error("Delivery is not available for this hotel. Please contact the restaurant for delivery options.");
+                        return;
+                      }
+                      
                       if (isPlaceOrderDisabled) {
                         e.preventDefault();
                       }
@@ -1101,7 +1114,7 @@ const PlaceOrderModal = ({
       {/* Map Modal */}
       {!isQrScan && (
         <MapModal
-          showMapModal={showMapModal}
+            showMapModal={showMapModal}
           setShowMapModal={setShowMapModal}
           setSelectedLocation={setSelectedCoords}
           setAddress={setAddress}
