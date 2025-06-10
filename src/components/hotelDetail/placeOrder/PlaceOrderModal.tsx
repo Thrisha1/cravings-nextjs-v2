@@ -142,6 +142,7 @@ interface AddressCardProps {
 const AddressCard = ({
   address,
   setShowMapModal,
+  setAddress,
   getLocation,
   isGeoLoading,
   geoError,
@@ -200,9 +201,9 @@ const AddressCard = ({
 
       <Textarea
         value={address || ""}
-        readOnly
-        className="min-h-[100px] mb-3 bg-gray-100"
-        placeholder="Select your location to see the address"
+        onChange={(e) => setAddress(e.target.value)}
+        className="min-h-[100px] mb-3"
+        placeholder="Enter your delivery address"
       />
 
       <div className="space-y-2">
@@ -215,7 +216,7 @@ const AddressCard = ({
           type="button"
           onClick={handleGetLocation}
           className="w-full"
-          variant={hasLocation ? "outline" : "outline"}
+          variant="outline"
           disabled={isGeoLoading}
           style={
             !hasLocation ? { borderColor: "#ef4444", color: "#ef4444" } : {}
@@ -634,6 +635,7 @@ const MapModal = ({
     } else {
       document.body.style.overflowY = "auto";
       document.body.style.maxHeight = "auto";
+      setOpenPlaceOrderModal(true);
     }
   }, [showMapModal]);
 
@@ -853,6 +855,12 @@ const PlaceOrderModal = ({
   }, [selectedCoords, isDelivery, hasDelivery, isQrScan]);
 
   const handlePlaceOrder = async () => {
+    // Check if user is a partner trying to order from their own hotel
+    if (user?.role === "partner" && user.id === hotelData.id) {
+      toast.error("Partners cannot place orders at their own hotels");
+      return;
+    }
+
     if (isDelivery && !address && !isQrScan) {
       toast.error("Please enter your delivery address");
       return;
@@ -1029,6 +1037,13 @@ const PlaceOrderModal = ({
                     href={getWhatsappLink(orderId as string)}
                     target="_blank"
                     onClick={(e) => {
+                      // Prevent WhatsApp from opening if partner validation fails
+                      if (user?.role === "partner" && user.id === hotelData.id) {
+                        e.preventDefault();
+                        toast.error("Partners cannot place orders at their own hotels");
+                        return;
+                      }
+                      
                       if (isPlaceOrderDisabled) {
                         e.preventDefault();
                       }

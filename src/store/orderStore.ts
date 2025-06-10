@@ -716,6 +716,12 @@ const useOrderStore = create(
           }
 
           const userData = useAuthStore.getState().userData;
+
+          if (userData?.role === "partner" && userData.id === hotelData.id) {
+            toast.error("Partners cannot place orders at their own hotels");
+            return null;
+          }
+
           if (!userData?.id || userData?.role !== "user") {
             toast.error("Please login as user to place order");
             return null;
