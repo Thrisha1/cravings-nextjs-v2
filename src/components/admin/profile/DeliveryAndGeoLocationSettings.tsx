@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DeliveryRules } from "@/store/orderStore";
+import { useAuthStore } from "@/store/authStore";
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
@@ -84,6 +85,7 @@ export function DeliveryAndGeoLocationSettings({
   setIsEditingLocation,
   handleSaveLocation,
 }: DeliveryAndGeoLocationSettingsProps) {
+  const { userData } = useAuthStore();
   const [mapDialogOpen, setMapDialogOpen] = useState(false);
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -92,6 +94,10 @@ export function DeliveryAndGeoLocationSettings({
     lat: number;
     lng: number;
   } | null>(null);
+
+  // Check if delivery feature is enabled
+  const features = userData?.role === "partner" && userData.feature_flags ? userData.feature_flags : "";
+  const isDeliveryEnabled = features.includes("delivery-true");
 
   useEffect(() => {
     if (mapDialogOpen && mapContainer.current && !map.current) {
@@ -154,7 +160,7 @@ export function DeliveryAndGeoLocationSettings({
   return (
     <div className="space-y-8 pt-2">
       {/* Geo Location Section */}
-      <div className="space-y-4 w-full">
+      <div className="space-y-4 w-full" id="geo_location">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Location</h3>
           {locationEditing ? (
@@ -203,7 +209,6 @@ export function DeliveryAndGeoLocationSettings({
           </div>
         ) : (
           <div className="space-y-4">
-            
             <div className="h-48 w-full rounded-md overflow-hidden relative border">
               {geoLocation.latitude && geoLocation.longitude ? (
                 <div className="h-full w-full bg-gray-100 relative">
@@ -215,10 +220,13 @@ export function DeliveryAndGeoLocationSettings({
                 </div>
               ) : (
                 <div className="h-full w-full bg-gray-100 flex items-center justify-center">
-                  <p className="text-muted-foreground">No location set</p>
+                  <p className="text-red-600">No location set</p>
                 </div>
               )}
             </div>
+            {(!geoLocation.latitude || !geoLocation.longitude) && (
+              <p className="text-sm text-red-500">⚠️ Location coordinates are required. Please set your restaurant location.</p>
+            )}
           </div>
         )}
 
@@ -264,7 +272,7 @@ export function DeliveryAndGeoLocationSettings({
         </div>
 
         {/* Delivery Rate */}
-        <div className="space-y-2">
+        <div className="space-y-2" id="delivery_rate">
           <Label>
             Delivery Rate {deliveryRules.is_fixed_rate ? "" : "(Per Km)"} (
             {currency?.value})
@@ -279,7 +287,12 @@ export function DeliveryAndGeoLocationSettings({
             />
           ) : (
             <div className="p-3 rounded-md border bg-muted/50">
-              {deliveryRate ? deliveryRate.toFixed(2) : "Not set"}
+              <span className={`${isDeliveryEnabled && (!deliveryRate || deliveryRate <= 0) ? "text-red-600" : "text-gray-700"}`}>
+                {deliveryRate ? deliveryRate.toFixed(2) : "Not set"}
+              </span>
+              {isDeliveryEnabled && (!deliveryRate || deliveryRate <= 0) && (
+                <p className="text-sm text-red-500 mt-1">⚠️ Delivery rate is required. Please set your delivery pricing.</p>
+              )}
             </div>
           )}
         </div>

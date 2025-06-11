@@ -51,6 +51,7 @@ import {
 import { updateAuthCookie } from "../auth/actions";
 import { DeliveryRules } from "@/store/orderStore";
 import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/DeliveryAndGeoLocationSettings";
+import { LocationSettings } from "@/components/admin/profile/LocationSettings";
 import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
 import { countryCodes } from "@/utils/countryCodes";
 import {
@@ -157,6 +158,39 @@ export default function ProfilePage() {
   const [showPricing, setShowPricing] = useState(true);
 
   const isLoading = authLoading;
+
+  // Handle anchor scrolling
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash) {
+        // Wait for the page to be fully loaded
+        const scrollToElement = () => {
+          const element = document.querySelector(hash);
+          if (element) {
+            // Use a more reliable scroll method
+            const elementTop = element.getBoundingClientRect().top + window.pageYOffset;
+            window.scrollTo({
+              top: elementTop - 100, // Offset for header
+              behavior: 'smooth'
+            });
+            
+            // Add highlight effect
+            element.classList.add('bg-yellow-100', 'border-2', 'border-yellow-400', 'rounded-lg');
+            setTimeout(() => {
+              element.classList.remove('bg-yellow-100', 'border-2', 'border-yellow-400', 'rounded-lg');
+            }, 1500);
+          }
+        };
+
+        // Try multiple times to ensure the element is available
+        scrollToElement();
+        setTimeout(scrollToElement, 100);
+        setTimeout(scrollToElement, 500);
+        setTimeout(scrollToElement, 1000);
+      }
+    }
+  }, [userData, typeof window !== 'undefined' ? window.location.hash : '']); // Add hash as dependency
 
   useEffect(() => {
     if (userData?.role === "partner") {
@@ -1237,517 +1271,123 @@ export default function ProfilePage() {
 
         {/* Account Settings Section (Only for hotel) */}
         {userData?.role === "partner" && (
-          <Card className="overflow-hidden hover:shadow-xl transition-shadow">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold">
-                Account Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 divide-y-2">
-              {/* //your hotel banner  */}
-              <div>
-                <h3 className="text-lg font-semibold">Your Hotel Banner</h3>
-                <p className="text-sm text-gray-500 mb-2">
-                  Click on the banner to change it.
-                </p>
+          <>
+            {/* Default Settings Section */}
+            <Card className="overflow-hidden hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold">
+                  Default Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 divide-y-2">
+                {/* Profile Section */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Profile</h3>
+                  
+                  {/* //your hotel banner  */}
+                  <div>
+                    <h3 className="text-lg font-semibold">Your Hotel Banner</h3>
+                    <p className="text-sm text-gray-500 mb-2">
+                      Click on the banner to change it.
+                    </p>
 
-                <label
-                  htmlFor="bannerInput"
-                  className="relative cursor-pointer w-full h-48 bg-gray-200 rounded-lg overflow-hidden"
-                >
-                  {bannerImage ? (
-                    <Img
-                      src={bannerImage}
-                      alt="Hotel Banner"
-                      width={500}
-                      height={500}
-                      className="object-cover w-full h-48 rounded-2xl"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-48 bg-gray-100 rounded-2xl text-gray-500">
-                      No banner set
-                    </div>
-                  )}
-                </label>
-
-                <input
-                  type="file"
-                  id="bannerInput"
-                  accept="image/*"
-                  onChange={handleBannerChange}
-                  className="hidden"
-                />
-
-                {isBannerChanged && (
-                  <div className="mt-2 flex justify-end">
-                    <Button
-                      disabled={isBannerUploading}
-                      onClick={
-                        isBannerUploading ? undefined : handleBannerUpload
-                      }
+                    <label
+                      htmlFor="bannerInput"
+                      className="relative cursor-pointer w-full h-48 bg-gray-200 rounded-lg overflow-hidden"
                     >
-                      {isBannerUploading ? "Uploading...." : "Update Banner"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2 pt-4">
-                <label htmlFor="bio" className="text-lg font-semibold">
-                  Bio
-                </label>
-                <div className="flex gap-2 w-full">
-                  {isEditing.description ? (
-                    <div className="grid gap-2 w-full">
-                      <Textarea
-                        id="bio"
-                        placeholder="Enter your Bio"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="flex-1"
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleSaveDescription}
-                          disabled={isSaving.description || !description}
-                          className="bg-orange-600 hover:bg-orange-700 text-white"
-                        >
-                          {isSaving.description ? (
-                            <>Saving...</>
-                          ) : (
-                            "Save"
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setIsEditing((prev) => ({ ...prev, description: false }));
-                            setDescription(userData?.description || "");
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between items-center w-full">
-                      <span className="text-gray-700">
-                        {description ? description : "No Bio set"}
-                      </span>
-                      <Button
-                        onClick={() => {
-                          setIsEditing((prev) => ({
-                            ...prev,
-                            description: true,
-                          }));
-                          setDescription(description ? description : "");
-                        }}
-                        variant="ghost"
-                        className="hover:bg-orange-100"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500">
-                  This Bio will be used for your restaurant profile
-                </p>
-              </div>
-              {/* <div className="space-y-2 pt-4">
-                <label htmlFor="upiId" className="text-lg font-semibold">
-                  UPI ID
-                </label>
-                <div className="flex gap-2">
-                  {isEditing.upiId ? (
-                    <>
-                      <Input
-                        id="upiId"
-                        type="text"
-                        placeholder="Enter your UPI ID"
-                        value={upiId}
-                        onChange={(e) => setUpiId(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button
-                        onClick={handleSaveUpiId}
-                        disabled={isSaving.upiId || !upiId}
-                        className="bg-orange-600 hover:bg-orange-700 text-white"
-                      >
-                        {isSaving.upiId ? (
-                          <>
-                            Saving...
-                          </>
-                        ) : (
-                          "Save"
-                        )}
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="flex justify-between items-center w-full">
-                      <span className="text-gray-700">
-                        {upiId ? upiId : "No UPI ID set"}
-                      </span>
-                      <Button
-                        onClick={() => {
-                          setIsEditing((prev) => ({ ...prev, upiId: true }));
-                          setUpiId(upiId ? upiId : "");
-                        }}
-                        variant="ghost"
-                        className="hover:bg-orange-100"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500">
-                  This UPI ID will be used for receiving payments from customers
-                </p>
-              </div> */}
-              <div className="space-y-2 pt-4">
-                <label htmlFor="placeId" className="text-lg font-semibold">
-                  Place ID
-                </label>
-                <div className="flex gap-2">
-                  {isEditing.placeId ? (
-                    <>
-                      <Input
-                        id="placeId"
-                        type="text"
-                        placeholder="Enter your Place ID"
-                        value={placeId}
-                        onChange={(e) => setPlaceId(e.target.value)}
-                        className="flex-1"
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleSavePlaceId}
-                          disabled={isSaving.placeId || !placeId}
-                          className="bg-orange-600 hover:bg-orange-700 text-white"
-                        >
-                          {isSaving.placeId ? <>Saving...</> : "Save"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setIsEditing((prev) => ({ ...prev, placeId: false }));
-                            setPlaceId(userData?.place_id || "");
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex justify-between items-center w-full">
-                      <span className="text-gray-700">
-                        {placeId ? placeId : "No Place ID set"}
-                      </span>
-                      <Button
-                        onClick={() => {
-                          setIsEditing((prev) => ({ ...prev, placeId: true }));
-                          setPlaceId(userData?.place_id || "");
-                        }}
-                        variant="ghost"
-                        className="hover:bg-orange-100"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500">
-                  This Place ID will be used for reviews. Get your place Id here{" "}
-                  {"-->"}{" "}
-                  <Link
-                    className="underline text-orange-600"
-                    target="_blank"
-                    href={
-                      "https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
-                    }
-                  >
-                    Get Place Id
-                  </Link>
-                </p>
-              </div>
-
-              <DeliveryAndGeoLocationSettings
-                handleSaveLocation={handleSaveLocation}
-                locationSaving={isSaving.location}
-                locationEditing={isEditing.location}
-                location={location}
-                setLocation={setLocation}
-                setIsEditingLocation={(value) =>
-                  setIsEditing({ ...isEditing, location: value })
-                }
-                geoLocation={geoLocation}
-                setGeoLocation={setGeoLocation}
-                geoLoading={isLoading}
-                geoSaving={isSaving.geoLocation}
-                geoError={geoError}
-                handleGetCurrentLocation={handleGetCurrentLocation}
-                handleSaveGeoLocation={handleSaveGeoLocation}
-                currency={currency}
-                deliveryRate={deliveryRate}
-                setDeliveryRate={setDeliveryRate}
-                deliveryRules={deliveryRules}
-                setDeliveryRules={setDeliveryRules}
-                isEditingDelivery={isEditing.deliveryRate}
-                setIsEditingDelivery={(value) =>
-                  setIsEditing({ ...isEditing, deliveryRate: value })
-                }
-                deliverySaving={isSaving.deliverySettings}
-                handleSaveDeliverySettings={handleSaveDeliverySettings}
-              />
-
-              
-
-              <div className="space-y-2 pt-4">
-                <label htmlFor="whatsNum" className="text-lg font-semibold">
-                  Whatsapp Number
-                  {userFeatures?.multiwhatsapp.enabled ? "s" : ""}
-                </label>
-
-                {userFeatures?.multiwhatsapp.enabled ? (
-                  // Multi-whatsapp UI
-                  <>
-                    {isEditing.whatsappNumber ? (
-                      <div className="space-y-4">
-                        {whatsappNumbers.map((item, index) => (
-                          <div key={index} className="flex gap-2 items-center">
-                            <div className="flex-1 grid grid-cols-2 gap-2">
-                              <Input
-                                placeholder="Area (e.g. North, South)"
-                                value={item.area}
-                                onChange={(e) => {
-                                  const newNumbers = [...whatsappNumbers];
-                                  newNumbers[index].area = e.target.value;
-                                  setWhatsappNumbers(newNumbers);
-                                }}
-                              />
-                              <Input
-                                type="text"
-                                placeholder="Whatsapp Number"
-                                minLength={10}
-                                maxLength={10}
-                                value={item.number}
-                                onChange={(e) => {
-                                  const newNumbers = [...whatsappNumbers];
-                                  newNumbers[index].number = e.target.value;
-                                  setWhatsappNumbers(newNumbers);
-                                }}
-                              />
-                            </div>
-                            <Button
-                              variant="ghost"
-                              onClick={() => {
-                                const newNumbers = [...whatsappNumbers];
-                                newNumbers.splice(index, 1);
-                                setWhatsappNumbers(newNumbers);
-                              }}
-                              className="text-red-500 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))}
-
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() =>
-                              setWhatsappNumbers([
-                                ...whatsappNumbers,
-                                { number: "", area: "" },
-                              ])
-                            }
-                            variant="outline"
-                          >
-                            Add Another Number
-                          </Button>
-                          <Button
-                            onClick={handleSaveWhatsappNumbers}
-                            disabled={
-                              isSaving.whatsappNumber || !whatsappNumbers.length
-                            }
-                            className="bg-orange-600 hover:bg-orange-700 text-white"
-                          >
-                            {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <div className="grid gap-2">
-                          {whatsappNumbers.map((item, index) => (
-                            <div
-                              key={index}
-                              className="flex gap-2 items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                            >
-                              <div className="flex-1 grid grid-cols-2 gap-4">
-                                <div className="flex flex-col">
-                                  <span className="text-sm text-gray-500">
-                                    Area
-                                  </span>
-                                  <span className="font-medium">
-                                    {item.area || "Default"}
-                                  </span>
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-sm text-gray-500">
-                                    Number
-                                  </span>
-                                  <span className="font-medium">
-                                    {item.number}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="flex justify-end">
-                          <Button
-                            onClick={() =>
-                              setIsEditing((prev) => ({
-                                ...prev,
-                                whatsappNumber: true,
-                              }))
-                            }
-                            variant="ghost"
-                            className="mt-4"
-                          >
-                            <Pencil className="w-4 h-4 " />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  // Single whatsapp number UI (original code)
-                  <div className="flex gap-2">
-                    {isEditing.whatsappNumber ? (
-                      <>
-                        <Input
-                          id="whatsNum"
-                          type="text"
-                          placeholder="Enter your Whatsapp Number"
-                          minLength={10}
-                          maxLength={10}
-                          value={whatsappNumber}
-                          onChange={(e) => setWhatsappNumber(e.target.value)}
-                          className="flex-1"
+                      {bannerImage ? (
+                        <Img
+                          src={bannerImage}
+                          alt="Hotel Banner"
+                          width={500}
+                          height={500}
+                          className="object-cover w-full h-48 rounded-2xl"
                         />
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={handleSaveWhatsappNumber}
-                            disabled={isSaving.whatsappNumber || !whatsappNumber}
-                            className="bg-orange-600 hover:bg-orange-700 text-white"
-                          >
-                            {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setIsEditing((prev) => ({ ...prev, whatsappNumber: false }));
-                              setWhatsappNumber(whatsappNumber ? whatsappNumber : "");
-                            }}
-                          >
-                            Cancel
-                          </Button>
+                      ) : (
+                        <div className="flex items-center justify-center h-48 bg-gray-100 rounded-2xl text-gray-500">
+                          No banner set
                         </div>
-                      </>
-                    ) : (
-                      <div className="flex justify-between items-center w-full">
-                        <span className="text-gray-700">
-                          {whatsappNumber
-                            ? whatsappNumber
-                            : "No Whatsapp Number set"}
-                        </span>
+                      )}
+                    </label>
+
+                    <input
+                      type="file"
+                      id="bannerInput"
+                      accept="image/*"
+                      onChange={handleBannerChange}
+                      className="hidden"
+                    />
+
+                    {isBannerChanged && (
+                      <div className="mt-2 flex justify-end">
                         <Button
-                          onClick={() => {
-                            setIsEditing((prev) => ({
-                              ...prev,
-                              whatsappNumber: true,
-                            }));
-                            setWhatsappNumber(
-                              whatsappNumber ? whatsappNumber : ""
-                            );
-                          }}
-                          variant="ghost"
-                          className="hover:bg-orange-100"
+                          disabled={isBannerUploading}
+                          onClick={
+                            isBannerUploading ? undefined : handleBannerUpload
+                          }
                         >
-                          <Pencil className="w-4 h-4" />
+                          {isBannerUploading ? "Uploading...." : "Update Banner"}
                         </Button>
                       </div>
                     )}
                   </div>
-                )}
 
-                <p className="text-sm text-gray-500">
-                  {getFeatures(userData.feature_flags as string).multiwhatsapp
-                    .access
-                    ? "These Whatsapp Numbers will be used for receiving messages from customers in different areas"
-                    : "This Whatsapp Number will be used for receiving messages from customers"}
-                </p>
-                {userData?.role === "partner" && (
-                  <div className="space-y-2 pt-4">
-                    <label className="text-lg font-semibold">Country Code</label>
-                    <div className="flex gap-2 items-center">
-                      {isEditingCountryCode ? (
-                        <>
-                          <Select
-                            value={countryCode}
-                            onValueChange={setCountryCode}
-                          >
-                            <SelectTrigger className="flex-1 border rounded p-2">
-                              <SelectValue placeholder="Select country code" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-[300px]">
-                              <div className="p-2 sticky top-0 bg-white z-10">
-                                <input
-                                  type="text"
-                                  placeholder="Search country or code..."
-                                  value={countryCodeSearch}
-                                  onChange={e => setCountryCodeSearch(e.target.value)}
-                                  className="w-full border rounded p-2"
-                                />
-                              </div>
-                              {countryCodes
-                                .filter(item =>
-                                  item.country.toLowerCase().includes(countryCodeSearch.toLowerCase()) ||
-                                  item.code.includes(countryCodeSearch)
-                                )
-                                .map(item => (
-                                  <SelectItem key={item.code} value={item.code}>
-                                    {item.code} ({item.country})
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                          <div className="flex gap-2 mt-2">
+                  {/* Bio */}
+                  <div className="space-y-2 pt-4" id="bio">
+                    <label htmlFor="bio" className="text-lg font-semibold">
+                      Bio
+                    </label>
+                    <div className="flex gap-2 w-full">
+                      {isEditing.description ? (
+                        <div className="grid gap-2 w-full">
+                          <Textarea
+                            id="bio"
+                            placeholder="Enter your Bio"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="flex-1"
+                          />
+                          <div className="flex gap-2">
                             <Button
-                              onClick={handleSaveCountryCode}
-                              disabled={isSaving.countryCode}
+                              onClick={handleSaveDescription}
+                              disabled={isSaving.description || !description}
                               className="bg-orange-600 hover:bg-orange-700 text-white"
                             >
-                              {isSaving.countryCode ? "Saving..." : "Save"}
+                              {isSaving.description ? (
+                                <>Saving...</>
+                              ) : (
+                                "Save"
+                              )}
                             </Button>
                             <Button
                               variant="outline"
                               onClick={() => {
-                                setIsEditingCountryCode(false);
-                                setCountryCode(userData?.country_code || "+91");
+                                setIsEditing((prev) => ({ ...prev, description: false }));
+                                setDescription(userData?.description || "");
                               }}
                             >
                               Cancel
                             </Button>
                           </div>
-                        </>
+                        </div>
                       ) : (
                         <div className="flex justify-between items-center w-full">
-                          <span className="text-gray-700 font-mono">{userData.country_code || countryCode}</span>
+                          <div className="flex-1">
+                            <span className={`${!description || description.trim() === "" ? "text-red-600" : "text-gray-700"}`}>
+                              {description ? description : "No Bio set"}
+                            </span>
+                            {(!description || description.trim() === "") && (
+                              <p className="text-sm text-red-500 mt-1">⚠️ This field is required. Please fill it to complete your profile.</p>
+                            )}
+                          </div>
                           <Button
-                            onClick={() => setIsEditingCountryCode(true)}
+                            onClick={() => {
+                              setIsEditing((prev) => ({
+                                ...prev,
+                                description: true,
+                              }));
+                              setDescription(description ? description : "");
+                            }}
                             variant="ghost"
                             className="hover:bg-orange-100"
                           >
@@ -1757,483 +1397,59 @@ export default function ProfilePage() {
                       )}
                     </div>
                     <p className="text-sm text-gray-500">
-                      This country code will be used for WhatsApp and phone links.
+                      This Bio will be used for your restaurant profile
                     </p>
                   </div>
-                )}
-              </div>
-              <div className="space-y-2 pt-4">
-                <label htmlFor="instaLink" className="text-lg font-semibold">
-                  Instagram Link
-                </label>
-                <div className="flex gap-2">
-                  {isEditing.instaLink ? (
-                    <>
-                      <Input
-                        id="instaLink"
-                        type="text"
-                        placeholder="Enter your Instagram Link"
-                        value={instaLink}
-                        onChange={(e) => setInstaLink(e.target.value)}
-                        className="flex-1"
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleSaveInstaLink}
-                          disabled={isSaving.instaLink || !instaLink}
-                          className="bg-orange-600 hover:bg-orange-700 text-white"
-                        >
-                          {isSaving.instaLink ? <>Saving...</> : "Save"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setIsEditing((prev) => ({ ...prev, instaLink: false }));
-                            setInstaLink(instaLink ? instaLink : "");
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex justify-between items-center w-full">
-                      <span className="text-gray-700 text-xs text-wrap">
-                        {instaLink ? instaLink : "No Instagram Link set"}
-                      </span>
-                      <Button
-                        onClick={() => {
-                          setIsEditing((prev) => ({
-                            ...prev,
-                            instaLink: true,
-                          }));
-                          setInstaLink(instaLink ? instaLink : "");
-                        }}
-                        variant="ghost"
-                        className="hover:bg-orange-100"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500">
-                  This Instagram Link will be used for your restaurant profile
-                </p>
-              </div>
-              <div className="space-y-2 pt-4">
-                <label htmlFor="footNote" className="text-lg font-semibold">
-                  Footnote
-                </label>
-                <div className="flex gap-2">
-                  {isEditing.footNote ? (
-                    <>
-                      <Input
-                        id="footNote"
-                        type="text"
-                        placeholder="Enter your Footnote"
-                        value={footNote}
-                        onChange={(e) => setFootNote(e.target.value)}
-                        className="flex-1"
-                      />
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={handleSaveFootNote}
-                          disabled={isSaving.footNote}
-                          className="bg-orange-600 hover:bg-orange-700 text-white"
-                        >
-                          {isSaving.footNote ? <>Saving...</> : "Save"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setIsEditing((prev) => ({ ...prev, footNote: false }));
-                            setFootNote(footNote ? footNote : "");
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex justify-between items-center w-full">
-                      <span className="text-gray-700">
-                        {footNote ? footNote : "No Footnote set"}
-                      </span>
-                      <Button
-                        onClick={() => {
-                          setIsEditing((prev) => ({
-                            ...prev,
-                            footNote: true,
-                          }));
-                          setFootNote(footNote ? footNote : "");
-                        }}
-                        variant="ghost"
-                        className="hover:bg-orange-100"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500">
-                  This Footnote will be used for your restaurant profile
-                </p>
-              </div>
 
-              <div className="space-y-2 pt-4">
-                {features && (
-                  <>
-                    <div className="text-lg font-semibold">
-                      Feature Settings
-                    </div>
-
-                    {features.ordering.access && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium">Ordering</div>
-                          <div className="text-sm text-gray-500">
-                            {features.ordering.enabled ? "Enabled" : "Disabled"}
-                          </div>
-                        </div>
-                        <Switch
-                          checked={features.ordering.enabled}
-                          onCheckedChange={(enabled) => {
-                            const updates = {
-                              ...features,
-                              ordering: {
-                                ...features.ordering,
-                                enabled: enabled,
-                              },
-                            };
-
-                            setFeatures(updates);
-                            setUserFeatures(updates);
-                            handleFeatureEnabledChange(updates);
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {features.delivery.access && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium">Delivery</div>
-                          <div className="text-sm text-gray-500">
-                            {features.delivery.enabled ? "Enabled" : "Disabled"}
-                          </div>
-                        </div>
-                        <Switch
-                          checked={features.delivery.enabled}
-                          onCheckedChange={(enabled) => {
-                            const updates = {
-                              ...features,
-                              delivery: {
-                                ...features.delivery,
-                                enabled: enabled,
-                              },
-                            };
-
-                            setFeatures(updates);
-                            setUserFeatures(updates);
-                            handleFeatureEnabledChange(updates);
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {features.multiwhatsapp.access && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium">
-                            Multiple Whatsapp Numbers
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {features.multiwhatsapp.enabled
-                              ? "Enabled"
-                              : "Disabled"}
-                          </div>
-                        </div>
-                        <Switch
-                          checked={features.multiwhatsapp.enabled}
-                          onCheckedChange={(enabled) => {
-                            const updates = {
-                              ...features,
-                              multiwhatsapp: {
-                                ...features.multiwhatsapp,
-                                enabled: enabled,
-                              },
-                            };
-
-                            setFeatures(updates);
-                            setUserFeatures(updates);
-                            handleFeatureEnabledChange(updates);
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {features.pos.access && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <div className="font-medium">POS</div>
-                          <div className="text-sm text-gray-500">
-                            {features.pos.enabled ? "Enabled" : "Disabled"}
-                          </div>
-                        </div>
-                        <Switch
-                          checked={features.pos.enabled}
-                          onCheckedChange={(enabled) => {
-                            const updates = {
-                              ...features,
-                              pos: {
-                                ...features.pos,
-                                enabled: enabled,
-                              },
-                            };
-
-                            setFeatures(updates);
-                            setUserFeatures(updates);
-                            handleFeatureEnabledChange(updates);
-                          }}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <div className="space-y-2 pt-4">
-                <div className="flex justify-between items-center">
-                  <h1 className="text-lg font-semibold">Gst Settings</h1>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-gray-600">Enable GST</span>
-                    <Switch
-                      checked={gst.enabled}
-                      onCheckedChange={(checked) => {
-                        setGst((prev) => ({
-                          ...prev,
-                          enabled: checked,
-                          gst_percentage: checked ? prev.gst_percentage : 0,
-                        }));
-                        if (!checked) {
-                          handleSaveGst(null, true);
-                        }
-                      }}
-                      className="data-[state=checked]:bg-black"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  {isEditing.gst ? (
-                    <form onSubmit={handleSaveGst} className="space-y-2 w-full">
-                      <div>
-                        <label htmlFor="gst_no" className="font-semibold">
-                          Gst No.
-                        </label>
-                        <Input
-                          id="gst_no"
-                          type="text"
-                          placeholder="Enter your Gst number"
-                          pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
-                          value={gst.gst_no}
-                          onChange={(e) =>
-                            setGst((prev) => {
-                              return { ...prev, gst_no: e.target.value };
-                            })
-                          }
-                          className="flex-1"
-                          disabled={!gst.enabled}
-                        />
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="gst_percentage"
-                          className="font-semibold"
-                        >
-                          Gst Percentage
-                        </label>
-                        <Input
-                          id="gst_percentage"
-                          type="number"
-                          placeholder="Enter your Gst percentage"
-                          value={gst.gst_percentage}
-                          onChange={(e) =>
-                            setGst((prev) => {
-                              return {
-                                ...prev,
-                                gst_percentage: Number(e.target.value),
-                              };
-                            })
-                          }
-                          className="flex-1"
-                          disabled={!gst.enabled}
-                        />
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          disabled={isSaving.gst}
-                          className="bg-orange-600 hover:bg-orange-700 text-white"
-                        >
-                          {isSaving.gst ? <>Saving...</> : "Save"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setIsEditing((prev) => ({ ...prev, gst: false }));
-                            setGst({
-                              gst_no: gst.gst_no,
-                              gst_percentage: gst.gst_percentage,
-                              enabled: gst.enabled,
-                            });
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div className="flex justify-between items-center w-full">
-                      <div className="flex flex-col gap-2">
-                        {gst.enabled ? (
-                          <>
-                            <div className="text-gray-700">
-                              {gst.gst_no
-                                ? `GST no: ${gst.gst_no}`
-                                : "No Gst no. set"}
-                            </div>
-                            <div className="text-gray-700">
-                              {gst.gst_percentage
-                                ? `GST percentage: ${gst.gst_percentage}%`
-                                : "No Gst percentage set"}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-gray-700">
-                            GST is currently disabled
-                          </div>
-                        )}
-                      </div>
-                      <Button
-                        onClick={() => {
-                          setIsEditing((prev) => ({
-                            ...prev,
-                            gst: true,
-                          }));
-                        }}
-                        variant="ghost"
-                        className="hover:bg-orange-100"
-                        disabled={!gst.enabled}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500">
-                  {gst.enabled
-                    ? "This Gst will be used for your restaurant profile and billing"
-                    : "GST is currently disabled for your restaurant"}
-                </p>
-              </div>
-
-              <div className="space-y-2 pt-4">
-                <div className="text-lg font-semibold mb-4">
-                  QrCode Settings
-                </div>
-                <Link
-                  href={"/admin/qr-management"}
-                  className=" hover:underline bg-gray-100 px-3 py-2 rounded-lg w-full flex items-center justify-between"
-                >
-                  Manage QrCode
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Link>
-              </div>
-              {getFeatures(userData.feature_flags as string)?.stockmanagement
-                .enabled && (
-                <div className="space-y-2 pt-4">
-                  <div className="text-lg font-semibold mb-4">
-                    Stock Management
-                  </div>
-                  <Link
-                    href={"/admin/stock-management"}
-                    className=" hover:underline bg-gray-100 px-3 py-2 rounded-lg w-full flex items-center justify-between"
-                  >
-                    Manage Stocks
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Link>
-                </div>
-              )}
-
-              <div className="space-y-2 pt-4">
-                <div className="text-lg font-semibold">Price Settings</div>
-
-                {/* show pricing  */}
-                <div className="flex gap-2">
-                  <label htmlFor="show-pricing">Show Pricing : </label>
-                  <Switch
-                    checked={showPricing}
-                    onCheckedChange={handleShowPricingChange}
-                  />
-                </div>
-
-                {/* currency  */}
-                {userData.currency !== "🚫" && (
-                  <div className="flex gap-2 items-center">
-                    <label htmlFor="currency">Currency : </label>
-                    <div className="flex gap-2 flex-1">
-                      {isEditing.currency ? (
+                  {/* Place ID */}
+                  <div className="space-y-2 pt-4" id="place_id">
+                    <label htmlFor="placeId" className="text-lg font-semibold">
+                      Place ID
+                    </label>
+                    <div className="flex gap-2">
+                      {isEditing.placeId ? (
                         <>
-                          <Select
-                            value={currency.label} // Use label as the value for selection
-                            onValueChange={(selectedLabel) => {
-                              const selectedCurrency = Currencies.find(
-                                (curr) => curr.label === selectedLabel
-                              );
-                              if (selectedCurrency) {
-                                setCurrency(selectedCurrency);
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="Select currency" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Currencies.map((curr) => (
-                                <SelectItem key={curr.label} value={curr.label}>
-                                  {curr.value} - {curr.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            onClick={handleSaveCurrency}
-                            disabled={isSaving.currency || !currency}
-                            className="bg-orange-600 hover:bg-orange-700 text-white"
-                          >
-                            {isSaving.currency ? <>Saving...</> : "Save"}
-                          </Button>
+                          <Input
+                            id="placeId"
+                            type="text"
+                            placeholder="Enter your Place ID"
+                            value={placeId}
+                            onChange={(e) => setPlaceId(e.target.value)}
+                            className="flex-1"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handleSavePlaceId}
+                              disabled={isSaving.placeId || !placeId}
+                              className="bg-orange-600 hover:bg-orange-700 text-white"
+                            >
+                              {isSaving.placeId ? <>Saving...</> : "Save"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setIsEditing((prev) => ({ ...prev, placeId: false }));
+                                setPlaceId(userData?.place_id || "");
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
                         </>
                       ) : (
                         <div className="flex justify-between items-center w-full">
-                          <span className="text-gray-700">
-                            {currency ? (
-                              <>
-                                {currency.value} - {currency.label}
-                              </>
-                            ) : (
-                              "No currency selected"
+                          <div className="flex-1">
+                            <span className={`${!placeId || placeId.trim() === "" ? "text-red-600" : "text-gray-700"}`}>
+                              {placeId ? placeId : "No Place ID set"}
+                            </span>
+                            {(!placeId || placeId.trim() === "") && (
+                              <p className="text-sm text-red-500 mt-1">⚠️ This field is required. Please fill it to complete your profile.</p>
                             )}
-                          </span>
+                          </div>
                           <Button
                             onClick={() => {
-                              setIsEditing((prev) => ({
-                                ...prev,
-                                currency: true,
-                              }));
-                              setCurrency(currency || Currencies[0]);
+                              setIsEditing((prev) => ({ ...prev, placeId: true }));
+                              setPlaceId(userData?.place_id || "");
                             }}
                             variant="ghost"
                             className="hover:bg-orange-100"
@@ -2243,11 +1459,860 @@ export default function ProfilePage() {
                         </div>
                       )}
                     </div>
+                    <p className="text-sm text-gray-500">
+                      This Place ID will be used for reviews. Get your place Id here{" "}
+                      {"-->"}{" "}
+                      <Link
+                        className="underline text-orange-600"
+                        target="_blank"
+                        href={
+                          "https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder"
+                        }
+                      >
+                        Get Place Id
+                      </Link>
+                    </p>
+                  </div>
+
+                  {/* WhatsApp Number */}
+                  <div className="space-y-2 pt-4" id="whatsapp">
+                    <label htmlFor="whatsNum" className="text-lg font-semibold">
+                      Whatsapp Number
+                      {userFeatures?.multiwhatsapp.enabled ? "s" : ""}
+                    </label>
+
+                    {userFeatures?.multiwhatsapp.enabled ? (
+                      // Multi-whatsapp UI
+                      <>
+                        {isEditing.whatsappNumber ? (
+                          <div className="space-y-4">
+                            {whatsappNumbers.map((item, index) => (
+                              <div key={index} className="flex gap-2 items-center">
+                                <div className="flex-1 grid grid-cols-2 gap-2">
+                                  <Input
+                                    placeholder="Area (e.g. North, South)"
+                                    value={item.area}
+                                    onChange={(e) => {
+                                      const newNumbers = [...whatsappNumbers];
+                                      newNumbers[index].area = e.target.value;
+                                      setWhatsappNumbers(newNumbers);
+                                    }}
+                                  />
+                                  <Input
+                                    type="text"
+                                    placeholder="Whatsapp Number"
+                                    minLength={10}
+                                    maxLength={10}
+                                    value={item.number}
+                                    onChange={(e) => {
+                                      const newNumbers = [...whatsappNumbers];
+                                      newNumbers[index].number = e.target.value;
+                                      setWhatsappNumbers(newNumbers);
+                                    }}
+                                  />
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  onClick={() => {
+                                    const newNumbers = [...whatsappNumbers];
+                                    newNumbers.splice(index, 1);
+                                    setWhatsappNumbers(newNumbers);
+                                  }}
+                                  className="text-red-500 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() =>
+                                  setWhatsappNumbers([
+                                    ...whatsappNumbers,
+                                    { number: "", area: "" },
+                                  ])
+                                }
+                                variant="outline"
+                              >
+                                Add Another Number
+                              </Button>
+                              <Button
+                                onClick={handleSaveWhatsappNumbers}
+                                disabled={
+                                  isSaving.whatsappNumber || !whatsappNumbers.length
+                                }
+                                className="bg-orange-600 hover:bg-orange-700 text-white"
+                              >
+                                {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="grid gap-2">
+                              {whatsappNumbers.map((item, index) => (
+                                <div
+                                  key={index}
+                                  className="flex gap-2 items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                                >
+                                  <div className="flex-1 grid grid-cols-2 gap-4">
+                                    <div className="flex flex-col">
+                                      <span className="text-sm text-gray-500">
+                                        Area
+                                      </span>
+                                      <span className="font-medium">
+                                        {item.area || "Default"}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-sm text-gray-500">
+                                        Number
+                                      </span>
+                                      <span className="font-medium">
+                                        {item.number}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="flex justify-end">
+                              <Button
+                                onClick={() =>
+                                  setIsEditing((prev) => ({
+                                    ...prev,
+                                    whatsappNumber: true,
+                                  }))
+                                }
+                                variant="ghost"
+                                className="mt-4"
+                              >
+                                <Pencil className="w-4 h-4 " />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      // Single whatsapp number UI (original code)
+                      <div className="flex gap-2">
+                        {isEditing.whatsappNumber ? (
+                          <>
+                            <Input
+                              id="whatsNum"
+                              type="text"
+                              placeholder="Enter your Whatsapp Number"
+                              minLength={10}
+                              maxLength={10}
+                              value={whatsappNumber}
+                              onChange={(e) => setWhatsappNumber(e.target.value)}
+                              className="flex-1"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={handleSaveWhatsappNumber}
+                                disabled={isSaving.whatsappNumber || !whatsappNumber}
+                                className="bg-orange-600 hover:bg-orange-700 text-white"
+                              >
+                                {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setIsEditing((prev) => ({ ...prev, whatsappNumber: false }));
+                                  setWhatsappNumber(whatsappNumber ? whatsappNumber : "");
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex justify-between items-center w-full">
+                            <div className="flex-1">
+                              <span className={`${!whatsappNumber || whatsappNumber.trim() === "" ? "text-red-600" : "text-gray-700"}`}>
+                                {whatsappNumber
+                                  ? whatsappNumber
+                                  : "No Whatsapp Number set"}
+                              </span>
+                              {(!whatsappNumber || whatsappNumber.trim() === "") && (
+                                <p className="text-sm text-red-500 mt-1">⚠️ This field is required. Please fill it to complete your profile.</p>
+                              )}
+                            </div>
+                            <Button
+                              onClick={() => {
+                                setIsEditing((prev) => ({
+                                  ...prev,
+                                  whatsappNumber: true,
+                                }));
+                                setWhatsappNumber(
+                                  whatsappNumber ? whatsappNumber : ""
+                                );
+                              }}
+                              variant="ghost"
+                              className="hover:bg-orange-100"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <p className="text-sm text-gray-500">
+                      {getFeatures((userData as Partner)?.feature_flags || "").multiwhatsapp
+                        .access
+                        ? "These Whatsapp Numbers will be used for receiving messages from customers in different areas"
+                        : "This Whatsapp Number will be used for receiving messages from customers"}
+                    </p>
+                    {userData?.role === "partner" && (
+                      <div className="space-y-2 pt-4">
+                        <label className="text-lg font-semibold">Country Code</label>
+                        <div className="flex gap-2 items-center">
+                          {isEditingCountryCode ? (
+                            <>
+                              <Select
+                                value={countryCode}
+                                onValueChange={setCountryCode}
+                              >
+                                <SelectTrigger className="flex-1 border rounded p-2">
+                                  <SelectValue placeholder="Select country code" />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-[300px]">
+                                  <div className="p-2 sticky top-0 bg-white z-10">
+                                    <input
+                                      type="text"
+                                      placeholder="Search country or code..."
+                                      value={countryCodeSearch}
+                                      onChange={e => setCountryCodeSearch(e.target.value)}
+                                      className="w-full border rounded p-2"
+                                    />
+                                  </div>
+                                  {countryCodes
+                                    .filter(item =>
+                                      item.country.toLowerCase().includes(countryCodeSearch.toLowerCase()) ||
+                                      item.code.includes(countryCodeSearch)
+                                    )
+                                    .map(item => (
+                                      <SelectItem key={item.code} value={item.code}>
+                                        {item.code} ({item.country})
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                              <div className="flex gap-2 mt-2">
+                                <Button
+                                  onClick={handleSaveCountryCode}
+                                  disabled={isSaving.countryCode}
+                                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                                >
+                                  {isSaving.countryCode ? "Saving..." : "Save"}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    setIsEditingCountryCode(false);
+                                    setCountryCode(userData?.country_code || "+91");
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex justify-between items-center w-full">
+                              <span className="text-gray-700 font-mono">{userData.country_code || countryCode}</span>
+                              <Button
+                                onClick={() => setIsEditingCountryCode(true)}
+                                variant="ghost"
+                                className="hover:bg-orange-100"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          This country code will be used for WhatsApp and phone links.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Instagram Link */}
+                  <div className="space-y-2 pt-4">
+                    <label htmlFor="instaLink" className="text-lg font-semibold">
+                      Instagram Link
+                    </label>
+                    <div className="flex gap-2">
+                      {isEditing.instaLink ? (
+                        <>
+                          <Input
+                            id="instaLink"
+                            type="text"
+                            placeholder="Enter your Instagram Link"
+                            value={instaLink}
+                            onChange={(e) => setInstaLink(e.target.value)}
+                            className="flex-1"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handleSaveInstaLink}
+                              disabled={isSaving.instaLink || !instaLink}
+                              className="bg-orange-600 hover:bg-orange-700 text-white"
+                            >
+                              {isSaving.instaLink ? <>Saving...</> : "Save"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setIsEditing((prev) => ({ ...prev, instaLink: false }));
+                                setInstaLink(instaLink ? instaLink : "");
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between items-center w-full">
+                          <div className="flex-1">
+                            <span className={`${!instaLink || instaLink.trim() === "" ? "text-red-600" : "text-gray-700"} text-xs text-wrap`}>
+                              {instaLink ? instaLink : "No Instagram Link set"}
+                            </span>
+                            {(!instaLink || instaLink.trim() === "") && (
+                              <p className="text-sm text-red-500 mt-1">⚠️ This field is required. Please fill it to complete your profile.</p>
+                            )}
+                          </div>
+                          <Button
+                            onClick={() => {
+                              setIsEditing((prev) => ({
+                                ...prev,
+                                instaLink: true,
+                              }));
+                              setInstaLink(instaLink ? instaLink : "");
+                            }}
+                            variant="ghost"
+                            className="hover:bg-orange-100"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      This Instagram Link will be used for your restaurant profile
+                    </p>
+                  </div>
+
+                  {/* Footnote */}
+                  <div className="space-y-2 pt-4">
+                    <label htmlFor="footNote" className="text-lg font-semibold">
+                      Footnote
+                    </label>
+                    <div className="flex gap-2">
+                      {isEditing.footNote ? (
+                        <>
+                          <Input
+                            id="footNote"
+                            type="text"
+                            placeholder="Enter your Footnote"
+                            value={footNote}
+                            onChange={(e) => setFootNote(e.target.value)}
+                            className="flex-1"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handleSaveFootNote}
+                              disabled={isSaving.footNote}
+                              className="bg-orange-600 hover:bg-orange-700 text-white"
+                            >
+                              {isSaving.footNote ? <>Saving...</> : "Save"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setIsEditing((prev) => ({ ...prev, footNote: false }));
+                                setFootNote(footNote ? footNote : "");
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between items-center w-full">
+                          <div className="flex-1">
+                            <span className={`${!footNote || footNote.trim() === "" ? "text-red-600" : "text-gray-700"}`}>
+                              {footNote ? footNote : "No Footnote set"}
+                            </span>
+                            {(!footNote || footNote.trim() === "") && (
+                              <p className="text-sm text-red-500 mt-1">⚠️ This field is required. Please fill it to complete your profile.</p>
+                            )}
+                          </div>
+                          <Button
+                            onClick={() => {
+                              setIsEditing((prev) => ({
+                                ...prev,
+                                footNote: true,
+                              }));
+                              setFootNote(footNote ? footNote : "");
+                            }}
+                            variant="ghost"
+                            className="hover:bg-orange-100"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      This Footnote will be used for your restaurant profile
+                    </p>
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Location</h3>
+                  <LocationSettings
+                    handleSaveLocation={handleSaveLocation}
+                    locationSaving={isSaving.location}
+                    locationEditing={isEditing.location}
+                    location={location}
+                    setLocation={setLocation}
+                    setIsEditingLocation={(value) =>
+                      setIsEditing({ ...isEditing, location: value })
+                    }
+                    geoLocation={geoLocation}
+                    setGeoLocation={setGeoLocation}
+                    geoLoading={isLoading}
+                    geoSaving={isSaving.geoLocation}
+                    geoError={geoError}
+                    handleGetCurrentLocation={handleGetCurrentLocation}
+                    handleSaveGeoLocation={handleSaveGeoLocation}
+                  />
+                </div>
+
+                {/* Price Settings */}
+                <div className="space-y-2 pt-4">
+                  <div className="text-lg font-semibold">Price Settings</div>
+
+                  {/* show pricing  */}
+                  <div className="flex gap-2">
+                    <label htmlFor="show-pricing">Show Pricing : </label>
+                    <Switch
+                      checked={showPricing}
+                      onCheckedChange={handleShowPricingChange}
+                    />
+                  </div>
+
+                  {/* currency  */}
+                  {userData.currency !== "🚫" && (
+                    <div className="flex gap-2 items-center">
+                      <label htmlFor="currency">Currency : </label>
+                      <div className="flex gap-2 flex-1">
+                        {isEditing.currency ? (
+                          <>
+                            <Select
+                              value={currency.label} // Use label as the value for selection
+                              onValueChange={(selectedLabel) => {
+                                const selectedCurrency = Currencies.find(
+                                  (curr) => curr.label === selectedLabel
+                                );
+                                if (selectedCurrency) {
+                                  setCurrency(selectedCurrency);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Select currency" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Currencies.map((curr) => (
+                                  <SelectItem key={curr.label} value={curr.label}>
+                                    {curr.value} - {curr.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              onClick={handleSaveCurrency}
+                              disabled={isSaving.currency || !currency}
+                              className="bg-orange-600 hover:bg-orange-700 text-white"
+                            >
+                              {isSaving.currency ? <>Saving...</> : "Save"}
+                            </Button>
+                          </>
+                        ) : (
+                          <div className="flex justify-between items-center w-full">
+                            <span className="text-gray-700">
+                              {currency ? (
+                                <>
+                                  {currency.value} - {currency.label}
+                                </>
+                              ) : (
+                                "No currency selected"
+                              )}
+                            </span>
+                            <Button
+                              onClick={() => {
+                                setIsEditing((prev) => ({
+                                  ...prev,
+                                  currency: true,
+                                }));
+                                setCurrency(currency || Currencies[0]);
+                              }}
+                              variant="ghost"
+                              className="hover:bg-orange-100"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* QrCode Settings */}
+                <div className="space-y-2 pt-4">
+                  <div className="text-lg font-semibold mb-4">
+                    QrCode Settings
+                  </div>
+                  <Link
+                    href={"/admin/qr-management"}
+                    className=" hover:underline bg-gray-100 px-3 py-2 rounded-lg w-full flex items-center justify-between"
+                  >
+                    Manage QrCode
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Link>
+                </div>
+
+                {/* Stock Management */}
+                {getFeatures((userData as Partner)?.feature_flags || "")?.stockmanagement
+                  .enabled && (
+                  <div className="space-y-2 pt-4">
+                    <div className="text-lg font-semibold mb-4">
+                      Stock Management
+                    </div>
+                    <Link
+                      href={"/admin/stock-management"}
+                      className=" hover:underline bg-gray-100 px-3 py-2 rounded-lg w-full flex items-center justify-between"
+                    >
+                      Manage Stocks
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Link>
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
+
+                {/* Feature Settings */}
+                <div className="space-y-2 pt-4">
+                  {features && (
+                    <>
+                      <div className="text-lg font-semibold">
+                        Feature Settings
+                      </div>
+
+                      {features.ordering.access && (
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <div className="font-medium">Ordering</div>
+                            <div className="text-sm text-gray-500">
+                              {features.ordering.enabled ? "Enabled" : "Disabled"}
+                            </div>
+                          </div>
+                          <Switch
+                            checked={features.ordering.enabled}
+                            onCheckedChange={(enabled) => {
+                              const updates = {
+                                ...features,
+                                ordering: {
+                                  ...features.ordering,
+                                  enabled: enabled,
+                                },
+                              };
+
+                              setFeatures(updates);
+                              setUserFeatures(updates);
+                              handleFeatureEnabledChange(updates);
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {features.delivery.access && (
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <div className="font-medium">Delivery</div>
+                            <div className="text-sm text-gray-500">
+                              {features.delivery.enabled ? "Enabled" : "Disabled"}
+                            </div>
+                          </div>
+                          <Switch
+                            checked={features.delivery.enabled}
+                            onCheckedChange={(enabled) => {
+                              const updates = {
+                                ...features,
+                                delivery: {
+                                  ...features.delivery,
+                                  enabled: enabled,
+                                },
+                              };
+
+                              setFeatures(updates);
+                              setUserFeatures(updates);
+                              handleFeatureEnabledChange(updates);
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {features.multiwhatsapp.access && (
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <div className="font-medium">
+                              Multiple Whatsapp Numbers
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {features.multiwhatsapp.enabled
+                                ? "Enabled"
+                                : "Disabled"}
+                            </div>
+                          </div>
+                          <Switch
+                            checked={features.multiwhatsapp.enabled}
+                            onCheckedChange={(enabled) => {
+                              const updates = {
+                                ...features,
+                                multiwhatsapp: {
+                                  ...features.multiwhatsapp,
+                                  enabled: enabled,
+                                },
+                              };
+
+                              setFeatures(updates);
+                              setUserFeatures(updates);
+                              handleFeatureEnabledChange(updates);
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {features.pos.access && (
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <div className="font-medium">POS</div>
+                            <div className="text-sm text-gray-500">
+                              {features.pos.enabled ? "Enabled" : "Disabled"}
+                            </div>
+                          </div>
+                          <Switch
+                            checked={features.pos.enabled}
+                            onCheckedChange={(enabled) => {
+                              const updates = {
+                                ...features,
+                                pos: {
+                                  ...features.pos,
+                                  enabled: enabled,
+                                },
+                              };
+
+                              setFeatures(updates);
+                              setUserFeatures(updates);
+                              handleFeatureEnabledChange(updates);
+                            }}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Delivery Settings Section */}
+            <Card className="overflow-hidden hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold">
+                  Delivery Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 divide-y-2">
+                {/* Location */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Location</h3>
+                  <DeliveryAndGeoLocationSettings
+                    handleSaveLocation={handleSaveLocation}
+                    locationSaving={isSaving.location}
+                    locationEditing={isEditing.location}
+                    location={location}
+                    setLocation={setLocation}
+                    setIsEditingLocation={(value) =>
+                      setIsEditing({ ...isEditing, location: value })
+                    }
+                    geoLocation={geoLocation}
+                    setGeoLocation={setGeoLocation}
+                    geoLoading={isLoading}
+                    geoSaving={isSaving.geoLocation}
+                    geoError={geoError}
+                    handleGetCurrentLocation={handleGetCurrentLocation}
+                    handleSaveGeoLocation={handleSaveGeoLocation}
+                    currency={currency}
+                    deliveryRate={deliveryRate}
+                    setDeliveryRate={setDeliveryRate}
+                    deliveryRules={deliveryRules}
+                    setDeliveryRules={setDeliveryRules}
+                    isEditingDelivery={isEditing.deliveryRate}
+                    setIsEditingDelivery={(value) =>
+                      setIsEditing({ ...isEditing, deliveryRate: value })
+                    }
+                    deliverySaving={isSaving.deliverySettings}
+                    handleSaveDeliverySettings={handleSaveDeliverySettings}
+                  />
+                </div>
+
+                {/* GST Settings */}
+                <div className="space-y-2 pt-4">
+                  <div className="flex justify-between items-center">
+                    <h1 className="text-lg font-semibold">Gst Settings</h1>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-600">Enable GST</span>
+                      <Switch
+                        checked={gst.enabled}
+                        onCheckedChange={(checked) => {
+                          setGst((prev) => ({
+                            ...prev,
+                            enabled: checked,
+                            gst_percentage: checked ? prev.gst_percentage : 0,
+                          }));
+                          if (!checked) {
+                            handleSaveGst(null, true);
+                          }
+                        }}
+                        className="data-[state=checked]:bg-black"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {isEditing.gst ? (
+                      <form onSubmit={handleSaveGst} className="space-y-2 w-full">
+                        <div>
+                          <label htmlFor="gst_no" className="font-semibold">
+                            Gst No.
+                          </label>
+                          <Input
+                            id="gst_no"
+                            type="text"
+                            placeholder="Enter your Gst number"
+                            pattern="^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"
+                            value={gst.gst_no}
+                            onChange={(e) =>
+                              setGst((prev) => {
+                                return { ...prev, gst_no: e.target.value };
+                              })
+                            }
+                            className="flex-1"
+                            disabled={!gst.enabled}
+                          />
+                        </div>
+                        <div>
+                          <label
+                            htmlFor="gst_percentage"
+                            className="font-semibold"
+                          >
+                            Gst Percentage
+                          </label>
+                          <Input
+                            id="gst_percentage"
+                            type="number"
+                            placeholder="Enter your Gst percentage"
+                            value={gst.gst_percentage}
+                            onChange={(e) =>
+                              setGst((prev) => {
+                                return {
+                                  ...prev,
+                                  gst_percentage: Number(e.target.value),
+                                };
+                              })
+                            }
+                            className="flex-1"
+                            disabled={!gst.enabled}
+                          />
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            disabled={isSaving.gst}
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                          >
+                            {isSaving.gst ? <>Saving...</> : "Save"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setIsEditing((prev) => ({ ...prev, gst: false }));
+                              setGst({
+                                gst_no: gst.gst_no,
+                                gst_percentage: gst.gst_percentage,
+                                enabled: gst.enabled,
+                              });
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="flex justify-between items-center w-full">
+                        <div className="flex flex-col gap-2">
+                          {gst.enabled ? (
+                            <>
+                              <div className="text-gray-700">
+                                {gst.gst_no
+                                  ? `GST no: ${gst.gst_no}`
+                                  : "No Gst no. set"}
+                              </div>
+                              <div className="text-gray-700">
+                                {gst.gst_percentage
+                                  ? `GST percentage: ${gst.gst_percentage}%`
+                                  : "No Gst percentage set"}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-gray-700">
+                              GST is currently disabled
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          onClick={() => {
+                            setIsEditing((prev) => ({
+                              ...prev,
+                              gst: true,
+                            }));
+                          }}
+                          variant="ghost"
+                          className="hover:bg-orange-100"
+                          disabled={!gst.enabled}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    {gst.enabled
+                      ? "This Gst will be used for your restaurant profile and billing"
+                      : "GST is currently disabled for your restaurant"}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </>
         )}
 
         {/* Danger Area */}
