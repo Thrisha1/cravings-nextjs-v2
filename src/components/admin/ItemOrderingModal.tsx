@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,6 +56,11 @@ interface ItemOrderingFormProps {
   onCancel: () => void;
 }
 
+// Type guard to check if item has a valid ID
+function hasValidId(item: MenuItem): item is MenuItem & { id: string } {
+  return typeof item.id === 'string' && item.id.length > 0;
+}
+
 export function ItemOrderingForm({
   categories,
   items: initialItems,
@@ -71,7 +78,9 @@ export function ItemOrderingForm({
   // Initialize items
   useEffect(() => {
     if (initialItems.length > 0) {
-      setLocalItems(initialItems);
+      // Only keep items with valid IDs
+      const validItems = initialItems.filter(hasValidId);
+      setLocalItems(validItems);
       setSearchTerm("");
       
       // Initialize with no categories expanded
@@ -150,6 +159,11 @@ export function ItemOrderingForm({
     }
     // If no search term, include all categories that have items
     return true;
+  });
+
+  // Filter out any items that don't have valid IDs
+  Object.keys(itemsByCategory).forEach(categoryId => {
+    itemsByCategory[categoryId] = itemsByCategory[categoryId].filter(item => !!item.id);
   });
 
   const toggleCategoryExpansion = (categoryId: string) => {
@@ -237,12 +251,15 @@ export function ItemOrderingForm({
 
     try {
       // Ensure all items have their priorities set based on their position in the category
-      const updatedItems = Object.entries(itemsByCategory).flatMap(([categoryId, items]) => {
-        return items.map((item, index) => ({
-          ...item,
-          priority: index + 1
-        }));
-      });
+      const updatedItems = Object.entries(itemsByCategory)
+        .flatMap(([categoryId, items]) => {
+          return items
+            .filter(item => item.id) // Only include items with valid IDs
+            .map((item, index) => ({
+              ...item,
+              priority: index + 1
+            }));
+        });
 
       await onSubmit(updatedItems);
       setIsLoading(false);
@@ -386,74 +403,78 @@ export function ItemOrderingForm({
                                     {...provided.droppableProps}
                                     className="w-full"
                                   >
-                                    {filteredItems.map((item, index) => (
-                                      <Draggable
-                                        key={item.id}
-                                        draggableId={item.id as string}
-                                        index={index}
-                                      >
-                                        {(provided, snapshot) => (
-                                          <div
-                                            ref={provided.innerRef}
-                                            {...provided.draggableProps}
-                                            className={`flex items-center w-full p-2 my-1 ${
-                                              snapshot.isDragging
-                                                ? "bg-primary/10 shadow-md rounded-md border border-primary"
-                                                : "bg-background hover:bg-gray-50 rounded-md"
-                                            }`}
+                                    {filteredItems
+                                      .filter(hasValidId) // Only include items with valid IDs
+                                      .map((item, index) => {
+                                        return (
+                                          <Draggable
+                                            key={item.id}
+                                            draggableId={item.id}
+                                            index={index}
                                           >
-                                            <div className="w-[30px] pl-8">
-                                              {/* Indent to show hierarchy */}
-                                            </div>
-                                            <div className="font-medium flex-1">
-                                              {item.name}
-                                            </div>
-                                            <div className="w-[80px] text-right">
-                                              ₹{item.price}
-                                            </div>
-                                            {/* Mobile Actions */}
-                                            <div className="w-[80px] flex justify-center gap-1 sm:hidden">
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  moveItem(item.id, 'up');
-                                                }}
-                                                disabled={index === 0}
-                                                title="Move up"
-                                              >
-                                                <ArrowUp className="h-4 w-4" />
-                                              </Button>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  moveItem(item.id, 'down');
-                                                }}
-                                                disabled={index === filteredItems.length - 1}
-                                                title="Move down"
-                                              >
-                                                <ArrowDown className="h-4 w-4" />
-                                              </Button>
-                                            </div>
-                                            {/* Drag Handle - desktop only */}
-                                            <div className="w-[40px] hidden sm:flex items-center justify-center">
+                                            {(provided, snapshot) => (
                                               <div
-                                                {...provided.dragHandleProps}
-                                                className="flex items-center justify-center"
-                                                onClick={(e) => e.stopPropagation()}
+                                                ref={provided.innerRef}
+                                                {...provided.draggableProps}
+                                                className={`flex items-center w-full p-2 my-1 ${
+                                                  snapshot.isDragging
+                                                    ? "bg-primary/10 shadow-md rounded-md border border-primary"
+                                                    : "bg-background hover:bg-gray-50 rounded-md"
+                                                }`}
                                               >
-                                                <MoveVertical className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
+                                                <div className="w-[30px] pl-8">
+                                                  {/* Indent to show hierarchy */}
+                                                </div>
+                                                <div className="font-medium flex-1">
+                                                  {item.name}
+                                                </div>
+                                                <div className="w-[80px] text-right">
+                                                  ₹{item.price}
+                                                </div>
+                                                {/* Mobile Actions */}
+                                                <div className="w-[80px] flex justify-center gap-1 sm:hidden">
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      moveItem(item.id, 'up');
+                                                    }}
+                                                    disabled={index === 0}
+                                                    title="Move up"
+                                                  >
+                                                    <ArrowUp className="h-4 w-4" />
+                                                  </Button>
+                                                  <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      moveItem(item.id, 'down');
+                                                    }}
+                                                    disabled={index === filteredItems.length - 1}
+                                                    title="Move down"
+                                                  >
+                                                    <ArrowDown className="h-4 w-4" />
+                                                  </Button>
+                                                </div>
+                                                {/* Drag Handle - desktop only */}
+                                                <div className="w-[40px] hidden sm:flex items-center justify-center">
+                                                  <div
+                                                    {...provided.dragHandleProps}
+                                                    className="flex items-center justify-center"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                  >
+                                                    <MoveVertical className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
+                                                  </div>
+                                                </div>
                                               </div>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </Draggable>
-                                    ))}
+                                            )}
+                                          </Draggable>
+                                        );
+                                      })}
                                     {provided.placeholder}
                                   </div>
                                 )}
@@ -513,9 +534,10 @@ export function ItemOrderingModal({
   const { updateItemsAsBatch, fetchMenu } = useMenuStore();
 
   const handleSubmit = async (updatedItems: MenuItem[]) => {
-    // Format items for batch update
-    const updates = updatedItems.map(item => ({
-      id: item.id as string,
+    // Filter out items without IDs and format for batch update
+    const validItems = updatedItems.filter(hasValidId);
+    const updates = validItems.map(item => ({
+      id: item.id,
       priority: item.priority
     }));
     
