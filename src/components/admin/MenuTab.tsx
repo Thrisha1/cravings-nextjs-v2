@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pen, Plus, Search, Upload, Save, X } from "lucide-react";
+import { Pen, Plus, Search, Upload, Save, X, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,6 +15,7 @@ import Link from "next/link";
 import { AddMenuItemForm } from "../bulkMenuUpload/AddMenuItemModal";
 import { EditMenuItemForm, EditMenuItemModal } from "./EditMenuItemModal";
 import { CategoryManagementModal, CategoryManagementForm } from "./CategoryManagementModal";
+import { ItemOrderingModal } from "./ItemOrderingModal";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
 import { toast } from "sonner";
@@ -63,6 +64,7 @@ export function MenuTab() {
   const [tempItems, setTempItems] = useState<Record<string, MenuItem[]>>({});
   const { updateItemsAsBatch } = useMenuStore();
   const [currenctCat , setCurrentCat] = useState("");
+  const [isItemOrderingOpen, setIsItemOrderingOpen] = useState(false);
 
   useEffect(() => {
     if (userData?.id) {
@@ -306,10 +308,18 @@ export function MenuTab() {
             <Button
               onClick={() => setIsEditingPriority(true)}
               variant="outline"
-              className="flex gap-2 text-xs sm:text-sm"
+              className="flex gap-2 text-xs sm:text-sm hidden sm:flex"
             >
               <Pen className="h-4 w-4" />
               <span>Edit Item Order</span>
+            </Button>
+            <Button
+              onClick={() => setIsItemOrderingOpen(true)}
+              variant="outline"
+              className="flex gap-2 text-xs sm:text-sm sm:hidden"
+            >
+              <Menu className="h-4 w-4" />
+              <span>Item Order</span>
             </Button>
             <Button
               onClick={() => setIsCategoryEditing(true)}
@@ -352,6 +362,25 @@ export function MenuTab() {
             priority: items[0].category.priority,
           }))}
           onOpenChange={setIsCategoryEditing}
+        />
+      )}
+
+      {isItemOrderingOpen && (
+        <ItemOrderingModal
+          open={isItemOrderingOpen}
+          onOpenChange={(open) => {
+            setIsItemOrderingOpen(open);
+            if (!open) {
+              // Refresh menu data when modal is closed
+              fetchMenu();
+            }
+          }}
+          categories={Object.entries(groupedItems).map(([category, items]) => ({
+            id: items[0].category.id,
+            name: category,
+            priority: items[0].category.priority || 0,
+          }))}
+          items={Object.values(groupedItems).flat()}
         />
       )}
 
