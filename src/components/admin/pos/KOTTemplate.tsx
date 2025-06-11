@@ -1,7 +1,7 @@
-import { Order } from "@/store/orderStore";
 import React from "react";
+import { Order } from "@/store/orderStore";
 
-const KOTTemplate = ({ ref , order} : {ref : React.RefObject<HTMLDivElement | null>, order : Order}) => {
+const KOTTemplate = ({ ref, order }: { ref: React.RefObject<HTMLDivElement | null>, order: Order }) => {
 
     if (!order) return null;
 

@@ -2,7 +2,7 @@ import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { useAuthStore } from "./authStore";
+import { useAuthStore, Captain } from "./authStore";
 import {
   createOrderItemsMutation,
   createOrderMutation,
@@ -39,6 +39,15 @@ export interface DeliveryRules {
   is_fixed_rate: boolean;
 }
 
+export interface DeliveryRules {
+  delivery_radius: number;
+  first_km_range: {
+    km: number;
+    rate: number;
+  };
+  is_fixed_rate: boolean;
+}
+
 export interface Order {
   id: string;
   items: OrderItem[];
@@ -59,14 +68,25 @@ export interface Order {
   userId?: string;
   user?: {
     phone?: string;
+    name?: string;
+    email?: string;
   };
   type?: "table_order" | "delivery" | "pos";
   deliveryAddress?: string | null;
   gstIncluded?: number;
+  orderedby?: string;
   delivery_charge?: number | null;
   delivery_location?: {
     type: string;
     coordinates: [number, number];
+  };
+  order_number?: string;
+  captain_id?: string;
+  captain?: {
+    id: string;
+    name: string;
+    phone?: string;
+    email: string;
   };
   extraCharges?:
     | {
@@ -76,6 +96,13 @@ export interface Order {
         id?: string;
       }[]
     | null;
+}
+
+export interface DeliveryInfo {
+  distance: number;
+  cost: number;
+  ratePerKm: number;
+  isOutOfRange: boolean;
 }
 
 export interface DeliveryInfo {
@@ -115,6 +142,7 @@ interface OrderState {
   deliveryCost: number | null;
   open_place_order_modal: boolean;
   setOpenPlaceOrderModal: (open: boolean) => void;
+
   setHotelId: (id: string) => void;
   addItem: (item: HotelDataMenus) => void;
   removeItem: (itemId: string) => void;
@@ -351,7 +379,8 @@ const useOrderStore = create(
               notes: order.notes || null,
               userId: order.user_id,
               gstIncluded: order.gst_included,
-              extraCharges: order.extra_charges || [],
+              extraCharges: order.extra_charges || [], // Handle null case
+              delivery_charge: order.delivery_charge, // Include delivery_charge
               user: order.user,
               items: order.order_items.map((i: any) => ({
                 id: i.item.id,
@@ -376,52 +405,154 @@ const useOrderStore = create(
       },
 
       subscribeOrders: (callback) => {
-        const partnerId = useAuthStore.getState().userData?.id;
+        const userData = useAuthStore.getState().userData;
 
+        if (!userData?.id || !userData?.role) {
+          console.log(
+            "User data not available yet, will retry subscription setup"
+          );
+          const retryInterval = setInterval(() => {
+            const retryUserData = useAuthStore.getState().userData;
+            if (retryUserData?.id && retryUserData?.role) {
+              clearInterval(retryInterval);
+              const unsubscribe = useOrderStore
+                .getState()
+                .subscribeOrders(callback);
+              return () => {
+                clearInterval(retryInterval);
+                unsubscribe();
+              };
+            }
+          }, 1000);
+
+          return () => {
+            clearInterval(retryInterval);
+          };
+        }
+
+        const partnerId =
+          userData?.role === "captain"
+            ? (userData as Captain).partner_id
+            : userData?.id;
+
+        if (!partnerId) {
+          console.error("No partner ID available for subscription");
+          return () => {};
+        }
+
+        let subscriptionActive = true;
         const unsubscribe = subscribeToHasura({
           query: subscriptionQuery,
-          variables: { partner_id: partnerId },
+          variables: {
+            partner_id: partnerId,
+          },
           onNext: (data) => {
-            const allOrders = data.data?.orders.map((order: any) => ({
-              id: order.id,
-              totalPrice: order.total_price,
-              createdAt: order.created_at,
-              tableNumber: order.table_number,
-              qrId: order.qr_id,
-              status: order.status,
-              type: order.type,
-              phone: order.phone,
-              notes: order.notes || null,
-              deliveryAddress: order.delivery_address,
-              partnerId: order.partner_id,
-              delivery_location: order.delivery_location,
-              gstIncluded: order.gst_included,
-              extraCharges: order.extra_charges || [],
-              delivery_charge: order.delivery_charge,
-              status_history: order.status_history,
-              userId: order.user_id,
-              user: order.user,
-              items: order.order_items.map((i: any) => ({
-                id: i.item.id,
-                quantity: i.quantity,
-                name: i.item.name || "Unknown",
-                price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
-                category: i.menu?.category,
-                stocks: i.menu?.stocks,
-              })),
-            }));
-
-            if (allOrders) {
-              set({ partnerOrders: allOrders });
-              if (callback) callback(allOrders);
+            if (!subscriptionActive) {
+              console.log("Subscription no longer active, ignoring data");
+              return;
             }
+
+            if (!data?.data?.orders) {
+              console.log("No orders data in subscription response");
+              if (callback) callback([]);
+              return;
+            }
+
+            const allOrders = data.data.orders
+              .map((order: any) => {
+                // Ensure captain data is properly included
+                const captainData = order.captainid ? {
+                  id: order.captainid.id,
+                  name: order.captainid.name,
+                  email: order.captainid.email
+                } : null;
+
+                return {
+                  id: order.id,
+                  totalPrice: order.total_price,
+                  createdAt: order.created_at,
+                  tableNumber: order.table_number,
+                  qrId: order.qr_id,
+                  status: order.status,
+                  type: order.type,
+                  phone: order.phone,
+                  deliveryAddress: order.delivery_address,
+                  partnerId: order.partner_id,
+                  gstIncluded: order.gst_included,
+                  extraCharges: order.extra_charges,
+                  userId: order.user_id,
+                  orderedby: order.orderedby,
+                  captain_id: order.captain_id,
+                  captain: captainData,  // Use the properly structured captain data
+                  user: order.user,
+                  items: order.order_items?.map((i: any) => ({
+                    id: i.menu?.id,
+                    quantity: i.quantity,
+                    name: i.menu?.name || "Unknown",
+                    price: i.menu?.offers?.[0]?.offer_price || i.menu?.price || 0,
+                    category: i.menu?.category?.name,
+                    description: i.menu?.description || "",
+                    image_url: i.menu?.image_url || "",
+                    is_top: i.menu?.is_top || false,
+                    is_available: i.menu?.is_available || false,
+                    priority: i.menu?.priority || 0,
+                    offers: i.menu?.offers || [],
+                  })) || [],
+                };
+              })
+              .filter((order: any): order is NonNullable<typeof order> => order !== null);
+
+            set({ partnerOrders: allOrders });
+            if (callback) callback(allOrders);
           },
           onError: (error) => {
-            console.error("Subscription error:", error);
+            console.error("Subscription error in order store:", {
+              error,
+              message: error instanceof Error ? error.message : String(error),
+              timestamp: new Date().toISOString(),
+              userData: {
+                id: userData?.id,
+                role: userData?.role,
+                partnerId:
+                  userData?.role === "captain"
+                    ? (userData as Captain).partner_id
+                    : userData?.id,
+              },
+            });
+
+            // If we get a connection error, try to resubscribe after a delay
+            if (
+              error.message.includes("connection") ||
+              error.message.includes("network")
+            ) {
+              console.log(
+                "Connection error detected, will attempt to resubscribe"
+              );
+              setTimeout(() => {
+                if (subscriptionActive) {
+                  console.log("Attempting to resubscribe...");
+                  const newUnsubscribe = useOrderStore
+                    .getState()
+                    .subscribeOrders(callback);
+                  unsubscribe();
+                  return newUnsubscribe;
+                }
+              }, 5000); // Wait 5 seconds before retrying
+            }
+
+            // Always call callback with empty array to prevent UI from breaking
+            if (callback) callback([]);
           },
         });
 
-        return unsubscribe;
+        return () => {
+          console.log("Cleaning up subscription", {
+            partnerId,
+            timestamp: new Date().toISOString(),
+          });
+          subscriptionActive = false;
+          unsubscribe();
+        };
       },
 
       setHotelId: (id: string) => {
@@ -693,11 +824,19 @@ const useOrderStore = create(
         tableNumber,
         qrId,
         gstIncluded,
-        extraCharges,
-        deliveryCharge
+        extraCharges?:
+          | {
+              name: string;
+              amount: number;
+              charge_type?: string;
+            }[]
+          | null,
+        deliveryCharge?: number
       ) => {
         try {
           const state = get();
+
+          // Validation checks
           if (!state.hotelId) {
             toast.error("No hotel selected");
             return null;
@@ -729,7 +868,9 @@ const useOrderStore = create(
 
           const validQrId = qrId && isValidUUID(qrId) ? qrId : null;
           const type = (tableNumber ?? 0) > 0 ? "table_order" : "delivery";
+          const createdAt = new Date().toISOString();
 
+          // Prepare extra charges
           const exCharges: {
             name: string;
             amount: number;
@@ -737,6 +878,7 @@ const useOrderStore = create(
             id?: string;
           }[] = [];
 
+          // Add any provided extra charges
           if (extraCharges && extraCharges.length > 0) {
             extraCharges.forEach((charge) => {
               exCharges.push({
@@ -748,6 +890,7 @@ const useOrderStore = create(
             });
           }
 
+          // Add delivery charge if applicable
           if (type === "delivery" && deliveryCharge && deliveryCharge > 0) {
             exCharges.push({
               name: "Delivery Charge",
@@ -757,6 +900,7 @@ const useOrderStore = create(
             });
           }
 
+          // Calculate totals
           const subtotal = currentOrder.items.reduce(
             (sum, item) => sum + item.price * item.quantity,
             0
@@ -768,8 +912,8 @@ const useOrderStore = create(
           );
 
           const grandTotal = subtotal + (gstIncluded || 0) + totalExtraCharges;
-          const createdAt = new Date().toISOString();
 
+          // Create order in database
           const orderResponse = await fetchFromHasura(createOrderMutation, {
             id: uuidv4(),
             totalPrice: grandTotal,
@@ -803,6 +947,7 @@ const useOrderStore = create(
 
           const orderId = orderResponse.insert_orders_one.id;
 
+          // Create order items
           const itemsResponse = await fetchFromHasura(
             createOrderItemsMutation,
             {
@@ -827,6 +972,7 @@ const useOrderStore = create(
             );
           }
 
+          // Prepare new order object
           const newOrder: Order = {
             id: orderId,
             items: currentOrder.items,
@@ -844,6 +990,7 @@ const useOrderStore = create(
             extraCharges: exCharges,
           };
 
+          // Update state
           set((state) => ({
             ...state,
             hotelOrders: {
@@ -876,7 +1023,8 @@ const useOrderStore = create(
 
       fetchOrderOfPartner: async (partnerId: string) => {
         try {
-          const response = await fetchFromHasura(
+          // First fetch the orders with captain data included
+          const ordersResponse = await fetchFromHasura(
             `query GetPartnerOrders($partnerId: uuid!) {
               orders(
                 where: { partner_id: { _eq: $partnerId } }
@@ -897,6 +1045,13 @@ const useOrderStore = create(
                 extra_charges
                 phone
                 user_id
+                orderedby
+                captain_id
+                captainid {
+                  id
+                  name
+                  email
+                }
                 user {
                   full_name
                   phone
@@ -905,15 +1060,20 @@ const useOrderStore = create(
                 order_items {
                   id
                   quantity
-                  item
                   menu {
+                    id
+                    name
+                    price
                     category {
-                      name
-                    }
-                    stocks {
-                      stock_quantity
                       id
+                      name
+                      priority
                     }
+                    description
+                    image_url
+                    is_top
+                    is_available
+                    priority
                     stocks {
                       stock_quantity
                       id
@@ -925,39 +1085,51 @@ const useOrderStore = create(
             { partnerId }
           );
 
-          if (response.errors) {
+          if (ordersResponse.errors) {
             throw new Error(
-              response.errors[0]?.message || "Failed to fetch orders"
+              ordersResponse.errors[0]?.message || "Failed to fetch orders"
             );
           }
 
-          return response.orders.map((order: any) => ({
-            id: order.id,
-            totalPrice: order.total_price,
-            createdAt: order.created_at,
-            tableNumber: order.table_number,
-            qrId: order.qr_id,
-            status: order.status,
-            type: order.type,
-            phone: order.phone,
-            deliveryAddress: order.delivery_address,
-            partnerId: order.partner_id,
-            delivery_location: order.delivery_location,
-            gstIncluded: order.gst_included,
-            extraCharges: order.extra_charges || [],
-            delivery_charge: order.delivery_charge,
-            status_history: order.status_history,
-            userId: order.user_id,
-            user: order.user,
-            items: order.order_items.map((i: any) => ({
-              id: i.item.id,
-              quantity: i.quantity,
-              name: i.item.name || "Unknown",
-              price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
-              category: i.menu?.category,
-              stocks: i.menu?.stocks,
-            })),
-          }));
+          return ordersResponse.orders.map((order: any) => {
+            // Ensure captain data is properly structured
+            const captainData = order.captainid ? {
+              id: order.captainid.id,
+              name: order.captainid.name,
+              email: order.captainid.email
+            } : null;
+
+            return {
+              id: order.id,
+              totalPrice: order.total_price,
+              createdAt: order.created_at,
+              tableNumber: order.table_number,
+              qrId: order.qr_id,
+              status: order.status,
+              type: order.type,
+              phone: order.phone,
+              deliveryAddress: order.delivery_address,
+              partnerId: order.partner_id,
+              delivery_location: order.delivery_location,
+              gstIncluded: order.gst_included,
+              extraCharges: order.extra_charges || [],
+              delivery_charge: order.delivery_charge,
+              status_history: order.status_history,
+              userId: order.user_id,
+              user: order.user,
+              orderedby: order.orderedby,
+              captain_id: order.captain_id,
+              captain: captainData,  // Use the properly structured captain data
+              items: order.order_items.map((i: any) => ({
+                id: i.menu?.id,
+                quantity: i.quantity,
+                name: i.menu?.name || "Unknown",
+                price: i.menu?.offers?.[0]?.offer_price || i.menu?.price || 0,
+                category: i.menu?.category,
+                stocks: i.menu?.stocks,
+              })),
+            };
+          });
         } catch (error) {
           console.error("Error fetching orders:", error);
           toast.error("Failed to load orders");

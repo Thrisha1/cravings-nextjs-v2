@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { update } from "firebase/database";
+import { POSMenuItems } from "@/components/pos/POSMenuItems";
+import { POSCart } from "@/components/pos/POSCart";
 
 const OrdersTab = () => {
   const router = useRouter();
@@ -58,6 +60,7 @@ const OrdersTab = () => {
   const soundRef = useRef<Howl | null>(null);
   const { setOrder, setEditOrderModalOpen } = usePOSStore();
   const orderAlertRef = useRef<boolean>(false);
+  const [isCreateOrderOverlayOpen, setIsCreateOrderOverlayOpen] = useState(false);
 
   // Preload sound effect immediately
   useEffect(() => {
