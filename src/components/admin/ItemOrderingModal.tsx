@@ -183,27 +183,42 @@ export function ItemOrderingForm({
 
   const handleSubmit = async () => {
     setIsLoading(true);
-
-    // Blur any focused inputs to dismiss keyboard
-    if (document.activeElement instanceof HTMLInputElement) {
-      document.activeElement.blur();
-    }
+    toast.loading("Updating item priorities...", { id: "item-priority-update" });
 
     try {
-      // Ensure all items have their priorities set based on their position in the category
-      const updatedItems = Object.entries(itemsByCategory)
+      // Optimize: Only process items with changed priorities
+      const originalItemsMap = new Map();
+      initialItems.forEach(item => {
+        if (item.id) {
+          originalItemsMap.set(item.id, item.priority);
+        }
+      });
+      
+      // Only include items that have changed priority
+      const changedItems = Object.entries(itemsByCategory)
         .flatMap(([categoryId, items]) => {
           return items
             .filter(hasValidId)
+            .filter(item => originalItemsMap.get(item.id) !== item.priority) // Only changed items
             .map((item, index) => ({
               ...item,
               priority: index + 1
             }));
         });
-
-      await onSubmit(updatedItems);
+      
+      if (changedItems.length === 0) {
+        // Nothing changed, avoid unnecessary API call
+        toast.success("No changes detected", { id: "item-priority-update" });
+        setIsLoading(false);
+        return;
+      }
+      
+      await onSubmit(changedItems);
+      
+      toast.success(`Updated ${changedItems.length} items`, { id: "item-priority-update" });
       setIsLoading(false);
     } catch (err) {
+      toast.error("Failed to update item priorities", { id: "item-priority-update" });
       setIsLoading(false);
       console.error("Error updating item order:", err);
       toast.error("Failed to update item order");
@@ -211,26 +226,21 @@ export function ItemOrderingForm({
   };
 
   const handleReset = () => {
-    // Blur any focused inputs to dismiss keyboard
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-    
     setLocalItems(initialItems);
     toast("Changes discarded");
   };
 
   return (
-    <div className="container px-0 sm:px-0 pb-6">
-      <div className="flex justify-between items-center mb-4 px-2">
+    <div className="container px-2 sm:px-0 pb-10">
+      <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Manage Item Order</h2>
       </div>
-      <p className="text-sm text-muted-foreground mt-1 mb-4 px-2">
+      <p className="text-sm text-muted-foreground mt-1 mb-4">
         Expand categories and reorder items. Long-press to drag on mobile.
       </p>
 
       <div className="space-y-4 flex flex-col">
-        <div className="flex gap-0 items-center sticky top-0 z-10 bg-background pt-0 pb-0 px-2">
+        <div className="flex gap-2 items-center sticky top-0 z-10 bg-background pt-0 pb-0">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
@@ -251,7 +261,7 @@ export function ItemOrderingForm({
               </Button>
             )}
           </div>
-          <Button variant="outline" onClick={() => setSearchTerm("")} className="shrink-0 ml-2">
+          <Button variant="outline" onClick={() => setSearchTerm("")} className="shrink-0">
             Clear
           </Button>
         </div>
@@ -266,12 +276,12 @@ export function ItemOrderingForm({
                 <TableHeader className="bg-gray-50 sticky top-0 z-10">
                   <TableRow>
                     <TableHead className="w-[30px]"></TableHead>
-                    <TableHead>Name</TableHead>
+                    <TableHead>Item Name</TableHead>
                     <TableHead className="w-[80px] text-right">Price</TableHead>
-                    <TableHead className="w-[80px] text-center sm:hidden">
-                      Move
+                    <TableHead className="w-[100px] text-center">
+                      Actions
                     </TableHead>
-                    <TableHead className="w-[40px] hidden sm:table-cell">
+                    <TableHead className="w-[40px]">
                       Drag
                     </TableHead>
                   </TableRow>
@@ -353,13 +363,13 @@ export function ItemOrderingForm({
                                               <div
                                                 ref={provided.innerRef}
                                                 {...provided.draggableProps}
-                                                className={`flex items-center w-full p-2 my-1 ${
+                                                className={`flex items-center w-full p-3 my-0 border-b ${
                                                   snapshot.isDragging
-                                                    ? "bg-primary/10 shadow-md rounded-md border border-primary"
-                                                    : "bg-background hover:bg-gray-50 rounded-md"
+                                                    ? "bg-primary/10 shadow-md"
+                                                    : "bg-background hover:bg-gray-50"
                                                 }`}
                                               >
-                                                <div className="w-[30px] pl-8">
+                                                <div className="w-[30px] pl-4">
                                                   {/* Indent to show hierarchy */}
                                                 </div>
                                                 <div className="font-medium flex-1">
@@ -368,8 +378,8 @@ export function ItemOrderingForm({
                                                 <div className="w-[80px] text-right">
                                                   ₹{item.price}
                                                 </div>
-                                                {/* Mobile Actions */}
-                                                <div className="w-[80px] flex justify-center gap-1 sm:hidden">
+                                                {/* Actions */}
+                                                <div className="w-[100px] flex justify-center gap-1">
                                                   <Button
                                                     variant="ghost"
                                                     size="icon"
@@ -397,14 +407,14 @@ export function ItemOrderingForm({
                                                     <ArrowDown className="h-4 w-4" />
                                                   </Button>
                                                 </div>
-                                                {/* Drag Handle - desktop only */}
-                                                <div className="w-[40px] hidden sm:flex items-center justify-center">
+                                                {/* Drag Handle */}
+                                                <div className="w-[40px] flex items-center justify-center">
                                                   <div
                                                     {...provided.dragHandleProps}
-                                                    className="flex items-center justify-center"
+                                                    className="flex items-center justify-center cursor-grab active:cursor-grabbing"
                                                     onClick={(e) => e.stopPropagation()}
                                                   >
-                                                    <MoveVertical className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
+                                                    <MoveVertical className="h-4 w-4 text-muted-foreground" />
                                                   </div>
                                                 </div>
                                               </div>
@@ -429,7 +439,7 @@ export function ItemOrderingForm({
         </div>
       </div>
 
-      <div className="flex gap-2 justify-end mt-6 px-2">
+      <div className="flex gap-2 justify-end mt-6">
         <Button
           variant="outline"
           onClick={onCancel}
@@ -447,8 +457,21 @@ export function ItemOrderingForm({
         <Button
           onClick={handleSubmit}
           disabled={isLoading}
+          className="relative"
         >
-          {isLoading ? "Saving..." : "Save Changes"}
+          {isLoading ? (
+            <>
+              <span className="opacity-0">Save Changes</span>
+              <span className="absolute inset-0 flex items-center justify-center">
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </span>
+            </>
+          ) : (
+            "Save Changes"
+          )}
         </Button>
       </div>
     </div>
