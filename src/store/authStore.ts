@@ -90,6 +90,7 @@ export interface Partner extends BaseUser {
   is_shop_open: boolean;
   country?: string;
   country_code?: string;
+  distance_meters?: number;
 }
 
 export interface SuperAdmin extends BaseUser {
