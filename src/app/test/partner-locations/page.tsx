@@ -149,7 +149,7 @@ const Page = () => {
                         type="text"
                         value={editingLocation}
                         onChange={(e) => setEditingLocation(e.target.value)}
-                        className="w-full p-1 border rounded"
+                        className="w-full p-1 border rounded bg-white"
                       />
                     ) : (
                       partner.location || 'N/A'
