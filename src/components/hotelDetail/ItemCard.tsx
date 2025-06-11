@@ -27,6 +27,7 @@ const ItemCard = ({
   const [isOpen, setIsOpen] = useState(false);
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
   const hasOrderingFeature = getFeatures(feature_flags || "")?.ordering.enabled;
+  const hasDeliveryFeature = getFeatures(feature_flags || "")?.delivery.enabled;
   const [itemQuantity, setItemQuantity] = useState<number | 0>(0);
 
   useEffect(() => {
@@ -133,7 +134,7 @@ const ItemCard = ({
 
           {/* Add to cart buttons */}
           {item.is_available &&
-            hasOrderingFeature &&
+            (hasOrderingFeature || hasDeliveryFeature) &&
             (!hasStockFeature || !isOutOfStock) && (
               <div className="flex gap-2 items-center justify-end w-full mt-2">
                 <button

@@ -1,13 +1,49 @@
 /*...........query...........*/
 
+export const getNearByPartnersQuery = `
+query GetNearByPartners(
+  $user_lat: float8!, 
+  $user_lng: float8!, 
+  $limit_count: Int!, 
+  $offset_count: Int!, 
+  $district_filter: String = "%", 
+  $search_query: String = "") {
+  get_all_partners(args: {limit_count: $limit_count, user_lat: $user_lat, user_lng: $user_lng, max_distance: 1000000000, offset_count: $offset_count, district_filter: $district_filter, search_query: $search_query}, where: {_and: {geo_location: {_is_null: false}, status: {_eq: "active"}, business_type: {_eq: "restaurant"}}}) {
+    id
+    store_name
+    location
+    description
+    district
+    store_banner
+    distance_meters(args: {user_lat: $user_lat, user_lng: $user_lng})
+  }
+  get_all_partners_aggregate(args: {user_lat: $user_lat, user_lng: $user_lng, max_distance: 1000000000, district_filter: $district_filter, search_query: $search_query}, where: {_and: {geo_location: {_is_null: false}, status: {_eq: "active"}, business_type: {_eq: "restaurant"}}}) {
+    aggregate {
+      count
+    }
+  }
+}
+`;
+
 export const getAllPartnersQuery = `
-query GetAllPartners($limit: Int, $offset: Int, $district: String = "%") {
+query GetAllPartners($limit: Int, $offset: Int, $district: String = "%", $query: String = "") {
   partners(
     where: {
       status: {_eq: "active"}, 
-      _or: [
-        {district: {_ilike: $district}},
-        {district: {_is_null: true}}
+      _and: [
+        {
+          _or: [
+            {district: {_ilike: $district}},
+            {district: {_is_null: true}}
+          ]
+        },
+        {
+          _or: [
+            {store_name: {_ilike: $query}},
+            {location: {_ilike: $query}},
+            {description: {_ilike: $query}}
+          ]
+        }
       ]
     }, 
     order_by: {store_name: asc}, 
@@ -24,9 +60,20 @@ query GetAllPartners($limit: Int, $offset: Int, $district: String = "%") {
   partners_aggregate(
     where: {
       status: {_eq: "active"}, 
-      _or: [
-        {district: {_ilike: $district}},
-        {district: {_is_null: true}}
+      _and: [
+        {
+          _or: [
+            {district: {_ilike: $district}},
+            {district: {_is_null: true}}
+          ]
+        },
+        {
+          _or: [
+            {store_name: {_ilike: $query}},
+            {location: {_ilike: $query}},
+            {description: {_ilike: $query}}
+          ]
+        }
       ]
     }
   ) {

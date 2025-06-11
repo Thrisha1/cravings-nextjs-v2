@@ -11,6 +11,7 @@ query GetFollowers($userId: uuid!, $limit: Int, $offset: Int) {
       store_name
       district
       store_banner
+      
     }
   }
   followers_aggregate(where: { user_id: { _eq: $userId } }) {

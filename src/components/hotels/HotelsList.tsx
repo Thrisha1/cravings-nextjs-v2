@@ -6,28 +6,28 @@ import PartnerCard from "./PartnerCard";
 import { useInView } from "react-intersection-observer";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { toast } from "sonner";
-import { getAllPartnersQuery } from "@/api/partners";
+import { getNearByPartnersQuery } from "@/api/partners";
 import { useSearchParams } from "next/navigation";
-
-
 
 const HotelsList = ({ 
   initialPartners,
   initialTotalCount,
-  initialDistrict = "all"
+  district = "all",
+  limit = 10,
+  query = ""
 }: {
   initialPartners: Partner[];
   initialTotalCount: number;
-  initialDistrict?: string;
+  district?: string;
+  limit?: number;
+  query?: string;
 }) => {
   const [partners, setPartners] = useState<Partner[]>(initialPartners);
   const [totalCount, setTotalCount] = useState<number>(initialTotalCount);
   const [isLoading, setIsLoading] = useState(false);
   const [currentOffset, setCurrentOffset] = useState(initialPartners.length);
-  const serachParams = useSearchParams();
-  const location = serachParams.get("location") || "";
-
-  const limit = 12; 
+  const searchParams = useSearchParams();
+  const location = searchParams.get("location") || "";
 
   useEffect(() => {
     setPartners(initialPartners);
@@ -35,7 +35,6 @@ const HotelsList = ({
     setCurrentOffset(initialPartners.length);
   }, [initialPartners]);
 
-  
   const { ref, inView } = useInView({
     threshold: 0,
     triggerOnce: false,
@@ -46,15 +45,33 @@ const HotelsList = ({
     
     setIsLoading(true);
     try {
-      const variables = {
-        limit,
-        offset: currentOffset + 1,
-        district: initialDistrict ? `%${location}%` : "%",
-      };
+      // Get user location from localStorage
+      const locCookie = localStorage.getItem("user-location-store");
+      let userLat = 10.164529;
+      let userLng = 76.228177;
 
-      const data = await fetchFromHasura(getAllPartnersQuery, variables);
-      const newPartners = data.partners;
-      const newTotalCount = data.partners_aggregate.aggregate.count;
+      if (locCookie) {
+        try {
+          const locData = JSON.parse(locCookie);
+          if (locData.state.coords) {
+            userLat = locData.state.coords.lat;
+            userLng = locData.state.coords.lng;
+          }
+        } catch (e) {
+          console.error("Error parsing location cookie:", e);
+        }
+      }
+
+      const data = await fetchFromHasura(getNearByPartnersQuery, {
+        user_lat: userLat,
+        user_lng: userLng,
+        limit_count: limit,
+        offset_count: currentOffset,
+        district_filter: location ? `%${location}%` : "%",
+        search_query: query ? `%${query}%` : ""
+      });
+      const newPartners = data.get_all_partners;
+      const newTotalCount = data.get_all_partners_aggregate.aggregate.count;
 
       if (newPartners.length) {
         setPartners(prev => [...prev, ...newPartners]);
@@ -74,8 +91,6 @@ const HotelsList = ({
       loadMorePartners();
     }
   }, [inView]);
-
- 
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -98,8 +113,6 @@ const HotelsList = ({
           Loading....
         </div>
       )}
-
-    
     </div>
   );
 };
