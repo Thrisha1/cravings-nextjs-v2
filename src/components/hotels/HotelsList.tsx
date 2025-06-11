@@ -47,8 +47,8 @@ const HotelsList = ({
     try {
       // Get user location from localStorage
       const locCookie = localStorage.getItem("user-location-store");
-      let userLat = 10.164529;
-      let userLng = 76.228177;
+      let userLat = 0;
+      let userLng = 0;
 
       if (locCookie) {
         try {
@@ -66,7 +66,7 @@ const HotelsList = ({
         user_lat: userLat,
         user_lng: userLng,
         limit_count: limit,
-        offset_count: currentOffset,
+        offset_count: currentOffset + 1,
         district_filter: location ? `%${location}%` : "%",
         search_query: query ? `%${query}%` : ""
       });
