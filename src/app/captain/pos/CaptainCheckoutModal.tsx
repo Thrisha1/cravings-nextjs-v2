@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,13 +11,12 @@ import { Button } from "@/components/ui/button";
 import { usePOSStore } from "@/store/posStore";
 import { Printer, Edit, Loader2 } from "lucide-react";
 import { useReactToPrint } from "react-to-print";
-import { useRef } from "react";
-import { Partner, useAuthStore } from "@/store/authStore";
-import KOTTemplate from "./KOTTemplate";
-import BillTemplate from "./BillTemplate";
-import { useRouter } from "next/navigation";
+import { useAuthStore, Captain, Partner } from "@/store/authStore";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import KOTTemplate from "@/components/admin/pos/KOTTemplate";
+import BillTemplate from "@/components/admin/pos/BillTemplate";
 
-export const PostCheckoutModal = () => {
+export const CaptainCheckoutModal = () => {
   const {
     order,
     clearCart,
@@ -27,9 +26,53 @@ export const PostCheckoutModal = () => {
     setEditOrderModalOpen,
   } = usePOSStore();
   const { userData } = useAuthStore();
-  const router = useRouter();
+  const captainData = userData as Captain;
+  const [partnerData, setPartnerData] = useState<Partner | null>(null);
+
+  // Fetch partner data to get currency
+  useEffect(() => {
+    const fetchPartnerData = async () => {
+      if (captainData?.partner_id) {
+        try {
+          const response = await fetchFromHasura(
+            `
+            query GetPartnerById($partner_id: uuid!) {
+              partners_by_pk(id: $partner_id) {
+                id
+                currency
+                gst_percentage
+                store_name
+              }
+            }
+            `,
+            {
+              partner_id: captainData.partner_id
+            }
+          );
+          if (response.partners_by_pk) {
+            setPartnerData(response.partners_by_pk);
+          }
+        } catch (error) {
+          console.error("Error fetching partner data:", error);
+        }
+      }
+    };
+
+    fetchPartnerData();
+  }, [captainData?.partner_id]);
+
   const billRef = useRef<HTMLDivElement>(null);
   const kotRef = useRef<HTMLDivElement>(null);
+
+//   const handlePrintBill = useReactToPrint({
+//     contentRef: billRef,
+//     onAfterPrint: () => console.log("Bill printed successfully"),
+//   });
+
+//   const handlePrintKOT = useReactToPrint({
+//     contentRef: kotRef,
+//     onAfterPrint: () => console.log("KOT printed successfully"),
+//   });
 
   const handleEditOrder = () => {
     setPostCheckoutModalOpen(false);
@@ -43,22 +86,16 @@ export const PostCheckoutModal = () => {
 
   if (!order) return null;
 
-  const currency = (userData as Partner)?.currency || "$";
-  const gstPercentage = (userData as Partner)?.gst_percentage || 0;
+  const currency = partnerData?.currency || "$";
+  const gstPercentage = partnerData?.gst_percentage || 0;
 
   const calculateGst = (amount: number) => {
     return (amount * gstPercentage) / 100;
   };
 
   // Calculate totals
-  const foodSubtotal = order.items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const extraChargesTotal = extraCharges.reduce(
-    (sum, charge) => sum + charge.amount,
-    0
-  );
+  const foodSubtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
   const subtotal = foodSubtotal + extraChargesTotal;
   const gstAmount = calculateGst(foodSubtotal);
   const grandTotal = subtotal + gstAmount;
@@ -99,7 +136,7 @@ export const PostCheckoutModal = () => {
                 <DialogTitle className="text-xl sm:text-2xl">Order #{order.id.slice(0, 8)}</DialogTitle>
                 <Button
                   variant="outline"
-                  onClick={handleClose}
+                  onClick={() => setPostCheckoutModalOpen(false)}
                   className="px-4 py-2.5 text-base font-semibold border-2 hover:bg-gray-100"
                 >
                   Back
@@ -120,7 +157,7 @@ export const PostCheckoutModal = () => {
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-center gap-2 text-green-700">
                   <div className="h-2 w-2 rounded-full bg-green-600"></div>
-                  <span className="font-semibold">Status: {order.status}</span>
+                  <span className="font-semibold">Status: Complete</span>
                 </div>
               </div>
 
@@ -191,31 +228,11 @@ export const PostCheckoutModal = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col gap-3 pb-4">
-                <div className="flex gap-3">
-                  <Button
-                    onClick={() => {
-                      router.push("/kot/" + order.id);
-                    }}
-                    className="flex-1 py-3 text-base font-semibold"
-                  >
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print KOT
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      router.push("/bill/" + order.id);
-                    }}
-                    className="flex-1 py-3 text-base font-semibold"
-                  >
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print Bill
-                  </Button>
-                </div>
+              <div className="flex gap-3 pb-4">
                 <Button
                   variant="outline"
                   onClick={handleEditOrder}
-                  className="w-full py-3 text-base font-semibold border-2 hover:bg-gray-100"
+                  className="flex-1 py-3 text-base font-semibold border-2 hover:bg-gray-100"
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Order
@@ -235,7 +252,7 @@ export const PostCheckoutModal = () => {
         <BillTemplate 
           ref={billRef} 
           order={order} 
-          userData={userData as Partner} 
+          userData={partnerData || captainData as any}
           extraCharges={extraCharges}
         />
       </div>

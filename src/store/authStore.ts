@@ -26,7 +26,17 @@ import { DeliveryRules } from "./orderStore";
 interface BaseUser {
   id: string;
   email: string;
-  role: "user" | "partner" | "superadmin";
+  role: "user" | "partner" | "superadmin" | "captain";
+}
+export interface GeoLocation {
+  type: "Point"; // likely always "Point" in your case
+  coordinates: [number, number]; // [longitude, latitude]
+  crs?: {
+    type: string;
+    properties: {
+      name: string;
+    };
+  };
 }
 export interface GeoLocation {
   type: "Point"; // likely always "Point" in your case
@@ -87,9 +97,19 @@ export interface SuperAdmin extends BaseUser {
   password: string;
 }
 
-export type AuthUser = User | Partner | SuperAdmin;
+export interface Captain extends BaseUser {
+  id: string;
+  role: "captain";
+  partner_id: string;
+  password: string;
+  currency?: string;
+  gst_percentage?: number;
+  name: string;
+}
 
+export type AuthUser = User | Partner | SuperAdmin | Captain;
 
+ 
 interface AuthState {
   userData: AuthUser | null;
   features: FeatureFlags | null;
@@ -120,9 +140,10 @@ interface AuthState {
   signInWithPhone: (phone: string, partnerId?: string) => Promise<User | null>;
   signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
   signInSuperAdminWithEmail: (email: string, password: string) => Promise<void>;
+  signInCaptainWithEmail: (email: string, password: string) => Promise<void>;
   fetchUser: () => Promise<void>;
   isLoggedIn: () => boolean;
-  setState: (udpatedUser: Partial<User> | Partial<Partner>) => void;
+  setState: (updates: Partial<AuthUser>) => void;
 }
 
 // Cookie management functions
@@ -218,6 +239,72 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               role: "superadmin",
             } as SuperAdmin,
           });
+        }
+      } else if (role === "captain") {
+        // First get captain data
+        const response = await fetchFromHasura(`
+          query GetCaptainById($id: uuid!) {
+            captain_by_pk(id: $id) {
+              id
+              email
+              partner_id
+              role
+              name
+            }
+          }
+        `, { id });
+
+        if (response?.captain_by_pk) {
+          const captain = response.captain_by_pk;
+          
+          // Fetch partner data
+          const partnerResponse = await fetchFromHasura(`
+            query GetPartnerData($partner_id: uuid!) {
+              partners_by_pk(id: $partner_id) {
+                id
+                currency
+                gst_percentage
+                store_name
+                store_banner
+                location
+                status
+                upi_id
+                description
+                phone
+                district
+                delivery_status
+                geo_location
+                delivery_rate
+                delivery_rules
+                place_id
+                theme
+                gst_no
+                business_type
+              }
+            }
+          `, { partner_id: captain.partner_id });
+
+          if (partnerResponse?.partners_by_pk) {
+            const partnerData = partnerResponse.partners_by_pk;
+            set({
+              userData: {
+                ...captain,
+                currency: partnerData.currency || "₹",
+                gst_percentage: partnerData.gst_percentage || 0,
+                partner: partnerData // Store full partner data
+              },
+              loading: false
+            });
+          } else {
+            set({
+              userData: {
+                ...captain,
+                currency: "₹",
+                gst_percentage: 0
+              },
+              loading: false
+            });
+          }
         }
       }
     } catch (error) {
@@ -373,13 +460,98 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  setState: (udpatedUser: Partial<User> | Partial<Partner>) => {
-    set({
-      userData: {
-        ...get().userData,
-        ...udpatedUser,
-      } as AuthUser,
-    });
+  signInCaptainWithEmail: async (email: string, password: string) => {
+    try {
+      const response = await fetchFromHasura(`
+        query LoginCaptain($email: String!, $password: String!) {
+          captain(where: {email: {_eq: $email}, password: {_eq: $password}}) {
+            id
+            email
+            partner_id
+            role
+            password
+            name
+          }
+        }
+      `, { email, password });
+
+      if (!response?.captain?.[0]) {
+        throw new Error("Invalid email or password");
+      }
+
+      const captain = response.captain[0];
+
+      // Fetch partner data immediately
+      const partnerResponse = await fetchFromHasura(`
+        query GetPartnerData($partner_id: uuid!) {
+          partners_by_pk(id: $partner_id) {
+            id
+            currency
+            gst_percentage
+            store_name
+            store_banner
+            location
+            status
+            upi_id
+            description
+            phone
+            district
+            delivery_status
+            geo_location
+            delivery_rate
+            delivery_rules
+            place_id
+            theme
+            gst_no
+            business_type
+          }
+        }
+      `, { partner_id: captain.partner_id });
+
+      if (partnerResponse?.partners_by_pk) {
+        const partnerData = partnerResponse.partners_by_pk;
+        await setAuthCookie({ 
+          id: captain.id, 
+          role: "captain",
+          feature_flags: "",
+          status: "active"
+        });
+        set({ 
+          userData: { 
+            ...captain, 
+            role: "captain",
+            currency: partnerData.currency || "₹",
+            gst_percentage: partnerData.gst_percentage || 0,
+            partner: partnerData
+          } as Captain 
+        });
+      } else {
+        await setAuthCookie({ 
+          id: captain.id, 
+          role: "captain",
+          feature_flags: "",
+          status: "active"
+        });
+        set({ 
+          userData: { 
+            ...captain, 
+            role: "captain",
+            currency: "₹",
+            gst_percentage: 0
+          } as Captain 
+        });
+      }
+    } catch (error) {
+      console.error("Captain login failed:", error);
+      throw error;
+    }
+  },
+
+  setState: (updates: Partial<AuthUser>) => {
+    set((state: AuthState) => ({
+      ...state,
+      userData: state.userData ? { ...state.userData, ...updates } as AuthUser : null,
+    }));
   },
 
   createPartner: async (
