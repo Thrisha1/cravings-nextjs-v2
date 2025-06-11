@@ -33,6 +33,8 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import { formatDisplayName } from "@/store/categoryStore_hasura";
+import { ItemOrderingForm } from "./ItemOrderingModal";
+
 export function MenuTab() {
   const {
     items: menu,
@@ -67,6 +69,7 @@ export function MenuTab() {
   const { updateItemsAsBatch } = useMenuStore();
   const [currenctCat , setCurrentCat] = useState("");
   const [isItemOrderingOpen, setIsItemOrderingOpen] = useState(false);
+  const [isInlineItemOrdering, setIsInlineItemOrdering] = useState(false);
 
   useEffect(() => {
     if (userData?.id) {
@@ -287,6 +290,36 @@ export function MenuTab() {
           }}
           onCancel={() => setIsCategoryEditing(false)}
         />
+      ) : isInlineItemOrdering ? (
+        <div className="mb-6 border rounded-lg shadow-sm">
+          <ItemOrderingForm
+            categories={Object.entries(groupedItems).map(([category, items]) => ({
+              id: items[0].category.id,
+              name: category,
+              priority: items[0].category.priority || 0,
+            }))}
+            items={Object.values(groupedItems).flat()}
+            onSubmit={async (updatedItems) => {
+              try {
+                const updates = updatedItems
+                  .filter(item => typeof item.id === 'string' && item.id.length > 0)
+                  .map(item => ({
+                    id: item.id as string,
+                    priority: item.priority
+                  }));
+                
+                await updateItemsAsBatch(updates);
+                setIsInlineItemOrdering(false);
+                fetchMenu(); // Refresh the menu
+                toast.success("Item order updated successfully");
+              } catch (error) {
+                console.error("Failed to update item order:", error);
+                toast.error("Failed to update item order");
+              }
+            }}
+            onCancel={() => setIsInlineItemOrdering(false)}
+          />
+        </div>
       ) : (
         <>
       <div className="flex justify-end gap-2 mb-4">
@@ -316,7 +349,7 @@ export function MenuTab() {
               <span>Edit Item Order</span>
             </Button>
             <Button
-              onClick={() => setIsItemOrderingOpen(true)}
+              onClick={() => setIsInlineItemOrdering(true)}
               variant="outline"
               className="flex gap-2 text-xs sm:text-sm sm:hidden"
             >
@@ -364,25 +397,6 @@ export function MenuTab() {
             priority: items[0].category.priority,
           }))}
           onOpenChange={setIsCategoryEditing}
-        />
-      )}
-
-      {isItemOrderingOpen && (
-        <ItemOrderingModal
-          open={isItemOrderingOpen}
-          onOpenChange={(open) => {
-            setIsItemOrderingOpen(open);
-            if (!open) {
-              // Refresh menu data when modal is closed
-              fetchMenu();
-            }
-          }}
-          categories={Object.entries(groupedItems).map(([category, items]) => ({
-            id: items[0].category.id,
-            name: category,
-            priority: items[0].category.priority || 0,
-          }))}
-          items={Object.values(groupedItems).flat()}
         />
       )}
 

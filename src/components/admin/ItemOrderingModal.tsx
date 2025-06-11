@@ -37,16 +37,9 @@ import {
   ArrowDown,
 } from "lucide-react";
 
-// Define Item type to be compatible with MenuItem
-interface Item {
-  id: string;
-  name: string;
-  price: number;
-  priority: number;
-  category: {
-    id: string;
-    name: string;
-  };
+// Type guard to check if item has a valid ID
+function hasValidId(item: MenuItem): item is MenuItem & { id: string } {
+  return typeof item.id === 'string' && item.id.length > 0;
 }
 
 interface ItemOrderingFormProps {
@@ -54,11 +47,6 @@ interface ItemOrderingFormProps {
   items: MenuItem[];
   onSubmit: (items: MenuItem[]) => Promise<void>;
   onCancel: () => void;
-}
-
-// Type guard to check if item has a valid ID
-function hasValidId(item: MenuItem): item is MenuItem & { id: string } {
-  return typeof item.id === 'string' && item.id.length > 0;
 }
 
 export function ItemOrderingForm({
@@ -71,7 +59,6 @@ export function ItemOrderingForm({
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [keyboardOpen, setKeyboardOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -87,48 +74,6 @@ export function ItemOrderingForm({
       setExpandedCategories(new Set());
     }
   }, [initialItems, categories]);
-
-  const handleInputFocus = () => {
-    setKeyboardOpen(true);
-  };
-
-  const handleInputBlur = () => {
-    setTimeout(() => {
-      const anyInputFocused = document.activeElement === searchInputRef.current;
-      if (!anyInputFocused) {
-        setKeyboardOpen(false);
-      }
-    }, 100);
-  };
-
-  // Effect to handle visual viewport changes (keyboard)
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.visualViewport) {
-        const currentHeight = window.visualViewport.height;
-        const windowHeight = window.innerHeight;
-        
-        // If visual viewport is significantly smaller than window height, keyboard is probably open
-        if (windowHeight - currentHeight > 150) {
-          setKeyboardOpen(true);
-        } else {
-          setKeyboardOpen(false);
-        }
-      }
-    };
-
-    // Add the event listener
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleResize);
-    }
-
-    // Clean up
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleResize);
-      }
-    };
-  }, []);
 
   // Group items by category
   const itemsByCategory = localItems.reduce<Record<string, MenuItem[]>>((acc, item) => {
@@ -159,11 +104,6 @@ export function ItemOrderingForm({
     }
     // If no search term, include all categories that have items
     return true;
-  });
-
-  // Filter out any items that don't have valid IDs
-  Object.keys(itemsByCategory).forEach(categoryId => {
-    itemsByCategory[categoryId] = itemsByCategory[categoryId].filter(item => !!item.id);
   });
 
   const toggleCategoryExpansion = (categoryId: string) => {
@@ -254,7 +194,7 @@ export function ItemOrderingForm({
       const updatedItems = Object.entries(itemsByCategory)
         .flatMap(([categoryId, items]) => {
           return items
-            .filter(item => item.id) // Only include items with valid IDs
+            .filter(hasValidId)
             .map((item, index) => ({
               ...item,
               priority: index + 1
@@ -263,7 +203,6 @@ export function ItemOrderingForm({
 
       await onSubmit(updatedItems);
       setIsLoading(false);
-      toast.success("Item order updated successfully");
     } catch (err) {
       setIsLoading(false);
       console.error("Error updating item order:", err);
@@ -282,16 +221,16 @@ export function ItemOrderingForm({
   };
 
   return (
-    <div className="container px-2 sm:px-0 pb-10">
-      <div className="flex justify-between items-center mb-4">
+    <div className="container px-0 sm:px-0 pb-6">
+      <div className="flex justify-between items-center mb-4 px-2">
         <h2 className="text-2xl font-bold">Manage Item Order</h2>
       </div>
-      <p className="text-sm text-muted-foreground mt-1 mb-4">
+      <p className="text-sm text-muted-foreground mt-1 mb-4 px-2">
         Expand categories and reorder items. Long-press to drag on mobile.
       </p>
 
       <div className="space-y-4 flex flex-col">
-        <div className="flex gap-0 items-center sticky top-0 z-10 bg-background pt-0 pb-0">
+        <div className="flex gap-0 items-center sticky top-0 z-10 bg-background pt-0 pb-0 px-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
@@ -300,8 +239,6 @@ export function ItemOrderingForm({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
-              onFocus={handleInputFocus}
-              onBlur={handleInputBlur}
             />
             {searchTerm && (
               <Button
@@ -314,16 +251,16 @@ export function ItemOrderingForm({
               </Button>
             )}
           </div>
-          <Button variant="outline" onClick={() => setSearchTerm("")} className="shrink-0">
+          <Button variant="outline" onClick={() => setSearchTerm("")} className="shrink-0 ml-2">
             Clear
           </Button>
         </div>
 
         <div 
           ref={contentRef}
-          className="border rounded-lg flex-1 overflow-hidden flex flex-col"
+          className="border rounded-lg flex-1 flex flex-col"
         >
-          <div className="overflow-visible">
+          <div className="w-full">
             <DragDropContext onDragEnd={handleDragEnd}>
               <Table className="min-w-full">
                 <TableHeader className="bg-gray-50 sticky top-0 z-10">
@@ -404,7 +341,7 @@ export function ItemOrderingForm({
                                     className="w-full"
                                   >
                                     {filteredItems
-                                      .filter(hasValidId) // Only include items with valid IDs
+                                      .filter(hasValidId)
                                       .map((item, index) => {
                                         return (
                                           <Draggable
@@ -492,7 +429,7 @@ export function ItemOrderingForm({
         </div>
       </div>
 
-      <div className="flex gap-2 justify-end mt-6">
+      <div className="flex gap-2 justify-end mt-6 px-2">
         <Button
           variant="outline"
           onClick={onCancel}
@@ -559,7 +496,7 @@ export function ItemOrderingModal({
         <FullModalHeader>
           <FullModalTitle>Manage Item Order</FullModalTitle>
         </FullModalHeader>
-        <FullModalBody className="overflow-auto">
+        <FullModalBody>
           <ItemOrderingForm 
             categories={categories}
             items={items}
