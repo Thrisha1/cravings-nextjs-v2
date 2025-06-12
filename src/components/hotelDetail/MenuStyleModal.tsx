@@ -25,7 +25,11 @@ const MenuStyleModal = ({ open, onOpenChange, onSave }: MenuStyleModalProps) => 
   };
 
   return (
-    <Dialog open={open}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (isOpen) {
+        onOpenChange(true);
+      }
+    }}>
       <DialogContent className="w-[95vw] max-w-[425px] rounded-xl mx-auto fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
         <DialogHeader className="relative">
           <DialogTitle className="text-lg sm:text-xl font-semibold text-center">
