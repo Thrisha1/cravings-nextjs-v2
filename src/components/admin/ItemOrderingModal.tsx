@@ -266,7 +266,7 @@ export function ItemOrderingForm({
                     <TableHead className="w-[30px]"></TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead className="w-[80px] text-right">Price</TableHead>
-                    <TableHead className="w-[80px] text-center sm:hidden">
+                    <TableHead className="w-[80px] text-center">
                       Move
                     </TableHead>
                     <TableHead className="w-[40px]">
@@ -367,7 +367,7 @@ export function ItemOrderingForm({
                                                   ₹{item.price}
                                                 </div>
                                                 {/* Mobile Actions */}
-                                                <div className="w-[80px] flex justify-center gap-1 sm:hidden">
+                                                <div className="w-[80px] flex justify-center gap-1">
                                                   <Button
                                                     variant="ghost"
                                                     size="icon"
