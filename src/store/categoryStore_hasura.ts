@@ -69,15 +69,17 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       if (!cat) throw new Error("Category name is required");
 
       const userData = useAuthStore.getState().userData;
-      
+
       const formattedName = formatStorageName(cat);
 
-      const category = await fetchFromHasura(getCategory, {
-        name: formattedName,
+      const existingCategories = await fetchFromHasura(getCategory, {
+        name: cat,
+        name_with_space: formattedName.replace(/_/g, " "),
+        name_with_underscore: formattedName.replace(/ /g, "_"),
         partner_id: userData?.id,
       }).then((res) => res.category);
 
-      const existingCategory = category[0];
+      const existingCategory = existingCategories[0];
 
       if (existingCategory) {
 
