@@ -16,15 +16,15 @@ interface FontSelectProps {
 
 export function FontSelect({ options, value, onChange }: FontSelectProps) {
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
         {options.map((option) => (
           <button
             key={option.value}
-            className={`p-3 border rounded-lg text-left transition-all ${option.className} ${
+            className={`p-2 sm:p-3 border rounded-lg text-left transition-all text-sm sm:text-base ${option.className} ${
               value === option.value
-                ? "border-primary ring-2 ring-primary/20"
-                : "border-muted hover:border-primary/40"
+                ? "border-primary ring-2 ring-primary/20 bg-primary/5"
+                : "border-muted hover:border-primary/40 hover:bg-gray-50"
             }`}
             onClick={() => onChange(option.value)}
           >

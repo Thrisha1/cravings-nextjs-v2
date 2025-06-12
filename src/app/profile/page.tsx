@@ -65,6 +65,7 @@ import { LocationSettings } from "@/components/admin/profile/LocationSettings";
 import useOrderStore from "@/store/orderStore";
 import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
 import { Offer } from "@/store/offerStore_hasura";
+import { useUserStore } from "@/store/userStore";
 
 interface Captain {
   id: string;
@@ -197,27 +198,31 @@ export default function ProfilePage() {
   const [isBannerChanged, setIsBannerChanged] = useState(false);
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
   const [userFeatures, setUserFeatures] = useState<FeatureFlags | null>(null);
-  const [footNote, setFootNote] = useState<string>("");
-  const [instaLink, setInstaLink] = useState<string>("");
+  const [captainOrders, setCaptainOrders] = useState<CaptainOrder[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [captains, setCaptains] = useState<Captain[]>([]);
+  const [loadingCaptains, setLoadingCaptains] = useState(false);
+  const [showCreateCaptain, setShowCreateCaptain] = useState(false);
+  const [newCaptain, setNewCaptain] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  });
+  const [isCreatingCaptain, setIsCreatingCaptain] = useState(false);
+  const [footNote, setFootNote] = useState("");
+  const [instaLink, setInstaLink] = useState("");
+  const [countryCode, setCountryCode] = useState("");
+  const { fetchCaptainOrders } = useOrderStore();
+  const { subscribeOrders } = useOrderStore();
+  const [isEditingCountryCode, setIsEditingCountryCode] = useState(false);
+  const [showPricing, setShowPricing] = useState(true);
   const [captainName, setCaptainName] = useState("");
   const [captainEmail, setCaptainEmail] = useState("");
   const [captainPassword, setCaptainPassword] = useState("");
-  const [isCreatingCaptain, setIsCreatingCaptain] = useState(false);
   const [captainError, setCaptainError] = useState<string | null>(null);
-  const [captains, setCaptains] = useState<Captain[]>([]);
-  const [isDeletingCaptain, setIsDeletingCaptain] = useState<string | null>(
-    null
-  );
+  const [isDeletingCaptain, setIsDeletingCaptain] = useState<string | null>(null);
   const [showCaptainForm, setShowCaptainForm] = useState(false);
-  const [captainOrders, setCaptainOrders] = useState<CaptainOrder[]>([]);
-  const [loadingOrders, setLoadingOrders] = useState(true);
-  const { subscribeOrders } = useOrderStore();
-  const [isEditingCountryCode, setIsEditingCountryCode] = useState(false);
-  const [countryCode, setCountryCode] = useState(
-    userData?.role === "partner" ? userData?.country_code || "+91" : "+91"
-  );
   const [countryCodeSearch, setCountryCodeSearch] = useState("");
-  const [showPricing, setShowPricing] = useState(true);
 
   const isLoading = authLoading;
 
@@ -347,9 +352,41 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (userData?.role === "partner" && features?.captainordering.enabled) {
-      fetchCaptains();
+      setLoadingOrders(true);
+      fetchCaptainOrders(userData.id).then((orders) => {
+        if (orders) {
+          // Convert Order[] to CaptainOrder[] format
+          const captainOrders = orders.map((order) => ({
+            id: order.id,
+            status: order.status,
+            created_at: order.createdAt,
+            total_price: order.totalPrice,
+            table_number: order.tableNumber || 0,
+            phone: order.phone || "",
+            order_items: order.items.map((item) => ({
+              id: item.id,
+              quantity: item.quantity,
+              menu: {
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                category: {
+                  name:
+                    typeof item.category === "string"
+                      ? item.category
+                      : item.category && "name" in item.category
+                      ? item.category.name
+                      : "",
+                },
+              },
+            })),
+          }));
+          setCaptainOrders(captainOrders);
+        }
+        setLoadingOrders(false);
+      });
     }
-  }, [userData, features?.captainordering.enabled]);
+  }, [userData, features?.captainordering.enabled, fetchCaptainOrders]);
 
   useEffect(() => {
     console.log("Debug - Current state:", {
@@ -373,51 +410,6 @@ export default function ProfilePage() {
       "FCM Token from localStorage"
     );
     if (userData?.role === "partner" && features?.captainordering.enabled) {
-      const fetchCaptainOrders = async () => {
-        try {
-          const response = await fetchFromHasura(
-            `
-            query GetCaptainOrders($partner_id: uuid!) {
-              orders(where: {partner_id: {_eq: $partner_id}, orderedby: {_eq: "captain"}}, order_by: {created_at: desc}) {
-                id
-                status
-                created_at
-                total_price
-                table_number
-                phone
-                order_items {
-                  id
-                  quantity
-                  menu {
-                    id
-                    name
-                    price
-                    category {
-                      name
-                    }
-                  }
-                }
-              }
-            }
-          `,
-            {
-              partner_id: userData.id,
-            }
-          );
-
-          if (response.orders) {
-            setCaptainOrders(response.orders);
-          }
-        } catch (error) {
-          console.error("Error fetching captain orders:", error);
-          toast.error("Failed to load captain orders");
-        } finally {
-          setLoadingOrders(false);
-        }
-      };
-
-      fetchCaptainOrders();
-
       const unsubscribe = subscribeOrders((orders: Order[]) => {
         const captainOrders = orders
           .filter((order) => order.orderedby === "captain")
