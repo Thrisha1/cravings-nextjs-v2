@@ -21,6 +21,7 @@ import {
 import { sendRegistrationWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
 import { DeliveryRules } from "./orderStore";
+import { clearUserToken } from "@/lib/clearUserToken";
 
 // Interfaces remain the same
 interface BaseUser {
@@ -318,6 +319,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async() => {
+    const token = localStorage.getItem("fcmToken");
+    
+    if (token) {
+      await clearUserToken(token);
+    }
+
     await removeAuthCookie();
     await removeLocationCookie();
     localStorage.clear();
