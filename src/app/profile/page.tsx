@@ -10,6 +10,7 @@ import {
   ArrowRight,
   X,
   // Loader2,
+  Share2,
 } from "lucide-react";
 import {
   AuthUser,
@@ -1465,6 +1466,40 @@ export default function ProfilePage() {
     }
   };
 
+  const handleShare = async () => {
+    const partner = userData as Partner;
+    const businessUrl = `${window.location.origin}${
+      partner.business_type === "restaurant" ? "/hotels" : "/business"
+    }/${partner.store_name?.replace(/\s+/g, "-")}/${partner.id}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: partner.store_name,
+          text:
+            partner.description ||
+            `Check out ${partner.store_name} on Cravings!`,
+          url: businessUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(businessUrl);
+        toast.success("Link copied to clipboard!");
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name !== "AbortError") {
+        console.error("Error sharing:", error);
+        // Try fallback to clipboard
+        try {
+          await navigator.clipboard.writeText(businessUrl);
+          toast.success("Link copied to clipboard!");
+        } catch (clipboardError) {
+          console.error("Error copying to clipboard:", clipboardError);
+          toast.error("Failed to share or copy link");
+        }
+      }
+    }
+  };
+
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
   }
@@ -1491,26 +1526,35 @@ export default function ProfilePage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex md:flex-row flex-col gap-4">
+            <div className="flex md:flex-row flex-col gap-2">
               {userData?.role === "user" && <></>}
               {userData?.role === "partner" && (
                 <>
-                  <Link
-                    href={`${
-                      userData?.business_type === "restaurant"
-                        ? "/hotels"
-                        : "/business"
-                    }/${userData?.store_name?.replace(/\s+/g, "-")}/${
-                      userData?.id
-                    }`}
-                    className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
-                  >
-                    <Tag className="sm:size-4 size-8 mr-2" />
-                    View My Business Website
-                  </Link>
+                  <div className="flex gap-2 w-full justify-between items-center">
+                    <Link
+                      href={`${
+                        userData?.business_type === "restaurant"
+                          ? "/hotels"
+                          : "/business"
+                      }/${userData?.store_name?.replace(/\s+/g, "-")}/${
+                        userData?.id
+                      }`}
+                      className="flex w-full h-[48px] items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
+                    >
+                      <Tag className="size-4  mr-2" />
+                      View My Business Website
+                    </Link>
+                    <button
+                      onClick={handleShare}
+                      className="flex items-center bg-orange-100 text-orange-800 font-semibold rounded-lg h-[48px]  text-sm sm:text-lg sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
+                    >
+                      <Share2 className="size-4 mr-2" />
+                      Share
+                    </button>
+                  </div>
                   <Button
                     onClick={handleShopOpenClose}
-                    className={`flex items-center h-[60px] font-semibold rounded-lg text-sm  sm:text-lg  sm:p-4 p-2  transition-colors ${
+                    className={`flex items-center h-[48px] font-semibold rounded-lg text-sm  sm:text-base  sm:p-4 p-2  transition-colors ${
                       isShopOpen ? "bg-red-500" : "bg-green-600"
                     }`}
                   >
