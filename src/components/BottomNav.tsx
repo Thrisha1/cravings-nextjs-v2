@@ -40,12 +40,12 @@ const BottomNav = () => {
           icon: <BadgePercent size={20} />,
           exactMatch: false,
         },
-        // {
-        //   href: "/hotels",
-        //   name: "Hotels",
-        //   icon: <Home size={20} />,
-        //   exactMatch: false,
-        // },
+        {
+          href: "/hotels",
+          name: "Hotels",
+          icon: <Home size={20} />,
+          exactMatch: false,
+        },
         {
           href: "/about-us",
           name: "About Us",
@@ -72,12 +72,12 @@ const BottomNav = () => {
             icon: <BadgePercent size={20} />,
             exactMatch: false,
           },
-          // {
-          //   href: "/hotels",
-          //   name: "Hotels",
-          //   icon: <Home size={20} />,
-          //   exactMatch: false,
-          // },
+          {
+            href: "/hotels",
+            name: "Hotels",
+            icon: <Home size={20} />,
+            exactMatch: false,
+          },
           
           
         ];

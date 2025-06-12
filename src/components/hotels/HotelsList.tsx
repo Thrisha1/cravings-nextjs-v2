@@ -8,6 +8,7 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import { toast } from "sonner";
 import { getNearByPartnersQuery } from "@/api/partners";
 import { useSearchParams } from "next/navigation";
+import { getLocationCookie } from "@/app/auth/actions";
 
 const HotelsList = ({ 
   initialPartners,
@@ -23,61 +24,52 @@ const HotelsList = ({
   query?: string;
 }) => {
   const [partners, setPartners] = useState<Partner[]>(initialPartners);
-  const [totalCount, setTotalCount] = useState<number>(initialTotalCount);
   const [isLoading, setIsLoading] = useState(false);
   const [currentOffset, setCurrentOffset] = useState(initialPartners.length);
   const searchParams = useSearchParams();
   const location = searchParams.get("location") || "";
 
-  useEffect(() => {
-    setPartners(initialPartners);
-    setTotalCount(initialTotalCount);
-    setCurrentOffset(initialPartners.length);
-  }, [initialPartners]);
 
   const { ref, inView } = useInView({
     threshold: 0,
     triggerOnce: false,
   });
 
+  useEffect(() => {
+    setPartners(initialPartners);
+    setCurrentOffset(initialPartners.length);
+  }, [initialPartners]);
+
   const loadMorePartners = async () => {
-    if (isLoading || partners.length >= totalCount) return;
-    
+    if (isLoading || (partners.length >= initialTotalCount)) return;
+
     setIsLoading(true);
     try {
       // Get user location from localStorage
-      const locCookie = localStorage.getItem("user-location-store");
+      const locCookie = await getLocationCookie();
       let userLat = 0;
       let userLng = 0;
 
       if (locCookie) {
-        try {
-          const locData = JSON.parse(locCookie);
-          if (locData.state.coords) {
-            userLat = locData.state.coords.lat;
-            userLng = locData.state.coords.lng;
-          }
-        } catch (e) {
-          console.error("Error parsing location cookie:", e);
-        }
+          userLat = locCookie.lat;
+          userLng = locCookie.lng;
       }
 
       const data = await fetchFromHasura(getNearByPartnersQuery, {
         user_lat: userLat,
         user_lng: userLng,
-        limit_count: limit,
-        offset_count: currentOffset + 1,
+        limit: limit,
+        offset: currentOffset,
         district_filter: location ? `%${location}%` : "%",
-        search_query: query ? `%${query}%` : ""
+        search_query: query ? `%${query}%` : "%"
       });
       const newPartners = data.get_all_partners;
-      const newTotalCount = data.get_all_partners_aggregate.aggregate.count;
 
       if (newPartners.length) {
         setPartners(prev => [...prev, ...newPartners]);
         setCurrentOffset(prev => prev + limit);
       }
-      setTotalCount(newTotalCount);
+
     } catch (error) {
       console.error("Error loading more partners:", error);
       toast.error("Failed to load more hotels");

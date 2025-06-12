@@ -12,10 +12,10 @@ import { toast } from "sonner";
 const HotelsPage = ({
   partnersData,
   recentVisitsData,
-  district = "all",
+  district = "%",
   hasUserLocation = false,
   limit = 10,
-  query = "",
+  query = "%",
 }: {
   partnersData: {
     partners: Partner[];

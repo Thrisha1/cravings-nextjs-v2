@@ -20,10 +20,10 @@ export default async function page({
     {
       user_lat: userLocation?.lat || 0,
       user_lng: userLocation?.lng || 0,
-      limit_count: limit,
-      offset_count: 0,
+      limit: limit,
+      offset: 0,
       district_filter: location ? `%${location}%` : "%",
-      search_query: query ? `%${query}%` : ""
+      search_query: query ? `%${query}%` : "%"
     }
   );
 
@@ -53,10 +53,10 @@ export default async function page({
         partners: get_all_partners,
         totalCount: get_all_partners_aggregate?.aggregate?.count || 0,
       }}
-      district={location || "all"}
+      district={location || "%"}
       hasUserLocation={!!userLocation}
       limit={limit}
-      query={query || ""}
+      query={query || "%"}
     />
   );
 }
