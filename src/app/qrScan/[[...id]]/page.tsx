@@ -215,6 +215,7 @@ const page = async ({
       );
     }
 
+
     // if (isOrderingEnabled || isDeliveryEnabled) {
     return (
       <HotelMenuPage

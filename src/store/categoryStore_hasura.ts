@@ -15,10 +15,9 @@ export interface Category {
 
 // Helper function to format category name for display
 export const formatDisplayName = (name: string): string => {
-  return name
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  return name.split('_').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
 };
 
 // Helper function to format category name for storage
@@ -127,7 +126,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const updatedCat = {
         id: cat.id,
-        name: cat.name,
+        name: (cat.name),
         priority: cat.priority,
       };
 
@@ -140,7 +139,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
           category.id === updatedCategory.id
             ? {
                 ...category,
-                name: updatedCategory.name,
+                name: (updatedCategory.name),
                 priority: updatedCategory.priority,
               }
             : category

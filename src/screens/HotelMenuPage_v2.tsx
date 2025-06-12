@@ -85,6 +85,7 @@ const HotelMenuPage = ({
   const { setHotelId, genOrderId, open_place_order_modal } = useOrderStore();
 
   const pathname = usePathname();
+  
 
   useEffect(() => {
     const handleUpdateQrCount = async () => {

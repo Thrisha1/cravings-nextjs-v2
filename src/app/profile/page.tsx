@@ -8,9 +8,15 @@ import {
   Pencil,
   Trash2,
   ArrowRight,
+  X,
   // Loader2,
 } from "lucide-react";
-import { GeoLocation, Partner, useAuthStore } from "@/store/authStore";
+import {
+  AuthUser,
+  GeoLocation,
+  Partner,
+  useAuthStore,
+} from "@/store/authStore";
 import { useLocationStore } from "@/store/geolocationStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -29,7 +35,6 @@ import {
 import { AlertDialogCancel } from "@radix-ui/react-alert-dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-// import Image from "next/image";
 import { deleteFileFromS3, uploadFileToS3 } from "../actions/aws-s3";
 import { deleteUserMutation } from "@/api/auth";
 import { updatePartnerMutation } from "@/api/partners";
@@ -41,7 +46,7 @@ import { processImage } from "@/lib/processImage";
 import { Textarea } from "@/components/ui/textarea";
 import Img from "@/components/Img";
 import { Switch } from "@/components/ui/switch";
-import { HotelData } from "../hotels/[...id]/page";
+// import { HotelData } from "@/app/hotels/[...id]/page";
 import { getSocialLinks } from "@/lib/getSocialLinks";
 import {
   FeatureFlags,
@@ -49,10 +54,52 @@ import {
   revertFeatureToString,
 } from "@/lib/getFeatures";
 import { updateAuthCookie } from "../auth/actions";
-import { DeliveryRules } from "@/store/orderStore";
+import { DeliveryRules, Order } from "@/store/orderStore";
+import {
+  createCaptainMutation,
+  getCaptainsQuery,
+  deleteCaptainMutation,
+} from "@/api/captains";
 import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/DeliveryAndGeoLocationSettings";
 import { LocationSettings } from "@/components/admin/profile/LocationSettings";
+import useOrderStore from "@/store/orderStore";
 import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
+import { Offer } from "@/store/offerStore_hasura";
+
+interface Captain {
+  id: string;
+  email: string;
+  name: string;
+  partner_id: string;
+  role: string;
+}
+
+interface CaptainOrder {
+  id: string;
+  status: string;
+  created_at: string;
+  total_price: number;
+  table_number: number;
+  phone: string;
+  order_items: Array<{
+    id: string;
+    quantity: number;
+    menu: {
+      id: string;
+      name: string;
+      price: number;
+      category: {
+        name: string;
+      };
+    };
+  }>;
+}
+
+interface HotelData extends Partner {
+  social_links?: string;
+  offers: Offer[];
+  menus: any[];
+}
 import { countryCodes } from "@/utils/countryCodes";
 import {
   Select,
@@ -152,8 +199,23 @@ export default function ProfilePage() {
   const [userFeatures, setUserFeatures] = useState<FeatureFlags | null>(null);
   const [footNote, setFootNote] = useState<string>("");
   const [instaLink, setInstaLink] = useState<string>("");
+  const [captainName, setCaptainName] = useState("");
+  const [captainEmail, setCaptainEmail] = useState("");
+  const [captainPassword, setCaptainPassword] = useState("");
+  const [isCreatingCaptain, setIsCreatingCaptain] = useState(false);
+  const [captainError, setCaptainError] = useState<string | null>(null);
+  const [captains, setCaptains] = useState<Captain[]>([]);
+  const [isDeletingCaptain, setIsDeletingCaptain] = useState<string | null>(
+    null
+  );
+  const [showCaptainForm, setShowCaptainForm] = useState(false);
+  const [captainOrders, setCaptainOrders] = useState<CaptainOrder[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  const { subscribeOrders } = useOrderStore();
   const [isEditingCountryCode, setIsEditingCountryCode] = useState(false);
-  const [countryCode, setCountryCode] = useState( userData?.role === "partner" ? userData?.country_code || "+91" : "+91");
+  const [countryCode, setCountryCode] = useState(
+    userData?.role === "partner" ? userData?.country_code || "+91" : "+91"
+  );
   const [countryCodeSearch, setCountryCodeSearch] = useState("");
   const [showPricing, setShowPricing] = useState(true);
 
@@ -192,14 +254,41 @@ export default function ProfilePage() {
     }
   }, [userData, typeof window !== 'undefined' ? window.location.hash : '']); // Add hash as dependency
 
+  // Handle anchor scrolling
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash) {
+        // Wait for the page to be fully loaded
+        const scrollToElement = () => {
+          const element = document.querySelector(hash);
+          if (element) {
+            // Use a more reliable scroll method
+            const elementTop = element.getBoundingClientRect().top + window.pageYOffset;
+            window.scrollTo({
+              top: elementTop - 100, // Offset for header
+              behavior: 'smooth'
+            });
+            
+            // Add highlight effect
+            element.classList.add('bg-yellow-100', 'border-2', 'border-yellow-400', 'rounded-lg');
+            setTimeout(() => {
+              element.classList.remove('bg-yellow-100', 'border-2', 'border-yellow-400', 'rounded-lg');
+            }, 1500);
+          }
+        };
+
+        // Try multiple times to ensure the element is available
+        scrollToElement();
+        setTimeout(scrollToElement, 100);
+        setTimeout(scrollToElement, 500);
+        setTimeout(scrollToElement, 1000);
+      }
+    }
+  }, [userData, typeof window !== 'undefined' ? window.location.hash : '']); // Add hash as dependency
+
   useEffect(() => {
     if (userData?.role === "partner") {
-      // console.log("Debug - UserData:", {
-      //   delivery_rate: userData.delivery_rate,
-      //   geo_location: userData.geo_location,
-      //   raw_userData: userData
-      // });
-
       setBannerImage(userData.store_banner || null);
       setUpiId(userData.upi_id || "");
       setPlaceId(userData.place_id || "");
@@ -250,16 +339,18 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (userData?.role === "partner") {
-      console.log("User Data:", userData?.role, userData?.feature_flags);
-
       const feature = getFeatures(userData?.feature_flags as string);
 
       setUserFeatures(feature);
-      console.log(feature);
     }
   }, [userData]);
 
-  // Add effect to log state changes
+  useEffect(() => {
+    if (userData?.role === "partner" && features?.captainordering.enabled) {
+      fetchCaptains();
+    }
+  }, [userData, features?.captainordering.enabled]);
+
   useEffect(() => {
     console.log("Debug - Current state:", {
       deliveryRate,
@@ -275,6 +366,114 @@ export default function ProfilePage() {
     isEditing.deliveryRate,
     isEditing.geoLocation,
   ]);
+
+  useEffect(() => {
+    console.log(
+      window.localStorage.getItem("fcmToken"),
+      "FCM Token from localStorage"
+    );
+    if (userData?.role === "partner" && features?.captainordering.enabled) {
+      const fetchCaptainOrders = async () => {
+        try {
+          const response = await fetchFromHasura(
+            `
+            query GetCaptainOrders($partner_id: uuid!) {
+              orders(where: {partner_id: {_eq: $partner_id}, orderedby: {_eq: "captain"}}, order_by: {created_at: desc}) {
+                id
+                status
+                created_at
+                total_price
+                table_number
+                phone
+                order_items {
+                  id
+                  quantity
+                  menu {
+                    id
+                    name
+                    price
+                    category {
+                      name
+                    }
+                  }
+                }
+              }
+            }
+          `,
+            {
+              partner_id: userData.id,
+            }
+          );
+
+          if (response.orders) {
+            setCaptainOrders(response.orders);
+          }
+        } catch (error) {
+          console.error("Error fetching captain orders:", error);
+          toast.error("Failed to load captain orders");
+        } finally {
+          setLoadingOrders(false);
+        }
+      };
+
+      fetchCaptainOrders();
+
+      const unsubscribe = subscribeOrders((orders: Order[]) => {
+        const captainOrders = orders
+          .filter((order) => order.orderedby === "captain")
+          .map((order) => ({
+            id: order.id,
+            status: order.status,
+            created_at: order.createdAt,
+            total_price: order.totalPrice,
+            table_number: order.tableNumber || 0,
+            phone: order.phone || "",
+            order_items: order.items.map((item) => ({
+              id: item.id,
+              quantity: item.quantity,
+              menu: {
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                category: {
+                  name:
+                    typeof item.category === "string"
+                      ? item.category
+                      : item.category && "name" in item.category
+                      ? item.category.name
+                      : "",
+                },
+              },
+            })),
+          }));
+        setCaptainOrders(captainOrders);
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    }
+  }, [userData, features?.captainordering.enabled, subscribeOrders]);
+
+  useEffect(() => {
+    console.log("Store changed:", {
+      coords,
+      geoString,
+      error,
+    });
+
+    if (coords && isEditing.geoLocation) {
+      console.log("Updating geoLocation from store:", {
+        lat: coords.lat,
+        lng: coords.lng,
+      });
+
+      setGeoLocation({
+        latitude: coords.lat,
+        longitude: coords.lng,
+      });
+    }
+  }, [coords, geoString, error, isEditing.geoLocation]);
 
   const profile = {
     name:
@@ -348,7 +547,6 @@ export default function ProfilePage() {
     }
   };
 
-  // Also add this effect to watch store changes
   useEffect(() => {
     console.log("Store changed:", {
       coords,
@@ -378,13 +576,11 @@ export default function ProfilePage() {
 
       console.log("Saving geoLocation:", geoLocation);
 
-      // Validate coordinates are present
       if (!latitude || !longitude) {
         toast.error("Please enter both latitude and longitude");
         return;
       }
 
-      // Convert to numbers and validate ranges
       const lat = latitude;
       const lng = longitude;
 
@@ -393,7 +589,6 @@ export default function ProfilePage() {
         return;
       }
 
-      // Validate coordinate ranges
       if (lat < -90 || lat > 90) {
         toast.error("Latitude must be between -90 and 90 degrees");
         return;
@@ -404,8 +599,6 @@ export default function ProfilePage() {
         return;
       }
 
-      // Create the correct format for geography type
-      // Using SRID=4326;POINT(longitude latitude) format
       const geographyFormat = {
         type: "Point",
         coordinates: [lng, lat],
@@ -414,15 +607,14 @@ export default function ProfilePage() {
       setIsSaving((prev) => ({ ...prev, geoLocation: true }));
       toast.loading("Updating location...");
 
-      // First verify the mutation
       const mutation = updatePartnerMutation;
-      console.log("Mutation:", mutation); // Debug log
+      console.log("Mutation:", mutation);
       console.log("Update data:", {
         id: userData?.id,
         updates: {
           geo_location: geographyFormat,
         },
-      }); // Debug log
+      });
 
       const response = await fetchFromHasura(mutation, {
         id: userData?.id,
@@ -431,13 +623,12 @@ export default function ProfilePage() {
         },
       });
 
-      console.log("Hasura response:", response); // Debug log
+      console.log("Hasura response:", response);
 
       if (!response) {
         throw new Error("No response from server");
       }
 
-      // Update local state
       revalidateTag(userData?.id as string);
       setState({ geo_location: geographyFormat });
       toast.dismiss();
@@ -496,7 +687,6 @@ export default function ProfilePage() {
       if (!files || !files[0]) return;
       const file = files[0];
 
-      //convert to local blob
       const blobUrl = URL.createObjectURL(file);
       setBannerImage(blobUrl);
 
@@ -521,14 +711,12 @@ export default function ProfilePage() {
       const prevImgUrl =
         userData.role === "partner" ? userData?.store_banner : "";
 
-      //Has previous uploaded image delete it
       if (prevImgUrl?.includes("cravingsbucket")) {
         await deleteFileFromS3(prevImgUrl);
       }
 
       let nextVersion = "v0";
 
-      // Check if the image URL already has a version number
       if (prevImgUrl) {
         const onlyImageName = prevImgUrl
           .split(
@@ -548,7 +736,6 @@ export default function ProfilePage() {
         }
       }
 
-      // Upload to S3
       const imgUrl = await uploadFileToS3(
         webpBase64WithPrefix,
         `hotel_banners/${userData.id + "_" + nextVersion}.webp`
@@ -560,9 +747,7 @@ export default function ProfilePage() {
       if (!imgUrl) {
         throw new Error("Failed to upload image to S3");
       }
-      // // console.log("Image uploaded to S3:", imgUrl);
 
-      // Update user data
       await fetchFromHasura(updatePartnerMutation, {
         id: userData?.id,
         updates: {
@@ -815,7 +1000,6 @@ export default function ProfilePage() {
 
   const handleSaveWhatsappNumbers = async () => {
     try {
-      // Validate all numbers
       for (const item of whatsappNumbers) {
         if (!item.number || item.number.length !== 10) {
           toast.error(
@@ -1011,16 +1195,12 @@ export default function ProfilePage() {
       });
     }
   };
-  // (Delivery Rate)
 
   const handleSaveDeliverySettings = async () => {
     try {
       if (!userData) return;
       toast.loading("Updating delivery settings...");
 
-      setIsSaving((prev) => ({ ...prev, deliveryRate: true }));
-
-      // Validate delivery rate is a positive number
       const rate = deliveryRate;
       if (isNaN(rate) || rate < 0) {
         toast.dismiss();
@@ -1030,9 +1210,8 @@ export default function ProfilePage() {
         return;
       }
 
-      // Prepare delivery rules object with defaults if not set
       const rules = {
-        delivery_radius: deliveryRules?.delivery_radius || 5, // default 5km
+        delivery_radius: deliveryRules?.delivery_radius || 5,
         first_km_range: {
           km: deliveryRules?.first_km_range?.km || 0,
           rate: deliveryRules?.first_km_range?.rate || 0,
@@ -1096,6 +1275,197 @@ export default function ProfilePage() {
       toast.error(
         error instanceof Error ? error.message : "Failed to update shop status"
       );
+    }
+  };
+
+  const handleCreateCaptain = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userData) return;
+
+    setIsCreatingCaptain(true);
+    setCaptainError(null);
+
+    try {
+      if (!captainName || !captainEmail || !captainPassword) {
+        throw new Error("Please fill in all fields");
+      }
+
+      if (captainPassword.length < 6) {
+        throw new Error("Password must be at least 6 characters long");
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(captainEmail)) {
+        throw new Error("Please enter a valid email address");
+      }
+
+      const checkEmail = await fetchFromHasura(
+        `
+        query CheckCaptainEmail($email: String!) {
+          captain(where: {email: {_eq: $email}}) {
+            id
+            email
+          }
+        }
+      `,
+        {
+          email: captainEmail,
+        }
+      );
+
+      if (checkEmail?.captain?.length > 0) {
+        throw new Error(
+          "This email is already registered. Please use a different email address."
+        );
+      }
+
+      const checkName = await fetchFromHasura(
+        `
+        query CheckCaptainName($name: String!) {
+          captain(where: {name: {_eq: $name}}) {
+            id
+            name
+          }
+        }
+      `,
+        {
+          name: captainName,
+        }
+      );
+
+      if (checkName?.captain?.length > 0) {
+        throw new Error(
+          "This name is already taken. Please use a different name."
+        );
+      }
+
+      console.log("Creating captain account with data:", {
+        name: captainName,
+        email: captainEmail,
+        partner_id: userData.id,
+        role: "captain",
+      });
+
+      const result = await fetchFromHasura(createCaptainMutation, {
+        name: captainName,
+        email: captainEmail,
+        password: captainPassword,
+        partner_id: userData.id,
+        role: "captain",
+      });
+
+      console.log("Captain creation result:", result);
+
+      if (!result?.insert_captain_one) {
+        if (result?.errors?.[0]?.message?.includes("unique constraint")) {
+          if (result?.errors?.[0]?.message?.includes("name")) {
+            throw new Error(
+              "This name is already taken. Please use a different name."
+            );
+          }
+          if (result?.errors?.[0]?.message?.includes("email")) {
+            throw new Error(
+              "This email is already registered. Please use a different email address."
+            );
+          }
+          throw new Error(
+            "A unique constraint violation occurred. Please try again."
+          );
+        }
+        throw new Error(
+          "Failed to create captain account - no response from server"
+        );
+      }
+
+      const verifyCaptain = (await fetchFromHasura(
+        `
+        query VerifyCaptain($partner_id: uuid!) {
+          captain(where: {partner_id: {_eq: $partner_id}}) {
+            id
+            email
+            name
+            partner_id
+            role
+          }
+        }
+      `,
+        {
+          partner_id: userData.id,
+        }
+      )) as { captain: Captain[] };
+
+      console.log("Verification query result:", verifyCaptain);
+
+      if (
+        !verifyCaptain?.captain?.some((c: Captain) => c.email === captainEmail)
+      ) {
+        throw new Error("Captain account creation verification failed");
+      }
+
+      toast.success("Captain account created successfully!");
+      setCaptainName("");
+      setCaptainEmail("");
+      setCaptainPassword("");
+      setShowCaptainForm(false);
+      fetchCaptains();
+    } catch (error) {
+      console.error("Error creating captain account:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to create captain account";
+      setCaptainError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsCreatingCaptain(false);
+    }
+  };
+
+  const fetchCaptains = async () => {
+    if (!userData) return;
+    try {
+      const result = (await fetchFromHasura(getCaptainsQuery, {
+        partner_id: userData.id,
+      })) as { captain: Captain[] };
+      setCaptains(result.captain || []);
+    } catch (error) {
+      console.error("Error fetching captains:", error);
+      toast.error("Failed to fetch captain accounts");
+    }
+  };
+
+  const handleDeleteCaptain = async (id: string) => {
+    setIsDeletingCaptain(id);
+    try {
+      const updateOrdersMutation = `
+        mutation UpdateOrdersWithCaptain($captain_id: uuid!) {
+          update_orders(
+            where: { captain_id: { _eq: $captain_id } }
+            _set: { 
+              captain_id: null,
+              orderedby: null
+            }
+          ) {
+            affected_rows
+          }
+        }
+      `;
+
+      await fetchFromHasura(updateOrdersMutation, {
+        captain_id: id,
+      });
+
+      await fetchFromHasura(deleteCaptainMutation, {
+        id,
+      });
+
+      await fetchCaptains();
+      toast.success("Captain deleted successfully");
+    } catch (error) {
+      console.error("Error deleting captain:", error);
+      toast.error("Failed to delete captain");
+    } finally {
+      setIsDeletingCaptain(null);
     }
   };
 
@@ -1169,7 +1539,6 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen w-full bg-orange-50 p-2">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Welcome Section */}
         <Card className="overflow-hidden hover:shadow-xl transition-shadow">
           <CardHeader>
             <div className="flex justify-between">
@@ -1179,6 +1548,7 @@ export default function ProfilePage() {
               <div
                 onClick={() => {
                   signOut();
+                  router.push("/");
                 }}
                 className="cursor-pointer hover:text-red-500 transition-all rounded-full flex flex-col items-center justify-center gap-1 text-gray-500"
               >
@@ -1189,18 +1559,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex md:flex-row flex-col gap-4">
-              {userData?.role === "user" && (
-                <>
-                  {/* <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
-                    <Tag className="sm:size-4 size-8 mr-2" />
-                    {profile.offersClaimed} Offers Claimed
-                  </Badge> */}
-                  {/* <Badge className="text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors">
-                    <UtensilsCrossed className="sm:size-4 size-8 mr-2" />
-                    {profile.restaurantsSubscribed} Restaurants Subscribed
-                  </Badge> */}
-                </>
-              )}
+              {userData?.role === "user" && <></>}
               {userData?.role === "partner" && (
                 <>
                   <Link
@@ -1230,46 +1589,6 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Claimed Offers Section */}
-        {/* {userData?.role === "user" && (
-          <Card className="overflow-hidden hover:shadow-xl transition-shadow">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold">
-                Your Claimed Offers
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {profile.claimedOffers.map((offer) => (
-                <div
-                  key={offer.id}
-                  className="p-4 border border-orange-300 rounded-lg hover:shadow-md transition-shadow"
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className=" sm:text-xl font-semibold">
-                        {offer.foodName}
-                      </h3>
-                      <p className="text-sm text-gray-600 flex items-center gap-2">
-                        <UtensilsCrossed className="w-4 h-4" />
-                        {offer.restaurant}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-gray-500 line-through text-sm">
-                        ₹{offer?.originalPrice?.toFixed(0)}
-                      </p>
-                      <p className="text-xl font-bold text-orange-600">
-                        ₹{offer?.newPrice?.toFixed(0)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )} */}
-
-        {/* Account Settings Section (Only for hotel) */}
         {userData?.role === "partner" && (
           <>
             {/* Default Settings Section */}
@@ -2127,6 +2446,48 @@ export default function ProfilePage() {
                           />
                         </div>
                       )}
+
+                    {features.captainordering.access && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <div className="font-medium">Captain Ordering</div>
+                            <div className="text-sm text-gray-500">
+                              {features.captainordering.enabled
+                                ? "Enabled"
+                                : "Disabled"}
+                            </div>
+                          </div>
+                          <Switch
+                            checked={features.captainordering.enabled}
+                            onCheckedChange={(enabled) => {
+                              const updates = {
+                                ...features,
+                                captainordering: {
+                                  ...features.captainordering,
+                                  enabled: enabled,
+                                },
+                              };
+                              setFeatures(updates);
+                              setUserFeatures(updates);
+                              handleFeatureEnabledChange(updates);
+                            }}
+                          />
+                        </div>
+                        {features.captainordering.enabled && (
+                          <div className="pt-2">
+                            <Button
+                              className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+                              onClick={() =>
+                                router.push("/admin/captain-management")
+                              }
+                            >
+                              Manage Captain Accounts
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     </>
                   )}
                 </div>
@@ -2315,7 +2676,6 @@ export default function ProfilePage() {
           </>
         )}
 
-        {/* Danger Area */}
         {userData?.role === "user" && (
           <Card className="overflow-hidden hover:shadow-xl transition-shadow border-red-500">
             <CardHeader>
@@ -2329,7 +2689,6 @@ export default function ProfilePage() {
                 including claimed offers, will be permanently deleted.
               </p>
 
-              {/* Confirmation Modal */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" disabled={isDeleting}>
