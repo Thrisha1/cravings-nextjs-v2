@@ -8,71 +8,30 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { usePOSStore } from "@/store/posStore";
+import { usePOSStore, ExtraCharge } from "@/store/posStore";
 import { Printer, Edit, Loader2 } from "lucide-react";
 import { useReactToPrint } from "react-to-print";
 import { useAuthStore, Captain, Partner } from "@/store/authStore";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import KOTTemplate from "@/components/admin/pos/KOTTemplate";
 import BillTemplate from "@/components/admin/pos/BillTemplate";
+import { getExtraCharge } from "@/lib/getExtraCharge";
+import { toast } from "sonner";
 
 export const CaptainCheckoutModal = () => {
   const {
     order,
+    postCheckoutModalOpen: isOpen,
+    setPostCheckoutModalOpen,
+    setEditOrderModalOpen,
     clearCart,
     extraCharges,
-    setPostCheckoutModalOpen,
-    postCheckoutModalOpen,
-    setEditOrderModalOpen,
+    qrGroup,
   } = usePOSStore();
+
   const { userData } = useAuthStore();
   const captainData = userData as Captain;
-  const [partnerData, setPartnerData] = useState<Partner | null>(null);
-
-  // Fetch partner data to get currency
-  useEffect(() => {
-    const fetchPartnerData = async () => {
-      if (captainData?.partner_id) {
-        try {
-          const response = await fetchFromHasura(
-            `
-            query GetPartnerById($partner_id: uuid!) {
-              partners_by_pk(id: $partner_id) {
-                id
-                currency
-                gst_percentage
-                store_name
-              }
-            }
-            `,
-            {
-              partner_id: captainData.partner_id
-            }
-          );
-          if (response.partners_by_pk) {
-            setPartnerData(response.partners_by_pk);
-          }
-        } catch (error) {
-          console.error("Error fetching partner data:", error);
-        }
-      }
-    };
-
-    fetchPartnerData();
-  }, [captainData?.partner_id]);
-
-  const billRef = useRef<HTMLDivElement>(null);
-  const kotRef = useRef<HTMLDivElement>(null);
-
-//   const handlePrintBill = useReactToPrint({
-//     contentRef: billRef,
-//     onAfterPrint: () => console.log("Bill printed successfully"),
-//   });
-
-//   const handlePrintKOT = useReactToPrint({
-//     contentRef: kotRef,
-//     onAfterPrint: () => console.log("KOT printed successfully"),
-//   });
+  const partnerData = userData as Partner;
 
   const handleEditOrder = () => {
     setPostCheckoutModalOpen(false);
@@ -96,7 +55,17 @@ export const CaptainCheckoutModal = () => {
   // Calculate totals
   const foodSubtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
-  const subtotal = foodSubtotal + extraChargesTotal;
+  
+  // Calculate QR group extra charges
+  const qrGroupCharges = qrGroup?.extra_charge
+    ? getExtraCharge(
+        order.items as any[],
+        qrGroup.extra_charge,
+        qrGroup.charge_type || "FLAT_FEE"
+      )
+    : 0;
+    
+  const subtotal = foodSubtotal + extraChargesTotal + qrGroupCharges;
   const gstAmount = calculateGst(foodSubtotal);
   const grandTotal = subtotal + gstAmount;
 
@@ -126,7 +95,7 @@ export const CaptainCheckoutModal = () => {
   return (
     <>
       <Dialog
-        open={postCheckoutModalOpen}
+        open={isOpen}
         onOpenChange={setPostCheckoutModalOpen}
       >
         <DialogContent className="max-w-none w-[95vw] sm:w-[90vw] md:w-[80vw] lg:w-[70vw] h-[95vh] sm:h-[90vh] p-0 sm:p-0 flex flex-col">
@@ -204,6 +173,24 @@ export const CaptainCheckoutModal = () => {
                           <span className="font-medium">{currency}{charge.amount.toFixed(2)}</span>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* QR Group Charges */}
+                {qrGroup && qrGroupCharges > 0 && (
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg mb-3">QR Group Charges</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span>{qrGroup.name}</span>
+                          <p className="text-xs text-gray-500">
+                            {qrGroup.charge_type === "PER_ITEM" ? "Per item charge" : "Fixed charge"}
+                          </p>
+                        </div>
+                        <span className="font-medium">{currency}{qrGroupCharges.toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
                 )}

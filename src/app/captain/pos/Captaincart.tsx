@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Captain, useAuthStore } from "@/store/authStore";
 import { Input } from "@/components/ui/input";
+import { getExtraCharge } from "@/lib/getExtraCharge";
 
 export const Captaincart = () => {
   const {
@@ -34,6 +35,8 @@ export const Captaincart = () => {
     setPostCheckoutModalOpen,
     addToCart,
     setIsCaptainOrder,
+    qrGroup,
+    getPartnerTables,
   } = usePOSStore();
   
   const { userData } = useAuthStore();
@@ -42,7 +45,6 @@ export const Captaincart = () => {
   const [phoneInput, setPhoneInput] = useState("");
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
   const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0, id: "" });
-  const { getPartnerTables } = usePOSStore();
 
   // Set default table number to 0 (No Table)
   useEffect(() => {
@@ -50,16 +52,6 @@ export const Captaincart = () => {
       setTableNumber(0);
     }
   }, [tableNumber, setTableNumber]);
-
-  const getGstAmount = (price: number, gstPercentage: number) => {
-    return (price * gstPercentage) / 100;
-  };
-
-  // Calculate totals
-  const foodSubtotal = totalAmount; // This is the subtotal of food items only
-  const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
-  const gstAmount = getGstAmount(foodSubtotal, captainData?.gst_percentage || 0); // GST only on food items
-  const grandTotal = foodSubtotal + gstAmount + extraChargesTotal; // Total including GST and extra charges
 
   // Check if table selection is made
   const isTableSelected = tableNumber !== undefined;
@@ -76,6 +68,26 @@ export const Captaincart = () => {
 
     fetchTableNumbers();
   }, [captainData?.partner_id, getPartnerTables]);
+
+  const getGstAmount = (price: number, gstPercentage: number) => {
+    return (price * gstPercentage) / 100;
+  };
+
+  // Calculate totals
+  const foodSubtotal = totalAmount; // This is the subtotal of food items only
+  const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
+  
+  // Calculate QR group extra charges
+  const qrGroupCharges = qrGroup?.extra_charge
+    ? getExtraCharge(
+        cartItems as any[],
+        qrGroup.extra_charge,
+        qrGroup.charge_type || "FLAT_FEE"
+      )
+    : 0;
+    
+  const gstAmount = getGstAmount(foodSubtotal, captainData?.gst_percentage || 0); // GST only on food items
+  const grandTotal = foodSubtotal + gstAmount + extraChargesTotal + qrGroupCharges;
 
   const handleAddExtraCharge = () => {
     if (!newExtraCharge.name || newExtraCharge.amount <= 0) {
@@ -343,6 +355,19 @@ export const Captaincart = () => {
                       <div className="flex justify-between text-sm">
                         <span>Extra Charges Total:</span>
                         <span>{captainData?.currency || "$"}{extraChargesTotal.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+
+                  {/* QR Group Charges */}
+                  {qrGroup && (
+                    <>
+                      <div className="flex justify-between text-sm border-t pt-2">
+                        <span className="font-medium">QR Group Charges</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>{qrGroup.name}</span>
+                        <span>{captainData?.currency || "$"}{qrGroupCharges.toFixed(2)}</span>
                       </div>
                     </>
                   )}

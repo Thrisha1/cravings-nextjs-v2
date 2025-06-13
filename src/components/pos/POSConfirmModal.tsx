@@ -8,6 +8,15 @@ import { useAuthStore, Partner } from "@/store/authStore";
 import { Input } from "@/components/ui/input";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { GET_QR_CODES_BY_PARTNER } from "@/api/qrcodes";
+import { getExtraCharge } from "@/lib/getExtraCharge";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface POSConfirmModalProps {
   onClose: () => void;
@@ -34,6 +43,8 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
     tableNumber,
     loading,
     addToCart,
+    qrGroup,
+    setDeliveryMode,
   } = usePOSStore();
   
   const { userData } = useAuthStore();
@@ -82,8 +93,18 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
   // Calculate totals
   const foodSubtotal = totalAmount;
   const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
+  
+  // Calculate QR group extra charges
+  const qrGroupCharges = qrGroup?.extra_charge
+    ? getExtraCharge(
+        cartItems as any[],
+        qrGroup.extra_charge,
+        qrGroup.charge_type || "FLAT_FEE"
+      )
+    : 0;
+    
   const gstAmount = getGstAmount(foodSubtotal, partnerData?.gst_percentage || 0);
-  const grandTotal = foodSubtotal + gstAmount + extraChargesTotal;
+  const grandTotal = foodSubtotal + gstAmount + extraChargesTotal + qrGroupCharges;
 
   // Check if table selection is made (only required for dine-in)
   const isTableSelected = isDelivery || tableNumber !== null;
@@ -170,7 +191,7 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
               variant={isDelivery ? "default" : "outline"}
               onClick={() => {
                 setIsDelivery(true);
-                setTableNumber(null);
+                setDeliveryMode(true);
               }}
               className="flex-1"
             >
@@ -276,6 +297,23 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
           </div>
         </div>
 
+        {/* QR Group Charges */}
+        {qrGroup && (
+          <div className="border rounded-lg p-3">
+            <div className="flex justify-between items-center">
+              <div>
+                <div className="font-medium">{qrGroup.name}</div>
+                <div className="text-sm text-muted-foreground">
+                  {qrGroup.charge_type === "PER_ITEM" ? "Per item charge" : "Fixed charge"}
+                </div>
+              </div>
+              <div className="font-medium">
+                {partnerData?.currency || "$"}{qrGroupCharges.toFixed(2)}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Order Summary */}
         <div className="border-t pt-4">
           <h3 className="font-semibold mb-2">Order Summary</h3>
@@ -347,6 +385,14 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
                   <span>{partnerData?.currency || "$"}{extraChargesTotal.toFixed(2)}</span>
                 </div>
               </>
+            )}
+
+            {/* QR Group Charges */}
+            {qrGroup && (
+              <div className="flex justify-between text-sm">
+                <span>{qrGroup.name}:</span>
+                <span>{partnerData?.currency || "$"}{qrGroupCharges.toFixed(2)}</span>
+              </div>
             )}
 
             {/* Grand Total */}
