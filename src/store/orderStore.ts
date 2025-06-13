@@ -391,6 +391,7 @@ const useOrderStore = create(
               })),
             }));
 
+
             if (allOrders) {
               set({ userOrders: allOrders });
               if (callback) callback(allOrders);
@@ -479,6 +480,7 @@ const useOrderStore = create(
                   deliveryAddress: order.delivery_address,
                   partnerId: order.partner_id,
                   gstIncluded: order.gst_included,
+                  status_history: order.status_history,
                   extraCharges: order.extra_charges,
                   userId: order.user_id,
                   orderedby: order.orderedby,
