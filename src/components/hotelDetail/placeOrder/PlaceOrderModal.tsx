@@ -953,7 +953,7 @@ const PlaceOrderModal = ({
   return (
     <>
       <div
-        className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto ${
+        className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto text-black ${
           open_place_order_modal ? "block" : "hidden"
         }`}
       >

@@ -163,7 +163,7 @@ const HotelMenuPage = ({
 
   const topItems = getTopItems();
   const categories = getCategories();
-  const selectedCategory = categories[0]?.name || "";
+  const selectedCategory = "all";
   const items = getCategoryItems(selectedCategory);
 
   return (
