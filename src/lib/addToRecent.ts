@@ -1,11 +1,12 @@
-import { useAuthStore } from "@/store/authStore";
+import { getAuthCookie } from "@/app/auth/actions";
 import { fetchFromHasura } from "./hasuraClient";
 
 export async function addToRecent(partnerId: string) {
   try {
-    const userData = useAuthStore.getState().userData;
+    const cookies = await getAuthCookie();
+    const id = cookies?.id || null;
 
-    if (!userData || !userData.id) {
+    if (!id) {
       console.error("User not logged in or user ID is missing.");
       return;
     }
@@ -29,7 +30,7 @@ export async function addToRecent(partnerId: string) {
           }
         }`,
       {
-        userId: userData.id,
+        userId:id,
         partnerId: partnerId,
       }
     );
