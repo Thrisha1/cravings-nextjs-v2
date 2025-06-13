@@ -139,7 +139,7 @@ const OrderDrawer = ({
   }, [hotelData]);
 
   useEffect(() => {
-    setOpenDrawerBottom(items?.length ? true : false);
+    setOpenDrawerBottom((items?.length || 0) > 0 ? true : false);
   }, [items, setOpenDrawerBottom]);
 
   const calculateGrandTotal = () => {
@@ -243,6 +243,10 @@ const OrderDrawer = ({
     )}`;
   };
 
+  useEffect(() => {
+    setOpenPlaceOrderModal(false);
+  }, [items]);
+
   const handlePlaceOrder = async () => {
     try {
       setOpenPlaceOrderModal(true);
@@ -254,9 +258,7 @@ const OrderDrawer = ({
     }
   };
 
-  useEffect(() => {
-    setOpenDrawerBottom(items?.length ? true : false);
-  }, [items]);
+
 
     useEffect(() => {
       const handleScroll = () => {
