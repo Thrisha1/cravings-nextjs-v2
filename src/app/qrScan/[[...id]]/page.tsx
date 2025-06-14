@@ -69,14 +69,18 @@ export async function generateMetadata({
     throw new Error("Hotel not found");
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cravings.menu';
+  const defaultBanner = `${baseUrl}/hotelDetailsBanner.jpeg`;
+  const storeBanner = hotel.store_banner ? (hotel.store_banner.startsWith('http') ? hotel.store_banner : `${baseUrl}${hotel.store_banner}`) : defaultBanner;
+
   return {
     title: hotel.store_name,
-    icons: [hotel.store_banner || "/hotelDetailsBanner.jpeg"],
+    icons: [storeBanner],
     description:
       hotel.description ||
       "Welcome to " + hotel.store_name + "! Enjoy a comfortable stay with us.",
     openGraph: {
-      images: [hotel.store_banner || "/hotelDetailsBanner.jpeg"],
+      images: [storeBanner],
       title: hotel.store_name,
       description:
         hotel.description ||

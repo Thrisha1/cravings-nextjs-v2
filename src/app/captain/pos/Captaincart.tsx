@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Captain, useAuthStore } from "@/store/authStore";
 import { Input } from "@/components/ui/input";
+import { getExtraCharge } from "@/lib/getExtraCharge";
 
 export const Captaincart = () => {
   const {
@@ -34,6 +35,13 @@ export const Captaincart = () => {
     setPostCheckoutModalOpen,
     addToCart,
     setIsCaptainOrder,
+    qrGroup,
+    getPartnerTables,
+    removeExtraCharge,
+    removedQrGroupCharges,
+    addQrGroupCharge,
+    removeQrGroupCharge,
+    extraCharges: storeExtraCharges,
   } = usePOSStore();
   
   const { userData } = useAuthStore();
@@ -42,7 +50,11 @@ export const Captaincart = () => {
   const [phoneInput, setPhoneInput] = useState("");
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
   const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0, id: "" });
-  const { getPartnerTables } = usePOSStore();
+
+  // Sync store extra charges with local state
+  useEffect(() => {
+    setExtraCharges(storeExtraCharges);
+  }, [storeExtraCharges]);
 
   // Set default table number to 0 (No Table)
   useEffect(() => {
@@ -50,16 +62,6 @@ export const Captaincart = () => {
       setTableNumber(0);
     }
   }, [tableNumber, setTableNumber]);
-
-  const getGstAmount = (price: number, gstPercentage: number) => {
-    return (price * gstPercentage) / 100;
-  };
-
-  // Calculate totals
-  const foodSubtotal = totalAmount; // This is the subtotal of food items only
-  const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
-  const gstAmount = getGstAmount(foodSubtotal, captainData?.gst_percentage || 0); // GST only on food items
-  const grandTotal = foodSubtotal + gstAmount + extraChargesTotal; // Total including GST and extra charges
 
   // Check if table selection is made
   const isTableSelected = tableNumber !== undefined;
@@ -77,6 +79,17 @@ export const Captaincart = () => {
     fetchTableNumbers();
   }, [captainData?.partner_id, getPartnerTables]);
 
+  const getGstAmount = (price: number, gstPercentage: number) => {
+    return (price * gstPercentage) / 100;
+  };
+
+  // Calculate totals
+  const foodSubtotal = totalAmount; // This is the subtotal of food items only
+  const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
+  
+  const gstAmount = getGstAmount(foodSubtotal, captainData?.gst_percentage || 0); // GST only on food items
+  const grandTotal = foodSubtotal + gstAmount + extraChargesTotal;
+
   const handleAddExtraCharge = () => {
     if (!newExtraCharge.name || newExtraCharge.amount <= 0) {
       toast.error("Please enter a valid charge name and amount");
@@ -89,14 +102,29 @@ export const Captaincart = () => {
       amount: newExtraCharge.amount,
     };
 
-    setExtraCharges([...extraCharges, charge]);
+    // Add to store instead of local state
+    addExtraCharge(charge);
     setNewExtraCharge({ name: "", amount: 0, id: "" });
   };
 
   const handleRemoveExtraCharge = (index: number) => {
-    const updatedCharges = [...extraCharges];
-    updatedCharges.splice(index, 1);
-    setExtraCharges(updatedCharges);
+    const chargeToRemove = extraCharges[index];
+    
+    // If this was a QR group charge, use the store function
+    if (chargeToRemove.id.startsWith('qr-group-')) {
+      const qrGroupId = chargeToRemove.id.replace('qr-group-', '');
+      removeQrGroupCharge(qrGroupId);
+    } else {
+      // Remove from store
+      removeExtraCharge(chargeToRemove.id);
+    }
+  };
+
+  const handleAddQrGroupCharge = () => {
+    if (qrGroup && removedQrGroupCharges.includes(qrGroup.id)) {
+      // Use the store function to add back the QR group charge
+      addQrGroupCharge(qrGroup.id);
+    }
   };
 
   const handleConfirmOrder = async () => {
@@ -109,10 +137,7 @@ export const Captaincart = () => {
 
       setUserPhone(phoneInput || null);
       
-      // Add all extra charges to the store
-      extraCharges.forEach(charge => {
-        addExtraCharge(charge);
-      });
+      // Extra charges are already in the store, no need to add them again
       
       await checkout();
       setIsModalOpen(false);
@@ -269,6 +294,19 @@ export const Captaincart = () => {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Show "Add back" message for removed QR group charges */}
+                  {qrGroup && removedQrGroupCharges.includes(qrGroup.id) && (
+                    <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded border">
+                      <span>Add extra {qrGroup.name} charge? </span>
+                      <button
+                        onClick={handleAddQrGroupCharge}
+                        className="text-blue-700 underline hover:text-blue-800"
+                      >
+                        Click here to add back
+                      </button>
                     </div>
                   )}
                 </div>

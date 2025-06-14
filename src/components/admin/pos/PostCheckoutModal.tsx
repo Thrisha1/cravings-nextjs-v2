@@ -16,6 +16,7 @@ import { Partner, useAuthStore } from "@/store/authStore";
 import KOTTemplate from "./KOTTemplate";
 import BillTemplate from "./BillTemplate";
 import { useRouter } from "next/navigation";
+import { getExtraCharge } from "@/lib/getExtraCharge";
 
 export const PostCheckoutModal = () => {
   const {
@@ -25,6 +26,7 @@ export const PostCheckoutModal = () => {
     setPostCheckoutModalOpen,
     postCheckoutModalOpen,
     setEditOrderModalOpen,
+    qrGroup,
   } = usePOSStore();
   const { userData } = useAuthStore();
   const router = useRouter();
@@ -59,6 +61,7 @@ export const PostCheckoutModal = () => {
     (sum, charge) => sum + charge.amount,
     0
   );
+  
   const subtotal = foodSubtotal + extraChargesTotal;
   const gstAmount = calculateGst(foodSubtotal);
   const grandTotal = subtotal + gstAmount;

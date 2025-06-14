@@ -8,6 +8,15 @@ import { useAuthStore, Partner } from "@/store/authStore";
 import { Input } from "@/components/ui/input";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { GET_QR_CODES_BY_PARTNER } from "@/api/qrcodes";
+import { getExtraCharge } from "@/lib/getExtraCharge";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface POSConfirmModalProps {
   onClose: () => void;
@@ -34,6 +43,15 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
     tableNumber,
     loading,
     addToCart,
+    qrGroup,
+    setDeliveryMode,
+    setIsCaptainOrder,
+    getPartnerTables,
+    removeExtraCharge,
+    removedQrGroupCharges,
+    addQrGroupCharge,
+    extraCharges: storeExtraCharges,
+    removeQrGroupCharge,
   } = usePOSStore();
   
   const { userData } = useAuthStore();
@@ -44,6 +62,11 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
   const [tableNumbers, setTableNumbers] = useState<number[]>([]);
   const [isLoadingTables, setIsLoadingTables] = useState(true);
   const [isDelivery, setIsDelivery] = useState(false);
+
+  // Sync store extra charges with local state
+  useEffect(() => {
+    setExtraCharges(storeExtraCharges);
+  }, [storeExtraCharges]);
 
   useEffect(() => {
     const fetchTableNumbers = async () => {
@@ -82,6 +105,7 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
   // Calculate totals
   const foodSubtotal = totalAmount;
   const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
+  
   const gstAmount = getGstAmount(foodSubtotal, partnerData?.gst_percentage || 0);
   const grandTotal = foodSubtotal + gstAmount + extraChargesTotal;
 
@@ -100,14 +124,29 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
       amount: newExtraCharge.amount,
     };
 
-    setExtraCharges([...extraCharges, charge]);
+    // Add to store instead of local state
+    addExtraCharge(charge);
     setNewExtraCharge({ name: "", amount: 0, id: "" });
   };
 
   const handleRemoveExtraCharge = (index: number) => {
-    const updatedCharges = [...extraCharges];
-    updatedCharges.splice(index, 1);
-    setExtraCharges(updatedCharges);
+    const chargeToRemove = extraCharges[index];
+    
+    // If this was a QR group charge, use the store function
+    if (chargeToRemove.id.startsWith('qr-group-')) {
+      const qrGroupId = chargeToRemove.id.replace('qr-group-', '');
+      removeQrGroupCharge(qrGroupId);
+    } else {
+      // Remove from store
+      removeExtraCharge(chargeToRemove.id);
+    }
+  };
+
+  const handleAddQrGroupCharge = () => {
+    if (qrGroup && removedQrGroupCharges.includes(qrGroup.id)) {
+      // Use the store function to add back the QR group charge
+      addQrGroupCharge(qrGroup.id);
+    }
   };
 
   const handleConfirmOrder = async () => {
@@ -119,10 +158,7 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
 
       setUserPhone(phoneInput || null);
       
-      // Add all extra charges to the store
-      extraCharges.forEach(charge => {
-        addExtraCharge(charge);
-      });
+      // Extra charges are already in the store, no need to add them again
       
       await checkout();
       onConfirm();
@@ -170,7 +206,7 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
               variant={isDelivery ? "default" : "outline"}
               onClick={() => {
                 setIsDelivery(true);
-                setTableNumber(null);
+                setDeliveryMode(true);
               }}
               className="flex-1"
             >
@@ -271,6 +307,19 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Show "Add back" message for removed QR group charges */}
+            {qrGroup && removedQrGroupCharges.includes(qrGroup.id) && (
+              <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded border">
+                <span>Add extra {qrGroup.name} charge? </span>
+                <button
+                  onClick={handleAddQrGroupCharge}
+                  className="text-blue-700 underline hover:text-blue-800"
+                >
+                  Click here to add back
+                </button>
               </div>
             )}
           </div>

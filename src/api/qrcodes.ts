@@ -11,6 +11,23 @@ query GetQrTable($id: uuid!) {
   }
 }`;
 
+export const GET_QR_CODES_WITH_GROUPS_BY_PARTNER = `
+  query GetQrCodesWithGroupsByPartner($partner_id: uuid!) {
+    qr_codes(where: {partner_id: {_eq: $partner_id}}) {
+      id
+      qr_number
+      table_number
+      no_of_scans
+      qr_group {
+        id
+        name
+        extra_charge
+        charge_type
+      }
+    }
+  }
+`;
+
 export const INCREMENT_QR_CODE_SCAN_COUNT = `
 mutation IncrementQrCodeScanCount($id: uuid!) {
   update_qr_codes_by_pk(pk_columns: {id: $id}, _inc: {no_of_scans: 1}) {

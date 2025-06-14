@@ -11,10 +11,20 @@ import { RiBillLine } from "react-icons/ri";
 import AuthInitializer from "@/providers/AuthInitializer";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Page() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { setPostCheckoutModalOpen, cartItems, clearCart } = usePOSStore();
+
+  const handleClearCart = () => {
+    if (cartItems.length === 0) {
+      toast.error("Cart is already empty");
+      return;
+    }
+    clearCart();
+    toast.success("Cart cleared successfully");
+  };
 
   return (
     <>
@@ -28,12 +38,12 @@ export default function Page() {
                 {cartItems.length > 0 && (
                   <Button
                     variant="outline"
-                    size="icon"
-                    onClick={clearCart}
-                    className="h-8 w-8"
+                    onClick={handleClearCart}
+                    className="h-8 flex items-center gap-2"
                     title="Clear Cart"
                   >
                     <Trash2 className="h-4 w-4" />
+                    <span className="text-sm">Clear Cart</span>
                   </Button>
                 )}
                 <Link
