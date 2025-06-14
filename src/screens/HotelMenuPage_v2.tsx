@@ -230,6 +230,7 @@ const HotelMenuPage = ({
           {/* search bar  */}
           <section className="px-[8%]">
             <SearchMenu
+              tableNumber={tableNumber}
               hotelData={hoteldata}
               feature_flags={hoteldata?.feature_flags || ""}
               currency={hoteldata?.currency}
@@ -258,6 +259,7 @@ const HotelMenuPage = ({
                 currency={hoteldata?.currency}
                 items={topItems}
                 styles={styles}
+                tableNumber={tableNumber}
               />
             </section>
           )}
@@ -272,6 +274,7 @@ const HotelMenuPage = ({
               categories={categories}
               selectedCategory={selectedCategory}
               menu={hoteldata?.menus}
+              tableNumber={tableNumber}
             />
           </section>
         </>

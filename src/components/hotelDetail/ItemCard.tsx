@@ -16,6 +16,7 @@ const ItemCard = ({
   feature_flags,
   currency,
   hotelData,
+  tableNumber,
 }: {
   item: HotelDataMenus;
   styles: Styles;
@@ -23,11 +24,12 @@ const ItemCard = ({
   className?: string;
   feature_flags?: string;
   hotelData?: HotelData;
+  tableNumber: number;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
   const hasOrderingFeature = getFeatures(feature_flags || "")?.ordering.enabled;
-  const hasDeliveryFeature = getFeatures(feature_flags || "")?.delivery.enabled;
+  const hasDeliveryFeature = getFeatures(feature_flags || "")?.delivery.enabled && tableNumber === 0;
   const [itemQuantity, setItemQuantity] = useState<number | 0>(0);
 
   useEffect(() => {
