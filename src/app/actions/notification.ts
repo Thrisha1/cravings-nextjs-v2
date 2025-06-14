@@ -124,9 +124,9 @@ class PartnerNotification {
 
     const { device_tokens } = await fetchFromHasura(
       `
-      query {
+      query GetPartnerDeviceTokens($partnerId: uuid!) {
         device_tokens(where: {user_id: {_eq: $partnerId}}) {
-          token
+          device_token
         }
       }
     `,
@@ -136,7 +136,7 @@ class PartnerNotification {
     );
 
     const tokens = device_tokens?.map(
-      (token: { token: string }) => token.token
+      (token: { device_token: string }) => token.device_token
     );
 
     if (tokens.length === 0) {
@@ -169,9 +169,9 @@ class UserNotification {
 
     const { device_tokens } = await fetchFromHasura(
       `
-      query {
+      query GetUserDeviceTokens($userId: uuid!) {
         device_tokens(where: {user_id: {_eq: $userId}}) {
-          token
+          device_token
         }
       }
     `,
@@ -181,7 +181,7 @@ class UserNotification {
     );
 
     const tokens = device_tokens?.map(
-      (token: { token: string }) => token.token
+      (token: { device_token: string }) => token.device_token
     );
 
     if (tokens.length === 0) {
