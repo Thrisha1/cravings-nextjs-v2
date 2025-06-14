@@ -272,6 +272,7 @@ const HotelMenuPage = ({
               categories={categories}
               selectedCategory={selectedCategory}
               menu={hoteldata?.menus}
+              tableNumber={tableNumber}
             />
           </section>
         </>

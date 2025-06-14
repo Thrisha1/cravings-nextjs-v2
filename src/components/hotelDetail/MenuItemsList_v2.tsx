@@ -14,6 +14,7 @@ const MenuItemsList = ({
   hotelData,
   selectedCategory,
   currency,
+  tableNumber,
 }: {
   menu: HotelDataMenus[];
   styles: Styles;
@@ -22,6 +23,7 @@ const MenuItemsList = ({
   hotelData: HotelData;
   selectedCategory: string;
   currency: string;
+  tableNumber: number;
 }) => {
   const [selectedCat, setSelectedCat] = useState(selectedCategory);
   const [menus, setMenus] = useState<HotelDataMenus[]>(items);
@@ -118,6 +120,7 @@ const MenuItemsList = ({
               key={item.id}
               item={item}
               styles={styles}
+              tableNumber={tableNumber}
             />
           ))}
       </div>

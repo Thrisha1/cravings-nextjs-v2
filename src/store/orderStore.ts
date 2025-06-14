@@ -23,7 +23,7 @@ import {
   setStatusHistory,
   toStatusDisplayFormat,
 } from "@/lib/statusHistory";
-import { sendOrderNotification } from "@/app/actions/sendOrderNotification";
+import { sendOrderNotification } from "@/app/actions/notification";
 
 export interface OrderItem extends HotelDataMenus {
   id: string;
