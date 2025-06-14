@@ -56,16 +56,6 @@ export const Captaincart = () => {
     setExtraCharges(storeExtraCharges);
   }, [storeExtraCharges]);
 
-  // Set default table number to 0 (No Table)
-  useEffect(() => {
-    if (tableNumber === undefined) {
-      setTableNumber(0);
-    }
-  }, [tableNumber, setTableNumber]);
-
-  // Check if table selection is made
-  const isTableSelected = tableNumber !== undefined;
-
   useEffect(() => {
     const fetchTableNumbers = async () => {
       if (!captainData?.partner_id) return;
@@ -212,9 +202,16 @@ export const Captaincart = () => {
             <div className="p-4 space-y-4">
               {/* Table Selection */}
               <div>
-                <label className="block text-sm font-medium mb-2">Table Number</label>
+                <label className="block text-sm font-medium mb-2">Table Number (Optional)</label>
+                {tableNumber !== null && (
+                  <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                    Selected: Table {tableNumber}
+                  </div>
+                )}
                 <div className="grid grid-cols-3 gap-2">
-                  {tableNumbers.map((table) => (
+                  {tableNumbers
+                    .filter(table => table !== 0) // Filter out table 0
+                    .map((table) => (
                     <Button
                       key={table}
                       variant={tableNumber === table ? "default" : "outline"}
@@ -224,16 +221,18 @@ export const Captaincart = () => {
                       Table {table}
                     </Button>
                   ))}
-                  <Button
-                    variant={tableNumber === 0 ? "default" : "outline"}
-                    onClick={() => setTableNumber(0)}
-                    className="h-10"
-                  >
-                    No Table
-                  </Button>
                 </div>
-                {!isTableSelected && (
-                  <p className="text-sm text-red-500 mt-1">Please select a table or choose "No Table"</p>
+                {tableNumber !== null && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setTableNumber(null)}
+                    className="mt-2 h-8 text-sm"
+                  >
+                    Clear Table Selection
+                  </Button>
+                )}
+                {tableNumbers.filter(table => table !== 0).length === 0 && (
+                  <p className="text-sm text-gray-500 mt-1">No tables available</p>
                 )}
               </div>
 
@@ -404,7 +403,7 @@ export const Captaincart = () => {
                 </Button>
                 <Button
                   onClick={handleConfirmOrder}
-                  disabled={loading || !isTableSelected || cartItems.length === 0}
+                  disabled={loading || cartItems.length === 0}
                   className="flex-1"
                 >
                   {loading ? (
