@@ -16,6 +16,7 @@ export async function middleware(request: NextRequest) {
     '/partner',
     '/offers',
     '/explore',
+    '/captainlogin',
     '/about-us',
     '/api/auth'
   ];
@@ -66,12 +67,16 @@ export async function middleware(request: NextRequest) {
       redirect: '/login'
     },
     partner: {
-      allowed: ['/admin', '/partner', '/profile', '/admin/orders', '/admin/stock-management'],
+      allowed: ['/admin', '/partner', '/profile', '/admin/orders','/admin/captain-management'],
       redirect: '/login'
     },
     superadmin: {
       allowed: ['/superadmin', '/admin', '/profile'],
-      redirect: '/superlogin'
+      redirect: '/superLogin'
+    },
+    captain:{
+      allowed:['/captain', '/captain/pos'],
+      redirect:'/captainlogin'
     }
   };
 

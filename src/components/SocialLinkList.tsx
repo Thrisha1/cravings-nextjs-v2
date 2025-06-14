@@ -8,13 +8,11 @@ import { MapPin } from "lucide-react";
 const SocialLinkList = ({
   socialLinks,
   styles,
-  hotelId,
-  countryCode,
+  hotelId
 }: {
   socialLinks: SocialLinks;
   styles: Styles;
   hotelId: string;
-  countryCode: string;
 }) => {
   return (
     <>
@@ -55,7 +53,7 @@ const SocialLinkList = ({
               const whatsapp = socialLinks.whatsapp.trim();
               const isNumber = /^\d+$/.test(whatsapp);
               const link = isNumber
-                ? `https://wa.me/${countryCode.replace(/\+/g, '')}${whatsapp}`
+                ? `https://wa.me/${whatsapp}`
                 : whatsapp;
               return (
                 <a

@@ -1,13 +1,73 @@
 /*...........query...........*/
 
+export const getNearByPartnersQuery = `
+query GetNearByPartners(
+  $user_lat: float8!,
+  $user_lng: float8!,
+  $limit: Int,
+  $offset: Int,
+  $district_filter: String = "%",
+  $search_query: String = "%",
+  $business_type: String = "restaurant",
+  $status: String = "active"
+) {
+  get_all_partners(
+    args: {
+      user_lat: $user_lat,
+      user_lng: $user_lng,
+      result_limit: $limit,
+      result_offset: $offset,
+      district_filter: $district_filter,
+      search_query: $search_query,
+      business_type_filter: $business_type,
+      status_filter: $status
+    }
+  ) {
+    id
+    store_name
+    location
+    description
+    district
+    store_banner
+    distance_meters(args: {user_lat: $user_lat, user_lng: $user_lng})
+  }
+  
+  get_all_partners_aggregate(
+    args: {
+      user_lat: $user_lat,
+      user_lng: $user_lng,
+      district_filter: $district_filter,
+      search_query: $search_query,
+      business_type_filter: $business_type,
+      status_filter: $status
+    }
+  ) {
+    aggregate {
+      count
+    }
+  }
+}
+`;
+
 export const getAllPartnersQuery = `
-query GetAllPartners($limit: Int, $offset: Int, $district: String = "%") {
+query GetAllPartners($limit: Int, $offset: Int, $district: String = "%", $query: String = "") {
   partners(
     where: {
       status: {_eq: "active"}, 
-      _or: [
-        {district: {_ilike: $district}},
-        {district: {_is_null: true}}
+      _and: [
+        {
+          _or: [
+            {district: {_ilike: $district}},
+            {district: {_is_null: true}}
+          ]
+        },
+        {
+          _or: [
+            {store_name: {_ilike: $query}},
+            {location: {_ilike: $query}},
+            {description: {_ilike: $query}}
+          ]
+        }
       ]
     }, 
     order_by: {store_name: asc}, 
@@ -24,9 +84,20 @@ query GetAllPartners($limit: Int, $offset: Int, $district: String = "%") {
   partners_aggregate(
     where: {
       status: {_eq: "active"}, 
-      _or: [
-        {district: {_ilike: $district}},
-        {district: {_is_null: true}}
+      _and: [
+        {
+          _or: [
+            {district: {_ilike: $district}},
+            {district: {_is_null: true}}
+          ]
+        },
+        {
+          _or: [
+            {store_name: {_ilike: $query}},
+            {location: {_ilike: $query}},
+            {description: {_ilike: $query}}
+          ]
+        }
       ]
     }
   ) {
@@ -69,6 +140,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     gst_no
     gst_percentage
     geo_location
+    country_code
     delivery_rate
     business_type
     delivery_rules

@@ -19,10 +19,74 @@ import { Offer } from "@/store/offerStore_hasura";
 import { AlertTriangle } from "lucide-react";
 import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
+import { Metadata } from "next";
 import React from "react";
 
 const isUUID = (str: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string[] }>;
+}): Promise<Metadata> {
+  const { id: qrIds } = await params;
+
+  const qrId = isUUID(qrIds?.[0] || "") ? qrIds?.[0] : qrIds?.[1];
+
+  const getHotelData = unstable_cache(
+    async (id: string) => {
+      try {
+
+        const { qr_codes } = await fetchFromHasura(GET_QR_TABLE, {
+          id: qrId,
+        });
+
+        const hotelId = qr_codes?.[0].partner_id;
+
+        const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
+          id: hotelId,
+        });
+
+        return {
+          id,
+          ...partnerData.partners[0],
+        } as HotelData;
+      } catch (error) {
+        console.error("Error fetching hotel data:", error);
+        return null;
+      }
+    },
+    [qrId as string, "hotel-data"],
+    { tags: [qrId as string, "hotel-data"] }
+  );
+
+  const hotel = await getHotelData(qrId);
+  // console.log("partnerdata",hotel);
+
+  if (!hotel) {
+    throw new Error("Hotel not found");
+  }
+
+  return {
+    title: hotel.store_name,
+    icons: [hotel.store_banner || "/hotelDetailsBanner.jpeg"],
+    description:
+      hotel.description ||
+      "Welcome to " + hotel.store_name + "! Enjoy a comfortable stay with us.",
+    openGraph: {
+      images: [hotel.store_banner || "/hotelDetailsBanner.jpeg"],
+      title: hotel.store_name,
+      description:
+        hotel.description ||
+        "Welcome to " +
+          hotel.store_name +
+          "! Enjoy a comfortable stay with us.",
+    },
+  };
+}
+
 
 const page = async ({
   params,
@@ -214,6 +278,7 @@ const page = async ({
         </div>
       );
     }
+
 
     // if (isOrderingEnabled || isDeliveryEnabled) {
     return (

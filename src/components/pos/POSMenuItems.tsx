@@ -8,7 +8,7 @@ import { Plus, Minus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Partner, useAuthStore } from "@/store/authStore";
 import ShopClosedModalWarning from "../admin/ShopClosedModalWarning";
-
+ 
 export const POSMenuItems = () => {
   const { items, groupedItems, fetchMenu } = useMenuStore();
   const { addToCart, cartItems, decreaseQuantity, removeFromCart } =

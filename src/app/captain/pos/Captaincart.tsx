@@ -1,0 +1,388 @@
+"use client";
+import React, { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ExtraCharge, usePOSStore } from "@/store/posStore";
+import { Plus, Minus, ShoppingCart, Loader2, X } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Captain, useAuthStore } from "@/store/authStore";
+import { Input } from "@/components/ui/input";
+
+export const Captaincart = () => {
+  const {
+    cartItems,
+    totalAmount,
+    increaseQuantity,
+    decreaseQuantity,
+    checkout,
+    setUserPhone,
+    addExtraCharge,
+    setTableNumber,
+    tableNumbers,
+    tableNumber,
+    loading,
+    order,
+    removeFromCart,
+    setLoading,
+    setPostCheckoutModalOpen,
+    addToCart,
+    setIsCaptainOrder,
+  } = usePOSStore();
+  
+  const { userData } = useAuthStore();
+  const captainData = userData as Captain;
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
+  const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0, id: "" });
+  const { getPartnerTables } = usePOSStore();
+
+  // Set default table number to 0 (No Table)
+  useEffect(() => {
+    if (tableNumber === undefined) {
+      setTableNumber(0);
+    }
+  }, [tableNumber, setTableNumber]);
+
+  const getGstAmount = (price: number, gstPercentage: number) => {
+    return (price * gstPercentage) / 100;
+  };
+
+  // Calculate totals
+  const foodSubtotal = totalAmount; // This is the subtotal of food items only
+  const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
+  const gstAmount = getGstAmount(foodSubtotal, captainData?.gst_percentage || 0); // GST only on food items
+  const grandTotal = foodSubtotal + gstAmount + extraChargesTotal; // Total including GST and extra charges
+
+  // Check if table selection is made
+  const isTableSelected = tableNumber !== undefined;
+
+  useEffect(() => {
+    const fetchTableNumbers = async () => {
+      if (!captainData?.partner_id) return;
+      try {
+        await getPartnerTables();
+      } catch (error) {
+        console.error("Error fetching table numbers:", error);
+      }
+    };
+
+    fetchTableNumbers();
+  }, [captainData?.partner_id, getPartnerTables]);
+
+  const handleAddExtraCharge = () => {
+    if (!newExtraCharge.name || newExtraCharge.amount <= 0) {
+      toast.error("Please enter a valid charge name and amount");
+      return;
+    }
+
+    const charge: ExtraCharge = {
+      id: Date.now().toString(),
+      name: newExtraCharge.name,
+      amount: newExtraCharge.amount,
+    };
+
+    setExtraCharges([...extraCharges, charge]);
+    setNewExtraCharge({ name: "", amount: 0, id: "" });
+  };
+
+  const handleRemoveExtraCharge = (index: number) => {
+    const updatedCharges = [...extraCharges];
+    updatedCharges.splice(index, 1);
+    setExtraCharges(updatedCharges);
+  };
+
+  const handleConfirmOrder = async () => {
+    try {
+      // Check if cart is empty
+      if (cartItems.length === 0) {
+        toast.error("Cart is empty. Please add items before confirming the order.");
+        return;
+      }
+
+      setUserPhone(phoneInput || null);
+      
+      // Add all extra charges to the store
+      extraCharges.forEach(charge => {
+        addExtraCharge(charge);
+      });
+      
+      await checkout();
+      setIsModalOpen(false);
+      setPostCheckoutModalOpen(true);
+      setPhoneInput("");
+      setExtraCharges([]);
+      setNewExtraCharge({ name: "", amount: 0, id: "" });
+    } catch (error) {
+      console.error("Checkout failed:", error);
+      toast.error("Checkout failed");
+    }
+  };
+
+  return (
+    <>
+      {/* Cart Summary Bar - Only show when there are items */}
+      <div className={`fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg transition-transform duration-300 ${cartItems.length > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className="max-w-6xl mx-auto px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              {/* price */}
+              <div className="flex gap-2 text-nowrap font-extrabold text-lg sm:text-xl lg:text-2xl">
+                <div>PRICE :</div>
+                <div>
+                  {captainData?.currency || "$"}
+                  {grandTotal.toFixed(2)}
+                </div>
+              </div>
+
+              {/* total Items */}
+              <div className="inline-flex flex-nowrap text-nowrap gap-2 font-medium text-black/50 text-sm">
+                <div>Total Items :</div>
+                <div>{cartItems.reduce((acc, item) => acc + item.quantity, 0)}</div>
+              </div>
+            </div>
+
+            <Button 
+              onClick={() => {
+                if (cartItems.length === 0) {
+                  toast.error("Cart is empty. Please add items before viewing the order.");
+                  return;
+                }
+                setIsModalOpen(true);
+              }}
+              className="bg-black hover:bg-black/90 text-white font-semibold text-sm sm:text-base flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg min-w-[140px] justify-center"
+            >
+              <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" /> 
+              <span>View Order</span>
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Custom Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg w-[95vw] sm:w-[500px] max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Confirm Order</h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsModalOpen(false)}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Table Selection */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Table Number</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {tableNumbers.map((table) => (
+                    <Button
+                      key={table}
+                      variant={tableNumber === table ? "default" : "outline"}
+                      onClick={() => setTableNumber(table)}
+                      className="h-10"
+                    >
+                      Table {table}
+                    </Button>
+                  ))}
+                  <Button
+                    variant={tableNumber === 0 ? "default" : "outline"}
+                    onClick={() => setTableNumber(0)}
+                    className="h-10"
+                  >
+                    No Table
+                  </Button>
+                </div>
+                {!isTableSelected && (
+                  <p className="text-sm text-red-500 mt-1">Please select a table or choose "No Table"</p>
+                )}
+              </div>
+
+              {/* Phone Number */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Customer Phone (Optional)</label>
+                <Input
+                  type="tel"
+                  placeholder="Enter phone number"
+                  value={phoneInput}
+                  onChange={(e) => setPhoneInput(e.target.value)}
+                />
+              </div>
+
+              {/* Extra Charges */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Extra Charges (Optional)</label>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Charge name"
+                      value={newExtraCharge.name}
+                      onChange={(e) => setNewExtraCharge({...newExtraCharge, name: e.target.value})}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Amount"
+                      value={newExtraCharge.amount || ""}
+                      onChange={(e) => setNewExtraCharge({...newExtraCharge, amount: Number(e.target.value)})}
+                    />
+                    <Button onClick={handleAddExtraCharge} className="whitespace-nowrap">
+                      Add Charge
+                    </Button>
+                  </div>
+
+                  {extraCharges.length > 0 && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="divide-y">
+                        {extraCharges.map((charge, index) => (
+                          <div
+                            key={charge.id || index}
+                            className="p-3 flex justify-between items-center"
+                          >
+                            <div>
+                              <div className="font-medium">{charge.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {captainData?.currency || "$"}{charge.amount.toFixed(2)}
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => handleRemoveExtraCharge(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Order Summary */}
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-2">Order Summary</h3>
+                <div className="space-y-2">
+                  {/* Food Items */}
+                  {cartItems.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{item.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {captainData?.currency || "$"}
+                          {item.price.toFixed(2)} each
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 ml-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => decreaseQuantity(item.id!)}
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </Button>
+
+                        <span className="w-6 text-center text-sm">
+                          {item.quantity}
+                        </span>
+
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => addToCart(item)}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Subtotal (Food only) */}
+                  <div className="flex justify-between text-sm border-t pt-2">
+                    <span>Subtotal</span>
+                    <span>{captainData?.currency || "$"}{foodSubtotal.toFixed(2)}</span>
+                  </div>
+
+                  {/* GST (on food only) */}
+                  {(captainData?.gst_percentage || 0) > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span>{`GST (${captainData?.gst_percentage || 0}%)`}</span>
+                      <span>{captainData?.currency || "$"}{gstAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  {/* Extra Charges */}
+                  {extraCharges.length > 0 && (
+                    <>
+                      <div className="flex justify-between text-sm border-t pt-2">
+                        <span className="font-medium">Extra Charges</span>
+                      </div>
+                      {extraCharges.map((charge, index) => (
+                        <div key={index} className="flex justify-between text-sm">
+                          <span className="ml-4">{charge.name}</span>
+                          <span>{captainData?.currency || "$"}{charge.amount.toFixed(2)}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between text-sm">
+                        <span>Extra Charges Total:</span>
+                        <span>{captainData?.currency || "$"}{extraChargesTotal.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Grand Total */}
+                  <div className="flex justify-between font-semibold mt-2 border-t pt-2">
+                    <span>Total</span>
+                    <span>{captainData?.currency || "$"}{grandTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleConfirmOrder}
+                  disabled={loading || !isTableSelected || cartItems.length === 0}
+                  className="flex-1"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Confirm Order"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};

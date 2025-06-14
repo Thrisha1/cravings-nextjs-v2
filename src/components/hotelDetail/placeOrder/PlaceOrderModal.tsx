@@ -142,6 +142,7 @@ interface AddressCardProps {
 const AddressCard = ({
   address,
   setShowMapModal,
+  setAddress,
   getLocation,
   isGeoLoading,
   geoError,
@@ -200,9 +201,9 @@ const AddressCard = ({
 
       <Textarea
         value={address || ""}
-        readOnly
-        className="min-h-[100px] mb-3 bg-gray-100"
-        placeholder="Select your location to see the address"
+        onChange={(e) => setAddress(e.target.value)}
+        className="min-h-[100px] mb-3"
+        placeholder="Enter your delivery address"
       />
 
       <div className="space-y-2">
@@ -215,7 +216,7 @@ const AddressCard = ({
           type="button"
           onClick={handleGetLocation}
           className="w-full"
-          variant={hasLocation ? "outline" : "outline"}
+          variant="outline"
           disabled={isGeoLoading}
           style={
             !hasLocation ? { borderColor: "#ef4444", color: "#ef4444" } : {}
@@ -634,6 +635,7 @@ const MapModal = ({
     } else {
       document.body.style.overflowY = "auto";
       document.body.style.maxHeight = "auto";
+      setOpenPlaceOrderModal(true);
     }
   }, [showMapModal]);
 
@@ -951,7 +953,7 @@ const PlaceOrderModal = ({
   return (
     <>
       <div
-        className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto ${
+        className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto text-black ${
           open_place_order_modal ? "block" : "hidden"
         }`}
       >

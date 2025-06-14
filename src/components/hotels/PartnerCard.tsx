@@ -11,6 +11,10 @@ const PartnerCard = ({
   imageWidth?: string;
   ref?: React.Ref<HTMLAnchorElement>;
 }) => {
+  // Convert meters to kilometers and round to 1 decimal place
+  const distanceInKm = partner.distance_meters ? (partner.distance_meters / 1000).toFixed(1) : null;
+  const shouldShowDistance = distanceInKm && parseFloat(distanceInKm) < 300;
+
   return (
     <a
       ref={ref}
@@ -45,6 +49,11 @@ const PartnerCard = ({
 
         <p className="text-xs md:text-sm text-gray-600 mb-2 line-clamp-2">
           {partner.district}
+          {shouldShowDistance && (
+            <span className="block text-xs text-gray-500">
+              {distanceInKm} km away
+            </span>
+          )}
         </p>
       </div>
     </a>

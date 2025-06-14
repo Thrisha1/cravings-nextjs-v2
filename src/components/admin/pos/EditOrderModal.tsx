@@ -23,6 +23,12 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Partner, useAuthStore } from "@/store/authStore";
 
+interface ExtraCharge {
+  id?: string;
+  name: string;
+  amount: number;
+}
+
 export const EditOrderModal = () => {
   const {
     order,
@@ -53,6 +59,8 @@ export const EditOrderModal = () => {
   const [newItemId, setNewItemId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
+  const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0 });
 
   const currency = (userData as Partner)?.currency || "$";
   const gstPercentage = (userData as Partner)?.gst_percentage || 0;
@@ -65,6 +73,8 @@ export const EditOrderModal = () => {
     setPhone(null);
     setNewItemId("");
     setSearchQuery("");
+    setExtraCharges([]);
+    setNewExtraCharge({ name: "", amount: 0 });
   };
 
   // Handle input focus to detect keyboard
@@ -111,6 +121,11 @@ export const EditOrderModal = () => {
         setTotalPrice(orderData.total_price);
         setTableNumber(orderData.table_number);
         setPhone(orderData.phone);
+        
+        // Load extra charges if they exist
+        if (orderData.extra_charges) {
+          setExtraCharges(orderData.extra_charges);
+        }
       }
     } catch (error) {
       console.error("Error fetching order details:", error);
@@ -131,10 +146,13 @@ export const EditOrderModal = () => {
       };
     }>
   ) => {
-    return items.reduce(
+    const subtotal = items.reduce(
       (sum, item) => sum + item.menu.price * item.quantity,
       0
     );
+    const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
+    const gstAmount = gstPercentage > 0 ? (subtotal * gstPercentage) / 100 : 0;
+    return subtotal + extraChargesTotal + gstAmount;
   };
 
   const handleQuantityChange = (index: number, newQuantity: number) => {
@@ -192,22 +210,55 @@ export const EditOrderModal = () => {
     }, 100);
   };
 
+  const handleAddExtraCharge = () => {
+    if (!newExtraCharge.name || newExtraCharge.amount <= 0) {
+      toast.error("Please enter a valid charge name and amount");
+      return;
+    }
+
+    const charge: ExtraCharge = {
+      id: Date.now().toString(),
+      name: newExtraCharge.name,
+      amount: newExtraCharge.amount,
+    };
+
+    setExtraCharges([...extraCharges, charge]);
+    setNewExtraCharge({ name: "", amount: 0 });
+    setTotalPrice(calculateTotal(items));
+  };
+
+  const handleRemoveExtraCharge = (index: number) => {
+    const updatedCharges = [...extraCharges];
+    updatedCharges.splice(index, 1);
+    setExtraCharges(updatedCharges);
+    setTotalPrice(calculateTotal(items));
+  };
+
   const handleUpdateOrder = async () => {
     try {
+      // Prevent updating if there are no items
+      if (!items || items.length === 0) {
+        toast.error("Cannot save order with no items");
+        return;
+      }
+
       setUpdating(true);
 
       // Calculate total with GST if applicable
-      const subtotal = calculateTotal(items);
-      const finalTotal =
-        gstPercentage > 0
-          ? subtotal + (subtotal * gstPercentage) / 100
-          : subtotal;
+      const subtotal = items.reduce(
+        (sum, item) => sum + item.menu.price * item.quantity,
+        0
+      );
+      const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
+      const gstAmount = gstPercentage > 0 ? (subtotal * gstPercentage) / 100 : 0;
+      const finalTotal = subtotal + extraChargesTotal + gstAmount;
 
       // Update order
       await fetchFromHasura(updateOrderMutation, {
         id: order?.id,
         totalPrice: finalTotal,
         phone: phone || "",
+        extraCharges: extraCharges.length > 0 ? extraCharges : null,
       });
 
       // Update order items
@@ -227,6 +278,7 @@ export const EditOrderModal = () => {
           totalPrice: finalTotal,
           tableNumber: tableNumber || 0,
           phone: phone || "",
+          extraCharges: extraCharges,
           items: items.map((item) => ({
             id: item.menu_id,
             name: item.menu.name,
@@ -341,10 +393,65 @@ export const EditOrderModal = () => {
                     {gstPercentage > 0 && (
                       <span className="text-xs text-muted-foreground ml-2">
                         (incl. {gstPercentage}% GST: {currency}
-                        {((totalPrice * gstPercentage) / 100).toFixed(2)})
+                        {((items.reduce((sum, item) => sum + item.menu.price * item.quantity, 0) * gstPercentage) / 100).toFixed(2)})
                       </span>
                     )}
                   </div>
+                </div>
+              </div>
+
+              {/* Extra Charges */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-3">Extra Charges</h3>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Charge name"
+                      value={newExtraCharge.name}
+                      onChange={(e) => setNewExtraCharge({ ...newExtraCharge, name: e.target.value })}
+                      onFocus={handleInputFocus}
+                      onBlur={handleInputBlur}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Amount"
+                      value={newExtraCharge.amount || ""}
+                      onChange={(e) => setNewExtraCharge({ ...newExtraCharge, amount: Number(e.target.value) })}
+                      onFocus={handleInputFocus}
+                      onBlur={handleInputBlur}
+                    />
+                    <Button onClick={handleAddExtraCharge} className="whitespace-nowrap">
+                      Add Charge
+                    </Button>
+                  </div>
+
+                  {extraCharges.length > 0 && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="divide-y">
+                        {extraCharges.map((charge, index) => (
+                          <div
+                            key={charge.id || index}
+                            className="p-3 flex justify-between items-center"
+                          >
+                            <div>
+                              <div className="font-medium">{charge.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {currency}{charge.amount.toFixed(2)}
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => handleRemoveExtraCharge(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -485,7 +592,10 @@ export const EditOrderModal = () => {
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleUpdateOrder} disabled={updating || loading}>
+          <Button 
+            onClick={handleUpdateOrder} 
+            disabled={updating || loading || !items || items.length === 0}
+          >
             {updating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

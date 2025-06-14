@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ThemeConfig } from "./ThemeChangeButton";
 import { History } from "lucide-react";
-import { HexColorPicker } from "react-colorful";
+import dynamic from "next/dynamic";
 
 interface ColorPickerModalProps {
   open: boolean;
@@ -45,6 +45,11 @@ const PRESETS = [
     accent: "#7F95D1",
   }
 ];
+
+const HexColorPicker = dynamic(
+  () => import("react-colorful").then(mod => ({ default: mod.HexColorPicker })),
+  { ssr: false }
+);
 
 const ColorPickerModal = ({
   theme,

@@ -1,7 +1,7 @@
-import { getAllPartnersQuery } from "@/api/partners";
+import { getAllPartnersQuery, getNearByPartnersQuery } from "@/api/partners";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import HotelsPage from "@/screens/HotelsPage";
-import { getAuthCookie } from "../auth/actions";
+import { getAuthCookie, getLocationCookie } from "../auth/actions";
 import { getFollowersQuery } from "@/api/followers";
 
 export default async function page({
@@ -11,13 +11,19 @@ export default async function page({
 }) {
   const cookies = await getAuthCookie();
   const location = (await searchParams)?.location?.toLowerCase() || null;
+  const query = (await searchParams)?.query?.toLowerCase() || null;
+  const userLocation = await getLocationCookie();
+  const limit = 10;
 
-  const { partners, partners_aggregate } = await fetchFromHasura(
-    getAllPartnersQuery,
+  const { get_all_partners, get_all_partners_aggregate } = await fetchFromHasura(
+    getNearByPartnersQuery,
     {
-      limit: 8,
+      user_lat: userLocation?.lat || 0,
+      user_lng: userLocation?.lng || 0,
+      limit: limit,
       offset: 0,
-      district: location ? `%${location}%` : "%",
+      district_filter: location ? `%${location}%` : "%",
+      search_query: query ? `%${query}%` : "%"
     }
   );
 
@@ -44,10 +50,13 @@ export default async function page({
         totalCount: followers_aggregate?.aggregate?.count || 0,
       }}
       partnersData={{
-        partners,
-        totalCount: partners_aggregate?.aggregate?.count || 0,
+        partners: get_all_partners,
+        totalCount: get_all_partners_aggregate?.aggregate?.count || 0,
       }}
-      district={location || "all"}
+      district={location || "%"}
+      hasUserLocation={!!userLocation}
+      limit={limit}
+      query={query || "%"}
     />
   );
 }

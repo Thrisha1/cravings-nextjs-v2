@@ -1,4 +1,3 @@
-
 export type FeatureFlags = {
   ordering: {
     access: boolean;
@@ -17,6 +16,10 @@ export type FeatureFlags = {
     enabled: boolean;
   };
   stockmanagement: {
+    access: boolean;
+    enabled: boolean;
+  };
+  captainordering: {
     access: boolean;
     enabled: boolean;
   }
@@ -45,6 +48,10 @@ export const revertFeatureToString = (features: FeatureFlags): string => {
     parts.push(`stockmanagement-${features.stockmanagement.enabled}`);
   }
 
+  if (features.captainordering.access) {
+    parts.push(`captainordering-${features.captainordering.enabled}`);
+  }
+
   return parts.join(",");
 };
 
@@ -70,6 +77,10 @@ export const getFeatures = (perm: string) => {
       access: false,
       enabled: false,
     },
+    captainordering: {
+      access: false,
+      enabled: false,
+    }
   };
 
   if (perm) {
@@ -87,12 +98,15 @@ export const getFeatures = (perm: string) => {
       } else if (key === "multiwhatsapp") {
         permissions.multiwhatsapp.access = true;
         permissions.multiwhatsapp.enabled = value === "true";
-      }else if (key === "pos") {
+      } else if (key === "pos") {
         permissions.pos.access = true;
         permissions.pos.enabled = value === "true";
-      }else if (key === "stockmanagement") {
+      } else if (key === "stockmanagement") {
         permissions.stockmanagement.access = true;
         permissions.stockmanagement.enabled = value === "true";
+      } else if (key === "captainordering") {
+        permissions.captainordering.access = true;
+        permissions.captainordering.enabled = value === "true";
       }
     }
   }
