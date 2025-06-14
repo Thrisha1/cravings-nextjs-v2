@@ -19,12 +19,14 @@ const SearchMenu = ({
   currency,
   feature_flags,
   styles,
+  tableNumber,
 }: {
   menu: HotelDataMenus[];
   styles: Styles;
   feature_flags: string;
   currency: string;
   hotelData: HotelData;
+  tableNumber: number;
 }) => {
   const [items, setItems] = useState<HotelDataMenus[]>([]);
   const [query, setQuery] = useState<string>("");
@@ -109,6 +111,7 @@ const SearchMenu = ({
             items.map((item) => (
               <ItemCard
                 hotelData={hotelData}
+                tableNumber={tableNumber}
                 feature_flags={feature_flags}
                 currency={currency}
                 key={item.id}

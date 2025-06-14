@@ -1,5 +1,6 @@
 "use client";
 import { getAllCommonOffers } from "@/api/common_offers";
+import { getLocationCookie, setLocationCookie } from "@/app/auth/actions";
 import CommonOfferCard from "@/components/explore/CommonOfferCard";
 import LocationSelection from "@/components/LocationSelection";
 import NoOffersFound from "@/components/NoOffersFound";
@@ -7,6 +8,7 @@ import OfferCardsLoading from "@/components/OfferCardsLoading";
 import SearchBox from "@/components/SearchBox";
 import { CommonOffer } from "@/components/superAdmin/OfferUploadSuperAdmin";
 import { fetchFromHasura } from "@/lib/hasuraClient";
+import { MapPin, Navigation, RefreshCw } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
@@ -17,84 +19,188 @@ const Explore = ({
   limit,
   totalOffers,
   initialDistrict,
-  initialSearchQuery
+  initialSearchQuery,
+  hasUserLocation = false,
 }: {
   commonOffers: CommonOffer[];
   limit: number;
   totalOffers: number;
   initialDistrict: string | null;
   initialSearchQuery: string;
+  hasUserLocation?: boolean;
 }) => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const searchParams = useSearchParams();
   const [offers, setOffers] = useState<CommonOffer[]>(commonOffers);
-  const [currentDistrict, setCurrentDistrict] = useState(initialDistrict);
-  const [currentSearchQuery, setCurrentSearchQuery] = useState(initialSearchQuery);
+  const [currentDistrict] = useState(initialDistrict);
+  const [currentSearchQuery] = useState(initialSearchQuery);
+  const [isRefreshingLocation, setIsRefreshingLocation] = useState(false);
+  const { ref, inView } = useInView();
+  const searchParams = useSearchParams();
 
-  const { ref, inView, entry } = useInView({
-    threshold: 0,
-  });
+  useEffect(() => {
+    const sessionKey = "location_session";
+    const currentSession = sessionStorage.getItem(sessionKey);
+
+    if (navigator.geolocation && (!currentSession || !hasUserLocation)) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            if (latitude && longitude) {
+              await setLocationCookie(latitude, longitude);
+              sessionStorage.setItem(sessionKey, "active");
+              if (!hasUserLocation) {
+                window.location.reload();
+              }
+            }
+          } catch (error) {
+            console.error("Error setting location:", error);
+          }
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+        }
+      );
+    }
+  }, [initialDistrict, hasUserLocation]);
 
   const loadMore = async () => {
+    if (!inView || isLoadingMore || offers.length >= totalOffers) return;
+
+    setIsLoadingMore(true);
+
     try {
-      if (!inView || isLoadingMore || offers.length >= totalOffers) return;
-      
-      setIsLoadingMore(true);
-      
-      // Prepare variables object conditionally
-      const variables: any = {
-        limit: limit,
-        offset: offers.length + 1
+      const variables: Record<string, any> = {
+        limit_count: limit,
+        offset_count: offers.length + 1,
       };
-      
+
       if (currentDistrict) {
-        variables.district = currentDistrict;
+        variables.district_filter = currentDistrict;
       }
-      
+
       if (currentSearchQuery) {
-        variables.searchQuery = `%${currentSearchQuery}%`;
+        variables.search_query = `%${currentSearchQuery}%`;
       }
-      
-      const newOffers = await fetchFromHasura(getAllCommonOffers(currentDistrict, currentSearchQuery), variables);
-      
-      const { common_offers } = newOffers;
-      if (common_offers?.length) {
-        setOffers(prev => [...prev, ...common_offers]);
+
+      const locationCookie = await getLocationCookie();
+
+      variables.user_lat = locationCookie?.lat || 0;
+      variables.user_lng = locationCookie?.lng || 0;
+
+      const response = await fetchFromHasura(
+        getAllCommonOffers(locationCookie || undefined),
+        variables
+      );
+
+      if (response?.get_offers_near_location?.length) {
+        setOffers((prev) => [...prev, ...response.get_offers_near_location]);
       }
     } catch (error) {
       console.error("Error loading more offers:", error);
+      toast.error("Failed to load more offers");
     } finally {
       setIsLoadingMore(false);
     }
   };
 
-
   useEffect(() => {
     loadMore();
-  }, [inView, entry]);
+  }, [inView]);
 
   useEffect(() => {
     setOffers(commonOffers);
-  },[commonOffers]);
+  }, [commonOffers]);
 
-  useEffect(() => {
-    if (isLoadingMore) {
-      toast.loading("Loading more items...");
+
+  const handleRequestLocationAccess = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            if (latitude && longitude) {
+              await setLocationCookie(latitude, longitude);
+              window.location.reload();
+            }
+          } catch (error) {
+            console.error("Error setting location:", error);
+            toast.error("Failed to set location");
+          }
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          toast.error("Failed to access your location");
+        }
+      );
     } else {
-      toast.dismiss();
+      toast.error("Geolocation is not supported by your browser");
     }
-  }, [isLoadingMore]);
+  };
+
+  const refreshLocation = () => {
+    setIsRefreshingLocation(true);
+    toast.info("Updating your location...");
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            if (latitude && longitude) {
+              await setLocationCookie(latitude, longitude);
+              toast.success("Location updated successfully");
+              window.location.reload();
+            }
+          } catch (error) {
+            console.error("Error setting location:", error);
+            toast.error("Failed to update location");
+            setIsRefreshingLocation(false);
+          }
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          toast.error("Failed to access your location");
+          setIsRefreshingLocation(false);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0, // Force fresh location
+        }
+      );
+    } else {
+      toast.error("Geolocation is not supported by your browser");
+      setIsRefreshingLocation(false);
+    }
+  };
 
   return (
     <div className="min-h-[100dvh] w-full bg-orange-50 px-3 py-3 relative pb-24">
       <div className="max-w-7xl mx-auto">
+        <div className="flex justify-start">
+          <button
+            onClick={refreshLocation}
+            disabled={isRefreshingLocation}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs bg-white border border-orange-300 rounded-full hover:bg-orange-50 transition-colors disabled:opacity-50"
+          >
+            <Navigation
+              className={`w-4 h-4 ${
+                isRefreshingLocation ? "animate-spin" : ""
+              }`}
+            />
+            <span>Refresh Location</span>
+          </button>
+        </div>
         <div className="flex justify-between items-start md:items-center gap-3 my-4">
           <div className="flex flex-col">
             <h1 className="text-xl md:text-3xl font-bold text-gray-900">
               Explore Delicious Foods
             </h1>
           </div>
-          <LocationSelection />
+          <div className="flex items-center gap-2">
+            <LocationSelection />
+          </div>
         </div>
 
         <SearchBox />
@@ -102,19 +208,15 @@ const Explore = ({
         <section className="mt-5">
           {offers.length > 0 ? (
             <>
-              {/* offer list  */}
               <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
-                {offers.map((offer, index) => {
-                  const isLast = index === offers.length - 1;
-                  return (
-                    <div
-                      key={offer.id}
-                      ref={isLast ? ref : null}
-                    >
-                      <CommonOfferCard commonOffer={offer} />
-                    </div>
-                  );
-                })}
+                {offers.map((offer, index) => (
+                  <div
+                    key={offer.id}
+                    ref={index === offers.length - 1 ? ref : null}
+                  >
+                    <CommonOfferCard commonOffer={offer} />
+                  </div>
+                ))}
               </div>
               {isLoadingMore && <OfferCardsLoading />}
             </>

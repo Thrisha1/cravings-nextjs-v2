@@ -11,6 +11,14 @@ query GetQrTable($id: uuid!) {
   }
 }`;
 
+export const INCREMENT_QR_CODE_SCAN_COUNT = `
+mutation IncrementQrCodeScanCount($id: uuid!) {
+  update_qr_codes_by_pk(pk_columns: {id: $id}, _inc: {no_of_scans: 1}) {
+    id
+    no_of_scans
+  }
+}`;
+
 export const GET_QR_CODES_BY_PARTNER = `
   query GetQrCodesByPartner($partner_id: uuid!) {
     qr_codes(where: {partner_id: {_eq: $partner_id}}) {

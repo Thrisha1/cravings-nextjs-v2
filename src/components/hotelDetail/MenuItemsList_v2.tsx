@@ -13,21 +13,29 @@ const MenuItemsList = ({
   categories,
   hotelData,
   selectedCategory,
-  currency
+  currency,
+  tableNumber,
 }: {
   menu: HotelDataMenus[];
   styles: Styles;
   items: HotelDataMenus[];
   categories: Category[];
-  hotelData : HotelData;
+  hotelData: HotelData;
   selectedCategory: string;
   currency: string;
+  tableNumber: number;
 }) => {
-  const [selectedCat, setSelectedCat] = useState(selectedCategory );
+  const [selectedCat, setSelectedCat] = useState(selectedCategory);
   const [menus, setMenus] = useState<HotelDataMenus[]>(items);
 
   useEffect(() => {
     if (selectedCat) {
+      
+      if (selectedCat === "all") {
+        setMenus(menu);
+        return;
+      }
+
       const filteredItems = menu.filter(
         (item) => item.category.name === selectedCat
       );
@@ -56,19 +64,38 @@ const MenuItemsList = ({
         // className="flex gap-x-2 overflow-x-scroll scrollbar-hidden "
         className="flex gap-2 flex-wrap justify-start"
       >
+        <button
+          onClick={() => {
+            setSelectedCat("all");
+            window.scrollTo({
+              top: document.getElementById("menu-items")?.offsetTop,
+              behavior: "smooth",
+            });
+          }}
+          style={{
+            ...styles.border,
+            color: selectedCat === "all" ? "white" : "black",
+            backgroundColor: selectedCat === "all" ? styles.accent : "white",
+          }}
+          // className="font-semibold capitalize text-nowrap rounded-full px-5 py-[10px] snap-start flex-shrink-0"
+          className="font-semibold capitalize text-xs text-nowrap rounded-full px-5 py-[10px] snap-start flex-shrink-0"
+          key={"all"}
+        >
+          All
+        </button>
+
         {categories.map((category, index) => (
           <button
             onClick={() => {
               setSelectedCat(category.name);
               window.scrollTo({
-                top : document.getElementById("menu-items")?.offsetTop,
-                behavior : "smooth"
-              })
+                top: document.getElementById("menu-items")?.offsetTop,
+                behavior: "smooth",
+              });
             }}
             style={{
               ...styles.border,
-              color:
-                selectedCat === category.name ? "white" : "black",
+              color: selectedCat === category.name ? "white" : "black",
               backgroundColor:
                 selectedCat === category.name ? styles.accent : "white",
             }}
@@ -83,9 +110,19 @@ const MenuItemsList = ({
 
       {/* items  */}
       <div id="menu-items" className="px-[8%] grid h-fit gap-3 rounded-3xl ">
-        {menus.sort((a,b) => a.priority - b.priority).map((item) => (
-          <ItemCard hotelData={hotelData} feature_flags={hotelData?.feature_flags} currency={currency} key={item.id} item={item} styles={styles} />
-        ))}
+        {menus
+          .sort((a, b) => a.priority - b.priority)
+          .map((item) => (
+            <ItemCard
+              hotelData={hotelData}
+              feature_flags={hotelData?.feature_flags}
+              currency={currency}
+              key={item.id}
+              item={item}
+              styles={styles}
+              tableNumber={tableNumber}
+            />
+          ))}
       </div>
     </div>
   );

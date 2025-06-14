@@ -34,6 +34,7 @@ const Page = () => {
       const unsubscribe = subscribeUserOrders((orders) => {
         setLoading(false);
       });
+
       return () => {
         unsubscribe();
       };
@@ -137,7 +138,10 @@ const Page = () => {
                     <h3 className="font-medium">
                       Store : {order.partner?.store_name}
                     </h3>
-                    <p className="text-xs opacity-70">
+                    <h3 className="text-sm text-gray-500">
+                      Ordered from : {order.partner?.store_name}
+                    </h3>
+                    <p className="text-sm text-gray-500">
                       {format(new Date(order.createdAt), "PPPp")}
                     </p>
                   </div>
@@ -261,14 +265,14 @@ const Page = () => {
                 <div className="flex justify-end gap-2 mt-4">
                   {order.status === "pending" && (
                     <>
-                      <Button
+                      {/* <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleEditOrder(order)}
                       >
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
-                      </Button>
+                      </Button> */}
                       <Button
                         variant="destructive"
                         size="sm"

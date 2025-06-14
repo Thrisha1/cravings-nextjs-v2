@@ -22,6 +22,9 @@ import { getFeatures } from "@/lib/getFeatures";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import ShopClosedModalWarning from "@/components/admin/ShopClosedModalWarning";
 import { addToRecent } from "@/lib/addToRecent";
+import { getQrScanCookie, setQrScanCookie } from "@/app/auth/actions";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import { INCREMENT_QR_CODE_SCAN_COUNT } from "@/api/qrcodes";
 // import { fetchFromHasura } from "@/lib/hasuraClient";
 // import { usePartnerStore } from "@/store/usePartnerStore";
 
@@ -80,8 +83,35 @@ const HotelMenuPage = ({
   };
 
   const { setHotelId, genOrderId, open_place_order_modal } = useOrderStore();
-  
+
   const pathname = usePathname();
+  
+
+  useEffect(() => {
+    const handleUpdateQrCount = async () => {
+      if (!qrId) return;
+
+      const canUpdateScanCount = (await getQrScanCookie(qrId)) ? false : true;
+
+      if (canUpdateScanCount) {
+        try {
+          await fetchFromHasura(
+            INCREMENT_QR_CODE_SCAN_COUNT,
+            {
+              id: qrId,
+            }
+          );
+          await setQrScanCookie(qrId);
+        } catch (error) {
+          console.error('Failed to update QR scan count:', error);
+        }
+      }
+    };
+
+    if (qrId) {
+      handleUpdateQrCount();
+    }
+  }, [qrId]);
 
   useEffect(() => {
     if (hoteldata) {
@@ -91,11 +121,9 @@ const HotelMenuPage = ({
   }, [hoteldata, setHotelId, genOrderId]);
 
   useEffect(() => {
-
-    if(hoteldata?.id) {
+    if (hoteldata?.id) {
       addToRecent(hoteldata?.id);
     }
-
   }, [hoteldata?.id]);
 
   const getCategories = () => {
@@ -135,7 +163,7 @@ const HotelMenuPage = ({
 
   const topItems = getTopItems();
   const categories = getCategories();
-  const selectedCategory = categories[0]?.name || "";
+  const selectedCategory = "all";
   const items = getCategoryItems(selectedCategory);
 
   return (
@@ -170,15 +198,19 @@ const HotelMenuPage = ({
 
               <h1
                 style={{
-                  textAlign: theme?.infoAlignment === "center" ? "center" : "left",
+                  textAlign:
+                    theme?.infoAlignment === "center" ? "center" : "left",
                 }}
                 className={"font-black text-3xl max-w-[250px]"}
-                dangerouslySetInnerHTML={{ __html: hoteldata?.store_name || "" }}
+                dangerouslySetInnerHTML={{
+                  __html: hoteldata?.store_name || "",
+                }}
               />
 
               <DescriptionWithTextBreak
                 style={{
-                  textAlign: theme?.infoAlignment === "center" ? "center" : "left",
+                  textAlign:
+                    theme?.infoAlignment === "center" ? "center" : "left",
                 }}
                 accent={styles.accent}
               >
@@ -198,6 +230,7 @@ const HotelMenuPage = ({
           {/* search bar  */}
           <section className="px-[8%]">
             <SearchMenu
+              tableNumber={tableNumber}
               hotelData={hoteldata}
               feature_flags={hoteldata?.feature_flags || ""}
               currency={hoteldata?.currency}
@@ -226,6 +259,7 @@ const HotelMenuPage = ({
                 currency={hoteldata?.currency}
                 items={topItems}
                 styles={styles}
+                tableNumber={tableNumber}
               />
             </section>
           )}
@@ -240,6 +274,7 @@ const HotelMenuPage = ({
               categories={categories}
               selectedCategory={selectedCategory}
               menu={hoteldata?.menus}
+              tableNumber={tableNumber}
             />
           </section>
         </>

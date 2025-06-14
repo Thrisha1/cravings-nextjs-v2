@@ -33,6 +33,7 @@ export interface CommonOffer {
   likes: number;
   image_url: string;
   id: string;
+  distance_meters?: number;
   district: string;
   coordinates?: {
     type: string;

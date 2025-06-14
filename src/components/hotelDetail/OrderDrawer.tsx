@@ -33,6 +33,8 @@ export const calculateDeliveryDistanceAndCost = async (
     }
 
     const restaurantCoords = hotelData?.geo_location?.coordinates;
+    if (!restaurantCoords) return;
+
     const userLocation = [
       userLocationData.state.coords.lng,
       userLocationData.state.coords.lat,
@@ -52,7 +54,7 @@ export const calculateDeliveryDistanceAndCost = async (
 
     const exactDistance = data.routes[0].distance / 1000;
     const distanceInKm = Math.ceil(exactDistance);
-    const deliveryRate = hotelData?.delivery_rate;
+    const deliveryRate = hotelData?.delivery_rate || 0;
 
     const { delivery_radius, first_km_range, is_fixed_rate } =
       hotelData?.delivery_rules || {};
@@ -64,7 +66,6 @@ export const calculateDeliveryDistanceAndCost = async (
         ratePerKm: deliveryRate,
         isOutOfRange: true,
       });
-
       return;
     }
 
@@ -72,18 +73,15 @@ export const calculateDeliveryDistanceAndCost = async (
 
     if (is_fixed_rate) {
       calculatedCost = deliveryRate;
-    } else {
-      if (first_km_range?.km > 0) {
-        if (distanceInKm <= first_km_range.km) {
-          calculatedCost = first_km_range.rate;
-        } else {
-          const remainingDistance = distanceInKm - first_km_range.km;
-          calculatedCost =
-            first_km_range.rate + remainingDistance * deliveryRate;
-        }
+    } else if (first_km_range?.km > 0) {
+      if (distanceInKm <= first_km_range.km) {
+        calculatedCost = first_km_range.rate;
       } else {
-        calculatedCost = distanceInKm * deliveryRate;
+        const remainingDistance = distanceInKm - first_km_range.km;
+        calculatedCost = first_km_range.rate + remainingDistance * deliveryRate;
       }
+    } else {
+      calculatedCost = distanceInKm * deliveryRate;
     }
 
     calculatedCost = Math.max(0, calculatedCost);
@@ -123,6 +121,7 @@ const OrderDrawer = ({
     setOpenOrderDrawer,
     deliveryInfo,
   } = useOrderStore();
+
   const pathname = usePathname();
   const [isQrScan, setIsQrScan] = useState(false);
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
@@ -131,7 +130,7 @@ const OrderDrawer = ({
 
   useEffect(() => {
     setIsQrScan(pathname.includes("qrScan") && !!qrId && !(tableNumber === 0));
-  }, [pathname, qrId]);
+  }, [pathname, qrId, tableNumber]);
 
   useEffect(() => {
     if (hotelData) {
@@ -139,23 +138,17 @@ const OrderDrawer = ({
     }
   }, [hotelData]);
 
+  useEffect(() => {
+    setOpenDrawerBottom((items?.length || 0) > 0 ? true : false);
+  }, [items, setOpenDrawerBottom]);
+
   const calculateGrandTotal = () => {
-    const baseTotal =
-      items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
+    const baseTotal = items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
     let grandTotal = baseTotal;
 
     if (hotelData?.gst_percentage) {
       grandTotal += getGstAmount(baseTotal, hotelData.gst_percentage);
     }
-
-    // if (
-    //   !isQrScan &&
-    //   deliveryInfo?.cost &&
-    //   items?.length &&
-    //   !deliveryInfo?.isOutOfRange
-    // ) {
-    //   grandTotal += deliveryInfo.cost;
-    // }
 
     if (qrGroup?.extra_charge) {
       grandTotal += getExtraCharge(
@@ -188,8 +181,7 @@ const OrderDrawer = ({
       }
     }
 
-    const baseTotal =
-      items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
+    const baseTotal = items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
     const gstAmount = hotelData?.gst_percentage
       ? getGstAmount(baseTotal, hotelData.gst_percentage)
       : 0;
@@ -210,54 +202,32 @@ const OrderDrawer = ({
     *🍽️ Order Details 🍽️*
     
     *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
-    ${
-      (tableNumber ?? 0) > 0
-        ? `*Table:* ${tableNumber}`
-        : "*Order Type:* Delivery"
-    }
-    ${
-      (tableNumber ?? 0) > 0
-        ? ""
-        : `*Delivery Address:* ${savedAddress}${locationLink}`
-    }
+    ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : "*Order Type:* Delivery"}
+    ${(tableNumber ?? 0) > 0 ? "" : `*Delivery Address:* ${savedAddress}${locationLink}`}
     *Time:* ${new Date().toLocaleTimeString()}
     
     *📋 Order Items:*
-      ${items
-        ?.map(
-          (item, index) =>
-            `${index + 1}. ${item.name} (${item.category.name})
-       ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
-              2
-            )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(
-              2
-            )}`
-        )
-        .join("\n\n")}
+    ${items?.map(
+      (item, index) =>
+        `${index + 1}. ${item.name} (${item.category.name})
+       ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(2)} = ${hotelData.currency}${(
+          item.price * item.quantity
+        ).toFixed(2)}`
+    ).join("\n\n")}
     
     *Subtotal:* ${hotelData.currency}${baseTotal.toFixed(2)}
     
-    ${
-      hotelData?.gst_percentage
-        ? `*GST (${hotelData.gst_percentage}%):* ${
-            hotelData.currency
-          }${gstAmount.toFixed(2)}`
-        : ""
-    }
+    ${hotelData?.gst_percentage
+      ? `*GST (${hotelData.gst_percentage}%):* ${hotelData.currency}${gstAmount.toFixed(2)}`
+      : ""}
     
-    ${
-      !isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
-        ? `*Delivery Charge:* ${hotelData.currency}${deliveryInfo.cost.toFixed(
-            2
-          )}`
-        : ""
-    }
+    ${!isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
+      ? `*Delivery Charge:* ${hotelData.currency}${deliveryInfo.cost.toFixed(2)}`
+      : ""}
     
-    ${
-      qrGroup?.extra_charge
-        ? `*${qrGroup.name}:* ${hotelData.currency}${qrCharge.toFixed(2)}`
-        : ""
-    }
+    ${qrGroup?.extra_charge
+      ? `*${qrGroup.name}:* ${hotelData.currency}${qrCharge.toFixed(2)}`
+      : ""}
     
     *Total Price:* ${hotelData.currency}${grandTotal.toFixed(2)}
     `;
@@ -268,10 +238,14 @@ const OrderDrawer = ({
       hotelData?.phone ||
       "8590115462";
 
-    return `https://api.whatsapp.com/send?phone=+91${number}&text=${encodeURIComponent(
+    return `https://api.whatsapp.com/send?phone=${hotelData?.country_code || "+91"}${number}&text=${encodeURIComponent(
       whatsappMsg
     )}`;
   };
+
+  useEffect(() => {
+    setOpenPlaceOrderModal(false);
+  }, [items]);
 
   const handlePlaceOrder = async () => {
     try {
@@ -284,9 +258,7 @@ const OrderDrawer = ({
     }
   };
 
-  useEffect(() => {
-    setOpenDrawerBottom(items?.length ? true : false);
-  }, [items]);
+
 
     useEffect(() => {
       const handleScroll = () => {
@@ -347,7 +319,7 @@ const OrderDrawer = ({
 
         <div
           onClick={handlePlaceOrder}
-          style={{ color: styles.accent }}
+          style={{ color: styles.accent }} 
           className="font-black relative cursor-pointer"
         >
           View Order

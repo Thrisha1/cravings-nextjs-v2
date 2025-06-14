@@ -4,6 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MenuTab } from "@/components/admin/MenuTab";
 import { OffersTab } from "@/components/admin/OffersTab";
 import { Partner } from "@/store/authStore";
+import { useEffect } from "react";
+import { Notification } from "@/app/actions/notification";
 
 export default function Admin({ userData }: { userData: Partner }) {
 

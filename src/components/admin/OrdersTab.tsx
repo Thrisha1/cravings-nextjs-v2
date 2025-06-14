@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { update } from "firebase/database";
+import { POSMenuItems } from "@/components/pos/POSMenuItems";
+import { POSCart } from "@/components/pos/POSCart";
 
 const OrdersTab = () => {
   const router = useRouter();
@@ -49,11 +51,6 @@ const OrdersTab = () => {
   });
   const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
   const [displayedOrders, setDisplayedOrders] = useState<Order[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const ordersPerPage = 10;
-  
   const [newOrderAlert, setNewOrderAlert] = useState({
     show: false,
     tableCount: 0,
@@ -63,6 +60,7 @@ const OrdersTab = () => {
   const soundRef = useRef<Howl | null>(null);
   const { setOrder, setEditOrderModalOpen } = usePOSStore();
   const orderAlertRef = useRef<boolean>(false);
+  const [isCreateOrderOverlayOpen, setIsCreateOrderOverlayOpen] = useState(false);
 
   // Preload sound effect immediately
   useEffect(() => {
@@ -81,6 +79,7 @@ const OrdersTab = () => {
   useEffect(() => {
     if (!userData?.id) return;
 
+    setLoading(true);
     // Set up subscription immediately
     const unsubscribe = subscribeOrders((allOrders) => {
       const prevOrders = prevOrdersRef.current;
@@ -132,6 +131,7 @@ const OrdersTab = () => {
       }
 
       prevOrdersRef.current = allOrders;
+      setLoading(false);
     });
 
     return () => {
@@ -142,7 +142,6 @@ const OrdersTab = () => {
   useEffect(() => {
     if (partnerOrders) {
       setOrders(partnerOrders);
-      setLoading(false);
     }
   }, [partnerOrders]);
 
@@ -184,9 +183,6 @@ const OrdersTab = () => {
       setActiveTab(value);
       setNewOrders((prev) => ({ ...prev, [value]: false }));
       localStorage.setItem("ordersActiveTab", value);
-      // Reset pagination when tab changes
-      setPage(1);
-      setHasMore(true);
     }
   };
 
@@ -202,35 +198,8 @@ const OrdersTab = () => {
     });
 
     setSortedOrders(filteredByTypeOrders);
-    // Reset pagination when filtered orders change
-    setPage(1);
-    setHasMore(true);
+    setDisplayedOrders(filteredByTypeOrders);
   }, [orders, activeTab]);
-
-  useEffect(() => {
-    // Update displayed orders based on current page
-    if (sortedOrders.length > 0) {
-      const startIndex = 0;
-      const endIndex = page * ordersPerPage;
-      const currentDisplayedOrders = sortedOrders.slice(startIndex, endIndex);
-      
-      setDisplayedOrders(currentDisplayedOrders);
-      // Check if we have more orders to load
-      setHasMore(endIndex < sortedOrders.length);
-    } else {
-      setDisplayedOrders([]);
-      setHasMore(false);
-    }
-  }, [sortedOrders, page]);
-
-  const loadMoreOrders = () => {
-    setLoadingMore(true);
-    // Small delay to show loading state
-    setTimeout(() => {
-      setPage(prevPage => prevPage + 1);
-      setLoadingMore(false);
-    }, 500);
-  };
 
   const handleCreateNewOrder = () => {
     router.push("/admin/pos");
@@ -365,6 +334,7 @@ const OrdersTab = () => {
                   <>
                     {displayedOrders.map((order, index) => (
                       <OrderItemCard
+                        key={`delivery-${order.id}-${index}`}
                         gstAmount={getGstAmount(
                           order.items.reduce((sum, item) => {
                             return sum + item.price * item.quantity;
@@ -372,7 +342,6 @@ const OrdersTab = () => {
                           (userData as Partner)?.gst_percentage || 0
                         )}
                         grantTotal={order.totalPrice || 0}
-                        key={`delivery-${order.id}-${index}`}
                         order={order}
                         deleteOrder={handleDeleteOrder}
                         updateOrderStatus={(status) => {
@@ -383,26 +352,6 @@ const OrdersTab = () => {
                         gstPercentage={(userData as Partner)?.gst_percentage || 0}
                       />
                     ))}
-                    
-                    {hasMore && (
-                      <div className="flex justify-center mt-6">
-                        <Button 
-                          variant="outline" 
-                          onClick={loadMoreOrders}
-                          disabled={loadingMore}
-                          className="w-full max-w-xs"
-                        >
-                          {loadingMore ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Loading...
-                            </>
-                          ) : (
-                            `Load More (${sortedOrders.length - displayedOrders.length} remaining)`
-                          )}
-                        </Button>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
@@ -435,26 +384,6 @@ const OrdersTab = () => {
                         gstPercentage={(userData as Partner)?.gst_percentage || 0}
                       />
                     ))}
-                    
-                    {hasMore && (
-                      <div className="flex justify-center mt-6">
-                        <Button 
-                          variant="outline" 
-                          onClick={loadMoreOrders}
-                          disabled={loadingMore}
-                          className="w-full max-w-xs"
-                        >
-                          {loadingMore ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Loading...
-                            </>
-                          ) : (
-                            `Load More (${sortedOrders.length - displayedOrders.length} remaining)`
-                          )}
-                        </Button>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
@@ -468,16 +397,16 @@ const OrdersTab = () => {
                 ) : (
                   <>
                     {displayedOrders.map((order, index) => {
-                      const gstPercentage =
-                        (userData as Partner)?.gst_percentage || 0;
+                      const gstPercentage = (userData as Partner)?.gst_percentage || 0;
                       const foodSubtotal = order.items.reduce((sum, item) => {
                         return sum + item.price * item.quantity;
                       }, 0);
                       const gstAmount = getGstAmount(foodSubtotal, gstPercentage);
                       const totalPriceWithGst = foodSubtotal + gstAmount;
-                      const extraChargesTotal = (
-                        order?.extraCharges ?? []
-                      ).reduce((acc, charge) => acc + charge.amount, 0);
+                      const extraChargesTotal = (order?.extraCharges ?? []).reduce(
+                        (acc, charge) => acc + charge.amount,
+                        0
+                      );
                       const grandTotal = totalPriceWithGst + extraChargesTotal;
 
                       return (
@@ -496,26 +425,6 @@ const OrdersTab = () => {
                         />
                       );
                     })}
-                    
-                    {hasMore && (
-                      <div className="flex justify-center mt-6">
-                        <Button 
-                          variant="outline" 
-                          onClick={loadMoreOrders}
-                          disabled={loadingMore}
-                          className="w-full max-w-xs"
-                        >
-                          {loadingMore ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Loading...
-                            </>
-                          ) : (
-                            `Load More (${sortedOrders.length - displayedOrders.length} remaining)`
-                          )}
-                        </Button>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
