@@ -258,6 +258,7 @@ const HotelMenuPage = ({
                 currency={hoteldata?.currency}
                 items={topItems}
                 styles={styles}
+                tableNumber={tableNumber}
               />
             </section>
           )}
