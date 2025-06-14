@@ -14,8 +14,8 @@ import { Input } from "@/components/ui/input";
 import { HotelData } from "@/app/hotels/[...id]/page";
 import Link from "next/link";
 import { getGstAmount, calculateDeliveryDistanceAndCost } from "../OrderDrawer";
-import { QrGroup } from "@/app/admin/qr-management/page";
 import { getExtraCharge } from "@/lib/getExtraCharge";
+import { getQrGroupForTable, QrGroup } from "@/lib/getQrGroupForTable";
 import {
   Select,
   SelectContent,
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { getFeatures } from "@/lib/getFeatures";
 import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
+import { fetchFromHasura } from "@/lib/hasuraClient";
 
 // Add type for deliveryInfo
 interface DeliveryInfo {
@@ -303,6 +304,7 @@ interface BillCardProps {
   deliveryInfo: DeliveryInfo | null;
   isDelivery: boolean;
   qrGroup: QrGroup | null;
+  hotelQrGroup?: QrGroup | null;
 }
 
 const BillCard = ({
@@ -312,7 +314,16 @@ const BillCard = ({
   deliveryInfo,
   isDelivery,
   qrGroup,
+  hotelQrGroup,
 }: BillCardProps) => {
+  console.log("BillCard rendered with props:", {
+    itemsCount: items.length,
+    isDelivery,
+    qrGroup,
+    hotelQrGroup,
+    tableNumber: hotelQrGroup?.table_number
+  });
+
   const subtotal = items.reduce(
     (acc, item) => acc + item.price * item.quantity,
     0
@@ -326,15 +337,34 @@ const BillCard = ({
       )
     : 0;
 
+  const hotelQrExtraCharges = hotelQrGroup?.extra_charge
+    ? getExtraCharge(
+        items,
+        hotelQrGroup.extra_charge,
+        hotelQrGroup.charge_type || "FLAT_FEE"
+      )
+    : 0;
+
   const deliveryCharges =
     isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
       ? deliveryInfo.cost
       : 0;
 
-  const taxableAmount = subtotal + qrExtraCharges;
+  const taxableAmount = subtotal + qrExtraCharges + hotelQrExtraCharges;
   const gstAmount = (taxableAmount * (gstPercentage || 0)) / 100;
 
-  const grandTotal = subtotal + qrExtraCharges + gstAmount + deliveryCharges;
+  const grandTotal = subtotal + qrExtraCharges + hotelQrExtraCharges + gstAmount + deliveryCharges;
+
+  console.log("BillCard - Hotel QR group charges:", {
+    hotelQrGroup,
+    hotelQrExtraCharges,
+    itemsCount: items.length,
+    extraChargeData: hotelQrGroup?.extra_charge,
+    chargeType: hotelQrGroup?.charge_type,
+    subtotal,
+    qrExtraCharges,
+    grandTotal
+  });
 
   return (
     <div className="bg-white rounded-lg shadow p-4">
@@ -361,6 +391,23 @@ const BillCard = ({
             <span>
               {currency}
               {qrExtraCharges.toFixed(2)}
+            </span>
+          </div>
+        ) : null}
+
+        {hotelQrGroup && hotelQrExtraCharges > 0 ? (
+          <div className="flex justify-between">
+            <div>
+              <span>{hotelQrGroup.name || "Hotel Service Charge"}</span>
+              <p className="text-xs text-gray-500">
+                {hotelQrGroup.charge_type === "PER_ITEM"
+                  ? "Per item charge"
+                  : "Fixed charge"}
+              </p>
+            </div>
+            <span>
+              {currency}
+              {hotelQrExtraCharges.toFixed(2)}
             </span>
           </div>
         ) : null}
@@ -751,11 +798,22 @@ const PlaceOrderModal = ({
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [hotelQrGroup, setHotelQrGroup] = useState<QrGroup | null>(null);
 
-  const isDelivery = !tableNumber;
-  const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
   const isQrScan = qrId !== null && tableNumber !== 0;
+  const isHotelPageOrder = tableNumber === 0 && !qrId; // Hotel page order (not QR scan)
+  const isDelivery = !tableNumber || isHotelPageOrder; // Force delivery for hotel page orders
+  const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
   const hasLocation = !!selectedCoords || !!address;
+
+  console.log("PlaceOrderModal - Order type detection:", {
+    tableNumber,
+    qrId,
+    isDelivery,
+    isQrScan,
+    isHotelPageOrder,
+    hotelDataId: hotelData?.id
+  });
 
   useEffect(() => {
     if (open_place_order_modal && items?.length === 0) {
@@ -854,6 +912,93 @@ const PlaceOrderModal = ({
     }
   }, [selectedCoords, isDelivery, hasDelivery, isQrScan]);
 
+  // Fetch QR group for table 0 when it's a hotel page order
+  useEffect(() => {
+    const fetchHotelQrGroup = async () => {
+      // Always fetch QR group for table 0 for hotel page orders (delivery orders)
+      if (tableNumber === 0 && hotelData?.id) {
+        try {
+          console.log("Fetching QR group for table 0, hotel ID:", hotelData.id);
+          
+          // Use the same query as admin QR management system
+          const response = await fetchFromHasura(
+            `
+            query GetQrCodesForTable($partner_id: uuid!, $table_number: Int!) {
+              qr_codes(where: {partner_id: {_eq: $partner_id}, table_number: {_eq: $table_number}}) {
+                id
+                table_number
+                qr_group {
+                  id
+                  name
+                  extra_charge
+                  charge_type
+                  partner_id
+                }
+              }
+            }
+          `,
+            {
+              partner_id: hotelData.id,
+              table_number: tableNumber,
+            }
+          );
+
+          console.log("QR codes response for table 0:", response);
+
+          if (response.qr_codes && response.qr_codes.length > 0) {
+            const qrCode = response.qr_codes[0];
+            if (qrCode.qr_group) {
+              const group = qrCode.qr_group;
+              console.log("Found QR group through qr_codes for table 0:", group);
+              
+              // Transform the extra_charge to match the expected format (same as admin system)
+              const extra_charge = Array.isArray(group.extra_charge)
+                ? group.extra_charge
+                : typeof group.extra_charge === 'number'
+                  ? [{ min_amount: 0, max_amount: null, charge: group.extra_charge }]
+                  : typeof group.extra_charge === 'object' && group.extra_charge?.rules
+                    ? group.extra_charge.rules
+                    : [{ min_amount: 0, max_amount: null, charge: 0 }];
+
+              const result = {
+                ...group,
+                table_number: qrCode.table_number,
+                extra_charge,
+              } as QrGroup;
+              
+              console.log("Transformed QR group result from qr_codes:", result);
+              setHotelQrGroup(result);
+              console.log("Set hotelQrGroup state to:", result);
+            } else {
+              console.log("QR code found but no qr_group associated with it");
+              setHotelQrGroup(null);
+            }
+          } else {
+            console.log("No QR codes found for table 0");
+            setHotelQrGroup(null);
+          }
+        } catch (error) {
+          console.error("Error fetching hotel QR group:", error);
+          setHotelQrGroup(null);
+        }
+      } else {
+        console.log("Not fetching QR group because:", {
+          tableNumber,
+          hotelDataId: hotelData?.id,
+          shouldFetch: tableNumber === 0 && hotelData?.id
+        });
+        setHotelQrGroup(null);
+      }
+    };
+
+    fetchHotelQrGroup();
+  }, [tableNumber, hotelData?.id]);
+
+  // Debug hotelQrGroup state changes
+  useEffect(() => {
+    console.log("hotelQrGroup state changed:", hotelQrGroup);
+  }, [hotelQrGroup]);
+
   const handlePlaceOrder = async () => {
     // Check if user is a partner trying to order from their own hotel
     if (user?.role === "partner" && user.id === hotelData.id) {
@@ -919,6 +1064,30 @@ const PlaceOrderModal = ({
         }
       }
 
+      // Add hotel QR group charges for table 0 (delivery orders from hotel page)
+      if (tableNumber === 0 && hotelQrGroup && hotelQrGroup.name) {
+        console.log("Calculating hotel QR group charges:", {
+          tableNumber,
+          hotelQrGroup,
+          items: items?.length
+        });
+        const hotelQrChargeAmount = getExtraCharge(
+          items || [],
+          hotelQrGroup.extra_charge,
+          hotelQrGroup.charge_type || "FLAT_FEE"
+        );
+        console.log("Hotel QR charge amount:", hotelQrChargeAmount);
+
+        if (hotelQrChargeAmount > 0) {
+          extraCharges.push({
+            name: hotelQrGroup.name,
+            amount: hotelQrChargeAmount,
+            charge_type: hotelQrGroup.charge_type || "FLAT_FEE",
+          });
+          console.log("Added hotel QR charge to extra charges:", extraCharges);
+        }
+      }
+
       if (!isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange) {
         extraCharges.push({
           name: "Delivery Charge",
@@ -929,7 +1098,7 @@ const PlaceOrderModal = ({
 
       const result = await placeOrder(
         hotelData,
-        tableNumber,
+        tableNumber === 0 ? 0 : tableNumber,
         qrId as string,
         gstAmount,
         extraCharges.length > 0 ? extraCharges : null
@@ -1025,6 +1194,7 @@ const PlaceOrderModal = ({
                 deliveryInfo={deliveryInfo}
                 isDelivery={isDelivery && !isQrScan}
                 qrGroup={qrGroup}
+                hotelQrGroup={tableNumber === 0 ? hotelQrGroup : null}
               />
 
               {/* Login Card (if not logged in) */}
