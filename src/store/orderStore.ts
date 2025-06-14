@@ -23,6 +23,7 @@ import {
   setStatusHistory,
   toStatusDisplayFormat,
 } from "@/lib/statusHistory";
+import { Notification } from "@/app/actions/notification";
 // import { sendOrderNotification } from "@/app/actions/notification";
 
 export interface OrderItem extends HotelDataMenus {
@@ -262,6 +263,8 @@ const useOrderStore = create(
             }
           );
 
+          await Notification.user.sendOrderStatusNotification(order , status);
+
           if (response.errors) {
             throw new Error(
               response.errors[0]?.message || "Failed to update status history"
@@ -332,6 +335,13 @@ const useOrderStore = create(
                 }
               }
               revalidateTag(userData?.id as string);
+            }
+          }
+
+          if(newStatus === "cancelled"){
+            const order = orders.find((o) => o.id === orderId);
+            if(order){
+              await Notification.user.sendOrderStatusNotification(order , newStatus);
             }
           }
 
@@ -1012,7 +1022,7 @@ const useOrderStore = create(
           }));
 
           toast.success("Order placed successfully!");
-          // await sendOrderNotification(orderId, hotelData.id);
+          await Notification.partner.sendOrderNotification(newOrder);
           return newOrder;
         } catch (error) {
           console.error("Order placement error:", error);
