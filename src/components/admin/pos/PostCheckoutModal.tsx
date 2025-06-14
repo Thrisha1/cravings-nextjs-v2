@@ -16,6 +16,7 @@ import { Partner, useAuthStore } from "@/store/authStore";
 import KOTTemplate from "./KOTTemplate";
 import BillTemplate from "./BillTemplate";
 import { useRouter } from "next/navigation";
+import { getExtraCharge } from "@/lib/getExtraCharge";
 
 export const PostCheckoutModal = () => {
   const {
@@ -25,6 +26,7 @@ export const PostCheckoutModal = () => {
     setPostCheckoutModalOpen,
     postCheckoutModalOpen,
     setEditOrderModalOpen,
+    qrGroup,
   } = usePOSStore();
   const { userData } = useAuthStore();
   const router = useRouter();
@@ -59,7 +61,17 @@ export const PostCheckoutModal = () => {
     (sum, charge) => sum + charge.amount,
     0
   );
-  const subtotal = foodSubtotal + extraChargesTotal;
+  
+  // Calculate QR group extra charges
+  const qrGroupCharges = qrGroup?.extra_charge
+    ? getExtraCharge(
+        order.items as any[],
+        qrGroup.extra_charge,
+        qrGroup.charge_type || "FLAT_FEE"
+      )
+    : 0;
+    
+  const subtotal = foodSubtotal + extraChargesTotal + qrGroupCharges;
   const gstAmount = calculateGst(foodSubtotal);
   const grandTotal = subtotal + gstAmount;
 
@@ -167,6 +179,24 @@ export const PostCheckoutModal = () => {
                           <span className="font-medium">{currency}{charge.amount.toFixed(2)}</span>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* QR Group Charges */}
+                {qrGroup && qrGroupCharges > 0 && (
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg mb-3">QR Group Charges</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <span>{qrGroup.name}</span>
+                          <p className="text-xs text-gray-500">
+                            {qrGroup.charge_type === "PER_ITEM" ? "Per item charge" : "Fixed charge"}
+                          </p>
+                        </div>
+                        <span className="font-medium">{currency}{qrGroupCharges.toFixed(2)}</span>
+                      </div>
                     </div>
                   </div>
                 )}
