@@ -33,6 +33,10 @@ export const CaptainCheckoutModal = () => {
   const captainData = userData as Captain;
   const partnerData = userData as Partner;
 
+  // Refs for printing
+  const kotRef = useRef<HTMLDivElement>(null);
+  const billRef = useRef<HTMLDivElement>(null);
+
   const handleEditOrder = () => {
     setPostCheckoutModalOpen(false);
     setEditOrderModalOpen(true);
