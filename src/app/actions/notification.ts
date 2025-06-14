@@ -124,7 +124,7 @@ class PartnerNotification {
 
     const { device_tokens } = await fetchFromHasura(
       `
-      query GetPartnerDeviceTokens($partnerId: uuid!) {
+      query GetPartnerDeviceTokens($partnerId: String!) {
         device_tokens(where: {user_id: {_eq: $partnerId}}) {
           device_token
         }
@@ -169,7 +169,7 @@ class UserNotification {
 
     const { device_tokens } = await fetchFromHasura(
       `
-      query GetUserDeviceTokens($userId: uuid!) {
+      query GetUserDeviceTokens($userId: String!) {
         device_tokens(where: {user_id: {_eq: $userId}}) {
           device_token
         }
