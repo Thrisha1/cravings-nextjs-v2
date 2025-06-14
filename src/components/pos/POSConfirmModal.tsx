@@ -45,6 +45,13 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
     addToCart,
     qrGroup,
     setDeliveryMode,
+    setIsCaptainOrder,
+    getPartnerTables,
+    removeExtraCharge,
+    removedQrGroupCharges,
+    addQrGroupCharge,
+    extraCharges: storeExtraCharges,
+    removeQrGroupCharge,
   } = usePOSStore();
   
   const { userData } = useAuthStore();
@@ -55,6 +62,11 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
   const [tableNumbers, setTableNumbers] = useState<number[]>([]);
   const [isLoadingTables, setIsLoadingTables] = useState(true);
   const [isDelivery, setIsDelivery] = useState(false);
+
+  // Sync store extra charges with local state
+  useEffect(() => {
+    setExtraCharges(storeExtraCharges);
+  }, [storeExtraCharges]);
 
   useEffect(() => {
     const fetchTableNumbers = async () => {
@@ -94,17 +106,8 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
   const foodSubtotal = totalAmount;
   const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
   
-  // Calculate QR group extra charges
-  const qrGroupCharges = qrGroup?.extra_charge
-    ? getExtraCharge(
-        cartItems as any[],
-        qrGroup.extra_charge,
-        qrGroup.charge_type || "FLAT_FEE"
-      )
-    : 0;
-    
   const gstAmount = getGstAmount(foodSubtotal, partnerData?.gst_percentage || 0);
-  const grandTotal = foodSubtotal + gstAmount + extraChargesTotal + qrGroupCharges;
+  const grandTotal = foodSubtotal + gstAmount + extraChargesTotal;
 
   // Check if table selection is made (only required for dine-in)
   const isTableSelected = isDelivery || tableNumber !== null;
@@ -121,14 +124,29 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
       amount: newExtraCharge.amount,
     };
 
-    setExtraCharges([...extraCharges, charge]);
+    // Add to store instead of local state
+    addExtraCharge(charge);
     setNewExtraCharge({ name: "", amount: 0, id: "" });
   };
 
   const handleRemoveExtraCharge = (index: number) => {
-    const updatedCharges = [...extraCharges];
-    updatedCharges.splice(index, 1);
-    setExtraCharges(updatedCharges);
+    const chargeToRemove = extraCharges[index];
+    
+    // If this was a QR group charge, use the store function
+    if (chargeToRemove.id.startsWith('qr-group-')) {
+      const qrGroupId = chargeToRemove.id.replace('qr-group-', '');
+      removeQrGroupCharge(qrGroupId);
+    } else {
+      // Remove from store
+      removeExtraCharge(chargeToRemove.id);
+    }
+  };
+
+  const handleAddQrGroupCharge = () => {
+    if (qrGroup && removedQrGroupCharges.includes(qrGroup.id)) {
+      // Use the store function to add back the QR group charge
+      addQrGroupCharge(qrGroup.id);
+    }
   };
 
   const handleConfirmOrder = async () => {
@@ -140,10 +158,7 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
 
       setUserPhone(phoneInput || null);
       
-      // Add all extra charges to the store
-      extraCharges.forEach(charge => {
-        addExtraCharge(charge);
-      });
+      // Extra charges are already in the store, no need to add them again
       
       await checkout();
       onConfirm();
@@ -294,25 +309,21 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
                 </div>
               </div>
             )}
+
+            {/* Show "Add back" message for removed QR group charges */}
+            {qrGroup && removedQrGroupCharges.includes(qrGroup.id) && (
+              <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded border">
+                <span>Add extra {qrGroup.name} charge? </span>
+                <button
+                  onClick={handleAddQrGroupCharge}
+                  className="text-blue-700 underline hover:text-blue-800"
+                >
+                  Click here to add back
+                </button>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* QR Group Charges */}
-        {qrGroup && (
-          <div className="border rounded-lg p-3">
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="font-medium">{qrGroup.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {qrGroup.charge_type === "PER_ITEM" ? "Per item charge" : "Fixed charge"}
-                </div>
-              </div>
-              <div className="font-medium">
-                {partnerData?.currency || "$"}{qrGroupCharges.toFixed(2)}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Order Summary */}
         <div className="border-t pt-4">
@@ -385,14 +396,6 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
                   <span>{partnerData?.currency || "$"}{extraChargesTotal.toFixed(2)}</span>
                 </div>
               </>
-            )}
-
-            {/* QR Group Charges */}
-            {qrGroup && (
-              <div className="flex justify-between text-sm">
-                <span>{qrGroup.name}:</span>
-                <span>{partnerData?.currency || "$"}{qrGroupCharges.toFixed(2)}</span>
-              </div>
             )}
 
             {/* Grand Total */}

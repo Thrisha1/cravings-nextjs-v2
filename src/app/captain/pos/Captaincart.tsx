@@ -37,6 +37,11 @@ export const Captaincart = () => {
     setIsCaptainOrder,
     qrGroup,
     getPartnerTables,
+    removeExtraCharge,
+    removedQrGroupCharges,
+    addQrGroupCharge,
+    removeQrGroupCharge,
+    extraCharges: storeExtraCharges,
   } = usePOSStore();
   
   const { userData } = useAuthStore();
@@ -45,6 +50,11 @@ export const Captaincart = () => {
   const [phoneInput, setPhoneInput] = useState("");
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
   const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0, id: "" });
+
+  // Sync store extra charges with local state
+  useEffect(() => {
+    setExtraCharges(storeExtraCharges);
+  }, [storeExtraCharges]);
 
   // Set default table number to 0 (No Table)
   useEffect(() => {
@@ -77,17 +87,8 @@ export const Captaincart = () => {
   const foodSubtotal = totalAmount; // This is the subtotal of food items only
   const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
   
-  // Calculate QR group extra charges
-  const qrGroupCharges = qrGroup?.extra_charge
-    ? getExtraCharge(
-        cartItems as any[],
-        qrGroup.extra_charge,
-        qrGroup.charge_type || "FLAT_FEE"
-      )
-    : 0;
-    
   const gstAmount = getGstAmount(foodSubtotal, captainData?.gst_percentage || 0); // GST only on food items
-  const grandTotal = foodSubtotal + gstAmount + extraChargesTotal + qrGroupCharges;
+  const grandTotal = foodSubtotal + gstAmount + extraChargesTotal;
 
   const handleAddExtraCharge = () => {
     if (!newExtraCharge.name || newExtraCharge.amount <= 0) {
@@ -101,14 +102,29 @@ export const Captaincart = () => {
       amount: newExtraCharge.amount,
     };
 
-    setExtraCharges([...extraCharges, charge]);
+    // Add to store instead of local state
+    addExtraCharge(charge);
     setNewExtraCharge({ name: "", amount: 0, id: "" });
   };
 
   const handleRemoveExtraCharge = (index: number) => {
-    const updatedCharges = [...extraCharges];
-    updatedCharges.splice(index, 1);
-    setExtraCharges(updatedCharges);
+    const chargeToRemove = extraCharges[index];
+    
+    // If this was a QR group charge, use the store function
+    if (chargeToRemove.id.startsWith('qr-group-')) {
+      const qrGroupId = chargeToRemove.id.replace('qr-group-', '');
+      removeQrGroupCharge(qrGroupId);
+    } else {
+      // Remove from store
+      removeExtraCharge(chargeToRemove.id);
+    }
+  };
+
+  const handleAddQrGroupCharge = () => {
+    if (qrGroup && removedQrGroupCharges.includes(qrGroup.id)) {
+      // Use the store function to add back the QR group charge
+      addQrGroupCharge(qrGroup.id);
+    }
   };
 
   const handleConfirmOrder = async () => {
@@ -121,10 +137,7 @@ export const Captaincart = () => {
 
       setUserPhone(phoneInput || null);
       
-      // Add all extra charges to the store
-      extraCharges.forEach(charge => {
-        addExtraCharge(charge);
-      });
+      // Extra charges are already in the store, no need to add them again
       
       await checkout();
       setIsModalOpen(false);
@@ -283,6 +296,19 @@ export const Captaincart = () => {
                       </div>
                     </div>
                   )}
+
+                  {/* Show "Add back" message for removed QR group charges */}
+                  {qrGroup && removedQrGroupCharges.includes(qrGroup.id) && (
+                    <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded border">
+                      <span>Add extra {qrGroup.name} charge? </span>
+                      <button
+                        onClick={handleAddQrGroupCharge}
+                        className="text-blue-700 underline hover:text-blue-800"
+                      >
+                        Click here to add back
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -355,19 +381,6 @@ export const Captaincart = () => {
                       <div className="flex justify-between text-sm">
                         <span>Extra Charges Total:</span>
                         <span>{captainData?.currency || "$"}{extraChargesTotal.toFixed(2)}</span>
-                      </div>
-                    </>
-                  )}
-
-                  {/* QR Group Charges */}
-                  {qrGroup && (
-                    <>
-                      <div className="flex justify-between text-sm border-t pt-2">
-                        <span className="font-medium">QR Group Charges</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>{qrGroup.name}</span>
-                        <span>{captainData?.currency || "$"}{qrGroupCharges.toFixed(2)}</span>
                       </div>
                     </>
                   )}

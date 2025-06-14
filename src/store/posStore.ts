@@ -72,6 +72,9 @@ interface POSState {
   setQrGroup: (qrGroup: QrGroup | null) => void;
   fetchQrGroupForTable: (tableNumber: number) => Promise<void>;
   setDeliveryMode: (isDelivery: boolean) => void;
+  removedQrGroupCharges: string[];
+  removeQrGroupCharge: (qrGroupId: string) => void;
+  addQrGroupCharge: (qrGroupId: string) => void;
 }
 
 export const usePOSStore = create<POSState>((set, get) => ({
@@ -90,6 +93,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   deliveryAddress: "",
   isPOSOpen: false,
   qrGroup: null,
+  removedQrGroupCharges: [],
 
   setDeliveryAddress: (address: string) => {
     set({ deliveryAddress: address });
@@ -227,6 +231,12 @@ export const usePOSStore = create<POSState>((set, get) => ({
     // Clear QR group first when changing table numbers
     set({ qrGroup: null });
     
+    // Remove any existing QR group charges from extraCharges when switching tables
+    set((state) => ({
+      extraCharges: state.extraCharges.filter(charge => !charge.id.startsWith('qr-group-')),
+      removedQrGroupCharges: [], // Clear removed QR group charges when switching tables
+    }));
+    
     // If table number is set, fetch QR group for that table
     if (tableNumber !== null) {
       const { fetchQrGroupForTable } = get();
@@ -302,7 +312,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   clearCart: () => {
-    set({ cartItems: [], totalAmount: 0, extraCharges: [] });
+    set({ cartItems: [], totalAmount: 0, extraCharges: [], removedQrGroupCharges: [] });
   },
 
   addExtraCharge: (charge: Omit<ExtraCharge, "id">) => {
@@ -324,7 +334,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   calculateTotalWithCharges: () => {
-    const { cartItems, extraCharges, qrGroup } = get();
+    const { cartItems, extraCharges } = get();
     const hotelData = useAuthStore.getState().userData as Partner;
     const gstPercentage = hotelData?.gst_percentage || 0;
 
@@ -334,29 +344,20 @@ export const usePOSStore = create<POSState>((set, get) => ({
       0
     );
 
-    // Calculate manual extra charges subtotal
-    const manualChargesSubtotal = extraCharges.reduce(
+    // Calculate all extra charges subtotal (including QR group charges)
+    const extraChargesSubtotal = extraCharges.reduce(
       (total, charge) => total + charge.amount,
       0
     );
 
-    // Calculate QR group extra charges
-    const qrGroupCharges = qrGroup?.extra_charge
-      ? getExtraCharge(
-          cartItems as any[],
-          qrGroup.extra_charge,
-          qrGroup.charge_type || "FLAT_FEE"
-        )
-      : 0;
-
-    // Calculate GST on food and manual charges only (not on QR group charges)
+    // Calculate GST on food and extra charges
     const gstAmount = getGstAmount(
-      foodSubtotal + manualChargesSubtotal,
+      foodSubtotal + extraChargesSubtotal,
       gstPercentage
     );
 
     // Return grand total
-    return foodSubtotal + manualChargesSubtotal + qrGroupCharges + gstAmount;
+    return foodSubtotal + extraChargesSubtotal + gstAmount;
   },
 
   checkout: async () => {
@@ -407,26 +408,10 @@ export const usePOSStore = create<POSState>((set, get) => ({
         0
       );
 
-      // Calculate QR group extra charges
-      const qrGroupCharges = qrGroup?.extra_charge
-        ? getExtraCharge(
-            cartItems as any[],
-            qrGroup.extra_charge,
-            qrGroup.charge_type || "FLAT_FEE"
-          )
-        : 0;
-
       // Prepare all extra charges (manual + QR group)
       const allExtraCharges = [...extraCharges];
       
-      // Add QR group charges if they exist
-      if (qrGroup && qrGroupCharges > 0) {
-        allExtraCharges.push({
-          id: uuidv4(),
-          name: qrGroup.name,
-          amount: qrGroupCharges,
-        });
-      }
+      // QR group charges are now included in extraCharges, so no need to add them separately
 
       const grandTotal =
         foodSubtotal +
@@ -618,12 +603,40 @@ export const usePOSStore = create<POSState>((set, get) => ({
         console.error("Partner ID not available");
         return;
       }
-      
+
       const qrGroup = await getQrGroupForTable(partnerId, tableNumber);
-      set({ qrGroup });
+      
+      if (qrGroup) {
+        set({ qrGroup });
+        
+        // Calculate the QR group charge amount
+        const { cartItems } = get();
+        const qrGroupCharges = getExtraCharge(
+          cartItems as any[],
+          qrGroup.extra_charge,
+          qrGroup.charge_type || "FLAT_FEE"
+        );
+        
+        // Only add as extra charge if it's not already removed and has a positive amount
+        const { removedQrGroupCharges, extraCharges } = get();
+        const isAlreadyRemoved = removedQrGroupCharges.includes(qrGroup.id);
+        const isAlreadyAdded = extraCharges.some(charge => charge.name === qrGroup.name);
+        
+        if (!isAlreadyRemoved && qrGroupCharges > 0 && !isAlreadyAdded) {
+          // Add QR group charge as an extra charge
+          const newCharge: ExtraCharge = {
+            id: `qr-group-${qrGroup.id}`,
+            name: qrGroup.name,
+            amount: qrGroupCharges,
+          };
+          
+          set((state) => ({
+            extraCharges: [...state.extraCharges, newCharge],
+          }));
+        }
+      }
     } catch (error) {
       console.error("Error fetching QR group for table:", error);
-      throw error;
     }
   },
 
@@ -635,6 +648,38 @@ export const usePOSStore = create<POSState>((set, get) => ({
       fetchQrGroupForTable(0).catch((error) => {
         console.error("Failed to fetch QR group for delivery:", error);
       });
+    }
+  },
+
+  removeQrGroupCharge: (qrGroupId: string) => {
+    set((state) => ({
+      removedQrGroupCharges: [...state.removedQrGroupCharges, qrGroupId],
+      extraCharges: state.extraCharges.filter(charge => charge.id !== `qr-group-${qrGroupId}`),
+    }));
+  },
+
+  addQrGroupCharge: (qrGroupId: string) => {
+    const { qrGroup, cartItems, extraCharges } = get();
+    
+    if (qrGroup && qrGroup.id === qrGroupId) {
+      const qrGroupCharges = getExtraCharge(
+        cartItems as any[],
+        qrGroup.extra_charge,
+        qrGroup.charge_type || "FLAT_FEE"
+      );
+      
+      if (qrGroupCharges > 0) {
+        const newCharge: ExtraCharge = {
+          id: `qr-group-${qrGroupId}`,
+          name: qrGroup.name,
+          amount: qrGroupCharges,
+        };
+        
+        set((state) => ({
+          removedQrGroupCharges: state.removedQrGroupCharges.filter((id) => id !== qrGroupId),
+          extraCharges: [...state.extraCharges, newCharge],
+        }));
+      }
     }
   },
 }));
