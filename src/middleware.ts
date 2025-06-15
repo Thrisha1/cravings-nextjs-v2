@@ -26,6 +26,25 @@ export async function middleware(request: NextRequest) {
     pathname === route || pathname.startsWith(`${route}/`)
   );
 
+  // Special handling for captainlogin - redirect logged in captains
+  if (pathname === '/captainlogin' && authToken) {
+    try {
+      const decrypted = decryptText(authToken) as { 
+        id: string; 
+        role: string; 
+        status?: string 
+      };
+      
+      // If captain is already logged in, redirect to /captain
+      if (decrypted?.role === 'captain') {
+        return NextResponse.redirect(new URL('/captain', request.url));
+      }
+    } catch (error) {
+      console.error('Error decrypting token for captain redirect:', error);
+      // Continue with normal flow if there's an error
+    }
+  }
+
   if (isPublicRoute) {
     return NextResponse.next();
   }
@@ -48,6 +67,11 @@ export async function middleware(request: NextRequest) {
         // Partner redirects to /admin
         if (decrypted?.role === 'partner') {
           return NextResponse.redirect(new URL('/admin', request.url));
+        }
+        
+        // Captain redirects to /captain
+        if (decrypted?.role === 'captain') {
+          return NextResponse.redirect(new URL('/captain', request.url));
         }
         
         // Regular users stay on home page

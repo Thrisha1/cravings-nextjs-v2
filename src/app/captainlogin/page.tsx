@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,10 +12,34 @@ import { ArrowLeft } from "lucide-react";
 
 export default function CaptainLoginPage() {
   const router = useRouter();
-  const { signInCaptainWithEmail, loading, error } = useAuthStore();
+  const { signInCaptainWithEmail, loading, error, userData } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check if user is already logged in as captain
+  useEffect(() => {
+    if (userData && userData.role === "captain") {
+      router.push("/captain");
+    }
+  }, [userData, router]);
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen w-full bg-orange-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't show the form if user is already logged in as captain
+  if (userData && userData.role === "captain") {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
