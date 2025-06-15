@@ -92,7 +92,7 @@ const BottomNav = () => {
         ];
 
         // Add Orders if ordering is enabled
-        if (features?.ordering?.enabled) {
+        if (features?.ordering?.enabled || features?.delivery?.enabled || features?.pos?.enabled) {
           partnerItems.push({
             href: "/admin/orders",
             name: "Orders",
