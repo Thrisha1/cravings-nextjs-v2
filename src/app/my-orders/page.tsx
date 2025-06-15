@@ -3,22 +3,17 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Loader2,
-  Edit,
   Trash2,
-  SquareArrowUpRight,
-  SquareArrowOutDownRight,
   ExternalLink,
+  Phone,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Partner, useAuthStore } from "@/store/authStore";
-import { usePOSStore } from "@/store/posStore";
 import { toast } from "sonner";
 import useOrderStore from "@/store/orderStore";
-import { EditOrderModal } from "@/components/admin/pos/EditOrderModal";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { cancelOrderMutation } from "@/api/orders";
 import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
-import { toStatusDisplayFormat } from "@/lib/statusHistory";
 import Link from "next/link";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import { getStatusDisplay } from "@/lib/getStatusDisplay";
@@ -26,12 +21,11 @@ import { getStatusDisplay } from "@/lib/getStatusDisplay";
 const Page = () => {
   const { userData } = useAuthStore();
   const { userOrders, subscribeUserOrders } = useOrderStore();
-  const { setOrder, setEditOrderModalOpen } = usePOSStore();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (userData?.id) {
-      const unsubscribe = subscribeUserOrders((orders) => {
+      const unsubscribe = subscribeUserOrders(() => {
         setLoading(false);
       });
 
@@ -40,27 +34,6 @@ const Page = () => {
       };
     }
   }, [userData]);
-
-  const handleEditOrder = (order: any) => {
-    setOrder({
-      id: order.id,
-      totalPrice: order.totalPrice,
-      tableNumber: order.tableNumber,
-      phone: order.phone,
-      items: order.items.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        category: item.category,
-      })),
-      extraCharges: order.extraCharges || [],
-      createdAt: order.createdAt,
-      status: order.status,
-      partnerId: order.partnerId,
-    });
-    setEditOrderModalOpen(true);
-  };
 
   const handleCancelOrder = async (orderId: string) => {
     const confirmed = window.confirm(
@@ -79,12 +52,50 @@ const Page = () => {
     }
   };
 
-  const calculateGst = (amount: number, gstPercentage: number) => {
-    return (amount * gstPercentage) / 100;
+
+
+  const getPaymentStatusDisplay = (paymentStatus?: string) => {
+    switch (paymentStatus) {
+      case "completed":
+        return { text: "Paid", className: "bg-green-100 text-green-800" };
+      case "failed":
+        return { text: "Payment Failed", className: "bg-red-100 text-red-800" };
+      case "cancelled":
+        return { text: "Payment Cancelled", className: "bg-gray-100 text-gray-800" };
+      case "pending":
+      default:
+        return { text: "Payment Pending", className: "bg-yellow-100 text-yellow-800" };
+    }
+  };
+
+  const handleCallRestaurant = (order: any) => {
+    const partner = order.partner as Partner;
+    console.log("partner",partner)
+    if (!partner) return;
+    
+    let phoneNumber = '';
+    const countryCode = partner.country_code || '+91';
+    console.log("countryCode",countryCode)
+
+
+    // Check if there are WhatsApp numbers first
+    if (partner.whatsapp_numbers && partner.whatsapp_numbers.length > 0) {
+      phoneNumber = partner.whatsapp_numbers[0].number;
+    } else if (partner.phone) {
+      phoneNumber = partner.phone;
+    }
+
+    if (phoneNumber) {
+      console.log("phoneNumber",phoneNumber)
+      const fullNumber = `${countryCode}${phoneNumber}`;
+      window.open(`tel:${fullNumber}`, '_self');
+    } else {
+      toast.error("Restaurant phone number not available");
+    }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto sm:px-4 px-2 py-8">
       <h1 className="text-2xl font-bold mb-6">My Orders</h1>
 
       {loading ? (
@@ -128,7 +139,7 @@ const Page = () => {
               <div
                 id={`order-${order.id}`}
                 key={order.id}
-                className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                className="border rounded-lg sm:p-4 p-2 shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="flex justify-between items-start mb-2">
                   <div>
@@ -138,25 +149,34 @@ const Page = () => {
                     <h3 className="font-medium">
                       Store : {order.partner?.store_name}
                     </h3>
-                    <h3 className="text-sm text-gray-500">
-                      Ordered from : {order.partner?.store_name}
-                    </h3>
                     <p className="text-sm text-gray-500">
                       {format(new Date(order.createdAt), "PPPp")}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex justify-end items-center gap-2 flex-wrap">
                     <Link
                       href={`/order/${order.id}`}
                       className={`px-2 py-1 rounded-full font-medium text-xs bg-blue-500 text-white flex items-center gap-1`}
                     >
-                      <ExternalLink className="inline mr-1 w-5 h-5" />
+                      <ExternalLink className="inline mr-1 w-4 h-4" />
                       <span>Track</span>
                     </Link>
+                    <button
+                      onClick={() => handleCallRestaurant(order)}
+                      className="px-2 py-1 rounded-full font-medium text-xs bg-green-500 text-white flex items-center gap-1 hover:bg-green-600 transition-colors"
+                    >
+                      <Phone className="inline mr-1 w-4 h-4" />
+                      <span>Call</span>
+                    </button>
                     <span
                       className={`px-2 py-1 rounded-full text-xs ${statusDisplay.className}`}
                     >
                       {statusDisplay.text}
+                    </span>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs ${getPaymentStatusDisplay(order.payment_status).className}`}
+                    >
+                      {getPaymentStatusDisplay(order.payment_status).text}
                     </span>
                   </div>
                 </div>
@@ -289,8 +309,6 @@ const Page = () => {
           })}
         </div>
       )}
-
-      <EditOrderModal />
     </div>
   );
 };

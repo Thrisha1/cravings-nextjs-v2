@@ -24,23 +24,30 @@ export async function createRazorpayOrder(orderId: string, amount: number, partn
         query GetPartnerLinkedAccount($partnerId: uuid!) {
             partners_by_pk(id: $partnerId) {
                 razorpay_linked_account_id
+                store_name
             }
         }
     `, { partnerId });
 
     console.log('Partner response:', partnerResponse);
 
-    if (!partnerResponse?.partners_by_pk?.razorpay_linked_account_id) {
-        throw new Error('Partner linked account not found');
+    const linkedAccountId = partnerResponse?.partners_by_pk?.razorpay_linked_account_id;
+
+    if (!linkedAccountId) {
+        console.warn('Partner does not have a linked account, creating order without transfers');
     }
 
-    const linkedAccountId = partnerResponse.partners_by_pk.razorpay_linked_account_id;
-
-    const options = {
+    // Base options for order creation
+    const baseOptions = {
         amount: amountInPaise,
         currency: 'INR',
         receipt: orderId,
         payment_capture: 1, // Auto capture payment
+    };
+
+    // Add transfers only if linked account exists
+    const options = linkedAccountId ? {
+        ...baseOptions,
         transfers: [
             {
                 account: linkedAccountId,
@@ -52,30 +59,12 @@ export async function createRazorpayOrder(orderId: string, amount: number, partn
                 }
             }
         ]
-    }
+    } : baseOptions;
 
     try {
         console.log('Creating Razorpay order with options:', options);
         const order = await razorpay.orders.create(options);
         console.log('Razorpay order created:', order);
-
-        // Update order with Razorpay order ID in notes field
-        const updateResponse = await fetchFromHasura(`
-            mutation UpdateOrderWithRazorpayId($orderId: uuid!, $razorpayOrderId: String!) {
-                update_orders_by_pk(
-                    pk_columns: {id: $orderId}
-                    _set: {notes: $razorpayOrderId}
-                ) {
-                    id
-                    notes
-                }
-            }
-        `, {
-            orderId,
-            razorpayOrderId: order.id
-        });
-
-        console.log('Order updated with Razorpay ID:', updateResponse);
 
         return {
             orderId: order.id,
@@ -84,7 +73,7 @@ export async function createRazorpayOrder(orderId: string, amount: number, partn
         }
     } catch (error) {
         console.error('Error creating Razorpay order:', error);
-        throw new Error('Failed to create payment order');
+        throw new Error(`Failed to create payment order: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 
@@ -112,7 +101,7 @@ export async function verifyPayment(razorpayOrderId: string, obj: RazorpayRespon
             return false;
         }
 
-        // Verify payment with Razorpay
+        // Fetch payment details from Razorpay
         const payment = await razorpay.payments.fetch(obj.razorpay_payment_id);
         console.log('Payment details from Razorpay:', payment);
 
@@ -121,10 +110,16 @@ export async function verifyPayment(razorpayOrderId: string, obj: RazorpayRespon
             return false;
         }
 
-        // Find and update the order in Hasura
+        // Get the original order ID from Razorpay order receipt
+        const razorpayOrder = await razorpay.orders.fetch(razorpayOrderId);
+        const originalOrderId = razorpayOrder.receipt;
+        
+        console.log('Original order ID from receipt:', originalOrderId);
+
+        // Find order in database using the original order ID
         const order = await fetchFromHasura(`
-            query GetOrderByRazorpayId($razorpayOrderId: String!) {
-                orders(where: {notes: {_eq: $razorpayOrderId}}) {
+            query GetOrderById($orderId: uuid!) {
+                orders_by_pk(id: $orderId) {
                     id
                     status
                     payment_status
@@ -139,35 +134,36 @@ export async function verifyPayment(razorpayOrderId: string, obj: RazorpayRespon
                     }
                 }
             }
-        `, { razorpayOrderId });
+        `, { orderId: originalOrderId });
 
         console.log('Order from database:', order);
 
-        if (!order?.orders?.[0]) {
+        if (!order?.orders_by_pk) {
             console.error('Order not found in database');
             return false;
         }
 
-        const orderData = order.orders[0];
+        const orderData = order.orders_by_pk;
         
-        if (orderData.status === 'completed') {
-            console.log('Order already completed');
+        if (orderData.payment_status === 'completed') {
+            console.log('Payment already completed');
             return true;
         }
 
-        // Update order status and payment status to completed
+        // Update order with payment details and payment status only
         const updateResponse = await fetchFromHasura(`
-            mutation UpdateOrderStatus($orderId: uuid!) {
+            mutation UpdateOrderWithPaymentDetails($orderId: uuid!, $paymentDetails: jsonb!) {
                 update_orders_by_pk(
                     pk_columns: {id: $orderId}
                     _set: {
-                        status: "completed",
-                        payment_status: "completed"
+                        payment_status: "completed",
+                        payment_details: $paymentDetails
                     }
                 ) {
                     id
                     status
                     payment_status
+                    payment_details
                     order_items {
                         id
                         quantity
@@ -179,9 +175,12 @@ export async function verifyPayment(razorpayOrderId: string, obj: RazorpayRespon
                     }
                 }
             }
-        `, { orderId: orderData.id });
+        `, { 
+            orderId: orderData.id,
+            paymentDetails: payment
+        });
 
-        console.log('Order status updated:', updateResponse);
+        console.log('Order updated with payment details:', updateResponse);
 
         return true;
     } catch (error) {

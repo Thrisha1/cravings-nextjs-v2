@@ -1027,15 +1027,15 @@ const PlaceOrderModal = ({
               {/* Place Order and Back Buttons */}
               <div className="flex flex-col gap-3 mt-6">
                 {user ? (
-                  <Link
-                    href={getWhatsappLink(orderId as string)}
-                    target="_blank"
-                    onClick={(e) => {
-                      if (isPlaceOrderDisabled) {
-                        e.preventDefault();
-                      }
-                    }}
-                  >
+                  // <Link
+                  //   href={getWhatsappLink(orderId as string)}
+                  //   target="_blank"
+                  //   onClick={(e) => {
+                  //     if (isPlaceOrderDisabled) {
+                  //       e.preventDefault();
+                  //     }
+                  //   }}
+                  // >
                     <Button
                       onClick={handlePlaceOrder}
                       disabled={isPlaceOrderDisabled || !user}
@@ -1044,13 +1044,13 @@ const PlaceOrderModal = ({
                       {isPlacingOrder ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Placing Order...
+                          Processing Payment...
                         </>
                       ) : (
-                        "Place Order"
+                        "Pay & Place Order"
                       )}
                     </Button>
-                  </Link>
+                  // </Link>
                 ) : null}
                 <Button
                   variant="outline"

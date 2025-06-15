@@ -17,13 +17,15 @@ import { usePOSStore } from "./posStore";
 import { v4 as uuidv4 } from "uuid";
 import {
   defaultStatusHistory,
-  OrderStatusDisplay,
   OrderStatusHistoryTypes,
   OrderStatusStorage,
   setStatusHistory,
-  toStatusDisplayFormat,
 } from "@/lib/statusHistory";
 import { Notification } from "@/app/actions/notification";
+import type {
+  RazorpayResponse,
+  RazorpayPaymentDetails,
+} from "@/types/razorpay";
 // import { sendOrderNotification } from "@/app/actions/notification";
 
 export interface OrderItem extends HotelDataMenus {
@@ -58,6 +60,7 @@ export interface Order {
   tableNumber?: number | null;
   qrId?: string | null;
   status: "pending" | "completed" | "cancelled";
+  payment_status?: "pending" | "completed" | "failed" | "cancelled";
   partnerId: string;
   status_history?: OrderStatusStorage;
   partner?: {
@@ -97,6 +100,7 @@ export interface Order {
         id?: string;
       }[]
     | null;
+  payment_details?: RazorpayPaymentDetails | null;
 }
 
 export interface DeliveryInfo {
@@ -124,6 +128,14 @@ interface HotelOrderState {
   } | null;
 }
 
+// Add payment modal types
+export interface PaymentModalState {
+  isOpen: boolean;
+  type: 'success' | 'failed' | null;
+  message: string;
+  autoCloseTimer: number;
+}
+
 interface OrderState {
   hotelId: string | null;
   hotelOrders: Record<string, HotelOrderState>;
@@ -142,7 +154,17 @@ interface OrderState {
   deliveryInfo: DeliveryInfo | null;
   deliveryCost: number | null;
   open_place_order_modal: boolean;
+  
+  // Payment modal states
+  payment_loader_modal: boolean;
+  payment_result_modal: PaymentModalState;
+  
   setOpenPlaceOrderModal: (open: boolean) => void;
+  
+  // Payment modal functions
+  setPaymentLoaderModal: (open: boolean) => void;
+  setPaymentResultModal: (state: PaymentModalState) => void;
+  closePaymentResultModal: () => void;
 
   setHotelId: (id: string) => void;
   addItem: (item: HotelDataMenus) => void;
@@ -211,6 +233,15 @@ const useOrderStore = create(
       coordinates: null,
       open_drawer_bottom: false,
       open_place_order_modal: false,
+      
+      // Payment modal states
+      payment_loader_modal: false,
+      payment_result_modal: {
+        isOpen: false,
+        type: null,
+        message: "",
+        autoCloseTimer: 0,
+      },
 
       updateOrderStatusHistory: async (
         orderId: string,
@@ -263,7 +294,7 @@ const useOrderStore = create(
             }
           );
 
-          await Notification.user.sendOrderStatusNotification(order , status);
+          await Notification.user.sendOrderStatusNotification(order, status);
 
           if (response.errors) {
             throw new Error(
@@ -338,10 +369,13 @@ const useOrderStore = create(
             }
           }
 
-          if(newStatus === "cancelled"){
+          if (newStatus === "cancelled") {
             const order = orders.find((o) => o.id === orderId);
-            if(order){
-              await Notification.user.sendOrderStatusNotification(order , newStatus);
+            if (order) {
+              await Notification.user.sendOrderStatusNotification(
+                order,
+                newStatus
+              );
             }
           }
 
@@ -372,13 +406,14 @@ const useOrderStore = create(
           query: userSubscriptionQuery,
           variables: { user_id: userId },
           onNext: (data) => {
-            const allOrders = data.data?.orders.map((order: HasuraOrder) => ({
+            const allOrders = data.data?.orders.map((order: any) => ({
               id: order.id,
               totalPrice: order.total_price,
               createdAt: order.created_at,
               tableNumber: order.table_number,
               qrId: order.qr_id,
               status: order.status,
+              payment_status: order.payment_status,
               status_history: order.status_history,
               type: order.type,
               phone: order.phone,
@@ -391,6 +426,7 @@ const useOrderStore = create(
               gstIncluded: order.gst_included,
               extraCharges: order.extra_charges || [], // Handle null case
               delivery_charge: order.delivery_charge, // Include delivery_charge
+              payment_details: order.payment_details,
               user: order.user,
               items: order.order_items.map((i: any) => ({
                 id: i.item.id,
@@ -400,7 +436,6 @@ const useOrderStore = create(
                 category: i.menu?.category,
               })),
             }));
-
 
             if (allOrders) {
               set({ userOrders: allOrders });
@@ -472,11 +507,13 @@ const useOrderStore = create(
             const allOrders = data.data.orders
               .map((order: any) => {
                 // Ensure captain data is properly included
-                const captainData = order.captainid ? {
-                  id: order.captainid.id,
-                  name: order.captainid.name,
-                  email: order.captainid.email
-                } : null;
+                const captainData = order.captainid
+                  ? {
+                      id: order.captainid.id,
+                      name: order.captainid.name,
+                      email: order.captainid.email,
+                    }
+                  : null;
 
                 return {
                   id: order.id,
@@ -485,6 +522,7 @@ const useOrderStore = create(
                   tableNumber: order.table_number,
                   qrId: order.qr_id,
                   status: order.status,
+                  payment_status: order.payment_status,
                   type: order.type,
                   phone: order.phone,
                   deliveryAddress: order.delivery_address,
@@ -492,27 +530,33 @@ const useOrderStore = create(
                   gstIncluded: order.gst_included,
                   status_history: order.status_history,
                   extraCharges: order.extra_charges,
+                  payment_details: order.payment_details,
                   userId: order.user_id,
                   orderedby: order.orderedby,
                   captain_id: order.captain_id,
-                  captain: captainData,  // Use the properly structured captain data
+                  captain: captainData, // Use the properly structured captain data
                   user: order.user,
-                  items: order.order_items?.map((i: any) => ({
-                    id: i.menu?.id,
-                    quantity: i.quantity,
-                    name: i.menu?.name || "Unknown",
-                    price: i.menu?.offers?.[0]?.offer_price || i.menu?.price || 0,
-                    category: i.menu?.category?.name,
-                    description: i.menu?.description || "",
-                    image_url: i.menu?.image_url || "",
-                    is_top: i.menu?.is_top || false,
-                    is_available: i.menu?.is_available || false,
-                    priority: i.menu?.priority || 0,
-                    offers: i.menu?.offers || [],
-                  })) || [],
+                  items:
+                    order.order_items?.map((i: any) => ({
+                      id: i.menu?.id,
+                      quantity: i.quantity,
+                      name: i.menu?.name || "Unknown",
+                      price:
+                        i.menu?.offers?.[0]?.offer_price || i.menu?.price || 0,
+                      category: i.menu?.category?.name,
+                      description: i.menu?.description || "",
+                      image_url: i.menu?.image_url || "",
+                      is_top: i.menu?.is_top || false,
+                      is_available: i.menu?.is_available || false,
+                      priority: i.menu?.priority || 0,
+                      offers: i.menu?.offers || [],
+                    })) || [],
                 };
               })
-              .filter((order: any): order is NonNullable<typeof order> => order !== null);
+              .filter(
+                (order: any): order is NonNullable<typeof order> =>
+                  order !== null
+              );
 
             set({ partnerOrders: allOrders });
             if (callback) callback(allOrders);
@@ -1002,62 +1046,161 @@ const useOrderStore = create(
             extraCharges: exCharges,
           };
 
-          // Update state
-          set((state) => ({
-            ...state,
-            hotelOrders: {
-              ...state.hotelOrders,
-              [state.hotelId!]: {
-                items: [],
-                totalPrice: 0,
-                order: newOrder,
-                orderId: null,
-                coordinates: null,
-              },
-            },
-            order: newOrder,
-            items: [],
-            orderId: null,
-            totalPrice: 0,
-          }));
+          // Initiate Razorpay payment
+          const { createRazorpayOrder } = await import(
+            "@/app/actions/razorpay"
+          );
 
-                  toast.success("Payment successful! Order placed successfully!");
-          await Notification.partner.sendOrderNotification(newOrder);
-                } else {
-                  // Update order status to failed
+          try {
+            const razorpayOrder = await createRazorpayOrder(
+              orderId,
+              grandTotal,
+              hotelData.id
+            );
+
+            const options = {
+              key: razorpayOrder.key,
+              amount: razorpayOrder.amount,
+              currency: "INR",
+              name: hotelData.store_name,
+              description: "Order Payment",
+              order_id: razorpayOrder.orderId,
+              handler: async function (response: RazorpayResponse) {
+                // Show payment loader
+                set((state) => ({
+                  ...state,
+                  payment_loader_modal: true,
+                }));
+
+                try {
+                  const { verifyPayment } = await import(
+                    "@/app/actions/razorpay"
+                  );
+                  const isVerified = await verifyPayment(
+                    razorpayOrder.orderId,
+                    response
+                  );
+
+                  if (isVerified) {
+                    // Update state only after successful payment
+                    set((state) => ({
+                      ...state,
+                      hotelOrders: {
+                        ...state.hotelOrders,
+                        [state.hotelId!]: {
+                          items: [],
+                          totalPrice: 0,
+                          order: newOrder,
+                          orderId: null,
+                          coordinates: null,
+                        },
+                      },
+                      order: newOrder,
+                      items: [],
+                      orderId: null,
+                      totalPrice: 0,
+                      payment_loader_modal: false,
+                      payment_result_modal: {
+                        isOpen: true,
+                        type: 'success',
+                        message: 'Payment successful! Order placed successfully!',
+                        autoCloseTimer: 2,
+                      },
+                    }));
+
+                    await Notification.partner.sendOrderNotification(newOrder);
+                  } else {
+                    // Update payment status to failed
+                    await fetchFromHasura(
+                      `mutation UpdatePaymentStatus($id: uuid!, $paymentStatus: String!) {
+                        update_orders_by_pk(pk_columns: {id: $id}, _set: {payment_status: $paymentStatus}) {
+                          id
+                          payment_status
+                        }
+                      }`,
+                      { id: orderId, paymentStatus: "failed" }
+                    );
+                    
+                    set((state) => ({
+                      ...state,
+                      payment_loader_modal: false,
+                      payment_result_modal: {
+                        isOpen: true,
+                        type: 'failed',
+                        message: 'Payment verification failed. Please try again.',
+                        autoCloseTimer: 2,
+                      },
+                    }));
+                  }
+                } catch (error) {
+                  console.error("Payment verification error:", error);
+                  // Update payment status to failed
                   await fetchFromHasura(
-                    `mutation UpdateOrderStatus($id: uuid!, $status: String!) {
-                      update_orders_by_pk(pk_columns: {id: $id}, _set: {status: $status}) {
+                    `mutation UpdatePaymentStatus($id: uuid!, $paymentStatus: String!) {
+                      update_orders_by_pk(pk_columns: {id: $id}, _set: {payment_status: $paymentStatus}) {
                         id
-                        status
+                        payment_status
                       }
                     }`,
-                    { id: orderId, status: "failed" }
+                    { id: orderId, paymentStatus: "failed" }
                   );
-                  toast.error("Payment verification failed");
+                  
+                  set((state) => ({
+                    ...state,
+                    payment_loader_modal: false,
+                    payment_result_modal: {
+                      isOpen: true,
+                      type: 'failed',
+                      message: 'Payment verification failed. Please try again.',
+                      autoCloseTimer: 2,
+                    },
+                  }));
                 }
-              } catch (error) {
-                console.error("Payment verification error:", error);
-                // Update order status to failed
-                await fetchFromHasura(
-                  `mutation UpdateOrderStatus($id: uuid!, $status: String!) {
-                    update_orders_by_pk(pk_columns: {id: $id}, _set: {status: $status}) {
-                      id
-                      status
-                    }
-                  }`,
-                  { id: orderId, status: "failed" }
-                );
-                toast.error("Payment verification failed");
-              }
-            }
-          };
+              },
+              modal: {
+                ondismiss: function () {
+                  console.log("Payment modal closed by user");
+                  // Update payment status to cancelled
+                  fetchFromHasura(
+                    `mutation UpdatePaymentStatus($id: uuid!, $paymentStatus: String!) {
+                      update_orders_by_pk(pk_columns: {id: $id}, _set: {payment_status: $paymentStatus}) {
+                        id
+                        payment_status
+                      }
+                    }`,
+                    { id: orderId, paymentStatus: "cancelled" }
+                  );
+                  
+                  set((state) => ({
+                    ...state,
+                    payment_result_modal: {
+                      isOpen: true,
+                      type: 'failed',
+                      message: 'Payment cancelled by user.',
+                      autoCloseTimer: 2,
+                    },
+                  }));
+                },
+              },
+              prefill: {
+                name: userData.full_name || "",
+                email: userData.email || "",
+                contact: userData.phone || "",
+              },
+              theme: {
+                color: "#EA580C",
+              },
+            };
 
-          // @ts-expect-error This is razorpay direct javascript calls
-          const rzp = new window.Razorpay(options);
-          rzp.open();
+            const rzp = new window.Razorpay(options);
+            rzp.open();
 
-          return null;
+            return null;
+          } catch (error) {
+            console.error("Razorpay order creation error:", error);
+            toast.error("Failed to initiate payment. Please try again.");
+            return null;
+          }
         } catch (error) {
           console.error("Order placement error:", error);
           toast.error(
@@ -1089,6 +1232,7 @@ const useOrderStore = create(
                 partner_id
                 gst_included
                 extra_charges
+                payment_details
                 phone
                 user_id
                 orderedby
@@ -1137,13 +1281,15 @@ const useOrderStore = create(
             );
           }
 
-          return ordersResponse.orders.map((order: HasuraOrder) => {
+          return ordersResponse.orders.map((order: any) => {
             // Ensure captain data is properly structured
-            const captainData = order.captainid ? {
-              id: order.captainid.id,
-              name: order.captainid.name,
-              email: order.captainid.email
-            } : null;
+            const captainData = order.captainid
+              ? {
+                  id: order.captainid.id,
+                  name: order.captainid.name,
+                  email: order.captainid.email,
+                }
+              : null;
 
             return {
               id: order.id,
@@ -1161,11 +1307,12 @@ const useOrderStore = create(
               extraCharges: order.extra_charges || [],
               delivery_charge: order.delivery_charge,
               status_history: order.status_history,
+              payment_details: order.payment_details,
               userId: order.user_id,
               user: order.user,
               orderedby: order.orderedby,
               captain_id: order.captain_id,
-              captain: captainData,  // Use the properly structured captain data
+              captain: captainData, // Use the properly structured captain data
               items: order.order_items.map((i: any) => ({
                 id: i.menu?.id,
                 quantity: i.quantity,
@@ -1218,6 +1365,11 @@ const useOrderStore = create(
         set({ deliveryInfo: info }),
 
       setDeliveryCost: (cost: number | null) => set({ deliveryCost: cost }),
+
+      // Payment modal functions
+      setPaymentLoaderModal: (open: boolean) => set({ payment_loader_modal: open }),
+      setPaymentResultModal: (state: PaymentModalState) => set({ payment_result_modal: state }),
+      closePaymentResultModal: () => set({ payment_result_modal: { isOpen: false, type: null, message: "", autoCloseTimer: 0 } }),
     }),
     {
       name: "order-storage",

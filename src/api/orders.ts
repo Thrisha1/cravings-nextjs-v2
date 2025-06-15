@@ -133,11 +133,13 @@ export const getOrderByIdQuery = `
       type
       delivery_address
       status
+      payment_status
       phone
       partner_id
       notes
       gst_included
       extra_charges
+      payment_details
       captainid {
         id
         name
@@ -183,10 +185,12 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     delivery_address
     delivery_location
     status
+    payment_status
     status_history
     partner_id
     gst_included
     extra_charges
+    payment_details
     phone
     user_id
     orderedby
@@ -244,15 +248,20 @@ subscription GetUserOrders($user_id: uuid!) {
     delivery_location
     notes
     status
+    payment_status
     status_history
     partner_id
     partner {
       gst_percentage
       currency
       store_name
+      phone
+      country_code
+      whatsapp_numbers
     }
     gst_included
     extra_charges
+    payment_details
     phone
     user_id
     user {
