@@ -347,67 +347,50 @@ export default function HomePage() {
           {/* Pricing Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
             {/* Basic Plan */}
-            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-              <div className="p-6 border-b border-gray-100">
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+              <div className="p-8 border-b border-gray-100 bg-gradient-to-br from-orange-50 to-white">
                 <h3 className="text-2xl font-bold text-gray-900">Basic</h3>
                 <div className="mt-4 flex items-baseline">
                   {isIndianPricing ? (
                     <>
-                      <span className="text-4xl font-bold text-gray-900">₹300</span>
-                      <span className="ml-1 text-lg text-gray-500">/month</span>
+                      <span className="text-5xl font-bold text-orange-500">₹300</span>
+                      <span className="ml-2 text-lg text-gray-600">/month</span>
                     </>
                   ) : (
                     <>
-                      <span className="text-4xl font-bold text-gray-900">$12</span>
-                      <span className="ml-1 text-lg text-gray-500">/month</span>
+                      <span className="text-5xl font-bold text-orange-500">$12</span>
+                      <span className="ml-2 text-lg text-gray-600">/month</span>
                     </>
                   )}
                 </div>
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-3 text-sm text-gray-500 font-medium">
                   {isIndianPricing ? 'or ₹3000/year (Save 17%)' : 'or $120/year (Save 17%)'}
                 </p>
               </div>
-              <div className="p-6 space-y-4">
-                <p className="font-medium text-gray-700 uppercase text-sm tracking-wide">MENU DIGITALIZATION:</p>
+              <div className="p-8 space-y-5">
+                <p className="font-semibold text-gray-800 uppercase text-sm tracking-wider">MENU DIGITALIZATION:</p>
 
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Create shareable offers</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Theme color customization</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Menu customization (images, prices, names)</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Reorder categories</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Edit/add &quot;Must Try&quot; dishes</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Google reviews integration</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Social media integration</span>
-                </div>
+                {[
+                  "Create shareable offers",
+                  "Theme color customization",
+                  "Menu customization (images, prices, names)",
+                  "Reorder categories",
+                  "Edit/add \"Must Try\" dishes",
+                  "Google reviews integration", 
+                  "Social media integration"
+                ].map((feature, index) => (
+                  <div key={index} className="flex items-center gap-3 group">
+                    <div className="bg-orange-100 rounded-full p-1">
+                      <Check className="h-4 w-4 text-orange-600" />
+                    </div>
+                    <span className="text-gray-700 group-hover:text-orange-600 transition-colors">{feature}</span>
+                  </div>
+                ))}
               </div>
-              <div className="p-6 border-t border-gray-100 space-y-4">
+              <div className="p-8 border-t border-gray-100 space-y-4 bg-gray-50">
                 <Button
                   onClick={() => window.open("https://wa.me/918590115462?text=Hi!%20I'm%20interested%20in%20the%20menu%20plan.%20Can%20you%20share%20more%20details%20about%20this?", "_blank")}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3"
                 >
                   Select Plan
                 </Button>
@@ -416,7 +399,7 @@ export default function HomePage() {
                     navigate.push("/hotels/Fried-Express/322331a7-8487-404a-a371-ae73e1afec82");
                     window.scrollTo(0, 0);
                   }}
-                  className="w-full bg-white hover:bg-gray-50 text-orange-500 border border-orange-500"
+                  className="w-full bg-white hover:bg-orange-50 text-orange-500 border-2 border-orange-500 font-semibold py-3"
                 >
                   View Demo
                 </Button>
@@ -424,95 +407,60 @@ export default function HomePage() {
             </div>
 
             {/* Pro Plan */}
-            <div className="bg-white rounded-2xl border-2 border-orange-500 overflow-hidden hover:shadow-md transition-shadow relative">
-              <div className="absolute -top--10 right-0 left-0 mx-auto w-max bg-orange-500 text-white text-xs font-bold py-1 px-4 rounded-b-lg shadow-md">
+            <div className="bg-white rounded-2xl border-2 border-orange-500 overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative">
+              <div className="absolute -top-px right-0 left-0 mx-auto w-max bg-orange-500 text-white text-sm font-bold py-2 px-6 rounded-b-lg shadow-lg">
                 MOST POPULAR
               </div>
-              <div className="p-6 border-b border-gray-100">
+              <div className="p-8 border-b border-gray-100 bg-gradient-to-br from-orange-50 to-white">
                 <h3 className="text-2xl font-bold text-gray-900">Pro</h3>
-                <div className="mt-4 flex items-baseline">
-                  {isIndianPricing ? (
-                    <>
+                <div className="mt-4">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl font-bold text-orange-500">₹500</span>
+                    <span className="text-lg text-gray-600">one-time setup fee</span>
+                  </div>
+                  <div className="mt-6">
+                    {isIndianPricing ? (
                       <div className="flex items-baseline gap-2">
-                        <span className="text-3xl text-gray-500 line-through">₹600</span>
-                        <span className="text-4xl font-bold text-gray-900">₹500</span>
-                        <span className="text-lg text-gray-500">/month</span>
+                        <span className="text-5xl font-bold text-orange-500">₹10</span>
+                        <span className="text-lg text-gray-600">/order</span>
                       </div>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-4xl font-bold text-gray-900">$15</span>
-                      <span className="ml-1 text-lg text-gray-500">/month</span>
-                    </>
-                  )}
+                    ) : (
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-5xl font-bold text-orange-500">$0.50</span>
+                        <span className="text-lg text-gray-600">/order</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <p className="mt-2 text-sm text-gray-500">
-                  {isIndianPricing ? <span><span className="text-gray-500 line-through">₹7200</span> <span className="text-gray-900 text-lg">₹6000</span> / year (Save 17%) </span> : <span>or $150/year (Save 17%)</span>}
-                </p>
               </div>
-              <div className="p-6 space-y-4">
-                <p className="font-medium text-gray-700 uppercase text-sm tracking-wide">ALL BASIC FEATURES PLUS:</p>
+              <div className="p-8 space-y-5">
+                <p className="font-semibold text-gray-800 uppercase text-sm tracking-wider">ALL BASIC FEATURES PLUS:</p>
 
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Everything in Basic plan</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Inbuilt POS</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Table ordering system</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Add charges in each table like Ac / Non-Ac, etc.</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">KOT and KDS system</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Receive orders via WhatsApp</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Admin dashboard for order tracking</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Outside delivery orders via WhatsApp</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Detailed Analytics</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">And GST and other extra charges</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-orange-500" />
-                  <span className="text-gray-700">Automatic stock updation</span>
-                </div>
-
+                {[
+                  "Everything in Basic plan",
+                  "Inbuilt POS",
+                  "Table ordering system",
+                  "Add charges in each table like Ac / Non-Ac, etc.",
+                  "KOT and KDS system",
+                  "Receive orders via WhatsApp",
+                  "Admin dashboard for order tracking",
+                  "Outside delivery orders via WhatsApp",
+                  "Detailed Analytics",
+                  "And GST and other extra charges",
+                  "Automatic stock updation"
+                ].map((feature, index) => (
+                  <div key={index} className="flex items-center gap-3 group">
+                    <div className="bg-orange-100 rounded-full p-1">
+                      <Check className="h-4 w-4 text-orange-600" />
+                    </div>
+                    <span className="text-gray-700 group-hover:text-orange-600 transition-colors">{feature}</span>
+                  </div>
+                ))}
               </div>
-              <div className="p-6 border-t border-gray-100 space-y-4">
+              <div className="p-8 border-t border-gray-100 space-y-4 bg-gray-50">
                 <Button
                   onClick={() => window.open("https://wa.me/918590115462?text=Hi!%20I'm%20interested%20in%20the%20ordering%20system%20and%20delivery%20plan.%20Can%20you%20share%20more%20details%20about%20this?", "_blank")}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3"
                 >
                   Select Plan
                 </Button>
@@ -521,7 +469,7 @@ export default function HomePage() {
                     navigate.push("/hotels/Al-Raidhan/373a15f9-9c58-4e34-ae07-b272e578928f")
                     window.scrollTo(0, 0);
                    }}
-                  className="w-full bg-white hover:bg-gray-50 text-orange-500 border border-orange-500"
+                  className="w-full bg-white hover:bg-orange-50 text-orange-500 border-2 border-orange-500 font-semibold py-3"
                 >
                   View Demo
                 </Button>
