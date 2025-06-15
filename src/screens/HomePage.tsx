@@ -350,22 +350,40 @@ export default function HomePage() {
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
               <div className="p-8 border-b border-gray-100 bg-gradient-to-br from-orange-50 to-white">
                 <h3 className="text-2xl font-bold text-gray-900">Basic</h3>
-                <div className="mt-4 flex items-baseline">
-                  {isIndianPricing ? (
-                    <>
-                      <span className="text-5xl font-bold text-orange-500">₹300</span>
-                      <span className="ml-2 text-lg text-gray-600">/month</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-5xl font-bold text-orange-500">$12</span>
-                      <span className="ml-2 text-lg text-gray-600">/month</span>
-                    </>
-                  )}
+                <div className="mt-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 p-3 border-2 border-orange-200 rounded-lg cursor-pointer hover:border-orange-500 transition-colors">
+                        {isIndianPricing ? (
+                          <div className="text-center">
+                            <span className="text-2xl font-bold text-orange-500">₹300</span>
+                            <span className="text-sm text-gray-600 block">monthly</span>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <span className="text-2xl font-bold text-orange-500">$12</span>
+                            <span className="text-sm text-gray-600 block">monthly</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 p-3 border-2 border-orange-200 rounded-lg cursor-pointer hover:border-orange-500 transition-colors">
+                        {isIndianPricing ? (
+                          <div className="text-center">
+                            <span className="text-2xl font-bold text-orange-500">₹3000</span>
+                            <span className="text-sm text-gray-600 block">yearly</span>
+                            <span className="text-xs text-green-600">Save ₹600</span>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <span className="text-2xl font-bold text-orange-500">$120</span>
+                            <span className="text-sm text-gray-600 block">yearly</span>
+                            <span className="text-xs text-green-600">Save $24</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <p className="mt-3 text-sm text-gray-500 font-medium">
-                  {isIndianPricing ? 'or ₹3000/year (Save 17%)' : 'or $120/year (Save 17%)'}
-                </p>
               </div>
               <div className="p-8 space-y-5">
                 <p className="font-semibold text-gray-800 uppercase text-sm tracking-wider">MENU DIGITALIZATION:</p>
@@ -411,22 +429,39 @@ export default function HomePage() {
               <div className="p-8 border-b border-gray-100 bg-gradient-to-br from-orange-50 to-white">
                 <h3 className="text-2xl font-bold text-gray-900">Pro</h3>
                 <div className="mt-4">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-bold text-orange-500">$15</span>
-                    <span className="text-lg text-gray-600">one-time setup fee</span>
-                  </div>
-                  <div className="mt-6">
-                    {isIndianPricing ? (
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-5xl font-bold text-orange-500">₹10</span>
-                        <span className="text-lg text-gray-600">/order</span>
+                  <div className="space-y-4">
+                    <div className="flex items-baseline gap-2 justify-center">
+                      <span className="text-4xl font-bold text-orange-500">₹500</span>
+                      <span className="text-lg text-gray-600">one-time setup fee</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 p-3 border-2 border-orange-200 rounded-lg cursor-pointer hover:border-orange-500 transition-colors">
+                        {isIndianPricing ? (
+                          <div className="text-center">
+                            <span className="text-2xl font-bold text-orange-500">₹10</span>
+                            <span className="text-sm text-gray-600 block">per delivery order</span>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <span className="text-2xl font-bold text-orange-500">$0.50</span>
+                            <span className="text-sm text-gray-600 block">per delivery order</span>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-5xl font-bold text-orange-500">$0.50</span>
-                        <span className="text-lg text-gray-600">/order</span>
+                      <div className="flex-1 p-3 border-2 border-orange-200 rounded-lg cursor-pointer hover:border-orange-500 transition-colors">
+                        {isIndianPricing ? (
+                          <div className="text-center">
+                            <span className="text-lg font-bold text-orange-500">No monthly</span>
+                            <span className="text-sm text-gray-600 block">subscription</span>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <span className="text-lg font-bold text-orange-500">No monthly</span>
+                            <span className="text-sm text-gray-600 block">subscription</span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
