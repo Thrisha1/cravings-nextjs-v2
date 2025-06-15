@@ -6,61 +6,70 @@ import PartnerCard from "./PartnerCard";
 import { useInView } from "react-intersection-observer";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { toast } from "sonner";
-import { getAllPartnersQuery } from "@/api/partners";
+import { getNearByPartnersQuery } from "@/api/partners";
 import { useSearchParams } from "next/navigation";
-
-
+import { getLocationCookie } from "@/app/auth/actions";
 
 const HotelsList = ({ 
   initialPartners,
   initialTotalCount,
-  initialDistrict = "all"
+  district = "all",
+  limit = 10,
+  query = ""
 }: {
   initialPartners: Partner[];
   initialTotalCount: number;
-  initialDistrict?: string;
+  district?: string;
+  limit?: number;
+  query?: string;
 }) => {
   const [partners, setPartners] = useState<Partner[]>(initialPartners);
-  const [totalCount, setTotalCount] = useState<number>(initialTotalCount);
   const [isLoading, setIsLoading] = useState(false);
   const [currentOffset, setCurrentOffset] = useState(initialPartners.length);
-  const serachParams = useSearchParams();
-  const location = serachParams.get("location") || "";
+  const searchParams = useSearchParams();
+  const location = searchParams.get("location") || "";
 
-  const limit = 12; 
 
-  useEffect(() => {
-    setPartners(initialPartners);
-    setTotalCount(initialTotalCount);
-    setCurrentOffset(initialPartners.length);
-  }, [initialPartners]);
-
-  
   const { ref, inView } = useInView({
     threshold: 0,
     triggerOnce: false,
   });
 
+  useEffect(() => {
+    setPartners(initialPartners);
+    setCurrentOffset(initialPartners.length);
+  }, [initialPartners]);
+
   const loadMorePartners = async () => {
-    if (isLoading || partners.length >= totalCount) return;
-    
+    if (isLoading || (partners.length >= initialTotalCount)) return;
+
     setIsLoading(true);
     try {
-      const variables = {
-        limit,
-        offset: currentOffset + 1,
-        district: initialDistrict ? `%${location}%` : "%",
-      };
+      // Get user location from localStorage
+      const locCookie = await getLocationCookie();
+      let userLat = 0;
+      let userLng = 0;
 
-      const data = await fetchFromHasura(getAllPartnersQuery, variables);
-      const newPartners = data.partners;
-      const newTotalCount = data.partners_aggregate.aggregate.count;
+      if (locCookie) {
+          userLat = locCookie.lat;
+          userLng = locCookie.lng;
+      }
+
+      const data = await fetchFromHasura(getNearByPartnersQuery, {
+        user_lat: userLat,
+        user_lng: userLng,
+        limit: limit,
+        offset: currentOffset,
+        district_filter: location ? `%${location}%` : "%",
+        search_query: query ? `%${query}%` : "%"
+      });
+      const newPartners = data.get_all_partners;
 
       if (newPartners.length) {
         setPartners(prev => [...prev, ...newPartners]);
         setCurrentOffset(prev => prev + limit);
       }
-      setTotalCount(newTotalCount);
+
     } catch (error) {
       console.error("Error loading more partners:", error);
       toast.error("Failed to load more hotels");
@@ -74,8 +83,6 @@ const HotelsList = ({
       loadMorePartners();
     }
   }, [inView]);
-
- 
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -98,8 +105,6 @@ const HotelsList = ({
           Loading....
         </div>
       )}
-
-    
     </div>
   );
 };

@@ -38,10 +38,21 @@ export function Navbar() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
+  const [isInstalled, setIsInstalled] = useState(false);
   const currentPath = pathname.split("?")[0];
 
   useEffect(() => {
+
+    const isApp = window.localStorage.getItem("isApp");
+    if (isApp === "true") {
+      setIsInstalled(true);
+    } else {
+      setIsInstalled(false);
+    }
+
+    console.log(isInstalled, isApp);
+    
+
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -244,7 +255,7 @@ export function Navbar() {
                 </Link>
               ) : null}
               {renderUserProfile()}
-              {userData ? (
+              {userData && !isInstalled ? (
                 <button
                   onClick={handleInstallClick}
                   className="inline-flex items-center h-fit text-nowrap text-xs gap-2 px-3 md:px-4 py-2 font-medium text-white bg-orange-600 rounded-full hover:bg-orange-700 transition-colors"

@@ -275,7 +275,7 @@ export function CategoryManagementForm({
                     <TableHead className="w-[100px] text-center hidden sm:table-cell">
                       Actions
                     </TableHead>
-                    <TableHead className="w-[80px] text-center sm:hidden">
+                    <TableHead className="w-[80px] text-center">
                       Move
                     </TableHead>
                     <TableHead className="w-[40px] hidden sm:table-cell">
@@ -366,8 +366,8 @@ export function CategoryManagementForm({
                                     </Button>
                                   </div>
                                 </TableCell>
-                                {/* Mobile Actions */}
-                                <TableCell className="sm:hidden">
+                                {/* Up/Down Arrows - Visible on All Devices */}
+                                <TableCell>
                                   <div className="flex justify-center gap-1">
                                     <Button
                                       variant="ghost"

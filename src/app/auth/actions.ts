@@ -12,7 +12,7 @@ export const setAuthCookie = async (data: { id: string; role: string , feature_f
   const encrypted = encryptText(data);
   (await cookies()).set('auth_token', encrypted, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
     sameSite: 'lax',

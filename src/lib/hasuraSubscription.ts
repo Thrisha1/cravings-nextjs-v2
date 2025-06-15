@@ -1,4 +1,3 @@
-
 import { createClient, Client } from 'graphql-ws';
 
 interface SubscriptionOptions {
@@ -47,8 +46,27 @@ class HasuraSubscriptionClient {
       {
         next: onNext,
         error: (error) => {
-          console.error('Subscription error:', error);
-          onError?.(error instanceof Error ? error : new Error(String(error)));
+          console.error('Subscription error details:', {
+            error,
+            message: error instanceof Error ? error.message : String(error),
+            raw: JSON.stringify(error, null, 2)
+          });
+          
+          // Try to extract a meaningful error message
+          let errorMessage = 'Subscription error occurred';
+          if (error instanceof Error) {
+            errorMessage = error.message;
+          } else if (typeof error === 'object' && error !== null) {
+            // Try to extract message from GraphQL error
+            const graphqlError = (error as any)?.message || 
+                               (error as any)?.errors?.[0]?.message ||
+                               JSON.stringify(error);
+            errorMessage = graphqlError;
+          } else {
+            errorMessage = String(error);
+          }
+          
+          onError?.(new Error(errorMessage));
         },
         complete: () => {
           console.log('Subscription completed');

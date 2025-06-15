@@ -112,17 +112,6 @@ const Explore = ({
     setOffers(commonOffers);
   }, [commonOffers]);
 
-  useEffect(() => {
-    if (isLoadingMore) {
-      toast.loading("Loading more items...");
-    } else {
-      toast.dismiss();
-    }
-
-    return () => {
-      toast.dismiss();
-    };
-  }, [isLoadingMore]);
 
   const handleRequestLocationAccess = () => {
     if (navigator.geolocation) {
