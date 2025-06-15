@@ -21,6 +21,8 @@ import {
 import { sendRegistrationWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
 import { DeliveryRules } from "./orderStore";
+import { clearUserToken } from "@/lib/clearUserToken";
+import { Notification } from "@/app/actions/notification";
 
 // Interfaces remain the same
 interface BaseUser {
@@ -90,6 +92,7 @@ export interface Partner extends BaseUser {
   is_shop_open: boolean;
   country?: string;
   country_code?: string;
+  distance_meters?: number;
 }
 
 export interface SuperAdmin extends BaseUser {
@@ -317,9 +320,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async() => {
+    const fcmToken = localStorage.getItem('fcmToken');
+    const isApp = localStorage.getItem('isApp');
+    await Notification.token.remove();
     await removeAuthCookie();
     await removeLocationCookie();
     localStorage.clear();
+    if (fcmToken) localStorage.setItem('fcmToken', fcmToken);
+    if (isApp) localStorage.setItem('isApp', isApp);
     window.location.href = "/";
     set({ userData: null, error: null });
   },

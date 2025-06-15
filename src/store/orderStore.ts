@@ -23,7 +23,8 @@ import {
   setStatusHistory,
   toStatusDisplayFormat,
 } from "@/lib/statusHistory";
-import { sendOrderNotification } from "@/app/actions/sendOrderNotification";
+import { Notification } from "@/app/actions/notification";
+// import { sendOrderNotification } from "@/app/actions/notification";
 
 export interface OrderItem extends HotelDataMenus {
   id: string;
@@ -262,6 +263,8 @@ const useOrderStore = create(
             }
           );
 
+          await Notification.user.sendOrderStatusNotification(order , status);
+
           if (response.errors) {
             throw new Error(
               response.errors[0]?.message || "Failed to update status history"
@@ -335,6 +338,13 @@ const useOrderStore = create(
             }
           }
 
+          if(newStatus === "cancelled"){
+            const order = orders.find((o) => o.id === orderId);
+            if(order){
+              await Notification.user.sendOrderStatusNotification(order , newStatus);
+            }
+          }
+
           const updatedOrders = orders.map((order) =>
             order.id === orderId ? { ...order, status: newStatus } : order
           );
@@ -390,6 +400,7 @@ const useOrderStore = create(
                 category: i.menu?.category,
               })),
             }));
+
 
             if (allOrders) {
               set({ userOrders: allOrders });
@@ -479,6 +490,7 @@ const useOrderStore = create(
                   deliveryAddress: order.delivery_address,
                   partnerId: order.partner_id,
                   gstIncluded: order.gst_included,
+                  status_history: order.status_history,
                   extraCharges: order.extra_charges,
                   userId: order.user_id,
                   orderedby: order.orderedby,
@@ -1010,7 +1022,7 @@ const useOrderStore = create(
           }));
 
           toast.success("Order placed successfully!");
-          await sendOrderNotification(orderId, hotelData.id);
+          await Notification.partner.sendOrderNotification(newOrder);
           return newOrder;
         } catch (error) {
           console.error("Order placement error:", error);

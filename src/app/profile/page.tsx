@@ -10,8 +10,14 @@ import {
   ArrowRight,
   X,
   // Loader2,
+  Share2,
 } from "lucide-react";
-import { AuthUser, GeoLocation, Partner, useAuthStore } from "@/store/authStore";
+import {
+  AuthUser,
+  GeoLocation,
+  Partner,
+  useAuthStore,
+} from "@/store/authStore";
 import { useLocationStore } from "@/store/geolocationStore";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -50,7 +56,11 @@ import {
 } from "@/lib/getFeatures";
 import { updateAuthCookie } from "../auth/actions";
 import { DeliveryRules, Order } from "@/store/orderStore";
-import { createCaptainMutation, getCaptainsQuery, deleteCaptainMutation } from "@/api/captains";
+import {
+  createCaptainMutation,
+  getCaptainsQuery,
+  deleteCaptainMutation,
+} from "@/api/captains";
 import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/DeliveryAndGeoLocationSettings";
 import useOrderStore from "@/store/orderStore";
 import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
@@ -195,13 +205,17 @@ export default function ProfilePage() {
   const [isCreatingCaptain, setIsCreatingCaptain] = useState(false);
   const [captainError, setCaptainError] = useState<string | null>(null);
   const [captains, setCaptains] = useState<Captain[]>([]);
-  const [isDeletingCaptain, setIsDeletingCaptain] = useState<string | null>(null);
+  const [isDeletingCaptain, setIsDeletingCaptain] = useState<string | null>(
+    null
+  );
   const [showCaptainForm, setShowCaptainForm] = useState(false);
   const [captainOrders, setCaptainOrders] = useState<CaptainOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const { subscribeOrders } = useOrderStore();
   const [isEditingCountryCode, setIsEditingCountryCode] = useState(false);
-  const [countryCode, setCountryCode] = useState( userData?.role === "partner" ? userData?.country_code || "+91" : "+91");
+  const [countryCode, setCountryCode] = useState(
+    userData?.role === "partner" ? userData?.country_code || "+91" : "+91"
+  );
   const [countryCodeSearch, setCountryCodeSearch] = useState("");
   const [showPricing, setShowPricing] = useState(true);
 
@@ -288,10 +302,15 @@ export default function ProfilePage() {
   ]);
 
   useEffect(() => {
+    console.log(
+      window.localStorage.getItem("fcmToken"),
+      "FCM Token from localStorage"
+    );
     if (userData?.role === "partner" && features?.captainordering.enabled) {
       const fetchCaptainOrders = async () => {
         try {
-          const response = await fetchFromHasura(`
+          const response = await fetchFromHasura(
+            `
             query GetCaptainOrders($partner_id: uuid!) {
               orders(where: {partner_id: {_eq: $partner_id}, orderedby: {_eq: "captain"}}, order_by: {created_at: desc}) {
                 id
@@ -314,9 +333,11 @@ export default function ProfilePage() {
                 }
               }
             }
-          `, {
-            partner_id: userData.id
-          });
+          `,
+            {
+              partner_id: userData.id,
+            }
+          );
 
           if (response.orders) {
             setCaptainOrders(response.orders);
@@ -333,15 +354,15 @@ export default function ProfilePage() {
 
       const unsubscribe = subscribeOrders((orders: Order[]) => {
         const captainOrders = orders
-          .filter(order => order.orderedby === "captain")
-          .map(order => ({
+          .filter((order) => order.orderedby === "captain")
+          .map((order) => ({
             id: order.id,
             status: order.status,
             created_at: order.createdAt,
             total_price: order.totalPrice,
             table_number: order.tableNumber || 0,
             phone: order.phone || "",
-            order_items: order.items.map(item => ({
+            order_items: order.items.map((item) => ({
               id: item.id,
               quantity: item.quantity,
               menu: {
@@ -349,12 +370,15 @@ export default function ProfilePage() {
                 name: item.name,
                 price: item.price,
                 category: {
-                  name: typeof item.category === 'string'
-                    ? item.category
-                    : (item.category && 'name' in item.category ? item.category.name : "")
-                }
-              }
-            }))
+                  name:
+                    typeof item.category === "string"
+                      ? item.category
+                      : item.category && "name" in item.category
+                      ? item.category.name
+                      : "",
+                },
+              },
+            })),
           }));
         setCaptainOrders(captainOrders);
       });
@@ -1209,41 +1233,51 @@ export default function ProfilePage() {
         throw new Error("Please enter a valid email address");
       }
 
-      const checkEmail = await fetchFromHasura(`
+      const checkEmail = await fetchFromHasura(
+        `
         query CheckCaptainEmail($email: String!) {
           captain(where: {email: {_eq: $email}}) {
             id
             email
           }
         }
-      `, {
-        email: captainEmail
-      });
+      `,
+        {
+          email: captainEmail,
+        }
+      );
 
       if (checkEmail?.captain?.length > 0) {
-        throw new Error("This email is already registered. Please use a different email address.");
+        throw new Error(
+          "This email is already registered. Please use a different email address."
+        );
       }
 
-      const checkName = await fetchFromHasura(`
+      const checkName = await fetchFromHasura(
+        `
         query CheckCaptainName($name: String!) {
           captain(where: {name: {_eq: $name}}) {
             id
             name
           }
         }
-      `, {
-        name: captainName
-      });
+      `,
+        {
+          name: captainName,
+        }
+      );
 
       if (checkName?.captain?.length > 0) {
-        throw new Error("This name is already taken. Please use a different name.");
+        throw new Error(
+          "This name is already taken. Please use a different name."
+        );
       }
 
       console.log("Creating captain account with data:", {
         name: captainName,
         email: captainEmail,
         partner_id: userData.id,
-        role: "captain"
+        role: "captain",
       });
 
       const result = await fetchFromHasura(createCaptainMutation, {
@@ -1251,7 +1285,7 @@ export default function ProfilePage() {
         email: captainEmail,
         password: captainPassword,
         partner_id: userData.id,
-        role: "captain"
+        role: "captain",
       });
 
       console.log("Captain creation result:", result);
@@ -1259,17 +1293,26 @@ export default function ProfilePage() {
       if (!result?.insert_captain_one) {
         if (result?.errors?.[0]?.message?.includes("unique constraint")) {
           if (result?.errors?.[0]?.message?.includes("name")) {
-            throw new Error("This name is already taken. Please use a different name.");
+            throw new Error(
+              "This name is already taken. Please use a different name."
+            );
           }
           if (result?.errors?.[0]?.message?.includes("email")) {
-            throw new Error("This email is already registered. Please use a different email address.");
+            throw new Error(
+              "This email is already registered. Please use a different email address."
+            );
           }
-          throw new Error("A unique constraint violation occurred. Please try again.");
+          throw new Error(
+            "A unique constraint violation occurred. Please try again."
+          );
         }
-        throw new Error("Failed to create captain account - no response from server");
+        throw new Error(
+          "Failed to create captain account - no response from server"
+        );
       }
 
-      const verifyCaptain = await fetchFromHasura(`
+      const verifyCaptain = (await fetchFromHasura(
+        `
         query VerifyCaptain($partner_id: uuid!) {
           captain(where: {partner_id: {_eq: $partner_id}}) {
             id
@@ -1279,13 +1322,17 @@ export default function ProfilePage() {
             role
           }
         }
-      `, {
-        partner_id: userData.id
-      }) as { captain: Captain[] };
+      `,
+        {
+          partner_id: userData.id,
+        }
+      )) as { captain: Captain[] };
 
       console.log("Verification query result:", verifyCaptain);
 
-      if (!verifyCaptain?.captain?.some((c: Captain) => c.email === captainEmail)) {
+      if (
+        !verifyCaptain?.captain?.some((c: Captain) => c.email === captainEmail)
+      ) {
         throw new Error("Captain account creation verification failed");
       }
 
@@ -1297,7 +1344,10 @@ export default function ProfilePage() {
       fetchCaptains();
     } catch (error) {
       console.error("Error creating captain account:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to create captain account";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to create captain account";
       setCaptainError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -1308,9 +1358,9 @@ export default function ProfilePage() {
   const fetchCaptains = async () => {
     if (!userData) return;
     try {
-      const result = await fetchFromHasura(getCaptainsQuery, {
-        partner_id: userData.id
-      }) as { captain: Captain[] };
+      const result = (await fetchFromHasura(getCaptainsQuery, {
+        partner_id: userData.id,
+      })) as { captain: Captain[] };
       setCaptains(result.captain || []);
     } catch (error) {
       console.error("Error fetching captains:", error);
@@ -1336,11 +1386,11 @@ export default function ProfilePage() {
       `;
 
       await fetchFromHasura(updateOrdersMutation, {
-        captain_id: id
+        captain_id: id,
       });
 
       await fetchFromHasura(deleteCaptainMutation, {
-        id
+        id,
       });
 
       await fetchCaptains();
@@ -1416,6 +1466,40 @@ export default function ProfilePage() {
     }
   };
 
+  const handleShare = async () => {
+    const partner = userData as Partner;
+    const businessUrl = `${window.location.origin}${
+      partner.business_type === "restaurant" ? "/hotels" : "/business"
+    }/${partner.store_name?.replace(/\s+/g, "-")}/${partner.id}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: partner.store_name,
+          text:
+            partner.description ||
+            `Check out ${partner.store_name} on Cravings!`,
+          url: businessUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(businessUrl);
+        toast.success("Link copied to clipboard!");
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name !== "AbortError") {
+        console.error("Error sharing:", error);
+        // Try fallback to clipboard
+        try {
+          await navigator.clipboard.writeText(businessUrl);
+          toast.success("Link copied to clipboard!");
+        } catch (clipboardError) {
+          console.error("Error copying to clipboard:", clipboardError);
+          toast.error("Failed to share or copy link");
+        }
+      }
+    }
+  };
+
   if (isLoading) {
     return <OfferLoadinPage message="Loading Profile...." />;
   }
@@ -1442,29 +1526,35 @@ export default function ProfilePage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex md:flex-row flex-col gap-4">
-              {userData?.role === "user" && (
-                <>
-                </>
-              )}
+            <div className="flex md:flex-row flex-col gap-2">
+              {userData?.role === "user" && <></>}
               {userData?.role === "partner" && (
                 <>
-                  <Link
-                    href={`${
-                      userData?.business_type === "restaurant"
-                        ? "/hotels"
-                        : "/business"
-                    }/${userData?.store_name?.replace(/\s+/g, "-")}/${
-                      userData?.id
-                    }`}
-                    className="flex items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
-                  >
-                    <Tag className="sm:size-4 size-8 mr-2" />
-                    View My Business Website
-                  </Link>
+                  <div className="flex gap-2 w-full justify-between items-center">
+                    <Link
+                      href={`${
+                        userData?.business_type === "restaurant"
+                          ? "/hotels"
+                          : "/business"
+                      }/${userData?.store_name?.replace(/\s+/g, "-")}/${
+                        userData?.id
+                      }`}
+                      className="flex w-full h-[48px] items-center font-semibold rounded-lg text-sm bg-orange-100 text-orange-800 sm:text-lg  sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
+                    >
+                      <Tag className="size-4  mr-2" />
+                      View My Business Website
+                    </Link>
+                    <button
+                      onClick={handleShare}
+                      className="flex items-center bg-orange-100 text-orange-800 font-semibold rounded-lg h-[48px]  text-sm sm:text-lg sm:p-4 p-2 hover:bg-orange-800 hover:text-orange-100 transition-colors"
+                    >
+                      <Share2 className="size-4 mr-2" />
+                      Share
+                    </button>
+                  </div>
                   <Button
                     onClick={handleShopOpenClose}
-                    className={`flex items-center h-[60px] font-semibold rounded-lg text-sm  sm:text-lg  sm:p-4 p-2  transition-colors ${
+                    className={`flex items-center h-[48px] font-semibold rounded-lg text-sm  sm:text-base  sm:p-4 p-2  transition-colors ${
                       isShopOpen ? "bg-red-500" : "bg-green-600"
                     }`}
                   >
@@ -1550,16 +1640,15 @@ export default function ProfilePage() {
                           disabled={isSaving.description || !description}
                           className="bg-orange-600 hover:bg-orange-700 text-white"
                         >
-                          {isSaving.description ? (
-                            <>Saving...</>
-                          ) : (
-                            "Save"
-                          )}
+                          {isSaving.description ? <>Saving...</> : "Save"}
                         </Button>
                         <Button
                           variant="outline"
                           onClick={() => {
-                            setIsEditing((prev) => ({ ...prev, description: false }));
+                            setIsEditing((prev) => ({
+                              ...prev,
+                              description: false,
+                            }));
                             setDescription(userData?.description || "");
                           }}
                         >
@@ -1618,7 +1707,10 @@ export default function ProfilePage() {
                         <Button
                           variant="outline"
                           onClick={() => {
-                            setIsEditing((prev) => ({ ...prev, placeId: false }));
+                            setIsEditing((prev) => ({
+                              ...prev,
+                              placeId: false,
+                            }));
                             setPlaceId(userData?.place_id || "");
                           }}
                         >
@@ -1687,8 +1779,6 @@ export default function ProfilePage() {
                 deliverySaving={isSaving.deliverySettings}
                 handleSaveDeliverySettings={handleSaveDeliverySettings}
               />
-
-              
 
               <div className="space-y-2 pt-4">
                 <label htmlFor="whatsNum" className="text-lg font-semibold">
@@ -1826,7 +1916,9 @@ export default function ProfilePage() {
                         <div className="flex gap-2">
                           <Button
                             onClick={handleSaveWhatsappNumber}
-                            disabled={isSaving.whatsappNumber || !whatsappNumber}
+                            disabled={
+                              isSaving.whatsappNumber || !whatsappNumber
+                            }
                             className="bg-orange-600 hover:bg-orange-700 text-white"
                           >
                             {isSaving.whatsappNumber ? <>Saving...</> : "Save"}
@@ -1834,8 +1926,13 @@ export default function ProfilePage() {
                           <Button
                             variant="outline"
                             onClick={() => {
-                              setIsEditing((prev) => ({ ...prev, whatsappNumber: false }));
-                              setWhatsappNumber(whatsappNumber ? whatsappNumber : "");
+                              setIsEditing((prev) => ({
+                                ...prev,
+                                whatsappNumber: false,
+                              }));
+                              setWhatsappNumber(
+                                whatsappNumber ? whatsappNumber : ""
+                              );
                             }}
                           >
                             Cancel
@@ -1877,7 +1974,9 @@ export default function ProfilePage() {
                 </p>
                 {userData?.role === "partner" && (
                   <div className="space-y-2 pt-4">
-                    <label className="text-lg font-semibold">Country Code</label>
+                    <label className="text-lg font-semibold">
+                      Country Code
+                    </label>
                     <div className="flex gap-2 items-center">
                       {isEditingCountryCode ? (
                         <>
@@ -1894,16 +1993,22 @@ export default function ProfilePage() {
                                   type="text"
                                   placeholder="Search country or code..."
                                   value={countryCodeSearch}
-                                  onChange={e => setCountryCodeSearch(e.target.value)}
+                                  onChange={(e) =>
+                                    setCountryCodeSearch(e.target.value)
+                                  }
                                   className="w-full border rounded p-2"
                                 />
                               </div>
                               {countryCodes
-                                .filter(item =>
-                                  item.country.toLowerCase().includes(countryCodeSearch.toLowerCase()) ||
-                                  item.code.includes(countryCodeSearch)
+                                .filter(
+                                  (item) =>
+                                    item.country
+                                      .toLowerCase()
+                                      .includes(
+                                        countryCodeSearch.toLowerCase()
+                                      ) || item.code.includes(countryCodeSearch)
                                 )
-                                .map(item => (
+                                .map((item) => (
                                   <SelectItem key={item.code} value={item.code}>
                                     {item.code} ({item.country})
                                   </SelectItem>
@@ -1931,7 +2036,9 @@ export default function ProfilePage() {
                         </>
                       ) : (
                         <div className="flex justify-between items-center w-full">
-                          <span className="text-gray-700 font-mono">{userData.country_code || countryCode}</span>
+                          <span className="text-gray-700 font-mono">
+                            {userData.country_code || countryCode}
+                          </span>
                           <Button
                             onClick={() => setIsEditingCountryCode(true)}
                             variant="ghost"
@@ -1943,7 +2050,8 @@ export default function ProfilePage() {
                       )}
                     </div>
                     <p className="text-sm text-gray-500">
-                      This country code will be used for WhatsApp and phone links.
+                      This country code will be used for WhatsApp and phone
+                      links.
                     </p>
                   </div>
                 )}
@@ -1974,7 +2082,10 @@ export default function ProfilePage() {
                         <Button
                           variant="outline"
                           onClick={() => {
-                            setIsEditing((prev) => ({ ...prev, instaLink: false }));
+                            setIsEditing((prev) => ({
+                              ...prev,
+                              instaLink: false,
+                            }));
                             setInstaLink(instaLink ? instaLink : "");
                           }}
                         >
@@ -2033,7 +2144,10 @@ export default function ProfilePage() {
                         <Button
                           variant="outline"
                           onClick={() => {
-                            setIsEditing((prev) => ({ ...prev, footNote: false }));
+                            setIsEditing((prev) => ({
+                              ...prev,
+                              footNote: false,
+                            }));
                             setFootNote(footNote ? footNote : "");
                           }}
                         >
@@ -2192,7 +2306,9 @@ export default function ProfilePage() {
                           <div>
                             <div className="font-medium">Captain Ordering</div>
                             <div className="text-sm text-gray-500">
-                              {features.captainordering.enabled ? "Enabled" : "Disabled"}
+                              {features.captainordering.enabled
+                                ? "Enabled"
+                                : "Disabled"}
                             </div>
                           </div>
                           <Switch
@@ -2215,7 +2331,9 @@ export default function ProfilePage() {
                           <div className="pt-2">
                             <Button
                               className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                              onClick={() => router.push("/admin/captain-management")}
+                              onClick={() =>
+                                router.push("/admin/captain-management")
+                              }
                             >
                               Manage Captain Accounts
                             </Button>

@@ -85,6 +85,7 @@ const HotelMenuPage = ({
   const { setHotelId, genOrderId, open_place_order_modal } = useOrderStore();
 
   const pathname = usePathname();
+  
 
   useEffect(() => {
     const handleUpdateQrCount = async () => {
@@ -162,7 +163,7 @@ const HotelMenuPage = ({
 
   const topItems = getTopItems();
   const categories = getCategories();
-  const selectedCategory = categories[0]?.name || "";
+  const selectedCategory = "all";
   const items = getCategoryItems(selectedCategory);
 
   return (
@@ -229,6 +230,7 @@ const HotelMenuPage = ({
           {/* search bar  */}
           <section className="px-[8%]">
             <SearchMenu
+              tableNumber={tableNumber}
               hotelData={hoteldata}
               feature_flags={hoteldata?.feature_flags || ""}
               currency={hoteldata?.currency}
@@ -257,6 +259,7 @@ const HotelMenuPage = ({
                 currency={hoteldata?.currency}
                 items={topItems}
                 styles={styles}
+                tableNumber={tableNumber}
               />
             </section>
           )}
@@ -271,6 +274,7 @@ const HotelMenuPage = ({
               categories={categories}
               selectedCategory={selectedCategory}
               menu={hoteldata?.menus}
+              tableNumber={tableNumber}
             />
           </section>
         </>

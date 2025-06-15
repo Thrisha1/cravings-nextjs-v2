@@ -92,7 +92,7 @@ const BottomNav = () => {
         ];
 
         // Add Orders if ordering is enabled
-        if (features?.ordering?.enabled) {
+        if (features?.ordering?.enabled || features?.delivery?.enabled || features?.pos?.enabled) {
           partnerItems.push({
             href: "/admin/orders",
             name: "Orders",
@@ -159,7 +159,8 @@ const BottomNav = () => {
   }, [lastScrollY]);
 
   // Don't show on /captain* routes, otherwise show if items exist
-  const shouldShow = items.length > 0 && !pathname.startsWith("/captain");
+  const shouldShow = items.length > 0 && !pathname.startsWith("/captain") && !pathname.startsWith("/kot") && !pathname.startsWith("/bill");
+
 
   if (!shouldShow) return null;
 
