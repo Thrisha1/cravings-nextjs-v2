@@ -430,9 +430,18 @@ export default function HomePage() {
                 <h3 className="text-2xl font-bold text-gray-900">Pro</h3>
                 <div className="mt-4">
                   <div className="space-y-4">
-                    <div className="flex items-baseline gap-2 justify-center">
-                      <span className="text-4xl font-bold text-orange-500">₹500</span>
-                      <span className="text-lg text-gray-600">one-time setup fee</span>
+                  <div className="flex items-baseline gap-2">
+                      {isIndianPricing ? (
+                        <>
+                          <span className="text-4xl font-bold text-orange-500">₹500</span>
+                          <span className="text-lg text-gray-600">one-time setup fee</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-4xl font-bold text-orange-500">$12</span>
+                          <span className="text-lg text-gray-600">setup fee</span>
+                        </>
+                      )}
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="flex-1 p-3 border-2 border-orange-200 rounded-lg cursor-pointer hover:border-orange-500 transition-colors">
@@ -522,7 +531,7 @@ export default function HomePage() {
                         </>
                       ) : (
                         <>
-                          <span className="text-4xl font-bold text-orange-500">$20</span>
+                          <span className="text-4xl font-bold text-orange-500">$12</span>
                           <span className="text-lg text-gray-600">setup fee</span>
                         </>
                       )}
@@ -536,7 +545,7 @@ export default function HomePage() {
                           </div>
                         ) : (
                           <div className="text-center">
-                            <span className="text-2xl font-bold text-orange-500">$20</span>
+                            <span className="text-2xl font-bold text-orange-500">$12</span>
                             <span className="text-sm text-gray-600 block">monthly</span>
                           </div>
                         )}
