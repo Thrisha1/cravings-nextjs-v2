@@ -146,7 +146,8 @@ class PartnerNotification {
     const message = getMessage("New Order Of", `You have a new order of ${orderItemsDesc}`, tokens , {
       url : 'https://www.cravings.live/admin/orders',
       channel_id : 'cravings_channel_1',
-      sound : 'custom_sound'
+      sound : 'custom_sound',
+      order_id : order.id
     });
 
     const response = await fetch(`${BASE_URL}/api/notifications/send`, {
@@ -196,7 +197,7 @@ class UserNotification {
       `Your order has been ${status} by ${order.partner?.store_name}`,
       tokens,
       {
-        url : 'https://www.cravings.live/admin/orders',
+        url : `https://www.cravings.live/order/${order.id}`,
         channel_id : 'cravings_channel_2',
         sound : 'default_sound'
       },
