@@ -1,9 +1,8 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -21,11 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { format, addMonths, addYears, isAfter, parseISO } from "date-fns";
-import { fetchFromHasura } from "@/lib/hasuraClient";
-import { revalidateTag } from "@/app/actions/revalidate";
+import { format } from "date-fns";
 import { usePartnerManagement } from "@/lib/subscriptionManagemenFunctions";
-import { DateRangePicker } from "../ui/date-range-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { CalendarIcon } from "lucide-react";
@@ -60,6 +56,11 @@ export interface PartnerPayment {
 const SubscriptionManagement = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [paymentDate, setPaymentDate] = useState<Date | undefined>(new Date());
+  
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [paymentDateSort, setPaymentDateSort] = useState<"nearest" | "oldest">("nearest");
+  
   const {
     partners,
     subscriptions,
@@ -84,10 +85,10 @@ const SubscriptionManagement = () => {
     setIncludePayment,
     setSubscriptionPayment,
     fetchPartners,
+    applyFilters,
     updatePartnerStatus,
     addSubscription,
     addPayment,
-    updatePaymentDate,
     viewPayments,
     viewAllSubscriptions,
     showAddSubscriptionForm,
@@ -95,9 +96,7 @@ const SubscriptionManagement = () => {
     showAddPaymentForm,
     formatDate,
     isActiveSubscription,
-    getActiveSubscriptions,
     getNearestExpiryDate,
-    getSortedPartners,
     nextPartners,
     prevPartners,
     nextPayments,
@@ -109,6 +108,17 @@ const SubscriptionManagement = () => {
     partnersOffset,
     setCurrentView,
   } = usePartnerManagement();
+
+  // Handle filter changes
+  const handleFilterChange = (newStatusFilter?: "all" | "active" | "inactive", newPaymentDateSort?: "nearest" | "oldest") => {
+    const status = newStatusFilter || statusFilter;
+    const sort = newPaymentDateSort || paymentDateSort;
+    
+    if (newStatusFilter) setStatusFilter(newStatusFilter);
+    if (newPaymentDateSort) setPaymentDateSort(newPaymentDateSort);
+    
+    applyFilters(status, sort);
+  };
 
   // Add Subscription Form Component
   if (currentView === "addSubscription" && selectedPartner) {
@@ -225,9 +235,8 @@ const SubscriptionManagement = () => {
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
                           <Calendar
-                            mode="single"
                             selected={paymentDate}
-                            onSelect={(selectedDate) => {
+                            onSelect={(selectedDate: Date | undefined) => {
                               setPaymentDate(selectedDate);
                               if (selectedDate) {
                                 setSubscriptionPayment({
@@ -238,7 +247,6 @@ const SubscriptionManagement = () => {
                                 });
                               }
                             }}
-                            initialFocus
                           />
                         </PopoverContent>
                       </Popover>
@@ -408,9 +416,8 @@ const SubscriptionManagement = () => {
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
                     <Calendar
-                      mode="single"
                       selected={date}
-                      onSelect={(selectedDate) => {
+                      onSelect={(selectedDate: Date | undefined) => {
                         setDate(selectedDate);
                         if (selectedDate) {
                           setNewPayment({
@@ -419,7 +426,6 @@ const SubscriptionManagement = () => {
                           });
                         }
                       }}
-                      initialFocus
                     />
                   </PopoverContent>
                 </Popover>
@@ -525,12 +531,59 @@ const SubscriptionManagement = () => {
               Refresh
             </Button>
           </div>
-          <div className="mt-4">
-            <Input
-              placeholder="Search partners by name or phone"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          
+          {/* Filter Controls */}
+          <div className="mt-4 space-y-4">
+            <div className="flex flex-wrap gap-4 items-end">
+              <div className="flex-1 min-w-[200px]">
+                <Input
+                  placeholder="Search partners by name or phone"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <div className="min-w-[150px]">
+                <Label htmlFor="statusFilter" className="text-sm font-medium">
+                  Partner Status
+                </Label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value: "all" | "active" | "inactive") => 
+                    handleFilterChange(value, undefined)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Partners</SelectItem>
+                    <SelectItem value="active">Active Only</SelectItem>
+                    <SelectItem value="inactive">Inactive Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="min-w-[150px]">
+                <Label htmlFor="paymentDateSort" className="text-sm font-medium">
+                  Sort by Expiry
+                </Label>
+                <Select
+                  value={paymentDateSort}
+                  onValueChange={(value: "nearest" | "oldest") => 
+                    handleFilterChange(undefined, value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sort by date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nearest">Nearest First</SelectItem>
+                    <SelectItem value="oldest">Oldest First</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -548,7 +601,7 @@ const SubscriptionManagement = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {getSortedPartners().map((partner) => {
+              {partners.map((partner) => {
                 const activeSubscriptions = getLastSubscription(partner.id);
                 const nearestExpiry = getNearestExpiryDate(partner.id);
 
@@ -592,7 +645,7 @@ const SubscriptionManagement = () => {
                               {formatDate(activeSubscriptions.expiry_date)}
                               {activeSubscriptions.expiry_date ===
                                 nearestExpiry && (
-                                <span className="ml-2 bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">
+                                <span className="ml-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
                                   Nearest
                                 </span>
                               )}
@@ -616,6 +669,13 @@ const SubscriptionManagement = () => {
                           <span className="text-gray-500">
                             No subscriptions
                           </span>
+                        )}
+                        
+                        {/* Always show nearest expiry date prominently */}
+                        {nearestExpiry && (
+                          <div className="text-xs text-gray-600 bg-blue-50 px-2 py-1 rounded">
+                            <strong>Next Expiry:</strong> {formatDate(nearestExpiry)}
+                          </div>
                         )}
                       </div>
                     </TableCell>
@@ -650,10 +710,16 @@ const SubscriptionManagement = () => {
             </TableBody>
           </Table>
 
+          {/* Show filter results count */}
+          <div className="mt-2 text-sm text-gray-600">
+            Showing {partners.length} partners
+            {statusFilter !== "all" && ` (${statusFilter} only)`}
+          </div>
+
           {/* Pagination for partners */}
           <div className="flex justify-between items-center mt-4">
             <Button
-              onClick={prevPartners}
+              onClick={() => prevPartners(statusFilter, paymentDateSort)}
               disabled={partnersOffset === 0 || loading}
               variant="outline"
             >
@@ -664,7 +730,7 @@ const SubscriptionManagement = () => {
               partners
             </span>
             <Button
-              onClick={nextPartners}
+              onClick={() => nextPartners(statusFilter, paymentDateSort)}
               disabled={!hasMorePartners || loading}
               variant="outline"
             >

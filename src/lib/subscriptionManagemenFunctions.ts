@@ -89,33 +89,52 @@ export const usePartnerManagement = () => {
     date: new Date().toISOString().split("T")[0],
   });
 
-  // Fetch partners data with pagination and search
+  // Fetch partners data with pagination, search, and filters
   const fetchPartners = useCallback(
-    async (offset = 0, reset = true) => {
+    async (
+      offset = 0, 
+      reset = true, 
+      statusFilter: "all" | "active" | "inactive" = "all",
+      paymentDateSort: "nearest" | "oldest" = "nearest"
+    ) => {
       setLoading(true);
       setError(null);
       try {
-        const query = searchTerm
-          ? `
-          query Partners($limit: Int!, $offset: Int!, $search: String!) {
+        // Build where clause for filtering
+        let whereClause = {};
+        
+        // Add search filter
+        if (searchTerm) {
+          whereClause = {
+            ...whereClause,
+            _or: [
+              { store_name: { _ilike: `%${searchTerm}%` } },
+              { phone: { _ilike: `%${searchTerm}%` } }
+            ]
+          };
+        }
+        
+        // Add status filter
+        if (statusFilter !== "all") {
+          whereClause = {
+            ...whereClause,
+            status: { _eq: statusFilter }
+          };
+        }
+
+        // Build order by clause
+        const orderBy = paymentDateSort === "nearest" 
+          ? [{ partner_subscriptions_aggregate: { max: { expiry_date: "asc_nulls_last" } } }]
+          : [{ partner_subscriptions_aggregate: { max: { expiry_date: "desc_nulls_last" } } }];
+
+        const query = `
+          query Partners($limit: Int!, $offset: Int!, $where: partners_bool_exp!, $orderBy: [partners_order_by!]!) {
             partners(
               limit: $limit, 
               offset: $offset,
-              where: {_or: [
-                {store_name: {_ilike: $search}},
-                {phone: {_ilike: $search}}
-              ]}
+              where: $where,
+              order_by: $orderBy
             ) {
-              id
-              phone
-              status
-              store_name
-            }
-          }
-        `
-          : `
-          query Partners($limit: Int!, $offset: Int!) {
-            partners(limit: $limit, offset: $offset ,order_by: {partner_subscriptions_aggregate: {max: {expiry_date: desc_nulls_last}}}) {
               id
               phone
               status
@@ -124,9 +143,12 @@ export const usePartnerManagement = () => {
           }
         `;
 
-        const variables = searchTerm
-          ? { limit: LIMIT, offset, search: `%${searchTerm}%` }
-          : { limit: LIMIT, offset };
+        const variables = {
+          limit: LIMIT,
+          offset,
+          where: whereClause,
+          orderBy: orderBy
+        };
 
         const data = await fetchFromHasura(query, variables);
 
@@ -796,16 +818,21 @@ export const usePartnerManagement = () => {
     [getLastSubscription]
   );
 
-  // Pagination handlers
-  const nextPartners = useCallback(() => {
+  // Pagination handlers with filter support
+  const nextPartners = useCallback((statusFilter?: "all" | "active" | "inactive", paymentDateSort?: "nearest" | "oldest") => {
     const newOffset = partnersOffset + LIMIT;
-    fetchPartners(newOffset, true);
+    fetchPartners(newOffset, true, statusFilter, paymentDateSort);
   }, [partnersOffset, fetchPartners]);
 
-  const prevPartners = useCallback(() => {
+  const prevPartners = useCallback((statusFilter?: "all" | "active" | "inactive", paymentDateSort?: "nearest" | "oldest") => {
     const newOffset = Math.max(0, partnersOffset - LIMIT);
-    fetchPartners(newOffset, true);
+    fetchPartners(newOffset, true, statusFilter, paymentDateSort);
   }, [partnersOffset, fetchPartners]);
+
+  // Function to apply filters
+  const applyFilters = useCallback((statusFilter: "all" | "active" | "inactive", paymentDateSort: "nearest" | "oldest") => {
+    fetchPartners(0, true, statusFilter, paymentDateSort);
+  }, [fetchPartners]);
 
   const nextPayments = useCallback(
     (partnerId: string) => {
@@ -845,7 +872,7 @@ export const usePartnerManagement = () => {
 
   // Load all data on component mount and when search term changes
   useEffect(() => {
-    fetchPartners(0, true);
+    fetchPartners(0, true, "all", "nearest");
   }, [searchTerm, fetchPartners]);
 
   return {
@@ -879,6 +906,7 @@ export const usePartnerManagement = () => {
 
     // Functions
     fetchPartners,
+    applyFilters,
     repeatLastPlan,
     fetchSubscriptions,
     fetchPayments,
