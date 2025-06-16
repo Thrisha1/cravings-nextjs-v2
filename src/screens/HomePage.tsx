@@ -5,6 +5,7 @@ import { UtensilsCrossed, ShoppingCart, Check, X, ChevronRight, Star, FileText }
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
+import Img from "@/components/Img";
 
 export default function HomePage() {
   const navigate = useRouter();
@@ -100,7 +101,7 @@ export default function HomePage() {
                 <div className="flex -space-x-2">
                   {restaurants.slice(0, 4).map((restaurant, i) => (
                     <div key={i} className="w-10 h-10 rounded-full bg-white border-2 border-white flex items-center justify-center overflow-hidden">
-                      <Image
+                      <Img
                         src={restaurant.logo}
                         alt={restaurant.name}
                         width={30}
@@ -122,7 +123,7 @@ export default function HomePage() {
                 <div className="relative bg-white p-4 border-b border-gray-100">
                   <div className="w-16 h-1 bg-gray-200 rounded mx-auto"></div>
                 </div>
-                <Image
+                <Img
                   src="/placeholder-menu-qr.jpg"
                   alt="Digital menu with QR code"
                   width={600}
@@ -174,7 +175,7 @@ export default function HomePage() {
 
                       {/* Restaurant logo */}
                       <div className="h-16 w-full flex items-center justify-center mb-2 relative">
-                        <Image
+                        <Img
                           src={restaurant.logo}
                           alt={restaurant.name}
                           width={100}

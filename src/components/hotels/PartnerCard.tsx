@@ -1,6 +1,7 @@
 import { Partner } from "@/store/authStore";
 import Image from "next/image";
 import React from "react";
+import Img from "../Img";
 
 const PartnerCard = ({
   partner,
@@ -31,12 +32,12 @@ const PartnerCard = ({
         }}
         className="relative h-28"
       >
-        <Image
+        <Img
           src={partner.store_banner || "/default-banner.jpg"}
           alt={partner.store_name}
-          fill
-          className="object-cover rounded-t-lg"
-          priority={false}
+          width={100}
+          height={100}
+          className="object-cover rounded-t-lg w-full h-full"
         />
       </div>
 

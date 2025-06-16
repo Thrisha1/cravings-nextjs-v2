@@ -1,8 +1,8 @@
 import { Offer } from "@/store/offerStore_hasura";
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import Image from "next/image";
-import { Button } from "./ui/button";
+// import Image from "next/image";
+// import { Button } from "./ui/button";
 import DiscountBadge from "./DiscountBadge";
 import Link from "next/link";
 import Img from "./Img";
@@ -29,7 +29,7 @@ const ClaimedOfferModal = ({
             alt={offer.menu.name}
             width={300}
             height={300}
-            className="rounded-xl"
+            className="rounded-xl w-full h-full"
           />
         </DialogHeader>
 

@@ -83,7 +83,7 @@ const PwaInstallPrompt = () => {
                       <Img
                         src={scrnshot}
                         alt={`Screenshot ${index + 1}`}
-                        className="w-auto h-auto object-cover "
+                        className="w-auto h-auto object-cover"
                       />
                     </div>
                   </CarouselItem>

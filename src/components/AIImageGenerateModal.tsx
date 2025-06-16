@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
+// import Image from "next/image";
 import { toast } from "sonner";
 import Img from "./Img";
 
@@ -80,7 +80,7 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
               alt="Generated AI"
               width={300}
               height={300}
-              className="object-cover rounded-md"
+              className="object-cover rounded-md w-full h-full"
             />
           </div>
         )}
