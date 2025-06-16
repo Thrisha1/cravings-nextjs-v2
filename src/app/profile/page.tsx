@@ -11,6 +11,9 @@ import {
   X,
   // Loader2,
   Share2,
+  Calendar,
+  CreditCard,
+  AlertTriangle,
 } from "lucide-react";
 import {
   AuthUser,
@@ -65,6 +68,7 @@ import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/Deliv
 import useOrderStore from "@/store/orderStore";
 import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
 import { Offer } from "@/store/offerStore_hasura";
+import { format } from "date-fns";
 
 interface Captain {
   id: string;
@@ -219,6 +223,16 @@ export default function ProfilePage() {
   const [countryCodeSearch, setCountryCodeSearch] = useState("");
   const [showPricing, setShowPricing] = useState(true);
 
+  // Billing/Subscription state
+  const [subscriptions, setSubscriptions] = useState<{
+    id: string;
+    plan: "300" | "500" | "flexible" | "growth" | "trial";
+    type: "monthly" | "yearly";
+    created_at: string;
+    expiry_date: string;
+  }[]>([]);
+  const [loadingSubscription, setLoadingSubscription] = useState(false);
+
   const isLoading = authLoading;
 
   useEffect(() => {
@@ -271,11 +285,43 @@ export default function ProfilePage() {
     }
   }, [userData]);
 
+  // Fetch subscription data for billing
+  const fetchSubscriptionData = async () => {
+    if (!userData?.id || userData.role !== "partner") return;
+
+    setLoadingSubscription(true);
+    try {
+      const response = await fetchFromHasura(
+        `query GetPartnerSubscriptions($partnerId: uuid!) {
+          partner_subscriptions(
+            where: {partner_id: {_eq: $partnerId}}, 
+            order_by: {created_at: desc}
+            limit: 1
+          ) {
+            id
+            plan
+            type
+            created_at
+            expiry_date
+          }
+        }`,
+        { partnerId: userData.id }
+      );
+
+      setSubscriptions(response.partner_subscriptions || []);
+    } catch (error) {
+      console.error("Error fetching subscription data:", error);
+    } finally {
+      setLoadingSubscription(false);
+    }
+  };
+
   useEffect(() => {
     if (userData?.role === "partner") {
       const feature = getFeatures(userData?.feature_flags as string);
 
       setUserFeatures(feature);
+      fetchSubscriptionData();
     }
   }, [userData]);
 
@@ -1574,6 +1620,78 @@ export default function ProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 divide-y-2">
+              {/* Billing Section */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Billing & Subscription</h3>
+                  {loadingSubscription && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+                  )}
+                </div>
+                
+                <div className="flex flex-col md:flex-row gap-4">
+                  <Button
+                    onClick={() => router.push("/admin/billing")}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg h-[48px] px-4"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    View Billing Details
+                  </Button>
+                  
+                  {/* Subscription Status */}
+                  {subscriptions.length > 0 && (() => {
+                    const activeSubscription = subscriptions.find(sub => 
+                      new Date(sub.expiry_date) > new Date()
+                    );
+                    
+                    if (activeSubscription) {
+                      const expiryDate = new Date(activeSubscription.expiry_date);
+                      const daysUntilExpiry = Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                      const isExpiringSoon = daysUntilExpiry <= 7;
+                      
+                      return (
+                        <div className={`flex items-center gap-2 p-3 rounded-lg border ${
+                          isExpiringSoon 
+                            ? "bg-red-50 border-red-200 text-red-700" 
+                            : "bg-green-50 border-green-200 text-green-700"
+                        }`}>
+                          <Calendar className="w-4 h-4" />
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {activeSubscription.plan.toUpperCase()} Plan ({activeSubscription.type})
+                            </span>
+                            <span className="text-sm">
+                              {isExpiringSoon ? "Expires in " : "Expires on "}
+                              {isExpiringSoon 
+                                ? `${daysUntilExpiry} ${daysUntilExpiry === 1 ? "day" : "days"}`
+                                : format(expiryDate, "MMM dd, yyyy")
+                              }
+                            </span>
+                          </div>
+                          {isExpiringSoon && (
+                            <AlertTriangle className="w-4 h-4 text-red-500" />
+                          )}
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="flex items-center gap-2 p-3 rounded-lg border bg-red-50 border-red-200 text-red-700">
+                          <AlertTriangle className="w-4 h-4" />
+                          <div className="flex flex-col">
+                            <span className="font-medium">No Active Subscription</span>
+                            <span className="text-sm">Please renew your subscription</span>
+                          </div>
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
+                
+                <p className="text-sm text-gray-500">
+                  Manage your subscription, view payment history, and check billing details.
+                </p>
+              </div>
+              
               <div>
                 <h3 className="text-lg font-semibold">Your Hotel Banner</h3>
                 <p className="text-sm text-gray-500 mb-2">

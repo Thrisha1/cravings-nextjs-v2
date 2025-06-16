@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -22,10 +22,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { usePartnerManagement } from "@/lib/subscriptionManagemenFunctions";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Calendar } from "../ui/calendar";
-import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 // Types
@@ -40,7 +36,7 @@ export interface PartnerSubscription {
   id: string;
   partner_id: string;
   created_at: string;
-  plan: "300" | "500";
+  plan: "300" | "500" | "flexible" | "growth" | "trial";
   type: "monthly" | "yearly";
   expiry_date: string;
 }
@@ -56,11 +52,18 @@ export interface PartnerPayment {
 const SubscriptionManagement = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [paymentDate, setPaymentDate] = useState<Date | undefined>(new Date());
-  
+
   // Filter states
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [paymentDateSort, setPaymentDateSort] = useState<"nearest" | "oldest">("nearest");
-  
+
+  // Payment calculation state
+  const [paymentCalculation, setPaymentCalculation] = useState({
+    orderCount: 0,
+    orderAmount: 0,
+    isCalculating: false,
+  });
+
   const {
     partners,
     subscriptions,
@@ -79,11 +82,22 @@ const SubscriptionManagement = () => {
     hasMorePartners,
     hasMoreSubscriptions,
     hasMorePayments,
+    trialStartDate,
+    trialEndDate,
+    orderCalculation,
+    subscriptionStartDate,
+    subscriptionEndDate,
+    useCustomDates,
     setSearchTerm,
     setNewSubscription,
     setNewPayment,
     setIncludePayment,
     setSubscriptionPayment,
+    setTrialStartDate,
+    setTrialEndDate,
+    setSubscriptionStartDate,
+    setSubscriptionEndDate,
+    setUseCustomDates,
     fetchPartners,
     applyFilters,
     updatePartnerStatus,
@@ -107,16 +121,73 @@ const SubscriptionManagement = () => {
     subscriptionsOffset,
     partnersOffset,
     setCurrentView,
+    calculateOrdersForBillingPeriod,
+    checkTrialOverlap,
+    deleteSubscription,
+    deletePayment,
+    getOrderCalculationDetails,
   } = usePartnerManagement();
+
+  // Calculate payment details for flexible/growth plans
+  useEffect(() => {
+    if (currentView === "addPayment" && selectedPartner) {
+      const activeSubscriptions = subscriptions[selectedPartner]?.filter(sub =>
+        isActiveSubscription(sub)
+      ) || [];
+      const hasActiveSubscription = activeSubscriptions.length > 0;
+      const activePlan = hasActiveSubscription ? activeSubscriptions[0].plan : null;
+      const isFlexibleOrGrowth = activePlan === "flexible" || activePlan === "growth";
+
+      if (isFlexibleOrGrowth && (activePlan === "flexible" || activePlan === "growth")) {
+        setPaymentCalculation(prev => ({ ...prev, isCalculating: true }));
+
+        getOrderCalculationDetails(selectedPartner, activePlan as "flexible" | "growth")
+          .then((details) => {
+            setPaymentCalculation({
+              orderCount: details.orderCount,
+              orderAmount: details.orderAmount,
+              isCalculating: false,
+            });
+            
+            // Update the payment amount with the calculated total
+            setNewPayment(prev => ({
+              ...prev,
+              amount: details.totalAmount,
+            }));
+          })
+          .catch((error: unknown) => {
+            console.error("Error calculating payment details:", error);
+            setPaymentCalculation({
+              orderCount: 0,
+              orderAmount: 0,
+              isCalculating: false,
+            });
+            
+            // Reset payment amount on error
+            setNewPayment(prev => ({
+              ...prev,
+              amount: 0,
+            }));
+          });
+      } else {
+        // Reset calculation for non-flexible/growth plans
+        setPaymentCalculation({
+          orderCount: 0,
+          orderAmount: 0,
+          isCalculating: false,
+        });
+      }
+    }
+  }, [currentView, selectedPartner, subscriptions, getOrderCalculationDetails, isActiveSubscription, setNewPayment]);
 
   // Handle filter changes
   const handleFilterChange = (newStatusFilter?: "all" | "active" | "inactive", newPaymentDateSort?: "nearest" | "oldest") => {
     const status = newStatusFilter || statusFilter;
     const sort = newPaymentDateSort || paymentDateSort;
-    
+
     if (newStatusFilter) setStatusFilter(newStatusFilter);
     if (newPaymentDateSort) setPaymentDateSort(newPaymentDateSort);
-    
+
     applyFilters(status, sort);
   };
 
@@ -145,19 +216,31 @@ const SubscriptionManagement = () => {
                   <Label htmlFor="plan">Plan</Label>
                   <Select
                     value={newSubscription.plan}
-                    onValueChange={(value: "300" | "500") =>
+                    onValueChange={(value: "300" | "500" | "flexible" | "growth" | "trial") => {
                       setNewSubscription({
                         ...newSubscription,
                         plan: value,
-                      })
-                    }
+                      });
+
+                      // Calculate orders for flexible and growth plans
+                      if ((value === "flexible" || value === "growth") && selectedPartner) {
+                        const startDate = new Date();
+                        const endDate = newSubscription.type === "monthly"
+                          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                          : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+                        calculateOrdersForBillingPeriod(selectedPartner, startDate, endDate);
+                      }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select plan" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="300">300</SelectItem>
-                      <SelectItem value="500">500</SelectItem>
+                      <SelectItem value="300">₹300 - Basic</SelectItem>
+                      <SelectItem value="500">₹500 - Premium</SelectItem>
+                      <SelectItem value="flexible">Flexible - Pay per Order</SelectItem>
+                      <SelectItem value="growth">Growth - Orders + ₹500</SelectItem>
+                      <SelectItem value="trial">Trial Plan</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -182,6 +265,168 @@ const SubscriptionManagement = () => {
                   </Select>
                 </div>
               </div>
+
+              {/* Order Calculation Display for Flexible/Growth Plans */}
+              {(newSubscription.plan === "flexible" || newSubscription.plan === "growth") && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="font-medium text-blue-900 mb-2">Order-Based Pricing Calculation</h4>
+                  {orderCalculation.isCalculating ? (
+                    <p className="text-blue-700">Calculating orders...</p>
+                  ) : (
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Valid Orders in Billing Period:</span>
+                        <span className="font-medium">{orderCalculation.orderCount} orders</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Order Charges (₹10 per order):</span>
+                        <span className="font-medium">₹{orderCalculation.orderAmount}</span>
+                      </div>
+                      {newSubscription.plan === "growth" && (
+                        <>
+                          <div className="flex justify-between">
+                            <span>Base Growth Plan Fee:</span>
+                            <span className="font-medium">₹{orderCalculation.growthBaseAmount}</span>
+                          </div>
+                          <hr className="border-blue-300" />
+                          <div className="flex justify-between font-semibold text-blue-900">
+                            <span>Total Amount:</span>
+                            <span>₹{orderCalculation.orderAmount + orderCalculation.growthBaseAmount}</span>
+                          </div>
+                        </>
+                      )}
+                      {newSubscription.plan === "flexible" && (
+                        <div className="flex justify-between font-semibold text-blue-900">
+                          <span>Total Amount:</span>
+                          <span>₹{orderCalculation.orderAmount}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Trial Plan Date Selection */}
+              {newSubscription.plan === "trial" && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg space-y-4">
+                  <h4 className="font-medium text-green-900 mb-2">Trial Period Selection</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Trial Start Date</Label>
+                      <Input
+                        type="date"
+                        value={trialStartDate.toISOString().split('T')[0]}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setTrialStartDate(new Date(e.target.value));
+                          }
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Label>Trial End Date</Label>
+                      <Input
+                        type="date"
+                        value={trialEndDate ? trialEndDate.toISOString().split('T')[0] : ''}
+                        onChange={(e) => {
+                          if (e.target.value && selectedPartner) {
+                            const newDate = new Date(e.target.value);
+                            // Check for overlaps
+                            const hasOverlap = checkTrialOverlap(selectedPartner, trialStartDate, newDate);
+                            if (hasOverlap) {
+                              alert("Trial period overlaps with existing trial. Please select different dates.");
+                              return;
+                            }
+                            setTrialEndDate(newDate);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {trialStartDate && trialEndDate && (
+                    <div className="text-sm text-green-700 bg-green-100 p-2 rounded">
+                      <strong>Trial Duration:</strong> {Math.ceil((trialEndDate.getTime() - trialStartDate.getTime()) / (1000 * 60 * 60 * 24))} days
+                      <br />
+                      <strong>Note:</strong> Full access with no charges during trial period
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Subscription Date Selection */}
+              {newSubscription.plan !== "trial" && (
+                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="useCustomDates"
+                      checked={useCustomDates}
+                      onCheckedChange={(checked) => {
+                        setUseCustomDates(checked as boolean);
+                        if (!checked) {
+                          // Reset to default (today)
+                          setSubscriptionStartDate(new Date());
+                          setSubscriptionEndDate(undefined);
+                        }
+                      }}
+                    />
+                    <Label htmlFor="useCustomDates" className="font-medium">
+                      Set custom subscription dates
+                    </Label>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Subscription Start Date</Label>
+                      <Input
+                        type="date"
+                        value={subscriptionStartDate.toISOString().split('T')[0]}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const newDate = new Date(e.target.value);
+                            setSubscriptionStartDate(newDate);
+                            // Auto-calculate end date if not using custom end date
+                            if (!useCustomDates || !subscriptionEndDate) {
+                              const endDate = newSubscription.type === "monthly"
+                                ? new Date(newDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+                                : new Date(newDate.getTime() + 365 * 24 * 60 * 60 * 1000);
+                              setSubscriptionEndDate(endDate);
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {useCustomDates && (
+                      <div>
+                        <Label>Subscription End Date</Label>
+                        <Input
+                          type="date"
+                          value={subscriptionEndDate ? subscriptionEndDate.toISOString().split('T')[0] : ''}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setSubscriptionEndDate(new Date(e.target.value));
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {!useCustomDates && (
+                    <div className="text-sm text-gray-600 bg-blue-50 p-2 rounded">
+                      <strong>Auto-calculated:</strong> End date will be {newSubscription.type === "monthly" ? "1 month" : "1 year"} from start date
+                    </div>
+                  )}
+
+                  {subscriptionStartDate && subscriptionEndDate && (
+                    <div className="text-sm text-gray-700 bg-green-50 p-2 rounded">
+                      <strong>Subscription Period:</strong> {format(subscriptionStartDate, "PPP")} to {format(subscriptionEndDate, "PPP")}
+                      <br />
+                      <strong>Duration:</strong> {Math.ceil((subscriptionEndDate.getTime() - subscriptionStartDate.getTime()) / (1000 * 60 * 60 * 24))} days
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Payment Option */}
               <div className="space-y-4">
@@ -216,40 +461,20 @@ const SubscriptionManagement = () => {
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label>Payment Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !paymentDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {paymentDate ? (
-                              format(paymentDate, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            selected={paymentDate}
-                            onSelect={(selectedDate: Date | undefined) => {
-                              setPaymentDate(selectedDate);
-                              if (selectedDate) {
-                                setSubscriptionPayment({
-                                  ...subscriptionPayment,
-                                  date: selectedDate
-                                    .toISOString()
-                                    .split("T")[0],
-                                });
-                              }
-                            }}
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <Input
+                        type="date"
+                        value={paymentDate ? paymentDate.toISOString().split('T')[0] : ''}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const selectedDate = new Date(e.target.value);
+                            setPaymentDate(selectedDate);
+                            setSubscriptionPayment({
+                              ...subscriptionPayment,
+                              date: selectedDate.toISOString().split("T")[0],
+                            });
+                          }
+                        }}
+                      />
                     </div>
                   </div>
                 )}
@@ -304,6 +529,7 @@ const SubscriptionManagement = () => {
                   <TableHead>Joined Date</TableHead>
                   <TableHead>Expiry Date</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -319,16 +545,33 @@ const SubscriptionManagement = () => {
                     </TableCell>
                     <TableCell>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          isActiveSubscription(subscription)
+                        className={`px-2 py-1 rounded-full text-xs ${isActiveSubscription(subscription)
                             ? "bg-green-100 text-green-800"
                             : "bg-red-100 text-red-800"
-                        }`}
+                          }`}
                       >
                         {isActiveSubscription(subscription)
                           ? "Active"
                           : "Expired"}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={async () => {
+                          if (window.confirm("Are you sure you want to delete this subscription? This action cannot be undone.")) {
+                            const success = await deleteSubscription(subscription.id, selectedPartner);
+                            if (success) {
+                              // Refresh the data
+                              fetchPartners(partnersOffset, true);
+                            }
+                          }
+                        }}
+                        disabled={loading}
+                      >
+                        Delete
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -365,6 +608,12 @@ const SubscriptionManagement = () => {
   // Add Payment Form Component
   if (currentView === "addPayment" && selectedPartner) {
     const partner = partners.find((p) => p.id === selectedPartner);
+    const activeSubscriptions = subscriptions[selectedPartner]?.filter(sub =>
+      isActiveSubscription(sub)
+    ) || [];
+    const hasActiveSubscription = activeSubscriptions.length > 0;
+    const activePlan = hasActiveSubscription ? activeSubscriptions[0].plan : null;
+    const isFlexibleOrGrowth = activePlan === "flexible" || activePlan === "growth";
 
     return (
       <div className="p-6">
@@ -379,14 +628,76 @@ const SubscriptionManagement = () => {
         <Card>
           <CardHeader>
             <CardTitle>Add Payment for {partner?.store_name}</CardTitle>
+            {hasActiveSubscription && !isFlexibleOrGrowth && (
+              <div className="text-sm text-green-600 bg-green-50 p-2 rounded">
+                💡 Amount auto-filled based on current active subscription: {activePlan} plan
+              </div>
+            )}
+            {hasActiveSubscription && isFlexibleOrGrowth && (
+              <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+                🔄 Amount calculated based on completed orders since last payment
+              </div>
+            )}
+            {!hasActiveSubscription && newPayment.amount === 0 && (
+              <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
+                ⚠️ No active subscription found. Please enter payment amount manually.
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {loading && <p>Loading...</p>}
             {error && <p className="text-red-500">{error}</p>}
 
+            {/* Order Calculation Display for Flexible/Growth Plans */}
+            {isFlexibleOrGrowth && hasActiveSubscription && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6">
+                <h4 className="font-medium text-blue-900 mb-3">Payment Calculation</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Completed Orders (since last payment):</span>
+                    <span className="font-medium">
+                      {paymentCalculation.isCalculating ? "Calculating..." : `${paymentCalculation.orderCount} orders`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Order Charges (₹10 per order):</span>
+                    <span className="font-medium">₹{paymentCalculation.orderAmount}</span>
+                  </div>
+                  {activePlan === "growth" && (
+                    <>
+                      <div className="flex justify-between">
+                        <span>Base Growth Plan Fee:</span>
+                        <span className="font-medium">₹500</span>
+                      </div>
+                      <hr className="border-blue-300" />
+                    </>
+                  )}
+                  <div className="flex justify-between font-semibold text-blue-900">
+                    <span>Total Amount Due:</span>
+                    <span>₹{activePlan === "growth" ? paymentCalculation.orderAmount + 500 : paymentCalculation.orderAmount}</span>
+                  </div>
+                  <div className="text-xs text-blue-600 mt-2">
+                    * Only completed orders since last payment are counted. Pending and cancelled orders are excluded.
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="amount">Amount</Label>
+                <Label htmlFor="amount">
+                  Payment Amount
+                  {hasActiveSubscription && !isFlexibleOrGrowth && (
+                    <span className="text-green-600 font-medium">
+                      (Auto-filled from {activePlan} plan)
+                    </span>
+                  )}
+                  {isFlexibleOrGrowth && (
+                    <span className="text-blue-600 font-medium">
+                      (Calculated from orders)
+                    </span>
+                  )}
+                </Label>
                 <Input
                   id="amount"
                   type="number"
@@ -397,38 +708,30 @@ const SubscriptionManagement = () => {
                       amount: parseFloat(e.target.value) || 0,
                     })
                   }
+                  className={hasActiveSubscription ? (isFlexibleOrGrowth ? "border-blue-300 bg-blue-50" : "border-green-300 bg-green-50") : ""}
                 />
+                {hasActiveSubscription && (
+                  <div className="text-xs text-gray-600 mt-1">
+                    You can modify this amount if needed
+                  </div>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      selected={date}
-                      onSelect={(selectedDate: Date | undefined) => {
-                        setDate(selectedDate);
-                        if (selectedDate) {
-                          setNewPayment({
-                            ...newPayment,
-                            date: selectedDate.toISOString().split("T")[0],
-                          });
-                        }
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  type="date"
+                  value={date ? date.toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const selectedDate = new Date(e.target.value);
+                      setDate(selectedDate);
+                      setNewPayment({
+                        ...newPayment,
+                        date: selectedDate.toISOString().split("T")[0],
+                      });
+                    }
+                  }}
+                />
               </div>
             </div>
 
@@ -466,8 +769,31 @@ const SubscriptionManagement = () => {
           <CardHeader>
             <div className="flex justify-between items-center">
               <CardTitle>Payments for {partner?.store_name}</CardTitle>
-              <Button onClick={() => showAddPaymentForm()}>Add Payment</Button>
+              <div className="flex gap-2">
+                <Button onClick={() => showAddPaymentForm()}>
+                  Add Payment
+                </Button>
+              </div>
             </div>
+            {/* Show current active subscription info */}
+            {(() => {
+              const activeSubscriptions = subscriptions[selectedPartner]?.filter(sub =>
+                isActiveSubscription(sub)
+              ) || [];
+              if (activeSubscriptions.length > 0) {
+                const activeSub = activeSubscriptions[0];
+                return (
+                  <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded mt-2">
+                    📋 Current Active Plan: ₹{activeSub.plan} ({activeSub.type}) - Expires {formatDate(activeSub.expiry_date)}
+                  </div>
+                );
+              }
+              return (
+                <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded mt-2">
+                  ℹ️ No active subscription found for this partner
+                </div>
+              );
+            })()}
           </CardHeader>
           <CardContent>
             {loading && <p>Loading...</p>}
@@ -478,6 +804,7 @@ const SubscriptionManagement = () => {
                 <TableRow>
                   <TableHead>Amount</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -485,6 +812,24 @@ const SubscriptionManagement = () => {
                   <TableRow key={payment.id}>
                     <TableCell>₹{payment.amount}</TableCell>
                     <TableCell>{formatDate(payment.date)}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={async () => {
+                          if (window.confirm("Are you sure you want to delete this payment? This action cannot be undone.")) {
+                            const success = await deletePayment(payment.id, selectedPartner);
+                            if (success) {
+                              // Refresh payments data
+                              viewPayments(selectedPartner);
+                            }
+                          }
+                        }}
+                        disabled={loading}
+                      >
+                        Delete
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -531,7 +876,7 @@ const SubscriptionManagement = () => {
               Refresh
             </Button>
           </div>
-          
+
           {/* Filter Controls */}
           <div className="mt-4 space-y-4">
             <div className="flex flex-wrap gap-4 items-end">
@@ -542,14 +887,14 @@ const SubscriptionManagement = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              
+
               <div className="min-w-[150px]">
                 <Label htmlFor="statusFilter" className="text-sm font-medium">
                   Partner Status
                 </Label>
                 <Select
                   value={statusFilter}
-                  onValueChange={(value: "all" | "active" | "inactive") => 
+                  onValueChange={(value: "all" | "active" | "inactive") =>
                     handleFilterChange(value, undefined)
                   }
                 >
@@ -563,14 +908,14 @@ const SubscriptionManagement = () => {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="min-w-[150px]">
                 <Label htmlFor="paymentDateSort" className="text-sm font-medium">
                   Sort by Expiry
                 </Label>
                 <Select
                   value={paymentDateSort}
-                  onValueChange={(value: "nearest" | "oldest") => 
+                  onValueChange={(value: "nearest" | "oldest") =>
                     handleFilterChange(undefined, value)
                   }
                 >
@@ -645,10 +990,10 @@ const SubscriptionManagement = () => {
                               {formatDate(activeSubscriptions.expiry_date)}
                               {activeSubscriptions.expiry_date ===
                                 nearestExpiry && (
-                                <span className="ml-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                                  Nearest
-                                </span>
-                              )}
+                                  <span className="ml-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                                    Nearest
+                                  </span>
+                                )}
                             </div>
                           ) : (
                             // Expired subscription display
@@ -670,7 +1015,7 @@ const SubscriptionManagement = () => {
                             No subscriptions
                           </span>
                         )}
-                        
+
                         {/* Always show nearest expiry date prominently */}
                         {nearestExpiry && (
                           <div className="text-xs text-gray-600 bg-blue-50 px-2 py-1 rounded">

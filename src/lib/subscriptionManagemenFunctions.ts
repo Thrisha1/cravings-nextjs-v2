@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { format, isAfter, addMonths, addYears } from "date-fns";
+import { format, isAfter, addMonths, addYears, isWithinInterval, parseISO } from "date-fns";
 import { fetchFromHasura } from "./hasuraClient";
 import { revalidateTag } from "@/app/actions/revalidate";
 
@@ -87,6 +87,23 @@ export const usePartnerManagement = () => {
   const [subscriptionPayment, setSubscriptionPayment] = useState({
     amount: 0,
     date: new Date().toISOString().split("T")[0],
+  });
+  
+  // Trial plan states
+  const [trialStartDate, setTrialStartDate] = useState<Date>(new Date());
+  const [trialEndDate, setTrialEndDate] = useState<Date | undefined>(undefined);
+  
+  // Subscription date states
+  const [subscriptionStartDate, setSubscriptionStartDate] = useState<Date>(new Date());
+  const [subscriptionEndDate, setSubscriptionEndDate] = useState<Date | undefined>(undefined);
+  const [useCustomDates, setUseCustomDates] = useState(false);
+  
+  // Order calculation states
+  const [orderCalculation, setOrderCalculation] = useState({
+    orderCount: 0,
+    orderAmount: 0,
+    growthBaseAmount: 500,
+    isCalculating: false,
   });
 
   // Fetch partners data with pagination, search, and filters
@@ -382,19 +399,31 @@ export const usePartnerManagement = () => {
     setLoading(true);
     setError(null);
     try {
-      const joinedAt = new Date().toISOString();
-      let expiryDate;
+      let startDate: string;
+      let expiryDate: string;
 
-      if (newSubscription.type === "monthly") {
-        expiryDate = addMonths(
-          new Date(subscriptionPayment.date),
-          1
-        ).toISOString();
+      if (newSubscription.plan === "trial") {
+        // For trial plans, use the trial start and end dates
+        if (!trialStartDate || !trialEndDate) {
+          setError("Please select both trial start and end dates");
+          setLoading(false);
+          return;
+        }
+        startDate = trialStartDate.toISOString();
+        expiryDate = trialEndDate.toISOString();
+      } else if (useCustomDates && subscriptionStartDate && subscriptionEndDate) {
+        // Use custom dates for regular plans
+        startDate = subscriptionStartDate.toISOString();
+        expiryDate = subscriptionEndDate.toISOString();
       } else {
-        expiryDate = addYears(
-          new Date(subscriptionPayment.date),
-          1
-        ).toISOString();
+        // Use default behavior (subscription start date and auto-calculated expiry)
+        startDate = subscriptionStartDate.toISOString();
+        
+        if (newSubscription.type === "monthly") {
+          expiryDate = addMonths(subscriptionStartDate, 1).toISOString();
+        } else {
+          expiryDate = addYears(subscriptionStartDate, 1).toISOString();
+        }
       }
 
       // Add subscription
@@ -414,7 +443,7 @@ export const usePartnerManagement = () => {
         {
           object: {
             ...newSubscription,
-            created_at: joinedAt,
+            created_at: startDate,
             expiry_date: expiryDate,
           },
         }
@@ -484,7 +513,7 @@ export const usePartnerManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [newSubscription, includePayment, subscriptionPayment]);
+  }, [newSubscription, includePayment, subscriptionPayment, trialStartDate, trialEndDate, useCustomDates, subscriptionStartDate, subscriptionEndDate]);
 
   // Add new payment
   const addPayment = useCallback(async () => {
@@ -615,17 +644,208 @@ export const usePartnerManagement = () => {
     setSelectedPartner(null);
   }, []);
 
+  // Calculate payment amount for flexible and growth plans
+  const calculatePaymentAmount = useCallback(async (partnerId: string, plan: "flexible" | "growth") => {
+    try {
+      // Get current active subscription to determine billing period
+      const partnerSubscriptions = subscriptions[partnerId] || [];
+      const activeSubscription = partnerSubscriptions.find(sub => 
+        isAfter(new Date(sub.expiry_date), new Date())
+      );
+
+      if (!activeSubscription || (activeSubscription.plan !== "flexible" && activeSubscription.plan !== "growth")) {
+        return 0;
+      }
+
+      // Calculate billing period bounds
+      const subscriptionStart = new Date(activeSubscription.created_at);
+      const subscriptionExpiry = new Date(activeSubscription.expiry_date);
+      const now = new Date();
+      
+      // For payment calculation, we look at orders since last payment (or subscription start if no payments)
+      // but only within the current subscription period
+      const partnerPayments = payments[partnerId] || [];
+      const lastPaymentDate = partnerPayments.length > 0 
+        ? new Date(Math.max(...partnerPayments.map(p => new Date(p.date).getTime())))
+        : null;
+
+      // Start date: last payment date or subscription start (whichever is later)
+      const startDate = lastPaymentDate && isAfter(lastPaymentDate, subscriptionStart) 
+        ? lastPaymentDate 
+        : subscriptionStart;
+
+      // End date: current date or subscription expiry (whichever is earlier)
+      const endDate = isAfter(subscriptionExpiry, now) ? now : subscriptionExpiry;
+
+      // Ensure start date is not after end date
+      if (isAfter(startDate, endDate)) {
+        return 0; // No orders to calculate
+      }
+
+      // Fetch orders within the payment calculation period
+      const ordersResponse = await fetchFromHasura(
+        `query GetPartnerOrdersForPayment($partnerId: uuid!, $startDate: timestamptz!, $endDate: timestamptz!) {
+          orders(
+            where: {
+              partner_id: { _eq: $partnerId }
+              created_at: { _gte: $startDate, _lte: $endDate }
+              status: { _eq: "completed" }
+            }
+          ) {
+            id
+            status
+            created_at
+            total_price
+          }
+        }`,
+        {
+          partnerId,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        }
+      );
+
+      if (ordersResponse.errors) {
+        throw new Error(ordersResponse.errors[0]?.message || "Failed to fetch orders for payment calculation");
+      }
+
+      const completedOrders = ordersResponse.orders || [];
+      const orderCount = completedOrders.length;
+      const orderCharges = orderCount * 10; // ₹10 per completed order
+
+      if (plan === "flexible") {
+        return orderCharges; // Only order charges
+      } else if (plan === "growth") {
+        return orderCharges + 500; // Order charges + ₹500 base fee
+      }
+
+      return 0;
+    } catch (error) {
+      console.error("Error calculating payment amount:", error);
+      return 0;
+    }
+  }, [subscriptions, payments]);
+
+  // Get order calculation details for UI display
+  const getOrderCalculationDetails = useCallback(async (partnerId: string, plan: "flexible" | "growth") => {
+    try {
+      // Get current active subscription to determine billing period
+      const partnerSubscriptions = subscriptions[partnerId] || [];
+      const activeSubscription = partnerSubscriptions.find(sub => 
+        isAfter(new Date(sub.expiry_date), new Date())
+      );
+
+      if (!activeSubscription || (activeSubscription.plan !== "flexible" && activeSubscription.plan !== "growth")) {
+        return { orderCount: 0, orderAmount: 0, totalAmount: 0 };
+      }
+
+      // Calculate billing period bounds
+      const subscriptionStart = new Date(activeSubscription.created_at);
+      const subscriptionExpiry = new Date(activeSubscription.expiry_date);
+      const now = new Date();
+      
+      // For payment calculation, we look at orders since last payment (or subscription start if no payments)
+      // but only within the current subscription period
+      const partnerPayments = payments[partnerId] || [];
+      const lastPaymentDate = partnerPayments.length > 0 
+        ? new Date(Math.max(...partnerPayments.map(p => new Date(p.date).getTime())))
+        : null;
+
+      // Start date: last payment date or subscription start (whichever is later)
+      const startDate = lastPaymentDate && isAfter(lastPaymentDate, subscriptionStart) 
+        ? lastPaymentDate 
+        : subscriptionStart;
+
+      // End date: current date or subscription expiry (whichever is earlier)
+      const endDate = isAfter(subscriptionExpiry, now) ? now : subscriptionExpiry;
+
+      // Ensure start date is not after end date
+      if (isAfter(startDate, endDate)) {
+        return { orderCount: 0, orderAmount: 0, totalAmount: 0 };
+      }
+
+
+
+      // Fetch orders within the payment calculation period
+      const ordersResponse = await fetchFromHasura(
+        `query GetPartnerOrdersForPayment($partnerId: uuid!, $startDate: timestamptz!, $endDate: timestamptz!) {
+          orders(
+            where: {
+              partner_id: { _eq: $partnerId }
+              created_at: { _gte: $startDate, _lte: $endDate }
+              status: { _in: ["completed", "pending"] }
+              type: { _eq: "delivery" }
+            }
+          ) {
+            id
+            status
+            created_at
+            total_price
+          }
+        }`,
+        {
+          partnerId,
+          startDate: format(startDate, "yyyy-MM-dd'T'00:00:00.000'Z'"),
+          endDate: format(endDate, "yyyy-MM-dd'T'23:59:59.999'Z'"),
+        }
+      );
+
+      if (ordersResponse.errors) {
+        throw new Error(ordersResponse.errors[0]?.message || "Failed to fetch orders for payment calculation");
+      }
+
+
+
+      const completedOrders = ordersResponse.orders || [];
+      const orderCount = completedOrders.length;
+      const orderAmount = orderCount * 10; // ₹10 per completed order
+
+      let totalAmount = orderAmount;
+      if (plan === "growth") {
+        totalAmount = orderAmount + 500; // Order charges + ₹500 base fee
+      }
+
+      return { orderCount, orderAmount, totalAmount };
+    } catch (error) {
+      console.error("Error calculating order details:", error);
+      return { orderCount: 0, orderAmount: 0, totalAmount: 0 };
+    }
+  }, [subscriptions, payments]);
+
   // Show add payment form
-  const showAddPaymentForm = useCallback(() => {
+  const showAddPaymentForm = useCallback(async () => {
     if (selectedPartner) {
+      // Get current active subscription to auto-fill payment amount
+      const partnerSubscriptions = subscriptions[selectedPartner] || [];
+      const activeSubscriptions = partnerSubscriptions.filter(subscription => 
+        isAfter(new Date(subscription.expiry_date), new Date())
+      );
+      
+      let defaultAmount = 0;
+      
+      if (activeSubscriptions.length > 0) {
+        const activePlan = activeSubscriptions[0].plan;
+        
+        if (activePlan === "flexible" || activePlan === "growth") {
+          // Calculate payment amount based on completed orders
+          defaultAmount = await calculatePaymentAmount(selectedPartner, activePlan as "flexible" | "growth");
+        } else if (activePlan === "trial") {
+          // Trial plans are free
+          defaultAmount = 0;
+        } else {
+          // Regular plans (300, 500)
+          defaultAmount = parseInt(activePlan);
+        }
+      }
+
       setNewPayment({
         partner_id: selectedPartner,
-        amount: 0,
+        amount: defaultAmount,
         date: new Date().toISOString().split("T")[0],
       });
       setCurrentView("addPayment");
     }
-  }, [selectedPartner]);
+  }, [selectedPartner, subscriptions, calculatePaymentAmount]);
 
   // Format date for display
   const formatDate = useCallback((dateString: string) => {
@@ -834,6 +1054,147 @@ export const usePartnerManagement = () => {
     fetchPartners(0, true, statusFilter, paymentDateSort);
   }, [fetchPartners]);
 
+  // Calculate orders for flexible and growth plans
+  const calculateOrdersForBillingPeriod = useCallback(async (partnerId: string, startDate: Date, endDate: Date) => {
+    setOrderCalculation(prev => ({ ...prev, isCalculating: true }));
+    
+    try {
+      // Fetch orders for the partner within the billing period
+      const ordersResponse = await fetchFromHasura(
+        `query GetPartnerOrdersForBilling($partnerId: uuid!, $startDate: timestamptz!, $endDate: timestamptz!) {
+          orders(
+            where: {
+              partner_id: { _eq: $partnerId }
+              created_at: { _gte: $startDate, _lte: $endDate }
+              status: { _nin: ["pending", "cancelled"] }
+            }
+          ) {
+            id
+            status
+            created_at
+            total_price
+          }
+        }`,
+        {
+          partnerId,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        }
+      );
+
+      if (ordersResponse.errors) {
+        throw new Error(ordersResponse.errors[0]?.message || "Failed to fetch orders");
+      }
+
+      const validOrders = ordersResponse.orders || [];
+      const orderCount = validOrders.length;
+      const orderAmount = orderCount * 10; // Each order costs 10rs
+
+      setOrderCalculation({
+        orderCount,
+        orderAmount,
+        growthBaseAmount: 500,
+        isCalculating: false,
+      });
+
+      return { orderCount, orderAmount };
+    } catch (error) {
+      console.error("Error calculating orders:", error);
+      setOrderCalculation(prev => ({ ...prev, isCalculating: false }));
+      setError("Failed to calculate orders for billing period");
+      return { orderCount: 0, orderAmount: 0 };
+    }
+  }, []);
+
+  // Check for trial plan overlaps
+  const checkTrialOverlap = useCallback((partnerId: string, startDate: Date, endDate: Date) => {
+    const partnerSubscriptions = subscriptions[partnerId] || [];
+    
+    return partnerSubscriptions.some(sub => {
+      // Only check trial plans for overlaps
+      if (sub.plan !== "trial") return false;
+      
+      const existingStart = parseISO(sub.created_at);
+      const existingEnd = parseISO(sub.expiry_date);
+      
+      // Check if new trial period overlaps with existing trial
+      return isWithinInterval(startDate, { start: existingStart, end: existingEnd }) ||
+             isWithinInterval(endDate, { start: existingStart, end: existingEnd }) ||
+             isWithinInterval(existingStart, { start: startDate, end: endDate }) ||
+             isWithinInterval(existingEnd, { start: startDate, end: endDate });
+    });
+  }, [subscriptions]);
+
+  // Delete subscription
+  const deleteSubscription = useCallback(async (subscriptionId: string, partnerId: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetchFromHasura(
+        `mutation DeleteSubscription($subscriptionId: uuid!) {
+          delete_partner_subscriptions_by_pk(id: $subscriptionId) {
+            id
+          }
+        }`,
+        { subscriptionId }
+      );
+
+      if (response.errors) {
+        throw new Error(response.errors[0]?.message || "Failed to delete subscription");
+      }
+
+      // Update local state
+      setSubscriptions((prev) => ({
+        ...prev,
+        [partnerId]: (prev[partnerId] || []).filter(sub => sub.id !== subscriptionId)
+      }));
+
+      return true;
+    } catch (err) {
+      setError("Failed to delete subscription");
+      console.error(err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Delete payment
+  const deletePayment = useCallback(async (paymentId: string, partnerId: string) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetchFromHasura(
+        `mutation DeletePayment($paymentId: uuid!) {
+          delete_partner_payments_by_pk(id: $paymentId) {
+            id
+          }
+        }`,
+        { paymentId }
+      );
+
+      if (response.errors) {
+        throw new Error(response.errors[0]?.message || "Failed to delete payment");
+      }
+
+      // Update local state
+      setPayments((prev) => ({
+        ...prev,
+        [partnerId]: (prev[partnerId] || []).filter(payment => payment.id !== paymentId)
+      }));
+
+      return true;
+    } catch (err) {
+      setError("Failed to delete payment");
+      console.error(err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const nextPayments = useCallback(
     (partnerId: string) => {
       const currentOffset = paymentsOffset[partnerId] || 0;
@@ -895,6 +1256,12 @@ export const usePartnerManagement = () => {
     paymentsOffset,
     subscriptionsOffset,
     partnersOffset,
+    trialStartDate,
+    trialEndDate,
+    orderCalculation,
+    subscriptionStartDate,
+    subscriptionEndDate,
+    useCustomDates,
 
     // Setters
     setSearchTerm,
@@ -903,6 +1270,12 @@ export const usePartnerManagement = () => {
     setIncludePayment,
     setSubscriptionPayment,
     setCurrentView,
+    setTrialStartDate,
+    setTrialEndDate,
+    setOrderCalculation,
+    setSubscriptionStartDate,
+    setSubscriptionEndDate,
+    setUseCustomDates,
 
     // Functions
     fetchPartners,
@@ -931,5 +1304,11 @@ export const usePartnerManagement = () => {
     prevPayments,
     nextSubscriptions,
     prevSubscriptions,
+    calculateOrdersForBillingPeriod,
+    calculatePaymentAmount,
+    getOrderCalculationDetails,
+    checkTrialOverlap,
+    deleteSubscription,
+    deletePayment,
   };
 };
