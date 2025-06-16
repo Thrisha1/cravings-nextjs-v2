@@ -23,52 +23,29 @@ const OrdersPage = () => {
   const [sortBy, setSortBy] = useState<string>("newest");
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 10;
+  const [hasMoreOrders, setHasMoreOrders] = useState(true);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [displayedOrders, setDisplayedOrders] = useState<Order[]>([]);
+  const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
 
-  useEffect(() => {
-    const loadOrders = async () => {
-      if (userData?.id) {
-        setLoading(true);
-        setError(null);
-        try {
-          const partnerOrders = await fetchOrderOfPartner(userData.id);
-          if (partnerOrders) {
-            setOrders(partnerOrders);
-          } else {
-            setError("Failed to load orders");
-          }
-        } catch (error) {
-          console.error("Failed to fetch orders:", error);
-          setError("Failed to load orders. Please try again.");
-          toast.error("Failed to load orders");
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadOrders();
-  }, [userData?.id, fetchOrderOfPartner]);
-
-  const handleDeleteOrder = async (orderId: string) => {
-    try {
-      const success = await deleteOrder(orderId);
-      if (success) {
-        setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
-        toast.success("Order deleted successfully");
-        return true;
-      } else {
-        toast.error("Failed to delete order");
-        return false;
-      }
-    } catch (error) {
-      console.error("Error deleting order:", error);
-      toast.error("Failed to delete order");
-      return false;
-    }
+  // Helper function to sort orders
+  const sortOrders = (ordersToSort: Order[]) => {
+    return [...ordersToSort].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA; // Always newest first
+    });
   };
 
-  const getFilteredAndSortedOrders = () => {
-    let result = [...orders];
+  // Helper function to process and filter orders
+  const processAndFilterOrders = (fetchedOrders: Order[]) => {
+    if (!fetchedOrders) return [];
+    
+    let result = [...fetchedOrders];
 
     // Filter by tab
     result = result.filter((order) => {
@@ -119,7 +96,108 @@ const OrdersPage = () => {
     return result;
   };
 
-  const filteredOrders = getFilteredAndSortedOrders();
+  useEffect(() => {
+    const loadOrders = async () => {
+      if (userData?.id) {
+        setLoading(true);
+        setError(null);
+        try {
+          const partnerOrders = await fetchOrderOfPartner(userData.id);
+          if (partnerOrders) {
+            setOrders(partnerOrders);
+          } else {
+            setError("Failed to load orders");
+          }
+        } catch (error) {
+          console.error("Failed to fetch orders:", error);
+          setError("Failed to load orders. Please try again.");
+          toast.error("Failed to load orders");
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadOrders();
+  }, [userData?.id, fetchOrderOfPartner]);
+
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      const success = await deleteOrder(orderId);
+      if (success) {
+        setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
+        toast.success("Order deleted successfully");
+        return true;
+      } else {
+        toast.error("Failed to delete order");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      toast.error("Failed to delete order");
+      return false;
+    }
+  };
+
+  // Apply pagination to filtered orders
+  useEffect(() => {
+    const filteredOrders = processAndFilterOrders(orders);
+    setSortedOrders(filteredOrders);
+    setTotalOrders(filteredOrders.length);
+    
+    // Reset to first page when filters change
+    setCurrentPage(1);
+    const startIndex = 0;
+    const endIndex = ordersPerPage;
+    const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+    setDisplayedOrders(paginatedOrders);
+    setHasMoreOrders(filteredOrders.length > ordersPerPage);
+  }, [orders, activeTab, filter, sortBy, searchQuery]);
+
+  const filteredOrders = processAndFilterOrders(orders);
+
+  // Pagination functions - fetch next 10 orders when Next is pressed
+  const fetchNextPage = async () => {
+    if (!userData?.id || !hasMoreOrders) return;
+
+    try {
+      setLoading(true);
+      const offset = currentPage * ordersPerPage;
+      
+      const fetchedOrders = await fetchOrderOfPartner(userData.id);
+      
+      if (!fetchedOrders) return;
+
+      const processedOrders = processAndFilterOrders(fetchedOrders);
+      const paginatedOrders = processedOrders.slice(offset, offset + ordersPerPage);
+      setDisplayedOrders(prevOrders => [...prevOrders, ...paginatedOrders]);
+      setHasMoreOrders(processedOrders.length > offset + ordersPerPage);
+      setCurrentPage(prev => prev + 1);
+    } catch (error) {
+      toast.error("Failed to load more orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (hasMoreOrders) {
+      fetchNextPage();
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+      // Calculate the start index for the previous page
+      const startIndex = (currentPage - 2) * ordersPerPage;
+      // Show the previous page's orders
+      setDisplayedOrders(prevOrders => prevOrders.slice(0, startIndex + ordersPerPage));
+    }
+  };
+
+  // Calculate total pages
+  const totalPages = Math.ceil(totalOrders / ordersPerPage);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -193,10 +271,10 @@ const OrdersPage = () => {
           <>
             <TabsContent value="delivery">
               <div className="space-y-4">
-                {filteredOrders.length === 0 ? (
+                {displayedOrders.length === 0 ? (
                   <p className="text-gray-500">No delivery orders found matching your criteria</p>
                 ) : (
-                  filteredOrders.map((order) => {
+                  displayedOrders.map((order) => {
                     const grandTotal = order.totalPrice || 0;
                     const gstPercentage = (userData as Partner)?.gst_percentage || 0;
                     const foodTotal = order.items.reduce(
@@ -234,10 +312,10 @@ const OrdersPage = () => {
 
             <TabsContent value="table">
               <div className="space-y-4">
-                {filteredOrders.length === 0 ? (
+                {displayedOrders.length === 0 ? (
                   <p className="text-gray-500">No table orders found matching your criteria</p>
                 ) : (
-                  filteredOrders.map((order) => {
+                  displayedOrders.map((order) => {
                     const grandTotal = order.totalPrice || 0;
                     const foodTotal = order.items.reduce(
                       (total, item) => total + (item.price || 0) * item.quantity,
@@ -275,10 +353,10 @@ const OrdersPage = () => {
 
             <TabsContent value="pos">
               <div className="space-y-4">
-                {filteredOrders.length === 0 ? (
+                {displayedOrders.length === 0 ? (
                   <p className="text-gray-500">No POS orders found matching your criteria</p>
                 ) : (
-                  filteredOrders.map((order) => {
+                  displayedOrders.map((order) => {
                     const grandTotal = order.totalPrice || 0;
                     const foodTotal = order.items.reduce(
                       (total, item) => total + (item.price || 0) * item.quantity,
@@ -316,6 +394,29 @@ const OrdersPage = () => {
           </>
         )}
       </Tabs>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex-none p-4 border-t flex items-center justify-between mt-6">
+          <Button
+            variant="outline"
+            onClick={handlePrevPage}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            onClick={handleNextPage}
+            disabled={!hasMoreOrders}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

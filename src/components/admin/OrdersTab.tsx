@@ -35,6 +35,7 @@ const OrdersTab = () => {
     deleteOrder,
     updateOrderStatus,
     updateOrderStatusHistory,
+    fetchOrderOfPartner,
   } = useOrderStore();
   const { orders , setOrders , removeOrder , loading , setLoading } = useOrderSubscriptionStore();
   const [activeTab, setActiveTab] = useState<"table" | "delivery" | "pos">(
@@ -57,6 +58,37 @@ const OrdersTab = () => {
   const { setOrder, setEditOrderModalOpen } = usePOSStore();
   const orderAlertRef = useRef<boolean>(false);
   const [isCreateOrderOverlayOpen, setIsCreateOrderOverlayOpen] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 10;
+  const [hasMoreOrders, setHasMoreOrders] = useState(true);
+  const [totalOrders, setTotalOrders] = useState(0);
+
+  // Helper function to sort orders
+  const sortOrders = (ordersToSort: Order[]) => {
+    return [...ordersToSort].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA; // Always newest first
+    });
+  };
+
+  // Helper function to process and filter orders
+  const processAndFilterOrders = (fetchedOrders: Order[]) => {
+    if (!fetchedOrders) return [];
+    
+    // Filter orders by active tab
+    const filteredOrders = fetchedOrders.filter((order) => {
+      if (activeTab === "table") return order.type === "table_order";
+      if (activeTab === "delivery") return order.type === "delivery";
+      if (activeTab === "pos") return order.type === "pos";
+      return false;
+    });
+
+    // Sort orders by date (newest first)
+    return sortOrders(filteredOrders);
+  };
 
   // Preload sound effect immediately
   useEffect(() => {
@@ -139,6 +171,38 @@ const OrdersTab = () => {
     };
   }, [userData?.id]);
 
+  // Initial fetch of orders
+  useEffect(() => {
+    const fetchInitialOrders = async () => {
+      if (userData?.id) {
+        try {
+          setLoading(true);
+          const fetchedOrders = await fetchOrderOfPartner(userData.id);
+          
+          if (!fetchedOrders) {
+            setOrders([]);
+            setLoading(false);
+            return;
+          }
+
+          const processedOrders = processAndFilterOrders(fetchedOrders);
+          setSortedOrders(processedOrders);
+          setTotalOrders(processedOrders.length);
+          const paginatedOrders = processedOrders.slice(0, ordersPerPage);
+          setDisplayedOrders(paginatedOrders);
+          setHasMoreOrders(processedOrders.length > ordersPerPage);
+          setCurrentPage(1);
+        } catch (error) {
+          toast.error("Failed to load orders");
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchInitialOrders();
+  }, [userData?.id, activeTab, fetchOrderOfPartner]);
+
   useEffect(() => {
     if (partnerOrders) {
       setOrders(partnerOrders);
@@ -184,24 +248,52 @@ const OrdersTab = () => {
     }
   };
 
-  useEffect(() => {
-    const filteredByTypeOrders = orders.filter((order) => {
-      if (activeTab === "table") return order.type === "table_order";
-      if (activeTab === "delivery") return order.type === "delivery";
-      if (activeTab === "pos") return order.type === "pos";
-      return false;
-    }).sort((a, b) => {
-      // Sort by created date, most recent first
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-
-    setSortedOrders(filteredByTypeOrders);
-    setDisplayedOrders(filteredByTypeOrders);
-  }, [orders, activeTab]);
-
   const handleCreateNewOrder = () => {
     router.push("/admin/pos");
   };
+
+  // Pagination functions - fetch next 10 orders when Next is pressed
+  const fetchNextPage = async () => {
+    if (!userData?.id || !hasMoreOrders) return;
+
+    try {
+      setLoading(true);
+      const offset = currentPage * ordersPerPage;
+      
+      const fetchedOrders = await fetchOrderOfPartner(userData.id);
+      
+      if (!fetchedOrders) return;
+
+      const processedOrders = processAndFilterOrders(fetchedOrders);
+      const paginatedOrders = processedOrders.slice(offset, offset + ordersPerPage);
+      setDisplayedOrders(prevOrders => [...prevOrders, ...paginatedOrders]);
+      setHasMoreOrders(processedOrders.length > offset + ordersPerPage);
+      setCurrentPage(prev => prev + 1);
+    } catch (error) {
+      toast.error("Failed to load more orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (hasMoreOrders) {
+      fetchNextPage();
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+      // Calculate the start index for the previous page
+      const startIndex = (currentPage - 2) * ordersPerPage;
+      // Show the previous page's orders
+      setDisplayedOrders(prevOrders => prevOrders.slice(0, startIndex + ordersPerPage));
+    }
+  };
+
+  // Calculate total pages
+  const totalPages = Math.ceil(totalOrders / ordersPerPage);
 
   return (
     <div className="py-6 px-4 sm:px-[8%] max-w-7xl mx-auto">
@@ -430,6 +522,29 @@ const OrdersTab = () => {
           </>
         )}
       </Tabs>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex-none p-4 border-t flex items-center justify-between mt-6">
+          <Button
+            variant="outline"
+            onClick={handlePrevPage}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            onClick={handleNextPage}
+            disabled={!hasMoreOrders}
+          >
+            Next
+          </Button>
+        </div>
+      )}
 
       <EditOrderModal />
     </div>
