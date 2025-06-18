@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pen, Plus, Search, Upload, Save, X, Menu, ListOrdered } from "lucide-react";
+import { Pen, Plus, Search, Upload, Save, X, Menu, ListOrdered, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,6 +34,12 @@ import {
 } from "@hello-pangea/dnd";
 import { formatDisplayName } from "@/store/categoryStore_hasura";
 import { ItemOrderingForm } from "./ItemOrderingModal";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function MenuTab() {
   const {
@@ -103,6 +109,61 @@ export function MenuTab() {
       setIsMenuItemsFetching(false);
     }, 2000);
   }, [groupedItems, searchQuery, searchParams]);
+
+  const handleCopyMenu = async () => {
+    try {
+      // Check if there are menu items to copy
+      if (!menu || menu.length === 0) {
+        toast.error("No menu items to copy");
+        return;
+      }
+
+      // Create a copy of menu items without IDs
+      const menuForCopy = menu.map((item) => ({
+        name: item.name,
+        price: item.price,
+        image_url: item.image_url,
+        description: item.description,
+        category: item.category.name, // Just the category name as string
+        is_top: item.is_top,
+        is_available: item.is_available,
+        priority: item.priority,
+        image_source: item.image_source || "local",
+      }));
+
+      // Convert to JSON string
+      const menuJson = JSON.stringify(menuForCopy, null, 2);
+
+      // Try to use the modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(menuJson);
+        toast.success("Menu copied to clipboard! You can now paste it in the bulk upload page.");
+      } else {
+        // Fallback for older browsers or non-HTTPS environments
+        const textArea = document.createElement("textarea");
+        textArea.value = menuJson;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          document.execCommand('copy');
+          toast.success("Menu copied to clipboard! You can now paste it in the bulk upload page.");
+        } catch (err) {
+          console.error('Fallback: Oops, unable to copy', err);
+          toast.error("Failed to copy menu to clipboard. Please try selecting and copying manually.");
+        }
+        
+        document.body.removeChild(textArea);
+      }
+    } catch (error) {
+      console.error("Error copying menu:", error);
+      toast.error("Failed to copy menu to clipboard");
+    }
+  };
 
   const handleAddItem = (item: {
     name: string;
@@ -210,6 +271,23 @@ export function MenuTab() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Menu Items</h2>
         <div className="flex gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopyMenu}
+                  disabled={!menu || menu.length === 0}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{menu && menu.length > 0 ? "Copy menu for bulk upload" : "No menu items to copy"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Link href="/admin/bulk-menu-upload">
             <Button variant="outline" size="icon">
               <Upload className="h-4 w-4" />
