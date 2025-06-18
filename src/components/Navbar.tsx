@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -28,11 +28,10 @@ const HIDDEN_PATHS = [
   "/hotels/[id]/menu/[mId]/reviews",
 ];
 
-export function Navbar() {
+export function Navbar({ userData }: { userData: any }) {
+  const features = getFeatures(userData?.feature_flags as string);
   const router = useRouter();
   const pathname = usePathname();
-  const { userData } = useAuthStore();
-  const [features, setFeatures] = useState<FeatureFlags | null>(null);
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
@@ -63,13 +62,6 @@ export function Navbar() {
       window.removeEventListener("resize", checkMobile);
     };
   }, []);
-
-  useEffect(() => {
-    if (userData?.role === "partner") {
-      const feature = getFeatures(userData?.feature_flags as string);
-      setFeatures(feature);
-    }
-  }, [userData]);
 
   useEffect(() => {
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
