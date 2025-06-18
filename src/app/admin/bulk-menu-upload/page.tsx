@@ -1,25 +1,40 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { MenuItemCard } from "@/components/bulkMenuUpload/MenuItemCard";
 import { EditItemModal } from "@/components/bulkMenuUpload/EditItemModal";
 import { useBulkUpload } from "@/hooks/useBulkUpload";
 import { useAuthStore } from "@/store/authStore";
 import { KimiAiLink } from "@/components/ui/KimiAiLink";
-
+import { useMenuStore } from "@/store/menuStore_hasura";
+import { toast } from "sonner";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const BulkUploadPage = () => {
   const router = useRouter();
   const { userData } = useAuthStore();
+  const { items: menuItems, fetchMenu } = useMenuStore();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeletingMenu, setIsDeletingMenu] = useState(false);
   const {
     loading,
     jsonInput,
-    menuItems,
+    menuItems: bulkMenuItems,
     selectAll,
     isEditModalOpen,
     isUploading,
@@ -44,12 +59,55 @@ const BulkUploadPage = () => {
     handleGenerateAIImages,
   } = useBulkUpload();
 
-  const isAIGenerateEnabled = Array.isArray(menuItems) && menuItems.length > 0 && 'image_prompt' in menuItems[0];
+  const isAIGenerateEnabled = Array.isArray(bulkMenuItems) && bulkMenuItems.length > 0 && 'image_prompt' in bulkMenuItems[0];
 
   useEffect(() => {
-    // console.log("Menu Items:", menuItems);
+    // console.log("Menu Items:", bulkMenuItems);
     
-  },[menuItems]);
+  },[bulkMenuItems]);
+
+  const handleDeleteAllMenu = async () => {
+    if (!userData?.id) {
+      toast.error("User data not found");
+      return;
+    }
+
+    setIsDeletingMenu(true);
+    try {
+      // Delete all menu items for the partner
+      const deleteAllMenuMutation = `
+        mutation DeleteAllMenu($partnerId: uuid!) {
+          update_menu(
+            where: {
+              partner_id: {_eq: $partnerId},
+              deletion_status: {_neq: 1}
+            },
+            _set: { deletion_status: 1 }
+          ) {
+            affected_rows
+          }
+        }
+      `;
+
+      const result = await fetchFromHasura(deleteAllMenuMutation, {
+        partnerId: userData.id,
+      });
+
+      if (result?.update_menu?.affected_rows > 0) {
+        toast.success(`Successfully deleted ${result.update_menu.affected_rows} menu items`);
+        // Refresh the menu to reflect changes
+        await fetchMenu(userData.id, true);
+      } else {
+        toast.info("No menu items found to delete");
+      }
+    } catch (error) {
+      console.error("Error deleting menu:", error);
+      toast.error("Failed to delete menu items");
+    } finally {
+      setIsDeletingMenu(false);
+      setShowDeleteDialog(false);
+    }
+  };
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-4 sm:p-8">
@@ -77,10 +135,10 @@ const BulkUploadPage = () => {
             onClick={handleJsonSubmit}
             disabled={!jsonInput.trim()}
           >
-            {menuItems.length > 0 ? "Update JSON" : "Convert JSON"}
+            {bulkMenuItems.length > 0 ? "Update JSON" : "Convert JSON"}
           </Button>
 
-          {menuItems.length > 0 && (
+          {bulkMenuItems.length > 0 && (
             <>
               <Button
                 className="text-[13px] w-full h-12"
@@ -106,9 +164,29 @@ const BulkUploadPage = () => {
               </Button>
             </>
           )}
+
+          {/* Delete Menu Button */}
+          <Button
+            className="text-[13px] w-full h-12 bg-red-600 hover:bg-red-700 text-white"
+            variant="destructive"
+            onClick={() => setShowDeleteDialog(true)}
+            disabled={isDeletingMenu}
+          >
+            {isDeletingMenu ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Menu
+              </>
+            )}
+          </Button>
         </div>
 
-        {menuItems.length > 0 && (
+        {bulkMenuItems.length > 0 && (
           <div className="mb-4 mt-5 flex items-center">
             <Checkbox
               checked={selectAll}
@@ -122,7 +200,7 @@ const BulkUploadPage = () => {
           </div>
         )}
 
-        {menuItems.length > 0 && (
+        {bulkMenuItems.length > 0 && (
           <div className="flex flex-wrap gap-2 py-4">
             <Button
               onClick={handleGenerateImages}
@@ -148,9 +226,9 @@ const BulkUploadPage = () => {
           </div>
         )}
 
-        {menuItems.length > 0 && !isEditModalOpen && (
+        {bulkMenuItems.length > 0 && !isEditModalOpen && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {menuItems.map((item, index) => (
+            {bulkMenuItems.map((item, index) => (
               <MenuItemCard
                 key={index}
                 item={item}
@@ -189,6 +267,27 @@ const BulkUploadPage = () => {
             />
           </div>
         )}
+
+        {/* Delete Menu Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Entire Menu</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete all menu items for this restaurant? This action cannot be undone and will permanently remove all menu items from your restaurant.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAllMenu}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete Menu
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
