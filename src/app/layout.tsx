@@ -9,6 +9,8 @@ import "@smastrom/react-rating/style.css";
 import { Toaster } from "@/components/ui/sonner";
 import AuthInitializer from "@/providers/AuthInitializer";
 import BottomNav from "@/components/BottomNav";
+import { Navbar } from "@/components/Navbar";
+import { getAuthCookie } from "./auth/actions";
 // import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
 // import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
 // import LocationAccess from "@/components/LocationAccess";
@@ -27,11 +29,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const user = await getAuthCookie();
   return (
     <html lang="en">
       <head>
@@ -57,14 +62,14 @@ export default function RootLayout({
         <AuthInitializer />
         <Toaster richColors closeButton />
         {/* <Snow /> */}
-        {/* <Navbar /> */}
+        <Navbar userData={user} />
         {/* <RateUsModal /> */}
 
         {/* pwa install is currently turned off */}
         {/* <PwaInstallPrompt /> */}
 
         {children}
-        <BottomNav />
+        <BottomNav userData={user} />
       </body>
     </html>
   );

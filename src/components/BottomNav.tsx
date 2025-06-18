@@ -17,11 +17,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useEffect, useState } from "react";
 
-const BottomNav = () => {
+const BottomNav = ({ userData }: { userData: any }) => {
   const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
-  const { userData } = useAuthStore();
 
   // Define navigation items based on user role
   const getNavItems = () => {
