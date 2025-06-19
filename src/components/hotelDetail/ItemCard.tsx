@@ -107,8 +107,9 @@ const ItemCard = ({
 
             {item.image_url.length > 0 && (
               <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden">
+                {/* converrt + to %2B uuse urrl encode */}
                 <Img
-                  src={item.image_url}
+                  src={item.image_url.replace("+", "%2B")}
                   alt={item.name}
                   className={`object-cover w-full h-full ${
                     !item.is_available || (isOutOfStock && hasStockFeature)
