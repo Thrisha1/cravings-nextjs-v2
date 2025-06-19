@@ -3,7 +3,7 @@
 export async function getCoordinatesFromLink(link: string) {
   try{
     const coordinates = await fetch(
-      `${process.env.NEXT_PUBLIC_FIREBASE_BACKEND_URL}/api/convert-coordinate`,
+      `${process.env.NEXT_PUBLIC_SERVER_URL}/api/convert-coordinate`,
       {
         method: "POST",
         headers: {
