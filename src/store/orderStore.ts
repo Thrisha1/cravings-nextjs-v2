@@ -397,7 +397,7 @@ const useOrderStore = create(
                 quantity: i.quantity,
                 name: i.item?.name || "Unknown",
                 price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
-                category: i.menu?.category,
+                category: i.item?.category,
               })),
             }));
 
@@ -471,6 +471,8 @@ const useOrderStore = create(
 
             const allOrders = data.data.orders
               .map((order: any) => {
+                console.log("allOrders" , order);
+                
                 // Ensure captain data is properly included
                 const captainData = order.captainid ? {
                   id: order.captainid.id,
@@ -498,11 +500,11 @@ const useOrderStore = create(
                   captain: captainData,  // Use the properly structured captain data
                   user: order.user,
                   items: order.order_items?.map((i: any) => ({
-                    id: i.menu?.id,
+                    id: i.item?.id,
                     quantity: i.quantity,
-                    name: i.menu?.name || "Unknown",
-                    price: i.menu?.offers?.[0]?.offer_price || i.menu?.price || 0,
-                    category: i.menu?.category?.name,
+                    name: i.item?.name || "Unknown",
+                    price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
+                    category: i.item?.category?.name,
                     description: i.menu?.description || "",
                     image_url: i.menu?.image_url || "",
                     is_top: i.menu?.is_top || false,
@@ -642,7 +644,7 @@ const useOrderStore = create(
       addItem: (item) => {
         const state = get();
         if (!state.hotelId) return;
-
+      
         set((state) => {
           const hotelOrders = { ...state.hotelOrders };
           const hotelOrder = hotelOrders[state.hotelId!] || {
@@ -651,31 +653,73 @@ const useOrderStore = create(
             order: null,
             orderId: null,
           };
-
-          const existingItem = hotelOrder.items.find((i) => i.id === item.id);
-
-          if (existingItem) {
-            const updatedItems = hotelOrder.items.map((i) =>
-              i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+      
+          if (item.variantSelections && item.variantSelections.length > 0) {
+            
+            const itemIdWithVariants = `${item.id}`;
+      
+            const existingItem = hotelOrder.items.find(
+              i => i.id === itemIdWithVariants
             );
-            hotelOrders[state.hotelId!] = {
-              ...hotelOrder,
-              items: updatedItems,
-              totalPrice: hotelOrder.totalPrice + item.price,
-            };
+      
+            if (existingItem) {
+              // If same variant combination exists, just increase quantity
+              const updatedItems = hotelOrder.items.map(i =>
+                i.id === itemIdWithVariants
+                  ? { ...i, quantity: i.quantity + 1 }
+                  : i
+              );
+              
+              hotelOrders[state.hotelId!] = {
+                ...hotelOrder,
+                items: updatedItems,
+                totalPrice: hotelOrder.totalPrice + item.price,
+              };
+            } else {
+              // Create new item with variant information
+              const newItem: OrderItem = {
+                ...item,
+                id: itemIdWithVariants,
+                quantity: 1,
+                variantSelections: item.variantSelections,
+                name: item.name, // This already includes variant info from the component
+                price: item.price, // This is the total price of all variants
+              };
+              
+              hotelOrders[state.hotelId!] = {
+                ...hotelOrder,
+                items: [...hotelOrder.items, newItem],
+                totalPrice: hotelOrder.totalPrice + item.price,
+              };
+            }
           } else {
-            const newItem: OrderItem = {
-              ...item,
-              id: item.id || "",
-              quantity: 1,
-            };
-            hotelOrders[state.hotelId!] = {
-              ...hotelOrder,
-              items: [...hotelOrder.items, newItem],
-              totalPrice: hotelOrder.totalPrice + item.price,
-            };
+            // Original logic for items without variants
+            const existingItem = hotelOrder.items.find((i) => i.id === item.id);
+      
+            if (existingItem) {
+              const updatedItems = hotelOrder.items.map((i) =>
+                i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+              );
+              hotelOrders[state.hotelId!] = {
+                ...hotelOrder,
+                items: updatedItems,
+                totalPrice: hotelOrder.totalPrice + item.price,
+              };
+            } else {
+              const newItem: OrderItem = {
+                ...item,
+                id: item.id || "",
+                quantity: 1,
+                variantSelections: [],
+              };
+              hotelOrders[state.hotelId!] = {
+                ...hotelOrder,
+                items: [...hotelOrder.items, newItem],
+                totalPrice: hotelOrder.totalPrice + item.price,
+              };
+            }
           }
-
+      
           return {
             hotelOrders,
             items: hotelOrders[state.hotelId!].items,
@@ -684,29 +728,79 @@ const useOrderStore = create(
           };
         });
       },
-
+      
       removeItem: (itemId) => {
         const state = get();
         if (!state.hotelId) return;
-
+      
         set((state) => {
           const hotelOrders = { ...state.hotelOrders };
           const hotelOrder = hotelOrders[state.hotelId!];
           if (!hotelOrder) return state;
-
+      
           const itemToRemove = hotelOrder.items.find(
             (item) => item.id === itemId
           );
           if (!itemToRemove) return state;
-
+      
+          // Calculate price to subtract (handles both regular items and variant items)
+          const priceToSubtract = itemToRemove.price * itemToRemove.quantity;
+      
           hotelOrders[state.hotelId!] = {
             ...hotelOrder,
             items: hotelOrder.items.filter((item) => item.id !== itemId),
-            totalPrice:
-              hotelOrder.totalPrice -
-              itemToRemove.price * itemToRemove.quantity,
+            totalPrice: hotelOrder.totalPrice - priceToSubtract,
           };
+      
+          return {
+            hotelOrders,
+            items: hotelOrders[state.hotelId!].items,
+            orderId: hotelOrders[state.hotelId!].orderId,
+            totalPrice: hotelOrders[state.hotelId!].totalPrice,
+          };
+        });
+      },
+      
+      decreaseQuantity: (itemId) => {
+        const state = get();
+        if (!state.hotelId) return;
+      
+        set((state) => {
+          const hotelOrders = { ...state.hotelOrders };
+          const hotelOrder = hotelOrders[state.hotelId!];
+          if (!hotelOrder) return state;
+      
+          const itemToDecrease = hotelOrder.items.find(
+            (item) => item.id === itemId
+          );
+          
+          console.log(itemToDecrease);
+          
 
+          if (!itemToDecrease) return state;
+      
+          if (itemToDecrease.quantity > 1) {
+            // Decrease quantity
+            const updatedItems = hotelOrder.items.map(item =>
+              item.id === itemId
+                ? { ...item, quantity: item.quantity - 1 }
+                : item
+            );
+            
+            hotelOrders[state.hotelId!] = {
+              ...hotelOrder,
+              items: updatedItems,
+              totalPrice: hotelOrder.totalPrice - itemToDecrease.price,
+            };
+          } else {
+            // Remove item if quantity would go to 0
+            hotelOrders[state.hotelId!] = {
+              ...hotelOrder,
+              items: hotelOrder.items.filter(item => item.id !== itemId),
+              totalPrice: hotelOrder.totalPrice - itemToDecrease.price,
+            };
+          }
+      
           return {
             hotelOrders,
             items: hotelOrders[state.hotelId!].items,
@@ -800,37 +894,7 @@ const useOrderStore = create(
         });
       },
 
-      decreaseQuantity: (itemId) => {
-        const state = get();
-        if (!state.hotelId) return;
-
-        set((state) => {
-          const hotelOrders = { ...state.hotelOrders };
-          const hotelOrder = hotelOrders[state.hotelId!];
-          if (!hotelOrder) return state;
-
-          const item = hotelOrder.items.find((i) => i.id === itemId);
-          if (!item || item.quantity <= 1) return state;
-
-          const updatedItems = hotelOrder.items.map((i) =>
-            i.id === itemId ? { ...i, quantity: i.quantity - 1 } : i
-          );
-
-          hotelOrders[state.hotelId!] = {
-            ...hotelOrder,
-            items: updatedItems,
-            totalPrice: hotelOrder.totalPrice - item.price,
-          };
-
-          return {
-            hotelOrders,
-            items: hotelOrders[state.hotelId!].items,
-            orderId: hotelOrders[state.hotelId!].orderId,
-            totalPrice: hotelOrders[state.hotelId!].totalPrice,
-          };
-        });
-      },
-
+     
       placeOrder: async (
         hotelData,
         tableNumber,
@@ -965,7 +1029,7 @@ const useOrderStore = create(
             {
               orderItems: currentOrder.items.map((item) => ({
                 order_id: orderId,
-                menu_id: item.id,
+                menu_id: item.id.split("|")[0],
                 quantity: item.quantity,
                 item: {
                   id: item.id,

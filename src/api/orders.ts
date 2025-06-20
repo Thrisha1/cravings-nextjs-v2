@@ -204,6 +204,7 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     order_items {
       id
       quantity
+      item
       menu {
         id
         name

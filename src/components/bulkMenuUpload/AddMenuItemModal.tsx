@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import CategoryDropdown from "@/components/ui/CategoryDropdown";
 import { ImageGridModal } from "./ImageGridModal";
 import Img from "../Img";
+import { Variant } from "../admin/EditMenuItemModal";
+import { X } from "lucide-react";
 
 interface AddMenuItemFormProps {
   onSubmit: (item: {
@@ -14,14 +16,15 @@ interface AddMenuItemFormProps {
     image: string;
     description: string;
     category: string;
+    variants? : {
+      name : string,
+      price : number
+    }[] | [];
   }) => void;
   onCancel: () => void;
 }
 
-export function AddMenuItemForm({
-  onSubmit,
-  onCancel,
-}: AddMenuItemFormProps) {
+export function AddMenuItemForm({ onSubmit, onCancel }: AddMenuItemFormProps) {
   const [newItem, setNewItem] = useState({
     name: "",
     price: "",
@@ -31,6 +34,12 @@ export function AddMenuItemForm({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [newVariant, setNewVariant] = useState<Omit<Variant, "id">>({
+    name: "",
+    price: 0,
+  });
+  const [showVariantForm, setShowVariantForm] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +49,10 @@ export function AddMenuItemForm({
     }
     setIsSubmitting(true);
     try {
-      await onSubmit(newItem);
+      await onSubmit({
+        ...newItem,
+        variants
+      });
       setNewItem({
         name: "",
         price: "",
@@ -48,6 +60,12 @@ export function AddMenuItemForm({
         description: "",
         category: "",
       });
+      setVariants([]);
+      setNewVariant({
+        name : "",
+        price : 0
+      })
+      setShowVariantForm(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -61,13 +79,43 @@ export function AddMenuItemForm({
       description: "",
       category: "",
     });
+   
+    setVariants([]);
+    setNewVariant({
+      name : "",
+      price : 0
+    })
+    setShowVariantForm(false);
     onCancel();
+  };
+
+  const addVariant = () => {
+    if (!newVariant.name || !newVariant.price) {
+      alert("Please fill both variant name and price");
+      return;
+    }
+
+    const variant: Variant = {
+      ...newVariant,
+    };
+
+    setVariants([...variants, variant]);
+    setNewVariant({ name: "", price: 0 });
+    setShowVariantForm(false);
+  };
+
+  const removeVariant = (name: string) => {
+    setVariants(variants.filter((v) => v.name !== name));
   };
 
   return (
     <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 mt-8">
       <h2 className="text-xl font-bold mb-4">Add New Menu Item</h2>
-      <form id="add-menu-item-form" onSubmit={handleSubmit} className="space-y-4">
+      <form
+        id="add-menu-item-form"
+        onSubmit={handleSubmit}
+        className="space-y-4"
+      >
         {/* Image Preview and Selection */}
         {newItem.category && newItem.name && (
           <div className="space-y-2">
@@ -134,12 +182,84 @@ export function AddMenuItemForm({
           value={newItem.category}
           onChange={(value) => setNewItem({ ...newItem, category: value })}
         />
+
+         {/* Variants Section */}
+         <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <h3 className="font-medium">Variants</h3>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowVariantForm(!showVariantForm)}
+            >
+              {showVariantForm ? "Cancel" : "Add Variant"}
+            </Button>
+          </div>
+          
+          {showVariantForm && (
+            <div className="space-y-2 p-3 border rounded-lg">
+              <Input
+                placeholder="Variant Name (e.g., Small, Large)"
+                value={newVariant.name}
+                onChange={(e) =>
+                  setNewVariant({ ...newVariant, name: e.target.value })
+                }
+              />
+              <Input
+                type="number"
+                placeholder="Price in ₹"
+                value={newVariant.price}
+                onChange={(e) =>
+                  setNewVariant({ ...newVariant, price: parseFloat(e.target.value) })
+                }
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowVariantForm(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={addVariant}
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {variants.length > 0 && (
+            <div className="space-y-2">
+              {variants.map((variant) => (
+                <div key={variant.name} className="flex items-center justify-between p-2 border rounded">
+                  <div>
+                    <p className="font-medium">{variant.name}</p>
+                    <p className="text-sm">₹{variant.price}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeVariant(variant.name)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+      
+
         <div className="flex justify-end gap-2 mt-4">
-          <Button 
-            variant="outline" 
-            onClick={handleCancel}
-            type="button"
-          >
+          <Button variant="outline" onClick={handleCancel} type="button">
             Cancel
           </Button>
           <Button

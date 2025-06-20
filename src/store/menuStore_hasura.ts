@@ -38,6 +38,10 @@ export interface MenuItem {
     show_stock: boolean;
     id?: string;
   }[];
+  variants?: {
+    name: string;
+    price: number;
+  }[];
 }
 
 interface MenuItem_withOffer_price {
@@ -254,6 +258,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         partner_id: userData.id,
         price: item.price,
         description: item.description || "",
+        variants : item.variants || []
       };
 
       const { insert_menu } = await fetchFromHasura(addMenu, {

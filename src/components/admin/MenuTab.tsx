@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pen, Plus, Search, Upload, Save, X, Menu, ListOrdered, Copy } from "lucide-react";
+import {
+  Pen,
+  Plus,
+  Search,
+  Upload,
+  Save,
+  X,
+  Menu,
+  ListOrdered,
+  Copy,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +26,10 @@ import { Partner, useAuthStore } from "@/store/authStore";
 import Link from "next/link";
 import { AddMenuItemForm } from "../bulkMenuUpload/AddMenuItemModal";
 import { EditMenuItemForm, EditMenuItemModal } from "./EditMenuItemModal";
-import { CategoryManagementModal, CategoryManagementForm } from "./CategoryManagementModal";
+import {
+  CategoryManagementModal,
+  CategoryManagementForm,
+} from "./CategoryManagementModal";
 import { ItemOrderingModal } from "./ItemOrderingModal";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
@@ -69,6 +82,12 @@ export function MenuTab() {
     image: string;
     description: string;
     category: string;
+    variants:
+      | {
+          name: string;
+          price: number;
+        }[]
+      | [];
   } | null>(null);
   const [isInlineItemOrdering, setIsInlineItemOrdering] = useState(false);
   const [tempItems, setTempItems] = useState<Record<string, MenuItem[]>>({});
@@ -137,7 +156,9 @@ export function MenuTab() {
       // Try to use the modern clipboard API first
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(menuJson);
-        toast.success("Menu copied to clipboard! You can now paste it in the bulk upload page.");
+        toast.success(
+          "Menu copied to clipboard! You can now paste it in the bulk upload page."
+        );
       } else {
         // Fallback for older browsers or non-HTTPS environments
         const textArea = document.createElement("textarea");
@@ -148,15 +169,19 @@ export function MenuTab() {
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
-        
+
         try {
-          document.execCommand('copy');
-          toast.success("Menu copied to clipboard! You can now paste it in the bulk upload page.");
+          document.execCommand("copy");
+          toast.success(
+            "Menu copied to clipboard! You can now paste it in the bulk upload page."
+          );
         } catch (err) {
-          console.error('Fallback: Oops, unable to copy', err);
-          toast.error("Failed to copy menu to clipboard. Please try selecting and copying manually.");
+          console.error("Fallback: Oops, unable to copy", err);
+          toast.error(
+            "Failed to copy menu to clipboard. Please try selecting and copying manually."
+          );
         }
-        
+
         document.body.removeChild(textArea);
       }
     } catch (error) {
@@ -171,6 +196,12 @@ export function MenuTab() {
     image: string;
     description: string;
     category: string;
+    variants?:
+      | {
+          name: string;
+          price: number;
+        }[]
+      | [];
   }) => {
     addItem({
       name: item.name,
@@ -186,7 +217,7 @@ export function MenuTab() {
       is_top: false,
       is_available: true,
       priority: 0,
-      
+      variants: item.variants,
     });
   };
 
@@ -197,6 +228,12 @@ export function MenuTab() {
     image: string;
     description: string;
     category: string;
+    variants?:
+      | {
+          name: string;
+          price: number;
+        }[]
+      | [];
   }) => {
     const existingItem = menu.find((menuItem) => menuItem.id === item.id);
 
@@ -214,6 +251,7 @@ export function MenuTab() {
         name: item.category,
         priority: existingItem.category.priority,
       },
+      variants: item.variants,
     });
   };
 
@@ -224,6 +262,10 @@ export function MenuTab() {
     image: string;
     description: string;
     category: string;
+    variants?: {
+      name: string;
+      price: number;
+    }[];
   }) => {
     setEditingItem({
       id: item.id,
@@ -232,6 +274,7 @@ export function MenuTab() {
       image: item.image,
       description: item.description || "",
       category: formatDisplayName(item.category),
+      variants: item.variants || [],
     });
     setIsEditModalOpen(true);
   };
@@ -284,7 +327,11 @@ export function MenuTab() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{menu && menu.length > 0 ? "Copy menu for bulk upload" : "No menu items to copy"}</p>
+                <p>
+                  {menu && menu.length > 0
+                    ? "Copy menu for bulk upload"
+                    : "No menu items to copy"}
+                </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -344,21 +391,25 @@ export function MenuTab() {
       ) : isInlineItemOrdering ? (
         <div className="mb-6 border rounded-lg shadow-sm">
           <ItemOrderingForm
-            categories={Object.entries(groupedItems).map(([category, items]) => ({
-              id: items[0].category.id,
-              name: category,
-              priority: items[0].category.priority || 0,
-            }))}
+            categories={Object.entries(groupedItems).map(
+              ([category, items]) => ({
+                id: items[0].category.id,
+                name: category,
+                priority: items[0].category.priority || 0,
+              })
+            )}
             items={Object.values(groupedItems).flat()}
             onSubmit={async (updatedItems) => {
               try {
                 const updates = updatedItems
-                  .filter(item => typeof item.id === 'string' && item.id.length > 0)
-                  .map(item => ({
+                  .filter(
+                    (item) => typeof item.id === "string" && item.id.length > 0
+                  )
+                  .map((item) => ({
                     id: item.id as string,
-                    priority: item.priority
+                    priority: item.priority,
                   }));
-                
+
                 await updateItemsAsBatch(updates);
                 setIsInlineItemOrdering(false);
                 fetchMenu(); // Refresh the menu
@@ -406,11 +457,13 @@ export function MenuTab() {
           {isCategoryEditing && (
             <CategoryManagementModal
               open={isCategoryEditing}
-              categories={Object.entries(groupedItems).map(([category, items]) => ({
-                id: items[0].category.id,
-                name: (category),
-                priority: items[0].category.priority,
-              }))}
+              categories={Object.entries(groupedItems).map(
+                ([category, items]) => ({
+                  id: items[0].category.id,
+                  name: category,
+                  priority: items[0].category.priority,
+                })
+              )}
               onOpenChange={setIsCategoryEditing}
             />
           )}
@@ -419,7 +472,12 @@ export function MenuTab() {
           <>
             {Object.entries(tempItems).length > 0 ? (
               <DragDropContext onDragEnd={onDragEnd}>
-                <Accordion onValueChange={(value : string) => setCurrentCat(value)} type="single" className="grid gap-4" collapsible>
+                <Accordion
+                  onValueChange={(value: string) => setCurrentCat(value)}
+                  type="single"
+                  className="grid gap-4"
+                  collapsible
+                >
                   {Object.entries(tempItems)
                     .sort(([categoryA], [categoryB]) => {
                       const priorityA = getCategoryPriority(categoryA);
@@ -430,7 +488,8 @@ export function MenuTab() {
                       <AccordionItem value={category} key={category + index}>
                         <AccordionTrigger className="flex items-center gap-2 group max-w-fit">
                           <h1 className="text-xl lg:text-3xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent flex items-center gap-2">
-                            <div className="left-marker">▶</div> {formatDisplayName(category)}
+                            <div className="left-marker">▶</div>{" "}
+                            {formatDisplayName(category)}
                           </h1>
                         </AccordionTrigger>
                         <AccordionContent>
@@ -481,14 +540,88 @@ export function MenuTab() {
                                             </CardTitle>
                                           </CardHeader>
                                           <CardContent className="relative">
-                                            <p className="text-2xl font-bold">
-                                              {(userData as Partner)?.currency || "₹"}{userData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09" ? item.price.toFixed(3) : item.price}
-                                            </p>
+                                            {/* Price Display - Shows default price or "From" price if variants exist */}
+                                            <div className="flex items-baseline gap-2">
+                                              <p className="text-2xl font-bold">
+                                                {(item.variants?.length ?? 0) >
+                                                0 ? (
+                                                  <>
+                                                    <span className="text-xs">
+                                                      From{" "}
+                                                    </span>
+                                                    {(userData as Partner)
+                                                      ?.currency || "₹"}
+                                                    {userData?.id ===
+                                                    "767da2a8-746d-42b6-9539-528b6b96ae09"
+                                                      ? Math.min(
+                                                          ...(
+                                                            item?.variants ?? []
+                                                          ).map((v) => v.price)
+                                                        ).toFixed(3)
+                                                      : Math.min(
+                                                          ...(
+                                                            item?.variants ?? []
+                                                          ).map((v) => v.price)
+                                                        )}
+                                                  </>
+                                                ) : userData?.id ===
+                                                  "767da2a8-746d-42b6-9539-528b6b96ae09" ? (
+                                                  item.price.toFixed(3)
+                                                ) : (
+                                                  item.price
+                                                )}
+                                              </p>
+                                              {(item.variants?.length ?? 0) >
+                                                0 && (
+                                                <span className="text-sm text-gray-500">
+                                                  (
+                                                  {(item.variants ?? []).length}{" "}
+                                                  options)
+                                                </span>
+                                              )}
+                                            </div>
+
+                                            {/* Variants Display */}
+                                            {(item.variants?.length ?? 0) >
+                                              0 && (
+                                              <div className="mt-2 space-y-1 bg-gray-50 p-2 rounded-lg">
+                                                <p className="text-sm font-medium text-gray-600">
+                                                  Options:
+                                                </p>
+                                                <div className="max-h-32 overflow-y-auto pr-2">
+                                                  {(item.variants ?? []).map(
+                                                    (variant, index) => (
+                                                      <div
+                                                        key={index}
+                                                        className="flex justify-between text-sm py-1 border-b border-gray-100"
+                                                      >
+                                                        <span className="text-gray-700">
+                                                          {variant.name}
+                                                        </span>
+                                                        <span className="font-medium">
+                                                          {(userData as Partner)
+                                                            ?.currency || "₹"}
+                                                          {userData?.id ===
+                                                          "767da2a8-746d-42b6-9539-528b6b96ae09"
+                                                            ? variant.price.toFixed(
+                                                                3
+                                                              )
+                                                            : variant.price}
+                                                        </span>
+                                                      </div>
+                                                    )
+                                                  )}
+                                                </div>
+                                              </div>
+                                            )}
+
                                             {item.description && (
-                                              <p className="text-gray-600 mt-2">
-                                                {item.description}
+                                              <p className="text-gray-600 mt-4">
+                                                Description : {item.description}
                                               </p>
                                             )}
+
+                                            {/* Toggles */}
                                             <div className="flex items-center mt-2">
                                               <label className="mr-2">
                                                 Mark as Popular:
@@ -500,16 +633,12 @@ export function MenuTab() {
                                                     if (item.is_top) {
                                                       await updateItem(
                                                         item.id as string,
-                                                        {
-                                                          is_top: false,
-                                                        }
+                                                        { is_top: false }
                                                       );
                                                     } else {
                                                       await updateItem(
                                                         item.id as string,
-                                                        {
-                                                          is_top: true,
-                                                        }
+                                                        { is_top: true }
                                                       );
                                                     }
                                                   } catch (error) {
@@ -561,6 +690,7 @@ export function MenuTab() {
                                                   description:
                                                     item.description || "",
                                                   category: item.category.name,
+                                                  variants: item.variants,
                                                 })
                                               }
                                             >
@@ -575,7 +705,8 @@ export function MenuTab() {
                                                 const isOfferActive =
                                                   adminOffers.some(
                                                     (offer) =>
-                                                      offer.menuItemId === item.id
+                                                      offer.menuItemId ===
+                                                      item.id
                                                   );
                                                 if (isOfferActive) {
                                                   alert(
@@ -583,7 +714,9 @@ export function MenuTab() {
                                                   );
                                                   return;
                                                 }
-                                                await deleteItem(item.id as string);
+                                                await deleteItem(
+                                                  item.id as string
+                                                );
                                                 if (item.image_url)
                                                   await deleteFileFromS3(
                                                     item.image_url
