@@ -91,7 +91,7 @@ export function AddMenuItemForm({ onSubmit, onCancel }: AddMenuItemFormProps) {
 
   const addVariant = () => {
     if (!newVariant.name || !newVariant.price) {
-      alert("Please fill both variant name and price");
+      alert("Please fill both option name and price");
       return;
     }
 
@@ -186,14 +186,14 @@ export function AddMenuItemForm({ onSubmit, onCancel }: AddMenuItemFormProps) {
          {/* Variants Section */}
          <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <h3 className="font-medium">Variants</h3>
+            <h3 className="font-medium">Options</h3>
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setShowVariantForm(!showVariantForm)}
             >
-              {showVariantForm ? "Cancel" : "Add Variant"}
+              {showVariantForm ? "Cancel" : "Add Option"}
             </Button>
           </div>
           

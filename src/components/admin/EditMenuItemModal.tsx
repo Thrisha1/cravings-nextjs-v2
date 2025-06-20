@@ -67,7 +67,7 @@ export function EditMenuItemForm({
     
     // If there are no variants, ensure base price is set
     if (variants.length === 0 && !editingItem.price) {
-      alert("Please set either a base price or add variants");
+      alert("Please set either a base price or add options");
       return;
     }
     
@@ -84,7 +84,7 @@ export function EditMenuItemForm({
 
   const addVariant = () => {
     if (!newVariant.name || !newVariant.price) {
-      alert("Please fill both variant name and price");
+      alert("Please fill both option name and price");
       return;
     }
     
@@ -183,21 +183,21 @@ export function EditMenuItemForm({
         {/* Variants Section */}
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <h3 className="font-medium">Variants</h3>
+            <h3 className="font-medium">Options</h3>
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setShowVariantForm(!showVariantForm)}
             >
-              {showVariantForm ? "Cancel" : "Add Variant"}
+              {showVariantForm ? "Cancel" : "Add Option"}
             </Button>
           </div>
           
           {showVariantForm && (
             <div className="space-y-2 p-3 border rounded-lg">
               <Input
-                placeholder="Variant Name (e.g., Small, Large)"
+                placeholder="Option Name (e.g., Half, Full)"
                 value={newVariant.name}
                 onChange={(e) =>
                   setNewVariant({ ...newVariant, name: e.target.value })
