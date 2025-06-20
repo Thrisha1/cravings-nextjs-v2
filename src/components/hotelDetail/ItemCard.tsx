@@ -16,6 +16,7 @@ const ItemCard = ({
   feature_flags,
   currency,
   hotelData,
+  tableNumber,
 }: {
   item: HotelDataMenus;
   styles: Styles;
@@ -23,10 +24,12 @@ const ItemCard = ({
   className?: string;
   feature_flags?: string;
   hotelData?: HotelData;
+  tableNumber: number;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
   const hasOrderingFeature = getFeatures(feature_flags || "")?.ordering.enabled;
+  const hasDeliveryFeature = getFeatures(feature_flags || "")?.delivery.enabled && tableNumber === 0;
   const [itemQuantity, setItemQuantity] = useState<number | 0>(0);
 
   useEffect(() => {
@@ -104,8 +107,9 @@ const ItemCard = ({
 
             {item.image_url.length > 0 && (
               <div className="w-[100px] h-[100px] relative rounded-3xl overflow-hidden">
+                {/* converrt + to %2B uuse urrl encode */}
                 <Img
-                  src={item.image_url}
+                  src={item.image_url.replace("+", "%2B")}
                   alt={item.name}
                   className={`object-cover w-full h-full ${
                     !item.is_available || (isOutOfStock && hasStockFeature)
@@ -132,8 +136,8 @@ const ItemCard = ({
           </DescriptionWithTextBreak>
 
           {/* Add to cart buttons */}
-          {item.is_available &&
-            hasOrderingFeature &&
+          {/* {item.is_available &&
+            (hasOrderingFeature || hasDeliveryFeature) &&
             (!hasStockFeature || !isOutOfStock) && (
               <div className="flex gap-2 items-center justify-end w-full mt-2">
                 <button
@@ -171,6 +175,55 @@ const ItemCard = ({
                 >
                   +
                 </button>
+              </div>
+            )} */}
+
+          {item.is_available &&
+            (hasOrderingFeature || hasDeliveryFeature) &&
+            (!hasStockFeature || !isOutOfStock) && (
+              <div className="flex gap-2 items-center justify-end w-full mt-2">
+                {itemQuantity > 0 ? (
+                  <div
+                    style={{
+                      backgroundColor: styles.accent,
+                      ...styles.border,
+                      color: "white",
+                    }}
+                    className="rounded-full transition-all duration-500  px-5 py-2 font-medium flex items-center gap-4"
+                  >
+                    <div
+                      className="cursor-pointer active:scale-95"
+                      onClick={() => {
+                        if (itemQuantity > 1) {
+                          decreaseQuantity(item.id as string);
+                        } else {
+                          removeItem(item.id as string);
+                        }
+                      }}
+                    >
+                      -
+                    </div>
+                    <div>{itemQuantity}</div>
+                    <div
+                      className="cursor-pointer active:scale-95"
+                      onClick={() => addItem(item)}
+                    >
+                      +
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => addItem(item)}
+                    style={{
+                      backgroundColor: styles.accent,
+                      ...styles.border,
+                      color: "white",
+                    }}
+                    className="rounded-full px-6 py-2 font-medium"
+                  >
+                    Add +
+                  </div>
+                )}
               </div>
             )}
         </div>

@@ -446,7 +446,7 @@ const StockManagementPage = () => {
   }
 
   return (
-    <div className="px-[5%] py-10 space-y-4">
+    <div className="px-[5%] py-10 space-y-4 pb-40">
       <div className="flex flex-col mb-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold mb-4 sm:mb-0">Stock Management</h1>
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">

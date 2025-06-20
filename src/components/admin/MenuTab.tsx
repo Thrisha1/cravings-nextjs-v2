@@ -1,5 +1,7 @@
+"use client";
+
 import { useEffect, useState } from "react";
-import { Pen, Plus, Search, Upload, Save, X } from "lucide-react";
+import { Pen, Plus, Search, Upload, Save, X, Menu, ListOrdered, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,9 +14,10 @@ import { Input } from "@/components/ui/input";
 import { useAdminOfferStore } from "@/store/useAdminOfferStore";
 import { Partner, useAuthStore } from "@/store/authStore";
 import Link from "next/link";
-import { AddMenuItemModal } from "../bulkMenuUpload/AddMenuItemModal";
-import { EditMenuItemModal } from "./EditMenuItemModal";
-import { CategoryManagementModal } from "./CategoryManagementModal";
+import { AddMenuItemForm } from "../bulkMenuUpload/AddMenuItemModal";
+import { EditMenuItemForm, EditMenuItemModal } from "./EditMenuItemModal";
+import { CategoryManagementModal, CategoryManagementForm } from "./CategoryManagementModal";
+import { ItemOrderingModal } from "./ItemOrderingModal";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
 import { toast } from "sonner";
@@ -30,6 +33,14 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import { formatDisplayName } from "@/store/categoryStore_hasura";
+import { ItemOrderingForm } from "./ItemOrderingModal";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 export function MenuTab() {
   const {
     items: menu,
@@ -38,11 +49,11 @@ export function MenuTab() {
     updateItem,
     deleteItem,
     groupedItems,
+    updateCategoriesAsBatch,
   } = useMenuStore();
   const [isCategoryEditing, setIsCategoryEditing] = useState(false);
   const { adminOffers, fetchAdminOffers } = useAdminOfferStore();
   const { userData } = useAuthStore();
-  const [catUpdated, setCatUpdated] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,17 +70,17 @@ export function MenuTab() {
     description: string;
     category: string;
   } | null>(null);
-  const [isEditingPriority, setIsEditingPriority] = useState(false);
+  const [isInlineItemOrdering, setIsInlineItemOrdering] = useState(false);
   const [tempItems, setTempItems] = useState<Record<string, MenuItem[]>>({});
   const { updateItemsAsBatch } = useMenuStore();
-  const [currenctCat , setCurrentCat] = useState("");
+  const [currenctCat, setCurrentCat] = useState("");
 
   useEffect(() => {
     if (userData?.id) {
       fetchAdminOffers(userData?.id);
       fetchMenu();
     }
-  }, [userData, fetchAdminOffers, fetchMenu, catUpdated]);
+  }, [userData, fetchAdminOffers, fetchMenu]);
 
   useEffect(() => {
     if (!isEditModalOpen) {
@@ -98,6 +109,61 @@ export function MenuTab() {
       setIsMenuItemsFetching(false);
     }, 2000);
   }, [groupedItems, searchQuery, searchParams]);
+
+  const handleCopyMenu = async () => {
+    try {
+      // Check if there are menu items to copy
+      if (!menu || menu.length === 0) {
+        toast.error("No menu items to copy");
+        return;
+      }
+
+      // Create a copy of menu items without IDs
+      const menuForCopy = menu.map((item) => ({
+        name: item.name,
+        price: item.price,
+        image_url: item.image_url,
+        description: item.description,
+        category: item.category.name, // Just the category name as string
+        is_top: item.is_top,
+        is_available: item.is_available,
+        priority: item.priority,
+        image_source: item.image_source || "local",
+      }));
+
+      // Convert to JSON string
+      const menuJson = JSON.stringify(menuForCopy, null, 2);
+
+      // Try to use the modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(menuJson);
+        toast.success("Menu copied to clipboard! You can now paste it in the bulk upload page.");
+      } else {
+        // Fallback for older browsers or non-HTTPS environments
+        const textArea = document.createElement("textarea");
+        textArea.value = menuJson;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          document.execCommand('copy');
+          toast.success("Menu copied to clipboard! You can now paste it in the bulk upload page.");
+        } catch (err) {
+          console.error('Fallback: Oops, unable to copy', err);
+          toast.error("Failed to copy menu to clipboard. Please try selecting and copying manually.");
+        }
+        
+        document.body.removeChild(textArea);
+      }
+    } catch (error) {
+      console.error("Error copying menu:", error);
+      toast.error("Failed to copy menu to clipboard");
+    }
+  };
 
   const handleAddItem = (item: {
     name: string;
@@ -200,36 +266,28 @@ export function MenuTab() {
     }
   };
 
-  const saveItemOrder = async () => {
-    try {
-      const allItems = Object.values(tempItems).flat().filter((items) => items.category.name === currenctCat);
-
-      const updates = allItems.map((item) => ({
-        id: item.id as string,
-        priority: item.priority,
-      }));
-
-      await updateItemsAsBatch(updates);
-
-      toast.success("Item order saved successfully");
-      setIsEditingPriority(false);
-      fetchMenu(); // Refresh the menu to get the new order
-    } catch (error) {
-      toast.error("Failed to save item order");
-      console.error(error);
-    }
-  };
-
-  const cancelEditing = () => {
-    setIsEditingPriority(false);
-    setTempItems(filteredGroupedItems); // Reset to original order
-  };
-
   return (
     <div className="">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Menu Items</h2>
         <div className="flex gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopyMenu}
+                  disabled={!menu || menu.length === 0}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{menu && menu.length > 0 ? "Copy menu for bulk upload" : "No menu items to copy"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Link href="/admin/bulk-menu-upload">
             <Button variant="outline" size="icon">
               <Upload className="h-4 w-4" />
@@ -245,30 +303,83 @@ export function MenuTab() {
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 mb-4">
-        {isEditingPriority ? (
-          <>
-            <Button onClick={saveItemOrder} className="flex gap-2 text-xs sm:text-sm">
-              <Save className="h-4 w-4" />
-              <span>Save Order</span>
-            </Button>
+      {/* Tab switch: show add form, edit form, category management, or menu */}
+      {isAddModalOpen ? (
+        <AddMenuItemForm
+          onSubmit={(item) => {
+            handleAddItem(item);
+            setIsAddModalOpen(false);
+          }}
+          onCancel={() => setIsAddModalOpen(false)}
+        />
+      ) : isEditModalOpen && editingItem ? (
+        <EditMenuItemForm
+          item={editingItem}
+          onSubmit={(item) => {
+            handleEditItem(item);
+            setIsEditModalOpen(false);
+          }}
+          onCancel={() => setIsEditModalOpen(false)}
+        />
+      ) : isCategoryEditing ? (
+        <CategoryManagementForm
+          categories={Object.entries(groupedItems).map(([category, items]) => ({
+            id: items[0].category.id,
+            name: category,
+            priority: items[0].category.priority || 0,
+          }))}
+          onSubmit={async (updatedCategories) => {
+            try {
+              // Use updateCategoriesAsBatch to update both names and priorities
+              await updateCategoriesAsBatch(updatedCategories);
+              setIsCategoryEditing(false);
+              fetchMenu(); // Refresh the menu to get the new categories
+            } catch (error) {
+              console.error("Failed to update categories:", error);
+              toast.error("Failed to update categories");
+            }
+          }}
+          onCancel={() => setIsCategoryEditing(false)}
+        />
+      ) : isInlineItemOrdering ? (
+        <div className="mb-6 border rounded-lg shadow-sm">
+          <ItemOrderingForm
+            categories={Object.entries(groupedItems).map(([category, items]) => ({
+              id: items[0].category.id,
+              name: category,
+              priority: items[0].category.priority || 0,
+            }))}
+            items={Object.values(groupedItems).flat()}
+            onSubmit={async (updatedItems) => {
+              try {
+                const updates = updatedItems
+                  .filter(item => typeof item.id === 'string' && item.id.length > 0)
+                  .map(item => ({
+                    id: item.id as string,
+                    priority: item.priority
+                  }));
+                
+                await updateItemsAsBatch(updates);
+                setIsInlineItemOrdering(false);
+                fetchMenu(); // Refresh the menu
+                toast.success("Item order updated successfully");
+              } catch (error) {
+                console.error("Failed to update item order:", error);
+                toast.error("Failed to update item order");
+              }
+            }}
+            onCancel={() => setIsInlineItemOrdering(false)}
+          />
+        </div>
+      ) : (
+        <>
+          <div className="flex justify-end gap-2 mb-4">
             <Button
+              onClick={() => setIsInlineItemOrdering(true)}
               variant="outline"
-              onClick={cancelEditing}
               className="flex gap-2 text-xs sm:text-sm"
             >
-              <X className="h-4 w-4" />
-              <span>Cancel</span>
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button
-              onClick={() => setIsEditingPriority(true)}
-              variant="outline"
-              className="flex gap-2 text-xs sm:text-sm"
-            >
-              <Pen className="h-4 w-4" />
+              <ListOrdered className="h-4 w-4" />
               <span>Edit Item Order</span>
             </Button>
             <Button
@@ -279,276 +390,230 @@ export function MenuTab() {
               <Pen className="h-4 w-4" />
               <span>Category Update</span>
             </Button>
-          </>
-        )}
-      </div>
+          </div>
 
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-        <Input
-          type="text"
-          placeholder="Search products..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+          <div className="relative mb-6">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <Input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
-      <AddMenuItemModal
-        isOpen={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-        onSubmit={handleAddItem}
-      />
+          {isCategoryEditing && (
+            <CategoryManagementModal
+              open={isCategoryEditing}
+              categories={Object.entries(groupedItems).map(([category, items]) => ({
+                id: items[0].category.id,
+                name: (category),
+                priority: items[0].category.priority,
+              }))}
+              onOpenChange={setIsCategoryEditing}
+            />
+          )}
 
-      {editingItem && (
-        <EditMenuItemModal
-          isOpen={isEditModalOpen}
-          onOpenChange={setIsEditModalOpen}
-          item={editingItem}
-          onSubmit={handleEditItem}
-        />
-      )}
-
-      {isCategoryEditing && (
-        <CategoryManagementModal
-          open={isCategoryEditing}
-          categories={Object.entries(groupedItems).map(([category, items]) => ({
-            id: items[0].category.id,
-            name: (category),
-            priority: items[0].category.priority,
-          }))}
-          onOpenChange={setIsCategoryEditing}
-        />
-      )}
-
-      {/* Menu Items */}
-      <>
-        {Object.entries(tempItems).length > 0 ? (
-          <DragDropContext onDragEnd={onDragEnd}>
-            <Accordion onValueChange={(value : string) => setCurrentCat(value)} type="single" className="grid gap-4" collapsible>
-              {Object.entries(tempItems)
-                .sort(([categoryA], [categoryB]) => {
-                  const priorityA = getCategoryPriority(categoryA);
-                  const priorityB = getCategoryPriority(categoryB);
-                  return priorityA - priorityB;
-                })
-                .map(([category, items], index) => (
-                  <AccordionItem value={category} key={category + index}>
-                    <AccordionTrigger className="flex items-center gap-2 group max-w-fit">
-                      <h1 className="text-xl lg:text-3xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent flex items-center gap-2">
-                        <div className="left-marker">▶</div> {formatDisplayName(category)}
-                      </h1>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <Droppable droppableId={category}>
-                        {(provided) => (
-                          <div
-                            {...provided.droppableProps}
-                            ref={provided.innerRef}
-                            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-                          >
-                            {items
-                              .sort((a, b) => a.priority - b.priority)
-                              .map((item, itemIndex) => (
-                                <Draggable
-                                  key={item.id}
-                                  draggableId={item.id as string}
-                                  index={itemIndex}
-                                  isDragDisabled={!isEditingPriority}
-                                >
-                                  {(provided) => (
-                                    <Card
-                                      {...provided.draggableProps}
-                                      ref={provided.innerRef}
-                                      className={`rounded-xl overflow-hidden grid ${
-                                        isEditingPriority ? "cursor-grab" : ""
-                                      }`}
+          {/* Menu Items */}
+          <>
+            {Object.entries(tempItems).length > 0 ? (
+              <DragDropContext onDragEnd={onDragEnd}>
+                <Accordion onValueChange={(value : string) => setCurrentCat(value)} type="single" className="grid gap-4" collapsible>
+                  {Object.entries(tempItems)
+                    .sort(([categoryA], [categoryB]) => {
+                      const priorityA = getCategoryPriority(categoryA);
+                      const priorityB = getCategoryPriority(categoryB);
+                      return priorityA - priorityB;
+                    })
+                    .map(([category, items], index) => (
+                      <AccordionItem value={category} key={category + index}>
+                        <AccordionTrigger className="flex items-center gap-2 group max-w-fit">
+                          <h1 className="text-xl lg:text-3xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent flex items-center gap-2">
+                            <div className="left-marker">▶</div> {formatDisplayName(category)}
+                          </h1>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <Droppable droppableId={category}>
+                            {(provided) => (
+                              <div
+                                {...provided.droppableProps}
+                                ref={provided.innerRef}
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                              >
+                                {items
+                                  .sort((a, b) => a.priority - b.priority)
+                                  .map((item, itemIndex) => (
+                                    <Draggable
+                                      key={item.id}
+                                      draggableId={item.id as string}
+                                      index={itemIndex}
                                     >
-                                      <CardHeader className="flex flex-row justify-between gap-4 relative">
-                                        {!item.is_available && (
-                                          <div className="absolute saturate-200 top-0 text-xl px-2 rounded-br-xl py-3 z-[40] left-0 bg-red-500 text-white font-bold">
-                                            Unavailable
-                                          </div>
-                                        )}
-                                        <div>
-                                          {item.image_url.length > 0 && (
-                                            <div className="relative w-32 h-32 overflow-hidden">
-                                              <Img
-                                                src={item.image_url}
-                                                alt={item.name}
-                                                className={`w-full h-full object-cover rounded-lg ${
-                                                  item.is_available
-                                                    ? ""
-                                                    : " saturate-0"
-                                                }`}
+                                      {(provided) => (
+                                        <Card
+                                          {...provided.draggableProps}
+                                          ref={provided.innerRef}
+                                          className={`rounded-xl overflow-hidden grid`}
+                                        >
+                                          <CardHeader className="flex flex-row justify-between gap-4 relative">
+                                            {!item.is_available && (
+                                              <div className="absolute saturate-200 top-0 text-xl px-2 rounded-br-xl py-3 z-[40] left-0 bg-red-500 text-white font-bold">
+                                                Unavailable
+                                              </div>
+                                            )}
+                                            <div>
+                                              {item.image_url.length > 0 && (
+                                                <div className="relative w-32 h-32 overflow-hidden">
+                                                  <Img
+                                                    src={item.image_url}
+                                                    alt={item.name}
+                                                    className={`w-full h-full object-cover rounded-lg ${
+                                                      item.is_available
+                                                        ? ""
+                                                        : " saturate-0"
+                                                    }`}
+                                                  />
+                                                </div>
+                                              )}
+                                            </div>
+                                            <CardTitle className="flex items-center justify-between w-full">
+                                              {item.name}
+                                            </CardTitle>
+                                          </CardHeader>
+                                          <CardContent className="relative">
+                                            <p className="text-2xl font-bold">
+                                              {(userData as Partner)?.currency || "₹"}{userData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09" ? item.price.toFixed(3) : item.price}
+                                            </p>
+                                            {item.description && (
+                                              <p className="text-gray-600 mt-2">
+                                                {item.description}
+                                              </p>
+                                            )}
+                                            <div className="flex items-center mt-2">
+                                              <label className="mr-2">
+                                                Mark as Popular:
+                                              </label>
+                                              <Switch
+                                                checked={item.is_top}
+                                                onCheckedChange={async () => {
+                                                  try {
+                                                    if (item.is_top) {
+                                                      await updateItem(
+                                                        item.id as string,
+                                                        {
+                                                          is_top: false,
+                                                        }
+                                                      );
+                                                    } else {
+                                                      await updateItem(
+                                                        item.id as string,
+                                                        {
+                                                          is_top: true,
+                                                        }
+                                                      );
+                                                    }
+                                                  } catch (error) {
+                                                    toast.error(
+                                                      "Failed to update item status"
+                                                    );
+                                                    console.error(error);
+                                                  }
+                                                }}
                                               />
                                             </div>
-                                          )}
-                                        </div>
-                                        <CardTitle className="flex items-center justify-between w-full">
-                                          {item.name}
-                                          {isEditingPriority && (
-                                            <div
-                                              {...provided.dragHandleProps}
-                                              className="p-2 rounded-md hover:bg-gray-100"
-                                            >
-                                              <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                width="24"
-                                                height="24"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                className="h-6 w-6"
-                                              >
-                                                <polyline points="18 8 22 12 18 16"></polyline>
-                                                <polyline points="6 8 2 12 6 16"></polyline>
-                                                <line
-                                                  x1="2"
-                                                  y1="12"
-                                                  x2="22"
-                                                  y2="12"
-                                                ></line>
-                                              </svg>
-                                            </div>
-                                          )}
-                                        </CardTitle>
-                                      </CardHeader>
-                                      <CardContent className="relative">
-                                        <p className="text-2xl font-bold">
-                                          {(userData as Partner)?.currency || "₹"}{userData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09" ? item.price.toFixed(3) : item.price}
-                                        </p>
-                                        {item.description && (
-                                          <p className="text-gray-600 mt-2">
-                                            {item.description}
-                                          </p>
-                                        )}
-                                        <div className="flex items-center mt-2">
-                                          <label className="mr-2">
-                                            Mark as Popular:
-                                          </label>
-                                          <Switch
-                                            checked={item.is_top}
-                                            onCheckedChange={async () => {
-                                              try {
-                                                if (item.is_top) {
-                                                  await updateItem(
-                                                    item.id as string,
-                                                    {
-                                                      is_top: false,
-                                                    }
-                                                  );
-                                                } else {
-                                                  await updateItem(
-                                                    item.id as string,
-                                                    {
-                                                      is_top: true,
-                                                    }
-                                                  );
-                                                }
-                                              } catch (error) {
-                                                toast.error(
-                                                  "Failed to update item status"
-                                                );
-                                                console.error(error);
-                                              }
-                                            }}
-                                          />
-                                        </div>
-                                        <div className="flex items-center mt-3">
-                                          <label className="mr-2">
-                                            Is Available:
-                                          </label>
-                                          <Switch
-                                            checked={item.is_available}
-                                            onCheckedChange={async () => {
-                                              try {
-                                                await updateItem(
-                                                  item.id as string,
-                                                  {
-                                                    is_available:
-                                                      !item.is_available,
+                                            <div className="flex items-center mt-3">
+                                              <label className="mr-2">
+                                                Is Available:
+                                              </label>
+                                              <Switch
+                                                checked={item.is_available}
+                                                onCheckedChange={async () => {
+                                                  try {
+                                                    await updateItem(
+                                                      item.id as string,
+                                                      {
+                                                        is_available:
+                                                          !item.is_available,
+                                                      }
+                                                    );
+                                                  } catch (error) {
+                                                    toast.error(
+                                                      "Failed to mark item as " +
+                                                        (item.is_available
+                                                          ? "Unavailable"
+                                                          : "Available")
+                                                    );
+                                                    console.error(error);
                                                   }
-                                                );
-                                              } catch (error) {
-                                                toast.error(
-                                                  "Failed to mark item as " +
-                                                    (item.is_available
-                                                      ? "Unavailable"
-                                                      : "Available")
-                                                );
-                                                console.error(error);
+                                                }}
+                                              />
+                                            </div>
+                                          </CardContent>
+                                          <CardFooter className="flex justify-end space-x-2">
+                                            <Button
+                                              variant="outline"
+                                              onClick={() =>
+                                                openEditModal({
+                                                  id: item.id as string,
+                                                  name: item.name,
+                                                  price: item.price,
+                                                  image: item.image_url,
+                                                  description:
+                                                    item.description || "",
+                                                  category: item.category.name,
+                                                })
                                               }
-                                            }}
-                                          />
-                                        </div>
-                                      </CardContent>
-                                      <CardFooter className="flex justify-end space-x-2">
-                                        <Button
-                                          variant="outline"
-                                          onClick={() =>
-                                            openEditModal({
-                                              id: item.id as string,
-                                              name: item.name,
-                                              price: item.price,
-                                              image: item.image_url,
-                                              description:
-                                                item.description || "",
-                                              category: item.category.name,
-                                            })
-                                          }
-                                        >
-                                          Edit
-                                        </Button>
-                                        <Button
-                                          variant="destructive"
-                                          onClick={async (e) => {
-                                            e.currentTarget.disabled = true;
-                                            e.currentTarget.innerText =
-                                              "Deleting...";
-                                            const isOfferActive =
-                                              adminOffers.some(
-                                                (offer) =>
-                                                  offer.menuItemId === item.id
-                                              );
-                                            if (isOfferActive) {
-                                              alert(
-                                                `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
-                                              );
-                                              return;
-                                            }
-                                            await deleteItem(item.id as string);
-                                            if (item.image_url)
-                                              await deleteFileFromS3(
-                                                item.image_url
-                                              );
-                                          }}
-                                        >
-                                          Delete
-                                        </Button>
-                                      </CardFooter>
-                                    </Card>
-                                  )}
-                                </Draggable>
-                              ))}
-                            {provided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-            </Accordion>
-          </DragDropContext>
-        ) : (
-          <div className="text-center">
-            {isMenuItemsFetching ? "Loading Menu...." : "No Menu Items Added!"}
-          </div>
-        )}
-      </>
+                                            >
+                                              Edit
+                                            </Button>
+                                            <Button
+                                              variant="destructive"
+                                              onClick={async (e) => {
+                                                e.currentTarget.disabled = true;
+                                                e.currentTarget.innerText =
+                                                  "Deleting...";
+                                                const isOfferActive =
+                                                  adminOffers.some(
+                                                    (offer) =>
+                                                      offer.menuItemId === item.id
+                                                  );
+                                                if (isOfferActive) {
+                                                  alert(
+                                                    `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
+                                                  );
+                                                  return;
+                                                }
+                                                await deleteItem(item.id as string);
+                                                if (item.image_url)
+                                                  await deleteFileFromS3(
+                                                    item.image_url
+                                                  );
+                                              }}
+                                            >
+                                              Delete
+                                            </Button>
+                                          </CardFooter>
+                                        </Card>
+                                      )}
+                                    </Draggable>
+                                  ))}
+                                {provided.placeholder}
+                              </div>
+                            )}
+                          </Droppable>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                </Accordion>
+              </DragDropContext>
+            ) : (
+              <div className="text-center py-10">
+                <p className="text-muted-foreground">No menu items found</p>
+              </div>
+            )}
+          </>
+        </>
+      )}
     </div>
   );
 }

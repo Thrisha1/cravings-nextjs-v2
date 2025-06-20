@@ -5,33 +5,43 @@ import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 import { Loader2, ArrowLeft, MapPin, LocateFixed, X } from "lucide-react";
 import { useLocationStore } from "@/store/geolocationStore";
-import mapboxgl, { LngLatLike } from "mapbox-gl";
+import mapboxgl, { LngLatLike, IControl } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HotelData } from "@/app/hotels/[...id]/page";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import Link from "next/link";
 import { getGstAmount, calculateDeliveryDistanceAndCost } from "../OrderDrawer";
 import { QrGroup } from "@/app/admin/qr-management/page";
-import { table } from "console";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { getFeatures } from "@/lib/getFeatures";
+import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
+
+// Add type for deliveryInfo
+interface DeliveryInfo {
+  distance: number;
+  cost: number;
+  ratePerKm: number;
+  isOutOfRange: boolean;
+}
+
+// Add type for MapboxGeocoder
+type MapboxGeocoder = IControl & {
+  on: (
+    event: string,
+    callback: (e: {
+      result: { center: [number, number]; place_name: string };
+    }) => void
+  ) => void;
+};
 
 const ItemsCard = ({
   items,
@@ -53,17 +63,23 @@ const ItemsCard = ({
         {items.map((item) => (
           <div
             key={item.id}
-            className="flex justify-between items-center border-b pb-2"
+            className="flex justify-between items-center border-b pb-2 gap-5"
           >
             <div>
-              <p className="font-medium">{item.name}</p>
-              <p className="text-sm text-gray-500">{item.category.name}</p>
+              <DescriptionWithTextBreak
+                spanClassName="text-sm text-black"
+                accent="black"
+                maxChars={15}
+              >
+                {item.name}
+              </DescriptionWithTextBreak>
+              <p className="text-xs text-gray-500">{item.category.name}</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="font-medium">
+              {/* <span className="font-medium">
                 {currency}
                 {item.price.toFixed(2)}
-              </span>
+              </span> */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -116,7 +132,7 @@ interface AddressCardProps {
   getLocation: () => void;
   isGeoLoading: boolean;
   geoError: string | null;
-  deliveryInfo: any;
+  deliveryInfo: DeliveryInfo | null;
   hasLocation: boolean;
   hotelData: HotelData;
   selectedLocation: string | null;
@@ -126,6 +142,7 @@ interface AddressCardProps {
 const AddressCard = ({
   address,
   setShowMapModal,
+  setAddress,
   getLocation,
   isGeoLoading,
   geoError,
@@ -136,11 +153,20 @@ const AddressCard = ({
   setSelectedLocation,
 }: AddressCardProps) => {
   mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
 
   const hasMultiWhatsapp =
     getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled &&
     hotelData?.whatsapp_numbers?.length > 0;
 
+  const handleGetLocation = () => {
+    setShowPermissionDialog(true);
+  };
+
+  const handleConfirmPermission = () => {
+    setShowPermissionDialog(false);
+    getLocation();
+  };
 
   return (
     <div className="bg-white rounded-lg shadow p-4 mb-4">
@@ -153,31 +179,26 @@ const AddressCard = ({
           <Label className="flex items-center gap-2 mb-2">
             Select Hotel Location
           </Label>
-          <Select
+          <select
             value={selectedLocation || ""}
-            onValueChange={setSelectedLocation}
+            onChange={(e) => setSelectedLocation(e.target.value)}
+            className="w-full p-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-black/20"
           >
-            <SelectTrigger className="w-full">
-              {selectedLocation
-                ? selectedLocation.toUpperCase()
-                : "Select Area"}
-            </SelectTrigger>
-            <SelectContent className="z-[60]">
-              {hotelData.whatsapp_numbers.map((item) => (
-                <SelectItem key={item.area} value={item.area}>
-                  {item.area.toUpperCase()}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="">Select Area</option>
+            {hotelData.whatsapp_numbers.map((item) => (
+              <option key={item.area} value={item.area}>
+                {item.area.toUpperCase()}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
       <Textarea
         value={address || ""}
-        readOnly
-        className="min-h-[100px] mb-3 bg-gray-100"
-        placeholder="Select your location to see the address"
+        onChange={(e) => setAddress(e.target.value)}
+        className="min-h-[100px] mb-3"
+        placeholder="Enter your delivery address"
       />
 
       <div className="space-y-2">
@@ -188,9 +209,9 @@ const AddressCard = ({
 
         <Button
           type="button"
-          onClick={getLocation}
+          onClick={handleGetLocation}
           className="w-full"
-          variant={hasLocation ? "outline" : "outline"}
+          variant="outline"
           disabled={isGeoLoading}
           style={
             !hasLocation ? { borderColor: "#ef4444", color: "#ef4444" } : {}
@@ -231,6 +252,41 @@ const AddressCard = ({
           </div>
         )}
       </div>
+
+      {/* Location Permission Dialog (custom, not Dialog) */}
+      {showPermissionDialog && (
+        <div className="fixed inset-0 z-[62] flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg p-6 w-[90vw] max-w-md shadow-lg">
+            <h1 className="text-xl font-semibold mb-2">
+              Location Permission Required
+            </h1>
+            <p className="mb-2">
+              To provide accurate delivery estimates, we need access to your
+              location.
+            </p>
+            <ul className="list-disc pl-5 space-y-2 mb-2">
+              <li>Please don&apos;t deny the location permission</li>
+              <li>
+                This helps us calculate accurate{" "}
+                <span className="font-medium">delivery charges</span>
+              </li>
+              <li>Your location is only used for this order</li>
+            </ul>
+            <p className="font-medium mb-4">
+              Click &quot;Allow&quot; when your browser asks for permission.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowPermissionDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmPermission}>Continue</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -239,10 +295,9 @@ interface BillCardProps {
   items: OrderItem[];
   currency: string;
   gstPercentage?: number;
-  deliveryInfo: any;
+  deliveryInfo: DeliveryInfo | null;
   isDelivery: boolean;
   qrGroup: QrGroup | null;
-  tableNumber?: number;
 }
 
 const BillCard = ({
@@ -251,7 +306,6 @@ const BillCard = ({
   gstPercentage,
   deliveryInfo,
   isDelivery,
-  tableNumber,
   qrGroup,
 }: BillCardProps) => {
   const subtotal = items.reduce(
@@ -259,7 +313,6 @@ const BillCard = ({
     0
   );
 
-  // Calculate QR group extra charges using the new function
   const qrExtraCharges = qrGroup?.extra_charge
     ? getExtraCharge(
         items,
@@ -268,13 +321,11 @@ const BillCard = ({
       )
     : 0;
 
-  // Calculate delivery charges
   const deliveryCharges =
     isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
       ? deliveryInfo.cost
       : 0;
 
-  // Calculate GST on subtotal + QR charges (before delivery)
   const taxableAmount = subtotal + qrExtraCharges;
   const gstAmount = (taxableAmount * (gstPercentage || 0)) / 100;
 
@@ -292,8 +343,7 @@ const BillCard = ({
           </span>
         </div>
 
-        {/* QR Group Extra Charges */}
-        {qrGroup && qrExtraCharges > 0 && (
+        {qrGroup && qrExtraCharges > 0 ? (
           <div className="flex justify-between">
             <div>
               <span>{qrGroup.name || "Service Charge"}</span>
@@ -308,10 +358,9 @@ const BillCard = ({
               {qrExtraCharges.toFixed(2)}
             </span>
           </div>
-        )}
+        ) : null}
 
-        {/* GST */}
-        {gstPercentage && (
+        {gstPercentage ? (
           <div className="flex justify-between">
             <span>GST ({gstPercentage}%)</span>
             <span>
@@ -319,10 +368,9 @@ const BillCard = ({
               {gstAmount.toFixed(2)}
             </span>
           </div>
-        )}
+        ) : null}
 
-        {/* Delivery charge */}
-        {isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange && (
+        {isDelivery && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange ? (
           <div className="flex justify-between">
             <div>
               <span>Delivery Charge</span>
@@ -332,7 +380,7 @@ const BillCard = ({
               {deliveryInfo.cost.toFixed(2)}
             </span>
           </div>
-        )}
+        ) : null}
 
         <div className="border-t pt-2 mt-2 flex justify-between font-bold text-lg">
           <span>Grand Total</span>
@@ -395,23 +443,20 @@ const LoginDrawer = ({
       } else {
         toast.error("Login failed. Please try again.");
       }
-    } catch (error) {
+    } catch {
       toast.error("Login failed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <Dialog open={showLoginDrawer} onOpenChange={setShowLoginDrawer}>
-      <DialogContent className="z-[62]">
-        <DialogHeader>
-          <DialogTitle>Login</DialogTitle>
-          <DialogDescription>
-            Enter your phone number to proceed
-          </DialogDescription>
-        </DialogHeader>
+  if (!showLoginDrawer) return null;
 
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-lg p-6 w-[90vw] max-w-md shadow-lg">
+        <h2 className="text-xl font-bold mb-2">Login</h2>
+        <p className="text-gray-600 mb-4">Enter your phone number to proceed</p>
         <div className="mb-4">
           <Label htmlFor="phone">Phone Number</Label>
           <Input
@@ -424,7 +469,6 @@ const LoginDrawer = ({
             placeholder="Enter your phone number"
           />
         </div>
-
         <div className="flex gap-2">
           <Button
             onClick={() => setShowLoginDrawer(false)}
@@ -448,8 +492,8 @@ const LoginDrawer = ({
             )}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
 
@@ -459,23 +503,23 @@ const MapModal = ({
   setSelectedLocation,
   setAddress,
   hotelData,
+  setOpenPlaceOrderModal,
 }: {
   showMapModal: boolean;
   setShowMapModal: (show: boolean) => void;
   setSelectedLocation: (coords: { lng: number; lat: number }) => void;
   setAddress: (address: string) => void;
   hotelData: HotelData;
+  setOpenPlaceOrderModal: (open: boolean) => void;
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
-  const geocoder = useRef<any | null>(null);
-  const [isMapLoading, setIsMapLoading] = useState(true);
+  const geocoder = useRef<MapboxGeocoder | null>(null);
 
   const initializeMap = async () => {
     if (!mapContainer.current || map.current) return;
 
-    // Try to get user location first
     const defaultCenter = [77.5946, 12.9716];
     let initialCenter = defaultCenter;
 
@@ -488,8 +532,8 @@ const MapModal = ({
         );
         initialCenter = [position.coords.longitude, position.coords.latitude];
       }
-    } catch (error) {
-      console.warn("Could not get user location:", error);
+    } catch (err) {
+      console.warn("Could not get user location:", err);
     }
 
     map.current = new mapboxgl.Map({
@@ -499,29 +543,30 @@ const MapModal = ({
       zoom: 12,
     });
 
-    const MapboxGeocoder = require("@mapbox/mapbox-gl-geocoder");
-    // Add geocoder control
-    geocoder.current = new MapboxGeocoder({
-      accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl,
-      marker: false,
-      placeholder: "Search for places...",
-    });
+    try {
+      // Import MapboxGeocoder dynamically to avoid require() style import
+      const { MapboxGeocoder } = await import("@mapbox/mapbox-gl-geocoder");
+      const geocoderInstance = new MapboxGeocoder({
+        accessToken: mapboxgl.accessToken,
+        mapboxgl: mapboxgl,
+        marker: false,
+        placeholder: "Search for places...",
+      }) as MapboxGeocoder;
 
-    map.current.addControl(geocoder.current);
+      geocoder.current = geocoderInstance;
+      map.current.addControl(geocoderInstance);
 
-    // Handle geocoder result
-    geocoder.current.on("result", (e: any) => {
-      const [lng, lat] = e.result.center;
-      setSelectedLocation({ lng, lat });
-      updateMarker(lng, lat);
-      setAddress(e.result.place_name);
-    });
+      geocoderInstance.on("result", (e) => {
+        const [lng, lat] = e.result.center;
+        setSelectedLocation({ lng, lat });
+        updateMarker(lng, lat);
+        setAddress(e.result.place_name);
+      });
+    } catch (err) {
+      console.warn("Could not initialize geocoder:", err);
+    }
 
     map.current.on("load", () => {
-      setIsMapLoading(false);
-
-      // Add click event to set marker
       map.current!.on("click", (e) => {
         const { lng, lat } = e.lngLat;
         setSelectedLocation({ lng, lat });
@@ -560,7 +605,6 @@ const MapModal = ({
         hotelMarker.getElement().style.pointerEvents = "none";
       }
 
-      // Add geolocate control
       map.current!.addControl(
         new mapboxgl.GeolocateControl({
           positionOptions: {
@@ -571,18 +615,22 @@ const MapModal = ({
         })
       );
 
-      // Add navigation control
       map.current!.addControl(new mapboxgl.NavigationControl());
-    });
-
-    map.current.on("error", () => {
-      setIsMapLoading(false);
     });
   };
 
   useEffect(() => {
     if (showMapModal) {
       initializeMap();
+    }
+
+    if (showMapModal) {
+      document.body.style.overflowY = "hidden !important";
+      document.body.style.maxHeight = "100vh";
+    } else {
+      document.body.style.overflowY = "auto";
+      document.body.style.maxHeight = "auto";
+      setOpenPlaceOrderModal(true);
     }
   }, [showMapModal]);
 
@@ -614,23 +662,18 @@ const MapModal = ({
     }
   };
 
+  if (!showMapModal) return null;
+
   return (
     <div
-      className={`fixed inset-0 top-0 left-0 z-50 h-screen w-screen ${
+      className={`fixed top-0 left-0 z-[5000] h-screen w-screen ${
         showMapModal ? "overflow-hidden" : "hidden"
       }`}
     >
-      <div
-        className={`fixed inset-0 top-0 bg-black/50 w-full h-full ${
-          showMapModal ? "" : "hidden"
-        }`}
-        onClick={() => setShowMapModal(false)}
-      />
-
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen w-screen">
         <div
-          className="relative bg-white rounded-lg max-w-screen-lg w-full h-[90vh] m-4 flex flex-col overflow-hidden"
-          onClick={(e) => e.stopPropagation()} // Prevent click propagation to background
+          className="relative z-[5000] bg-white rounded-lg w-screen h-[100dvh] flex flex-col overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-between items-center p-4 border-b">
             <h2 className="text-xl font-bold">Select Your Location</h2>
@@ -689,12 +732,10 @@ const PlaceOrderModal = ({
     userAddress: address,
     clearOrder,
     deliveryInfo,
-    setDeliveryInfo,
   } = useOrderStore();
 
   const { userData: user } = useAuthStore();
   const {
-    coords,
     error: geoError,
     getLocation,
     isLoading: isGeoLoading,
@@ -704,13 +745,51 @@ const PlaceOrderModal = ({
   const [showLoginDrawer, setShowLoginDrawer] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   const isDelivery = !tableNumber;
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
   const isQrScan = qrId !== null && tableNumber !== 0;
   const hasLocation = !!selectedCoords || !!address;
 
+  useEffect(() => {
+    if (open_place_order_modal && items?.length === 0) {
+      setOpenPlaceOrderModal(false);
+      setOpenDrawerBottom(true);
+    }
+  }, [open_place_order_modal, items]);
+
+  // Keyboard detection
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        const currentHeight = window.visualViewport.height;
+        const windowHeight = window.innerHeight;
+
+        // If visual viewport is significantly smaller than window height, keyboard is probably open
+        if (windowHeight - currentHeight > 150) {
+          setKeyboardOpen(true);
+        } else {
+          setKeyboardOpen(false);
+        }
+      }
+    };
+
+    // Add the event listener
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", handleResize);
+    }
+
+    // Clean up
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", handleResize);
+      }
+    };
+  }, []);
+
   // Check if multi-whatsapp feature is enabled
+
   const hasMultiWhatsapp =
     getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled &&
     hotelData?.whatsapp_numbers?.length > 0;
@@ -720,7 +799,7 @@ const PlaceOrderModal = ({
       `hotel-${hotelData.id}-whatsapp-area`
     );
 
-    const selectedLocation = hotelData.whatsapp_numbers.find(
+    const selectedLocation = hotelData.whatsapp_numbers?.find(
       (item) => item.area === selectedPhone
     );
 
@@ -729,14 +808,17 @@ const PlaceOrderModal = ({
     } else {
       setSelectedLocation(null);
     }
-  }, []);
+  }, [hotelData]);
 
   const handleSelectHotelLocation = (location: string) => {
     setSelectedLocation(location);
-    const phoneNumber = hotelData.whatsapp_numbers.find(
+    const phoneNumber = hotelData.whatsapp_numbers?.find(
       (item) => item.area === location
     )?.number;
-    localStorage.setItem(`hotel-${hotelData.id}-whatsapp-area`, phoneNumber || "");
+    localStorage.setItem(
+      `hotel-${hotelData.id}-whatsapp-area`,
+      phoneNumber || ""
+    );
   };
 
   useEffect(() => {
@@ -762,7 +844,7 @@ const PlaceOrderModal = ({
   }, []);
 
   useEffect(() => {
-    if (isDelivery && hasDelivery && selectedCoords && !isQrScan) {
+    if (isDelivery && hasDelivery && selectedCoords !== null && !isQrScan) {
       calculateDeliveryDistanceAndCost(hotelData as HotelData);
     }
   }, [selectedCoords, isDelivery, hasDelivery, isQrScan]);
@@ -788,6 +870,11 @@ const PlaceOrderModal = ({
       return;
     }
 
+    // Blur any focused inputs to dismiss keyboard
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     setIsPlacingOrder(true);
     try {
       const subtotal =
@@ -797,10 +884,8 @@ const PlaceOrderModal = ({
         hotelData?.gst_percentage as number
       );
 
-      // Prepare extra charges array
       const extraCharges = [];
 
-      // Add QR group charge if applicable
       if (isQrScan && qrGroup && qrGroup.name) {
         const qrChargeAmount = getExtraCharge(
           items || [],
@@ -817,7 +902,6 @@ const PlaceOrderModal = ({
         }
       }
 
-      // Add delivery charge if applicable
       if (!isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange) {
         extraCharges.push({
           name: "Delivery Charge",
@@ -854,6 +938,7 @@ const PlaceOrderModal = ({
   };
 
   // Determine if place order button should be disabled
+
   const isPlaceOrderDisabled =
     isPlacingOrder ||
     (isDelivery && hasDelivery && !selectedCoords && !isQrScan) ||
@@ -861,10 +946,15 @@ const PlaceOrderModal = ({
     (hasMultiWhatsapp && !selectedLocation);
 
   return (
-    <Dialog open={open_place_order_modal} onOpenChange={setOpenPlaceOrderModal}>
-      <DialogContent className="w-screen h-[100dvh] overflow-y-auto z-[60] bg-gray-50">
-        <DialogHeader>
-          <div className="flex items-center gap-4">
+    <>
+      <div
+        className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto text-black ${
+          open_place_order_modal ? "block" : "hidden"
+        }`}
+      >
+        {/* Header */}
+        <div className="sticky top-0  bg-white border-b">
+          <div className="flex items-center gap-4 p-4">
             <button
               onClick={() => {
                 setOpenPlaceOrderModal(false);
@@ -874,110 +964,113 @@ const PlaceOrderModal = ({
             >
               <ArrowLeft size={20} />
             </button>
-            <DialogTitle>Review Your Order</DialogTitle>
+            <h1 className="text-xl font-bold">Review Your Order</h1>
           </div>
-        </DialogHeader>
+        </div>
 
-        {(items?.length ?? 0) > 0 && (
-          <div className="space-y-4">
-            {/* Items Card */}
-            <ItemsCard
-              items={items || []}
-              increaseQuantity={increaseQuantity}
-              decreaseQuantity={decreaseQuantity}
-              removeItem={removeItem}
-              currency={hotelData?.currency || "₹"}
-            />
-
-            {/* Show table number for QR scan or address for delivery */}
-            {isQrScan ? (
-              <TableNumberCard tableNumber={tableNumber} />
-            ) : isDelivery ? (
-              <AddressCard
-                address={address}
-                setAddress={setAddress}
-                setShowMapModal={setShowMapModal}
-                getLocation={getLocation}
-                isGeoLoading={isGeoLoading}
-                geoError={geoError}
-                deliveryInfo={deliveryInfo}
-                hasLocation={hasLocation}
-                hotelData={hotelData}
-                selectedLocation={selectedLocation}
-                setSelectedLocation={handleSelectHotelLocation}
+        {/* Main Content */}
+        <div className="p-4 pb-32">
+          {(items?.length ?? 0) > 0 && (
+            <div className="space-y-4 max-w-2xl mx-auto">
+              {/* Items Card */}
+              <ItemsCard
+                items={items || []}
+                increaseQuantity={increaseQuantity}
+                decreaseQuantity={decreaseQuantity}
+                removeItem={removeItem}
+                currency={hotelData?.currency || "₹"}
               />
-            ) : null}
 
-            {/* Bill Card */}
-            <BillCard
-              items={items || []}
-              currency={hotelData?.currency || "₹"}
-              gstPercentage={hotelData?.gst_percentage}
-              deliveryInfo={deliveryInfo}
-              isDelivery={isDelivery && !isQrScan}
-              qrGroup={qrGroup}
-              tableNumber={tableNumber}
-            />
+              {/* Show table number for QR scan or address for delivery */}
+              {isQrScan ? (
+                <TableNumberCard tableNumber={tableNumber} />
+              ) : isDelivery ? (
+                <AddressCard
+                  address={address}
+                  setAddress={setAddress}
+                  setShowMapModal={setShowMapModal}
+                  getLocation={getLocation}
+                  isGeoLoading={isGeoLoading}
+                  geoError={geoError}
+                  deliveryInfo={deliveryInfo}
+                  hasLocation={hasLocation}
+                  hotelData={hotelData}
+                  selectedLocation={selectedLocation}
+                  setSelectedLocation={handleSelectHotelLocation}
+                />
+              ) : null}
 
-            {/* Login Card (if not logged in) */}
-            {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}
+              {/* Bill Card */}
+              <BillCard
+                items={items || []}
+                currency={hotelData?.currency || "₹"}
+                gstPercentage={hotelData?.gst_percentage}
+                deliveryInfo={deliveryInfo}
+                isDelivery={isDelivery && !isQrScan}
+                qrGroup={qrGroup}
+              />
 
-            {/* Place Order Button */}
-            {user && !isPlaceOrderDisabled ? (
-              <Link
-                className="pt-4"
-                href={getWhatsappLink(orderId as string)}
-                target="_blank"
-              >
+              {/* Login Card (if not logged in) */}
+              {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}
+
+              {isDelivery && !isQrScan && deliveryInfo?.isOutOfRange && (
+                <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
+                  Delivery is not available to your selected location
+                </div>
+              )}
+
+              {/* Place Order and Back Buttons */}
+              <div className="flex flex-col gap-3 mt-6">
+                {user ? (
+                  <Link
+                    href={getWhatsappLink(orderId as string)}
+                    target="_blank"
+                    onClick={(e) => {
+                      if (isPlaceOrderDisabled) {
+                        e.preventDefault();
+                      }
+                    }}
+                  >
+                    <Button
+                      onClick={handlePlaceOrder}
+                      disabled={isPlaceOrderDisabled || !user}
+                      className="w-full"
+                    >
+                      {isPlacingOrder ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Placing Order...
+                        </>
+                      ) : (
+                        "Place Order"
+                      )}
+                    </Button>
+                  </Link>
+                ) : null}
                 <Button
-                  onClick={handlePlaceOrder}
+                  variant="outline"
+                  onClick={() => {
+                    setOpenPlaceOrderModal(false);
+                    setOpenDrawerBottom(true);
+                  }}
                   className="w-full"
-                  disabled={isPlaceOrderDisabled || !user}
                 >
-                  {isPlacingOrder ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Placing Order...
-                    </>
-                  ) : (
-                    "Place Order"
-                  )}
+                  Back
                 </Button>
-              </Link>
-            ) : (
-              <Button
-                className="w-full"
-                disabled={isPlaceOrderDisabled || !user}
-              >
-                {isPlacingOrder ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Placing Order...
-                  </>
-                ) : (
-                  "Place Order"
-                )}
-              </Button>
-            )}
-
-            {isDelivery && !isQrScan && deliveryInfo?.isOutOfRange && (
-              <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
-                Delivery is not available to your selected location
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
-        {/* Map Modal */}
-        {!isQrScan && (
-          <MapModal
-            showMapModal={showMapModal}
-            setShowMapModal={setShowMapModal}
-            setSelectedLocation={setSelectedCoords}
-            setAddress={setAddress}
-            hotelData={hotelData}
-          />
-        )}
+        {/* Fixed Footer - Empty now, just for spacing */}
+        <div
+          className="fixed bottom-0 left-0 right-0 bg-white border-t h-4 "
+          style={{
+            bottom: keyboardOpen
+              ? `${window.visualViewport?.offsetTop || 0}px`
+              : "0",
+          }}
+        />
 
         {/* Login Drawer */}
         <LoginDrawer
@@ -986,8 +1079,19 @@ const PlaceOrderModal = ({
           hotelId={hotelData?.id || ""}
           onLoginSuccess={handleLoginSuccess}
         />
-      </DialogContent>
-    </Dialog>
+      </div>
+      {/* Map Modal */}
+      {!isQrScan && (
+        <MapModal
+          showMapModal={showMapModal}
+          setShowMapModal={setShowMapModal}
+          setSelectedLocation={setSelectedCoords}
+          setAddress={setAddress}
+          hotelData={hotelData}
+          setOpenPlaceOrderModal={setOpenPlaceOrderModal}
+        />
+      )}
+    </>
   );
 };
 

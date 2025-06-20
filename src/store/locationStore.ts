@@ -24,7 +24,7 @@ export const useLocationStore = create<LocationState>(() => ({
     "Pathanamthitta",
     "Alappuzha",
     "Kollam",
-    "Trivandrum",
+    "Thiruvananthapuram",
   ],
   locationData : [
     {
@@ -805,6 +805,7 @@ export const useLocationStore = create<LocationState>(() => ({
     }
   ],
   countries : [
+    "India",
     "Afghanistan",
     "Albania",
     "Algeria",

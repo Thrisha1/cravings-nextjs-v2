@@ -45,9 +45,9 @@ export default async function HotelsPage() {
               
               <div className="mt-auto flex flex-row-reverse items-center justify-between">
                 <Link 
-                  href={partner.location}
+                  href={partner?.location || "/"}
                   target="_blank"
-                  className="text-gray-500 hover:text-orange-500 transition-colors p-1 bg-orange-500 text-white text-sm md:text-sm font-medium py-1.5 px-2 rounded transition-colors duration-200 text-center"
+                  className=" hover:text-orange-500  p-1 bg-orange-500 text-white text-sm md:text-sm font-medium py-1.5 px-2 rounded transition-colors duration-200 text-center"
                   aria-label="View location on map"
                 >
                   <svg className="md:size-5 size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

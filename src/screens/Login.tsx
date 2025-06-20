@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { Notification } from "@/app/actions/notification";
 type LoginMode = "user" | "partner";
 export default function Login() {
   const { signInWithPhone, signInPartnerWithEmail } = useAuthStore();
@@ -34,12 +35,13 @@ export default function Login() {
     setIsLoading(true);
     try {
       await signInWithPhone(cleanedPhone);
+      await Notification.token.save();
       const redirectPath = localStorage.getItem("redirectPath");
       if (redirectPath) {
         localStorage.removeItem("redirectPath");
         navigate.push(redirectPath);
       } else {
-        navigate.push("/explore");
+        navigate.push("/");
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
@@ -53,6 +55,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       await signInPartnerWithEmail(partnerData.email, partnerData.password);
+      await Notification.token.save();
       navigate.push("/admin");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");

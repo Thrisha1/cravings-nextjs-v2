@@ -3,6 +3,7 @@
 import React from "react";
 import CATEGORIES from "@/data/CATEGORIES.json";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 const CategoryList = ({ hotelId }: { hotelId: string }) => {
   const router = useRouter();
@@ -20,7 +21,13 @@ const CategoryList = ({ hotelId }: { hotelId: string }) => {
             className="p-4 group rounded-full cursor-pointer flex flex-col items-center justify-center"
             onClick={() => handleCategoryClick(category.id)}
           >
-            <img src={category.image} alt={category.name} className="w-32 aspect-square drop-shadow-lg drop-shadow-black object-cover group-hover:scale-110 transition-all duration-300" />
+            <Image 
+              src={category.image} 
+              alt={category.name} 
+              width={128}
+              height={128}
+              className="w-32 aspect-square drop-shadow-lg drop-shadow-black object-cover group-hover:scale-110 transition-all duration-300" 
+            />
             <h2 className="font-semibold text-center text-sm">{category.name}</h2>
           </div>
         ))}

@@ -15,7 +15,7 @@ export const getSocialLinks = (hoteldata: HotelData): SocialLinks => {
 
   return {
     instagram: instaLink || undefined,
-    whatsapp: (hoteldata?.whatsapp_numbers?.[0] || hoteldata?.phone) ? `https://wa.me/+91${
+    whatsapp: (hoteldata?.whatsapp_numbers?.[0] || hoteldata?.phone) ? `https://wa.me/${hoteldata?.country_code || "+91"}${
       hoteldata?.whatsapp_numbers?.[0] ? hoteldata.whatsapp_numbers[0]?.number : hoteldata?.phone
     }` : undefined,
     googleReview: undefined,

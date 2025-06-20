@@ -165,15 +165,15 @@ const QrPayment = () => {
 
       // Follow the partner
 
-      if (!followers || followers.length === 0) {
-        await fetchFromHasura(FOLLOW_PARTNER, {
-          userId: u.id,
-          partnerId: hotelDetails?.hotelId,
-          phone: u.role === "user" ? u.phone : "",
-        });
-      } else {
-        console.log("Already following");
-      }
+      // if (!followers || followers.length === 0) {
+      //   await fetchFromHasura(FOLLOW_PARTNER, {
+      //     userId: u.id,
+      //     partnerId: hotelDetails?.hotelId,
+      //     phone: u.role === "user" ? u.phone : "",
+      //   });
+      // } else {
+      //   console.log("Already following");
+      // }
 
       // Calculate discount
       const calculatedDiscount = 0;

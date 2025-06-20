@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -14,51 +13,45 @@ import {
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
 import { useLocationStore } from "@/store/locationStore";
-import { MapPin } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { resolveShortUrl } from "@/app/actions/extractLatLonFromGoogleMapsUrl";
-// import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Pencil } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { getCoordinatesFromLink } from "@/lib/getCoordinatesFromLink";
 
+interface GeoLocation {
+  latitude: number;
+  longitude: number;
+}
 
 export function PartnerDialog() {
   const router = useRouter();
-  const { signUpWithEmailForPartner, loading } =
-    useAuthStore();
+  const { signUpWithEmailForPartner, loading } = useAuthStore();
   const { locationData, countries } = useLocationStore();
+  
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     hotelName: "",
-    area: "", 
-    location: "",
+    area: "",
     phone: "",
     upiId: "",
     isInIndia: true,
     state: "",
     country: "India",
+    location: "",
+    geoLocation: { latitude: 0, longitude: 0 } as GeoLocation,
   });
+
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // const [authMethod, setAuthMethod] = useState<"google" | "email">("google");
-
-  // const validateUpiId = (upiId: string) => {
-  //   const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z]{3,}$/;
-  //   return upiRegex.test(upiId);
-  // };
+  const [locationEditing, setLocationEditing] = useState(true);
 
   const validateForm = async () => {
-    // if (!validateUpiId(formData.upiId)) {
-    //   setError("Please enter a valid UPI ID (format: username@bankname)");
-    //   setIsSubmitting(false);
-    //   return false;
-    // }
-
     if (
       !formData.hotelName ||
-      !formData.location ||
       !formData.phone ||
       !formData.country ||
       (formData.country === "India" && (!formData.state || !formData.area))
@@ -67,18 +60,34 @@ export function PartnerDialog() {
       setIsSubmitting(false);
       return false;
     }
-    const urlWithCoordinates = await resolveShortUrl(formData.location);
 
-    // Save form data to localStorage
-    localStorage.setItem(
-      "partnerFormData",
-      JSON.stringify({
-        ...formData,
-        location: urlWithCoordinates ?? formData.location,
-      })
-    );
+    if (!formData.email || !formData.password) {
+      setError("Email and password are required");
+      setIsSubmitting(false);
+      return false;
+    }
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      setIsSubmitting(false);
+      return false;
+    }
+
+    if (formData.location) {
+      const isValid = /^https:\/\/(maps\.app\.goo\.gl\/[a-zA-Z0-9]+|www\.google\.[a-z.]+\/maps\/.+)$/i.test(
+        formData.location.trim()
+      );
+      if (!isValid) {
+        setError("Please enter a valid Google Maps URL");
+        setIsSubmitting(false);
+        return false;
+      }
+    }
+    
+    localStorage.setItem("partnerFormData", JSON.stringify(formData));
     return true;
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,33 +99,46 @@ export function PartnerDialog() {
     }
 
     try {
-        await signUpWithEmailForPartner(
-          formData.hotelName,
-          formData.phone,
-          formData.upiId,
-          formData.area,
-          formData.location,
-          formData.email,
-          formData.password,
-          formData.country,
-          formData.state
-        );
-        toast.success("Account created successfully!");
-        setTimeout(() => {
-          router.push("/admin");
-        }, 1000);
-    } catch (error: unknown) {
-      setError(
-        error instanceof Error ? error.message : "An unexpected error occurred"
+      let geoLoc = formData.geoLocation;
+      
+      // If location is provided but coordinates aren't extracted yet
+      if (formData.location && 
+          (formData.geoLocation.latitude === 0 || formData.geoLocation.longitude === 0)) {
+        const response = await getCoordinatesFromLink(formData.location.trim());
+        geoLoc = response.coordinates;
+        
+        // Update form data with new coordinates
+        setFormData(prev => ({
+          ...prev,
+          geoLocation: geoLoc
+        }));
+      }
+
+      await signUpWithEmailForPartner(
+        formData.hotelName,
+        formData.phone,
+        formData.upiId,
+        formData.area,
+        formData.email,
+        formData.password,
+        formData.country,
+        formData.state,
+        formData.location,
+        geoLoc
       );
-      setIsSubmitting(false);
+      
+      toast.success("Account created successfully!");
+      localStorage.removeItem("partnerFormData");
+      setTimeout(() => {
+        router.push("/admin");
+      }, 1000);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "An unexpected error occurred";
+      setError(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const openGoogleMaps = () => {
-    window.open("https://www.google.com/maps", "_blank");
   };
 
   return (
@@ -127,15 +149,10 @@ export function PartnerDialog() {
         </h2>
       </div>
       <ScrollArea className="flex-1 px-6 mt-5">
-        <form className="space-y-6 pb-10 px-2">
-          
-
+        <form className="space-y-6 pb-10 px-2" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label
-              htmlFor="hotelName"
-              className="text-sm font-medium text-gray-700"
-            >
-              Business Name
+            <Label htmlFor="hotelName" className="text-sm font-medium text-gray-700">
+              Business Name *
             </Label>
             <Input
               id="hotelName"
@@ -150,11 +167,8 @@ export function PartnerDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label
-              htmlFor="phone"
-              className="text-sm font-medium text-gray-700"
-            >
-              Phone Number
+            <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+              Phone Number *
             </Label>
             <Input
               id="phone"
@@ -169,24 +183,20 @@ export function PartnerDialog() {
             />
           </div>
 
-          {/* <div className="space-y-2">
-            <Label
-              htmlFor="upiId"
-              className="text-sm font-medium text-gray-700"
-            >
-              UPI ID
+          <div className="space-y-2">
+            <Label htmlFor="upiId" className="text-sm font-medium text-gray-700">
+              UPI ID (For payments)
             </Label>
             <Input
               id="upiId"
-              placeholder="Enter your UPI ID (e.g. username@bankname)"
+              placeholder="Enter your UPI ID"
               value={formData.upiId}
               onChange={(e) =>
                 setFormData({ ...formData, upiId: e.target.value })
               }
               className="w-full"
-              required
             />
-          </div> */}
+          </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between space-x-2 mb-4">
@@ -213,7 +223,7 @@ export function PartnerDialog() {
               <>
                 <div className="space-y-2">
                   <Label htmlFor="state" className="text-sm font-medium text-gray-700">
-                    State
+                    State *
                   </Label>
                   <Select
                     value={formData.state}
@@ -236,7 +246,7 @@ export function PartnerDialog() {
 
                 <div className="space-y-2">
                   <Label htmlFor="area" className="text-sm font-medium text-gray-700">
-                    District
+                    District *
                   </Label>
                   <Select
                     value={formData.area}
@@ -264,7 +274,7 @@ export function PartnerDialog() {
             ) : (
               <div className="space-y-2">
                 <Label htmlFor="country" className="text-sm font-medium text-gray-700">
-                  Country
+                  Country *
                 </Label>
                 <Select
                   value={formData.country}
@@ -287,93 +297,118 @@ export function PartnerDialog() {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label
-              htmlFor="location"
-              className="text-sm font-medium text-gray-700"
-            >
-              Google Map Location
-            </Label>
-            <div className="relative">
-              <Textarea
-                id="location"
-                placeholder="Paste your gmap location"
-                value={formData.location}
-                onChange={(e) =>
-                  setFormData({ ...formData, location: e.target.value })
-                }
-                className="min-h-[100px] pr-10"
-                required
-              />
-              <Button
-                type="button"
-                className="absolute right-2 top-2"
-                onClick={openGoogleMaps}
-              >
-                <MapPin className="h-4 w-4 text-gray-500" />
-              </Button>
+          {/* Location Section */}
+          <div className="space-y-4 w-full">
+            <div className="flex justify-between items-center">
+              <Label className="text-sm font-medium text-gray-700">
+                Business Location
+              </Label>
+              {!locationEditing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLocationEditing(true)}
+                  className="gap-2"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Edit
+                </Button>
+              )}
             </div>
+
+            {locationEditing ? (
+              <div className="space-y-3">
+                <Input
+                  value={formData.location}
+                  onChange={(e) =>
+                    setFormData({ ...formData, location: e.target.value })
+                  }
+                  placeholder="Paste your Google Maps location link here"
+                />
+                <div className="flex items-center">
+                  <a 
+                    className="text-orange-600 underline text-sm" 
+                    href="https://www.google.com/maps" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Get Google Maps Link {"->"}
+                  </a>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Share your business location from Google Maps to help customers find you
+                </p>
+              </div>
+            ) : (
+              <div className="h-48 w-full rounded-md overflow-hidden relative border">
+                {formData.geoLocation.latitude !== 0 && formData.geoLocation.longitude !== 0 ? (
+                  <div className="h-full w-full bg-gray-100 relative">
+                    <img
+                      src={`https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+ff0000(${formData.geoLocation.longitude},${formData.geoLocation.latitude})/${formData.geoLocation.longitude},${formData.geoLocation.latitude},15/600x300?access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}`}
+                      alt="Map preview"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-full w-full bg-gray-100 flex items-center justify-center">
+                    <p className="text-muted-foreground">No location set</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* <div className="flex items-center justify-between space-x-2 mt-6">
-            <Label htmlFor="auth-method" className="text-sm text-gray-600">
-              {"Sign up with Email"}
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+              Email *
             </Label>
-            <Switch
-              id="auth-method"
-              checked={authMethod === "email"}
-              onCheckedChange={(checked) =>
-                setAuthMethod(checked ? "email" : "google")
+            <Input
+              id="email"
+              type="email"
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
               }
-              className="data-[state=checked]:bg-orange-600"
+              required
             />
-          </div> */}
-            <>
-              <div className="space-y-2 text-gray-700">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  required
-                />
-              </div>
+          </div>
 
-              <div className="space-y-2 text-gray-700">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  required
-                  minLength={6}
-                />
-              </div>
-            </>
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+              Password *
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter your password (min 6 characters)"
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+              required
+              minLength={6}
+            />
+          </div>
 
-            {error && (
+          {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4">
               {error}
             </div>
           )}
 
           <Button
-            onClick={(e)=>handleSubmit(e)}
+            type="submit"
             className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white"
-            disabled={isSubmitting}
+            disabled={isSubmitting || loading}
           >
-            {loading ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-800"></div>
-            ): (
-              "Sign up with Email"
+            {isSubmitting || loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating account...
+              </>
+            ) : (
+              "Sign up as Partner"
             )}
           </Button>
         </form>

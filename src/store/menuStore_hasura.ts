@@ -61,6 +61,27 @@ interface MenuItem_withOffer_price {
   is_available: boolean;
 }
 
+interface MenuItem_withOffer_price {
+  id?: string;
+  name: string;
+  category: {
+    id: string;
+    name: string;
+    priority: number;
+  };
+  image_url: string;
+  image_source: string;
+  partner_id: string;
+  priority: number;
+  price: number;
+  offers: {
+    offer_price: number;
+  }[];
+  description: string;
+  is_top: boolean;
+  is_available: boolean;
+}
+
 interface CategoryImages {
   image_url: string;
   image_source: string;
@@ -103,7 +124,7 @@ interface MenuState {
   groupedItems: GroupedItems;
   categoryImages: CategoryImages[];
   addItem: (item: Omit<MenuItem, "id">) => Promise<void>;
-  fetchMenu: (hotelId?: string) => Promise<MenuItem[] | []>;
+  fetchMenu: (hotelId?: string, forceRefresh?: boolean) => Promise<MenuItem[] | []>;
   updateItem: (id: string, updatedItem: Partial<MenuItem>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
   fetchCategorieImages: (category: string) => Promise<CategoryImages[]>;
@@ -111,9 +132,7 @@ interface MenuState {
   updatedCategories: (categories: Category[]) => void;
   updateCategoriesAsBatch: (categories: Category[]) => Promise<Category[]>;
   deleteCategoryAndItems: (categoryId: string) => Promise<void>;
-  updateItemsAsBatch: (
-    items: { id: string; priority: number }[]
-  ) => Promise<void>;
+  updateItemsAsBatch: (items: { id: string; priority: number }[]) => Promise<void>;
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
@@ -121,34 +140,67 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   categoryImages: [],
   groupedItems: {},
 
-  fetchMenu: async (hotelId?: string) => {
+  fetchMenu: async (hotelId?: string, forceRefresh: boolean = false) => {
     const userData = useAuthStore.getState().userData as AuthUser;
 
-    if (!userData && !hotelId) throw new Error("User data not found");
+    if (!hotelId && !userData) throw new Error("No partner ID provided and user data not found");
 
     const targetId = hotelId || userData.id;
 
-    if (get().items.length > 0 && get().items[0].partner_id === targetId) {
-      return get().items as MenuItem[];
+    // Only check cache if forceRefresh is false
+    if (!forceRefresh) {
+      if (get().items.length > 0 && get().items[0].partner_id === targetId) {
+        /* console.log("Returning cached menu items for partner:", targetId); */
+        return get().items as MenuItem[];
+      }
+    } else {
+      // Clear the cache when forceRefresh is true
+      set({ items: [], groupedItems: {} });
     }
 
+    /* console.log("Fetching menu items for partner:", targetId, "forceRefresh:", forceRefresh); */
     try {
-      const items =
-        (await fetchFromHasura(getMenu, {
-          partner_id: targetId,
-        }).then((res) =>
-          res.menu.map((mi: MenuItem_withOffer_price) => {
-            return {
-              ...mi,
-              price: (mi.offers[0]?.offer_price || mi.price) ?? 0,
-              category: {
-                id: mi.category.id,
-                name: mi.category.name,
-                priority: mi.category.priority,
-              },
-            };
-          })
-        )) || [];
+      const response = await fetchFromHasura(getMenu, {
+        partner_id: targetId,
+      });
+
+      /* console.log("Menu fetch response:", {
+        partnerId: targetId,
+        itemsCount: response.menu?.length || 0,
+        firstFewItems: response.menu?.slice(0, 3).map((item: MenuItem_withOffer_price) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          is_available: item.is_available
+        }))
+      }); */
+
+      if (!response.menu) {
+        console.warn("No menu items found in response for partner:", targetId);
+        set({ items: [] });
+        return [];
+      }
+
+      const items = response.menu.map((mi: MenuItem_withOffer_price) => ({
+        ...mi,
+        price: (mi.offers[0]?.offer_price || mi.price) ?? 0,
+        category: {
+          id: mi.category.id,
+          name: mi.category.name,
+          priority: mi.category.priority,
+        },
+      }));
+
+      /* console.log("Processed menu items:", {
+        count: items.length,
+        firstFew: items.slice(0, 3).map((item: MenuItem) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          category: item.category.name
+        }))
+      }); */
+
       set({ items });
       get().groupItems();
       return items;
@@ -183,10 +235,13 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           item.image_source || ""
         );
 
+        const formattedName = item.name.replace(/[^a-zA-Z0-9]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_"); 
+        const formattedCategory = item.category.name.replace(/[^a-zA-Z0-9]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_");
+
         s3Url = await uploadFileToS3(
           getProcessedBase64Url,
-          `${userData.id}/menu/${item.name}_${
-            item.category.name
+          `${userData.id}/menu/${formattedName}_${
+            formattedCategory
           }_${Date.now()}.webp`
         );
       }
@@ -259,10 +314,13 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           updatedItem.image_source || ""
         );
 
+        const formattedName = updatedItem.name?.replace(/[^a-zA-Z0-9]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_"); 
+        const formattedCategory = updatedItem.category?.name?.replace(/[^a-zA-Z0-9]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_"); ;
+
         const s3Url = await uploadFileToS3(
           getProcessedBase64Url,
-          `${userData.id}/menu/${updatedItem.name}_${
-            updatedItem.category
+          `${userData.id}/menu/${formattedName}_${
+            formattedCategory
           }_${Date.now()}.webp`
         );
 

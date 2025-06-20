@@ -1,6 +1,9 @@
 export default async function convertLocToCoord(url: string) {
-  const response = await fetch(
-    process.env.NEXT_PUBLIC_SERVER_URL + "/api/convert-coordinate",
+
+
+  const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL;
+
+  const response = await fetch(baseUrl + "/api/convert-coordinate",
     {
       method: "POST",
       headers: {
@@ -13,7 +16,7 @@ export default async function convertLocToCoord(url: string) {
     const data = await response.json();
 
     if (!data.coordinates) {
-      throw new Error("No coordinates found in response");
+      throw new Error(data?.error || "No coordinates found in response");
     }
 
     return data.coordinates;

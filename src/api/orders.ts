@@ -19,43 +19,47 @@ export const getOrdersOfPartnerQuery = `
 
 //mutation
 export const createOrderMutation = `
-                  mutation CreateOrder(
-                    $id: uuid,
-                    $totalPrice: float8!,
-                    $createdAt: timestamptz!,
-                    $tableNumber: Int,
-                    $qrId: uuid,
-                    $partnerId: uuid!,
-                    $userId: uuid,
-                    $type: String!,
-                    $delivery_address: String,
-                    $phone: String,
-                    $status: String,
-                    $gst_included: numeric,
-                    $extra_charges: jsonb,
-                    $delivery_location: geography
-                  ) {
-                    insert_orders_one(object: {
-                      id: $id
-                      total_price: $totalPrice
-                      created_at: $createdAt
-                      table_number: $tableNumber
-                      qr_id: $qrId
-                      partner_id: $partnerId
-                      user_id: $userId
-                      status: $status
-                      type: $type
-                      phone: $phone
-                      delivery_address: $delivery_address
-                      gst_included: $gst_included
-                      extra_charges: $extra_charges
-                      delivery_location: $delivery_location
-                    }) {
-                      id
-                      total_price
-                      created_at
-                    }
-                  }
+  mutation CreateOrder(
+    $id: uuid,
+    $totalPrice: float8!,
+    $createdAt: timestamptz!,
+    $tableNumber: Int,
+    $qrId: uuid,
+    $partnerId: uuid!,
+    $userId: uuid,
+    $type: String!,
+    $delivery_address: String,
+    $phone: String,
+    $status: String,
+    $gst_included: numeric,
+    $extra_charges: jsonb,
+    $orderedby: String,
+    $delivery_location: geography,
+    $captain_id: uuid
+  ) {
+    insert_orders_one(object: {
+      id: $id
+      total_price: $totalPrice
+      created_at: $createdAt
+      table_number: $tableNumber
+      qr_id: $qrId
+      partner_id: $partnerId
+      user_id: $userId
+      status: $status
+      type: $type
+      phone: $phone
+      delivery_address: $delivery_address
+      gst_included: $gst_included
+      extra_charges: $extra_charges
+      orderedby: $orderedby
+      delivery_location: $delivery_location
+      captain_id: $captain_id
+    }) {
+      id
+      total_price
+      created_at
+    }
+  }
 `;
 
 export const createOrderItemsMutation = `
@@ -70,17 +74,23 @@ export const updateOrderMutation = `
   mutation UpdateOrder(
     $id: uuid!,
     $totalPrice: float8,
-    $phone: String
+    $phone: String,
+    $tableNumber: Int,
+    $extraCharges: jsonb
   ) {
     update_orders_by_pk(
       pk_columns: { id: $id }
       _set: {
-        total_price: $totalPrice
-        phone: $phone
+        total_price: $totalPrice,
+        phone: $phone,
+        table_number: $tableNumber,
+        extra_charges: $extraCharges
       }
     ) {
       id
       total_price
+      table_number
+      extra_charges
     }
   }
 `;
@@ -125,6 +135,14 @@ export const getOrderByIdQuery = `
       status
       phone
       partner_id
+      notes
+      gst_included
+      extra_charges
+      captainid {
+        id
+        name
+        email
+      }
       order_items {
         id
         quantity
@@ -146,7 +164,13 @@ export const getOrderByIdQuery = `
 export const subscriptionQuery = `
 subscription GetPartnerOrders($partner_id: uuid!) {
   orders(
-    where: { partner_id: { _eq: $partner_id }, _or: [{ status: { _eq: "pending" } }, { type: { _eq: "pos" } }] }
+    where: { 
+      partner_id: { _eq: $partner_id },
+      _or: [
+        { orderedby: { _is_null: true } },
+        { orderedby: { _eq: "captain" } }
+      ]
+    }
     order_by: { created_at: desc }
   ) {
     id
@@ -165,6 +189,13 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     extra_charges
     phone
     user_id
+    orderedby
+    captain_id
+    captainid {
+      id
+      name
+      email
+    }
     user {
       full_name
       phone
@@ -173,15 +204,20 @@ subscription GetPartnerOrders($partner_id: uuid!) {
     order_items {
       id
       quantity
-      item
       menu {
+        id
+        name
+        price
         category {
-          name
-        }
-        stocks {
-          stock_quantity
           id
+          name
+          priority
         }
+        description
+        image_url
+        is_top
+        is_available
+        priority
         stocks {
           stock_quantity
           id
@@ -239,4 +275,15 @@ subscription GetUserOrders($user_id: uuid!) {
     }
   }
 }
+`;
+
+// Add a new query to fetch captains
+export const getCaptainsQuery = `
+  query GetCaptains($captain_ids: [uuid!]!) {
+    captain(where: {id: {_in: $captain_ids}}) {
+      id
+      name
+      email
+    }
+  }
 `;
