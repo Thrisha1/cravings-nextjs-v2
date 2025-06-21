@@ -14,6 +14,9 @@ import { deleteBillMutation } from "@/api/pos";
 import { Order, OrderItem } from "./orderStore";
 import { v4 as uuidv4 } from "uuid";
 import { getExtraCharge } from "@/lib/getExtraCharge";
+import { getQrGroupForTable } from "@/lib/getQrGroupForTable";
+import { QrGroup } from "@/app/admin/qr-management/page";
+import { toast } from "sonner";
 
 interface CartItem extends MenuItem {
   quantity: number;
@@ -65,6 +68,13 @@ interface POSState {
   setIsCaptainOrder: (isCaptain: boolean) => void;
   isPOSOpen: boolean;
   setIsPOSOpen: (open: boolean) => void;
+  qrGroup: QrGroup | null;
+  setQrGroup: (qrGroup: QrGroup | null) => void;
+  fetchQrGroupForTable: (tableNumber: number) => Promise<void>;
+  setDeliveryMode: (isDelivery: boolean) => void;
+  removedQrGroupCharges: string[];
+  removeQrGroupCharge: (qrGroupId: string) => void;
+  addQrGroupCharge: (qrGroupId: string) => void;
 }
 
 export const usePOSStore = create<POSState>((set, get) => ({
@@ -82,6 +92,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
   isCaptainOrder: false,
   deliveryAddress: "",
   isPOSOpen: false,
+  qrGroup: null,
+  removedQrGroupCharges: [],
 
   setDeliveryAddress: (address: string) => {
     set({ deliveryAddress: address });
@@ -215,6 +227,23 @@ export const usePOSStore = create<POSState>((set, get) => ({
 
   setTableNumber: (tableNumber: number | null) => {
     set({ tableNumber });
+    
+    // Clear QR group first when changing table numbers
+    set({ qrGroup: null });
+    
+    // Remove any existing QR group charges from extraCharges when switching tables
+    set((state) => ({
+      extraCharges: state.extraCharges.filter(charge => !charge.id.startsWith('qr-group-')),
+      removedQrGroupCharges: [], // Clear removed QR group charges when switching tables
+    }));
+    
+    // If table number is set, fetch QR group for that table
+    if (tableNumber !== null) {
+      const { fetchQrGroupForTable } = get();
+      fetchQrGroupForTable(tableNumber).catch((error) => {
+        console.error("Failed to fetch QR group for table:", error);
+      });
+    }
   },
 
   setUserPhone: (phone: string | null) => {
@@ -283,7 +312,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   clearCart: () => {
-    set({ cartItems: [], totalAmount: 0, extraCharges: [] });
+    set({ cartItems: [], totalAmount: 0, extraCharges: [], removedQrGroupCharges: [] });
   },
 
   addExtraCharge: (charge: Omit<ExtraCharge, "id">) => {
@@ -315,26 +344,26 @@ export const usePOSStore = create<POSState>((set, get) => ({
       0
     );
 
-    // Calculate charges subtotal
-    const chargesSubtotal = extraCharges.reduce(
+    // Calculate all extra charges subtotal (including QR group charges)
+    const extraChargesSubtotal = extraCharges.reduce(
       (total, charge) => total + charge.amount,
       0
     );
 
-    // Calculate GST on both food and all extra charges
+    // Calculate GST on food and extra charges
     const gstAmount = getGstAmount(
-      foodSubtotal + chargesSubtotal,
+      foodSubtotal + extraChargesSubtotal,
       gstPercentage
     );
 
     // Return grand total
-    return foodSubtotal + chargesSubtotal + gstAmount;
+    return foodSubtotal + extraChargesSubtotal + gstAmount;
   },
 
   checkout: async () => {
     try {
       set({ loading: true });
-      const { cartItems, extraCharges, isCaptainOrder } = get();
+      const { cartItems, extraCharges, isCaptainOrder, qrGroup } = get();
       const userData = useAuthStore.getState().userData;
       console.log("User Data:", {
         id: userData?.id,
@@ -379,13 +408,14 @@ export const usePOSStore = create<POSState>((set, get) => ({
         0
       );
 
+      // Prepare all extra charges (manual + QR group)
+      const allExtraCharges = [...extraCharges];
+      
+      // QR group charges are now included in extraCharges, so no need to add them separately
+
       const grandTotal =
         foodSubtotal +
-        getExtraCharge(
-          cartItems as OrderItem[],
-          extraCharges[0]?.amount || 0,
-          "FLAT_FEE"
-        ) +
+        allExtraCharges.reduce((sum, charge) => sum + charge.amount, 0) +
         getGstAmount(foodSubtotal, gstPercentage);
 
       const orderId = uuidv4();
@@ -401,7 +431,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         type: "pos",
         status: "completed" as "completed",
         tableNumber: get().tableNumber,
-        extraCharges: extraCharges,
+        extraCharges: allExtraCharges,
         gstIncluded: gstPercentage,
         captainId: isCaptainOrder ? userId : null
       });
@@ -411,7 +441,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         id: orderId,
         totalPrice: foodSubtotal,
         gst_included: gstPercentage,
-        extra_charges: extraCharges.length > 0 ? extraCharges : null,
+        extra_charges: allExtraCharges.length > 0 ? allExtraCharges : null,
         createdAt,
         tableNumber: get().tableNumber || null,
         qrId: null,
@@ -435,7 +465,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
             type: "pos",
             status: "completed" as "completed",
             tableNumber: get().tableNumber,
-            extraCharges: extraCharges,
+            extraCharges: allExtraCharges,
             gstIncluded: gstPercentage,
             captainId: isCaptainOrder ? userId : null
           }
@@ -443,40 +473,81 @@ export const usePOSStore = create<POSState>((set, get) => ({
         throw new Error(orderResponse.errors?.[0]?.message || "Failed to create order");
       }
 
-      const itemsResponse = await fetchFromHasura(createOrderItemsMutation, {
-        orderItems: cartItems.map((item) => ({
-          order_id: orderId,
-          menu_id: item.id,
-          quantity: item.quantity,
-          item: {
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            offers: item.offers,
-          },
-        })),
-      });
+      // Create order items
+      const orderItemsResponse = await fetchFromHasura(
+        `mutation CreateOrderItems($orderItems: [order_items_insert_input!]!) {
+          insert_order_items(objects: $orderItems) {
+            returning {
+              id
+              order_id
+              menu_id
+              quantity
+            }
+          }
+        }`,
+        {
+          orderItems: cartItems.map((item) => ({
+            order_id: orderId,
+            menu_id: item.id,
+            quantity: item.quantity,
+            item: {
+              id: item.id,
+              name: item.name,
+              price: item.price,
+              category: item.category,
+            },
+          })),
+        }
+      );
 
-      if (itemsResponse.errors) {
-        throw new Error(
-          itemsResponse.errors?.[0]?.message || "Failed to add order items"
-        );
+      if (orderItemsResponse.errors) {
+        console.error("Order items creation failed:", orderItemsResponse.errors);
+        throw new Error(orderItemsResponse.errors[0]?.message || "Failed to create order items");
       }
 
-      set({
-        loading: false,
-        order: {
-          ...orderResponse.insert_orders_one,
-          items: cartItems,
-          extraCharges: extraCharges,
-          deliveryAddress: get().deliveryAddress || "",
-          createdAt: createdAt
-        } as unknown as Order,
-      });
-      set({ postCheckoutModalOpen: true });
+      // Create order object
+      const newOrder: Order = {
+        id: orderId,
+        items: cartItems.map(item => ({
+          id: item.id || "",
+          quantity: item.quantity,
+          name: item.name,
+          price: item.price,
+          category: item.category,
+          offers: item.offers || [],
+          image_url: item.image_url || "",
+          description: item.description || "",
+          is_top: item.is_top || false,
+          is_available: item.is_available || true,
+          priority: item.priority || 0,
+        })),
+        totalPrice: grandTotal,
+        createdAt,
+        tableNumber: get().tableNumber,
+        qrId: undefined,
+        status: "completed",
+        partnerId,
+        userId: undefined,
+        user: {
+          phone: get().userPhone || "N/A",
+        },
+        gstIncluded: gstPercentage,
+        extraCharges: allExtraCharges,
+        type: "pos",
+        deliveryAddress: get().deliveryAddress || undefined,
+        phone: get().userPhone || undefined,
+        orderedby: isCaptainOrder ? "captain" : undefined,
+        captain_id: isCaptainOrder ? userId : undefined,
+      };
+
+      set({ order: newOrder, postCheckoutModalOpen: true });
+      toast.success("Order placed successfully!");
     } catch (error) {
-      console.error("Error during checkout:", error);
+      console.error("Checkout error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to place order");
       throw error;
+    } finally {
+      set({ loading: false });
     }
   },
 
@@ -512,4 +583,103 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   setIsPOSOpen: (open) => set({ isPOSOpen: open }),
+
+  setQrGroup: (qrGroup: QrGroup | null) => set({ qrGroup }),
+
+  fetchQrGroupForTable: async (tableNumber: number) => {
+    try {
+      const userData = useAuthStore.getState().userData;
+      let partnerId: string;
+      
+      if (userData?.role === "captain") {
+        const captainData = userData as Captain;
+        partnerId = captainData.partner_id;
+      } else {
+        const partnerData = userData as Partner;
+        partnerId = partnerData.id;
+      }
+      
+      if (!partnerId) {
+        console.error("Partner ID not available");
+        return;
+      }
+
+      const qrGroup = await getQrGroupForTable(partnerId, tableNumber);
+      
+      if (qrGroup) {
+        set({ qrGroup });
+        
+        // Calculate the QR group charge amount
+        const { cartItems } = get();
+        const qrGroupCharges = getExtraCharge(
+          cartItems as any[],
+          qrGroup.extra_charge,
+          qrGroup.charge_type || "FLAT_FEE"
+        );
+        
+        // Only add as extra charge if it's not already removed and has a positive amount
+        const { removedQrGroupCharges, extraCharges } = get();
+        const isAlreadyRemoved = removedQrGroupCharges.includes(qrGroup.id);
+        const isAlreadyAdded = extraCharges.some(charge => charge.name === qrGroup.name);
+        
+        if (!isAlreadyRemoved && qrGroupCharges > 0 && !isAlreadyAdded) {
+          // Add QR group charge as an extra charge
+          const newCharge: ExtraCharge = {
+            id: `qr-group-${qrGroup.id}`,
+            name: qrGroup.name,
+            amount: qrGroupCharges,
+          };
+          
+          set((state) => ({
+            extraCharges: [...state.extraCharges, newCharge],
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching QR group for table:", error);
+    }
+  },
+
+  setDeliveryMode: (isDelivery: boolean) => {
+    if (isDelivery) {
+      set({ tableNumber: 0, qrGroup: null });
+      // Fetch QR group for table 0 (delivery)
+      const { fetchQrGroupForTable } = get();
+      fetchQrGroupForTable(0).catch((error) => {
+        console.error("Failed to fetch QR group for delivery:", error);
+      });
+    }
+  },
+
+  removeQrGroupCharge: (qrGroupId: string) => {
+    set((state) => ({
+      removedQrGroupCharges: [...state.removedQrGroupCharges, qrGroupId],
+      extraCharges: state.extraCharges.filter(charge => charge.id !== `qr-group-${qrGroupId}`),
+    }));
+  },
+
+  addQrGroupCharge: (qrGroupId: string) => {
+    const { qrGroup, cartItems, extraCharges } = get();
+    
+    if (qrGroup && qrGroup.id === qrGroupId) {
+      const qrGroupCharges = getExtraCharge(
+        cartItems as any[],
+        qrGroup.extra_charge,
+        qrGroup.charge_type || "FLAT_FEE"
+      );
+      
+      if (qrGroupCharges > 0) {
+        const newCharge: ExtraCharge = {
+          id: `qr-group-${qrGroupId}`,
+          name: qrGroup.name,
+          amount: qrGroupCharges,
+        };
+        
+        set((state) => ({
+          removedQrGroupCharges: state.removedQrGroupCharges.filter((id) => id !== qrGroupId),
+          extraCharges: [...state.extraCharges, newCharge],
+        }));
+      }
+    }
+  },
 }));

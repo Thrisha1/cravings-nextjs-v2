@@ -22,6 +22,8 @@ import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Partner, useAuthStore } from "@/store/authStore";
+import { getExtraCharge } from "@/lib/getExtraCharge";
+import { getQrGroupForTable } from "@/lib/getQrGroupForTable";
 
 interface ExtraCharge {
   id?: string;
@@ -61,6 +63,7 @@ export const EditOrderModal = () => {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
   const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0 });
+  const [qrGroup, setQrGroup] = useState<any>(null);
 
   const currency = (userData as Partner)?.currency || "$";
   const gstPercentage = (userData as Partner)?.gst_percentage || 0;
@@ -151,8 +154,41 @@ export const EditOrderModal = () => {
       0
     );
     const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
+    
+    // Calculate QR group extra charges
+    const qrGroupCharges = qrGroup?.extra_charge
+      ? getExtraCharge(
+          items as any[],
+          qrGroup.extra_charge,
+          qrGroup.charge_type || "FLAT_FEE"
+        )
+      : 0;
+      
     const gstAmount = gstPercentage > 0 ? (subtotal * gstPercentage) / 100 : 0;
-    return subtotal + extraChargesTotal + gstAmount;
+    return subtotal + extraChargesTotal + qrGroupCharges + gstAmount;
+  };
+
+  // Fetch QR group when table number changes
+  const fetchQrGroupForTable = async (tableNum: number | null) => {
+    if (tableNum === null) {
+      setQrGroup(null);
+      return;
+    }
+    
+    try {
+      const partnerId = (userData as Partner)?.id;
+      if (!partnerId) return;
+      
+      const qrGroupData = await getQrGroupForTable(partnerId, tableNum);
+      setQrGroup(qrGroupData);
+    } catch (error) {
+      console.error("Error fetching QR group for table:", error);
+    }
+  };
+
+  const handleTableNumberChange = (newTableNumber: number | null) => {
+    setTableNumber(newTableNumber);
+    fetchQrGroupForTable(newTableNumber);
   };
 
   const handleQuantityChange = (index: number, newQuantity: number) => {
@@ -363,7 +399,7 @@ export const EditOrderModal = () => {
                         type="number"
                         value={tableNumber || ""}
                         onChange={(e) =>
-                          setTableNumber(Number(e.target.value) || null)
+                          handleTableNumberChange(Number(e.target.value) || null)
                         }
                         placeholder="Table number"
                         onFocus={handleInputFocus}
@@ -454,6 +490,31 @@ export const EditOrderModal = () => {
                   )}
                 </div>
               </div>
+
+              {/* QR Group Charges */}
+              {qrGroup && (
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-medium mb-3">QR Group Charges</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-medium">{qrGroup.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {qrGroup.charge_type === "PER_ITEM" ? "Per item charge" : "Fixed charge"}
+                        </div>
+                      </div>
+                      <div className="font-medium">
+                        {currency}
+                        {getExtraCharge(
+                          items as any[],
+                          qrGroup.extra_charge,
+                          qrGroup.charge_type || "FLAT_FEE"
+                        ).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Add New Item */}
               <div className="border rounded-lg p-4">

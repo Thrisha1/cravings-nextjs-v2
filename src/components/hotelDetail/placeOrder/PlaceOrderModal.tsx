@@ -902,6 +902,23 @@ const PlaceOrderModal = ({
         }
       }
 
+      // Add table 0 extra charges for delivery orders (when tableNumber is 0 and qrGroup exists)
+      if (!isQrScan && tableNumber === 0 && qrGroup && qrGroup.name) {
+        const table0ChargeAmount = getExtraCharge(
+          items || [],
+          qrGroup.extra_charge,
+          qrGroup.charge_type || "FLAT_FEE"
+        );
+
+        if (table0ChargeAmount > 0) {
+          extraCharges.push({
+            name: qrGroup.name,
+            amount: table0ChargeAmount,
+            charge_type: qrGroup.charge_type || "FLAT_FEE",
+          });
+        }
+      }
+
       if (!isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange) {
         extraCharges.push({
           name: "Delivery Charge",
