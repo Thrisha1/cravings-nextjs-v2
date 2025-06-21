@@ -195,10 +195,11 @@ const AddressCard = ({
       )}
 
       <Textarea
+        disabled
         value={address || ""}
         onChange={(e) => setAddress(e.target.value)}
         className="min-h-[100px] mb-3"
-        placeholder="Enter your delivery address"
+        placeholder="Delivery address"
       />
 
       <div className="space-y-2">
