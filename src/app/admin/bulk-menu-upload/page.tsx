@@ -112,11 +112,33 @@ const BulkUploadPage = () => {
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-orange-50 to-orange-100 p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-2 sm:gap-4 mb-6 sm:mb-8">
-          <Button variant="ghost" onClick={() => router.back()} className="p-2 sm:p-3">
-            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+        <div className="flex items-center justify-between gap-2 sm:gap-4 mb-6 sm:mb-8">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button variant="ghost" onClick={() => router.back()} className="p-2 sm:p-3">
+              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+            </Button>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Bulk Menu Upload</h1>
+          </div>
+          
+          {/* Delete Menu Button - moved to top right */}
+          <Button
+            className="text-[13px] h-10 bg-red-600 hover:bg-red-700 text-white"
+            variant="destructive"
+            onClick={() => setShowDeleteDialog(true)}
+            disabled={isDeletingMenu}
+          >
+            {isDeletingMenu ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Menu
+              </>
+            )}
           </Button>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Bulk Menu Upload</h1>
         </div>
 
         <div className="space-y-4">
@@ -164,26 +186,6 @@ const BulkUploadPage = () => {
               </Button>
             </>
           )}
-
-          {/* Delete Menu Button */}
-          <Button
-            className="text-[13px] w-full h-12 bg-red-600 hover:bg-red-700 text-white"
-            variant="destructive"
-            onClick={() => setShowDeleteDialog(true)}
-            disabled={isDeletingMenu}
-          >
-            {isDeletingMenu ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Deleting...
-              </>
-            ) : (
-              <>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Menu
-              </>
-            )}
-          </Button>
         </div>
 
         {bulkMenuItems.length > 0 && (

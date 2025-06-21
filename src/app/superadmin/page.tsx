@@ -18,6 +18,12 @@ const page = async (props: { searchParams: SearchParams }) => {
   const page = (await props.searchParams).page;
   const pages = [
     {
+      name: "Create Partner",
+      component: null,
+      id: "create-partner",
+      href: "/superadmin/create-partner",
+    },
+    {
       name: "Partner Verification",
       component: <PartnerVerification />,
       id: "partner-verification",
@@ -86,14 +92,25 @@ const page = async (props: { searchParams: SearchParams }) => {
 
         <div className="mt-5">
           {pages.map((p) => (
-            <Link
-              className="font-medium p-4 mt-2 rounded border-2 border-[#ffba79]/20 bg-[#fffefd] flex items-center justify-between"
-              href={`?page=${p.id}`}
-              key={p.name}
-            >
-              {p.name}
-              <ChevronRight size={24} className="text-orange-600" />
-            </Link>
+            p.href ? (
+              <Link
+                className="font-medium p-4 mt-2 rounded border-2 border-[#ffba79]/20 bg-[#fffefd] flex items-center justify-between"
+                href={p.href}
+                key={p.name}
+              >
+                {p.name}
+                <ChevronRight size={24} className="text-orange-600" />
+              </Link>
+            ) : (
+              <Link
+                className="font-medium p-4 mt-2 rounded border-2 border-[#ffba79]/20 bg-[#fffefd] flex items-center justify-between"
+                href={`?page=${p.id}`}
+                key={p.name}
+              >
+                {p.name}
+                <ChevronRight size={24} className="text-orange-600" />
+              </Link>
+            )
           ))}
         </div>
       </main>

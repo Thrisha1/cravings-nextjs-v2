@@ -71,7 +71,7 @@ export async function middleware(request: NextRequest) {
       redirect: '/login'
     },
     superadmin: {
-      allowed: ['/superadmin', '/admin', '/profile'],
+      allowed: ['/superadmin', '/admin', '/profile', '/superadmin/create-partner'],
       redirect: '/superLogin'
     },
     captain:{
