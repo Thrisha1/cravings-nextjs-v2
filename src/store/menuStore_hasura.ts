@@ -38,6 +38,10 @@ export interface MenuItem {
     show_stock: boolean;
     id?: string;
   }[];
+  variants?: {
+    name: string;
+    price: number;
+  }[];
 }
 
 interface MenuItem_withOffer_price {
@@ -235,10 +239,13 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           item.image_source || ""
         );
 
+        const formattedName = item.name.replace(/[^a-zA-Z0-9]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_"); 
+        const formattedCategory = item.category.name.replace(/[^a-zA-Z0-9]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_");
+
         s3Url = await uploadFileToS3(
           getProcessedBase64Url,
-          `${userData.id}/menu/${item.name}_${
-            item.category.name
+          `${userData.id}/menu/${formattedName}_${
+            formattedCategory
           }_${Date.now()}.webp`
         );
       }
@@ -251,6 +258,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         partner_id: userData.id,
         price: item.price,
         description: item.description || "",
+        variants : item.variants || []
       };
 
       const { insert_menu } = await fetchFromHasura(addMenu, {
@@ -311,10 +319,13 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           updatedItem.image_source || ""
         );
 
+        const formattedName = updatedItem.name?.replace(/[^a-zA-Z0-9]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_"); 
+        const formattedCategory = updatedItem.category?.name?.replace(/[^a-zA-Z0-9]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_"); ;
+
         const s3Url = await uploadFileToS3(
           getProcessedBase64Url,
-          `${userData.id}/menu/${updatedItem.name}_${
-            updatedItem.category
+          `${userData.id}/menu/${formattedName}_${
+            formattedCategory
           }_${Date.now()}.webp`
         );
 
