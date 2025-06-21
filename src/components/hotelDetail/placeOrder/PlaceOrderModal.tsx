@@ -195,10 +195,11 @@ const AddressCard = ({
       )}
 
       <Textarea
+        disabled
         value={address || ""}
         onChange={(e) => setAddress(e.target.value)}
         className="min-h-[100px] mb-3"
-        placeholder="Enter your delivery address"
+        placeholder="Delivery address"
       />
 
       <div className="space-y-2">
@@ -662,7 +663,6 @@ const MapModal = ({
     }
   };
 
-  if (!showMapModal) return null;
 
   return (
     <div
@@ -897,6 +897,23 @@ const PlaceOrderModal = ({
           extraCharges.push({
             name: qrGroup.name,
             amount: qrChargeAmount,
+            charge_type: qrGroup.charge_type || "FLAT_FEE",
+          });
+        }
+      }
+
+      // Add table 0 extra charges for delivery orders (when tableNumber is 0 and qrGroup exists)
+      if (!isQrScan && tableNumber === 0 && qrGroup && qrGroup.name) {
+        const table0ChargeAmount = getExtraCharge(
+          items || [],
+          qrGroup.extra_charge,
+          qrGroup.charge_type || "FLAT_FEE"
+        );
+
+        if (table0ChargeAmount > 0) {
+          extraCharges.push({
+            name: qrGroup.name,
+            amount: table0ChargeAmount,
             charge_type: qrGroup.charge_type || "FLAT_FEE",
           });
         }
