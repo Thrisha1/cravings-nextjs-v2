@@ -663,7 +663,6 @@ const MapModal = ({
     }
   };
 
-  if (!showMapModal) return null;
 
   return (
     <div
