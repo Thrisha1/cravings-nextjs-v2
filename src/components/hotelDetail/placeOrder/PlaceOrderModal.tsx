@@ -179,23 +179,18 @@ const AddressCard = ({
           <Label className="flex items-center gap-2 mb-2">
             Select Hotel Location
           </Label>
-          <Select
+          <select
             value={selectedLocation || ""}
-            onValueChange={setSelectedLocation}
+            onChange={(e) => setSelectedLocation(e.target.value)}
+            className="w-full p-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-black/20"
           >
-            <SelectTrigger className="w-full">
-              {selectedLocation
-                ? selectedLocation.toUpperCase()
-                : "Select Area"}
-            </SelectTrigger>
-            <SelectContent className="z-[60]">
-              {hotelData.whatsapp_numbers.map((item) => (
-                <SelectItem key={item.area} value={item.area}>
-                  {item.area.toUpperCase()}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="">Select Area</option>
+            {hotelData.whatsapp_numbers.map((item) => (
+              <option key={item.area} value={item.area}>
+                {item.area.toUpperCase()}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 

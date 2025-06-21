@@ -77,6 +77,7 @@ export interface HotelDataMenus extends Omit<MenuItem, "category"> {
   offers: {
     offer_price: number;
   }[];
+  variantSelections?: any;
 }
 
 const isUUID = (str: string) =>

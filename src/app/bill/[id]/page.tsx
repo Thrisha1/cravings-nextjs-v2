@@ -82,6 +82,51 @@ const PrintOrderPage = () => {
         };
 
         setOrder(formattedOrder);
+        
+        // Calculate amounts for logging
+        const foodSubtotal = formattedOrder.items.reduce(
+          (sum: number, item: OrderItem) => sum + item.price * item.quantity, 0
+        );
+        
+        const chargesSubtotal = formattedOrder.extra_charges.reduce(
+          (sum: number, charge: any) => 
+            sum + getExtraCharge(
+              formattedOrder.items || [],
+              charge.amount || 0,
+              charge.charge_type as QrGroup["charge_type"]
+            ), 0
+        );
+        
+        const gstPercentage = formattedOrder.partner?.gst_percentage || 0;
+        const subtotal = foodSubtotal + chargesSubtotal;
+        const gstAmount = (foodSubtotal * gstPercentage) / 100;
+        const grandTotal = subtotal + gstAmount;
+        
+        // Log the bill contents in JSON format
+        console.log('Bill Contents JSON:', JSON.stringify({
+          id: formattedOrder.id,
+          created_at: formattedOrder.created_at,
+          store_name: formattedOrder.partner?.store_name,
+          district: formattedOrder.partner?.district,
+          phone: formattedOrder.partner?.phone,
+          table_number: formattedOrder.tableNumber,
+          type: formattedOrder.type,
+          delivery_address: formattedOrder.deliveryAddress,
+          order_items: formattedOrder.items,
+          extra_charges: formattedOrder.extra_charges,
+          customer_phone: formattedOrder.phone,
+          customer_name: formattedOrder.user?.full_name,
+          calculations: {
+            food_subtotal: foodSubtotal,
+            charges_subtotal: chargesSubtotal,
+            subtotal: subtotal,
+            gst_percentage: gstPercentage,
+            gst_amount: gstAmount,
+            grand_total: grandTotal
+          },
+          currency: formattedOrder.partner?.currency || "$",
+          gst_no: formattedOrder.partner?.gst_no
+        }, null, 2));
       } catch (err) {
         console.error("Error fetching order:", err);
         setError("Failed to load order details");

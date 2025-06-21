@@ -260,3 +260,5 @@ button[data-state="open"] h1 .left-marker {
   from { transform: translateY(-50%) rotate(0deg) !important; }
   to { transform: translateY(-50%) rotate(360deg) !important; }
 }
+
+

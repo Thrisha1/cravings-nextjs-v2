@@ -239,12 +239,11 @@ export default function OfferUploadSuperAdmin() {
           `local`
         );
 
+        const formattedName = formData.item_name.replace(/[^a-zA-Z0-9]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_"); 
+
         s3Url = await uploadFileToS3(
           processedImage,
-          `common_offers/${formData.item_name.replace(
-            /\s+/g,
-            "_"
-          )}_${Date.now()}.webp`
+          `common_offers/${formattedName}_${Date.now()}.webp`
         );
       }
 

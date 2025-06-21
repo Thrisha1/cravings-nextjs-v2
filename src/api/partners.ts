@@ -153,6 +153,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
       }
       priority
       description
+      variants
       id
       image_url
       is_top

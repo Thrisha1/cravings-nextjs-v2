@@ -25,6 +25,7 @@ import {
   Droppable,
   Draggable,
   DropResult,
+  DraggableProvided,
 } from "@hello-pangea/dnd";
 import { useMenuStore, MenuItem } from "@/store/menuStore_hasura";
 import {
@@ -218,6 +219,24 @@ export function ItemOrderingForm({
     toast("Changes discarded");
   };
 
+  // Add this new component for better mobile drag handle
+  const DragHandle = ({ provided }: { provided: DraggableProvided }) => {
+    return (
+      <div
+        {...provided.dragHandleProps}
+        className="flex items-center justify-center cursor-grab active:cursor-grabbing touch-manipulation"
+        style={{
+          touchAction: 'none',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          userSelect: 'none',
+        }}
+      >
+        <MoveVertical className="h-4 w-4 text-muted-foreground" />
+      </div>
+    );
+  };
+
   return (
     <div className="container px-0 sm:px-0 pb-6">
       <div className="flex justify-between items-center mb-4 px-2">
@@ -256,7 +275,10 @@ export function ItemOrderingForm({
 
         <div 
           ref={contentRef}
-          className="border rounded-lg flex-1 flex flex-col"
+          className="border rounded-lg flex-1 flex flex-col overflow-auto touch-pan-y"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+          }}
         >
           <div className="w-full">
             <DragDropContext onDragEnd={handleDragEnd}>
@@ -356,6 +378,10 @@ export function ItemOrderingForm({
                                                     ? "bg-primary/10 shadow-md rounded-md border border-primary"
                                                     : "bg-background hover:bg-gray-50 rounded-md"
                                                 }`}
+                                                style={{
+                                                  ...provided.draggableProps.style,
+                                                  touchAction: 'pan-y',
+                                                }}
                                               >
                                                 <div className="w-[30px] pl-8">
                                                   {/* Indent to show hierarchy */}
@@ -397,13 +423,7 @@ export function ItemOrderingForm({
                                                 </div>
                                                 {/* Drag Handle - visible on all devices */}
                                                 <div className="w-[40px] flex items-center justify-center">
-                                                  <div
-                                                    {...provided.dragHandleProps}
-                                                    className="flex items-center justify-center cursor-grab active:cursor-grabbing"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                  >
-                                                    <MoveVertical className="h-4 w-4 text-muted-foreground" />
-                                                  </div>
+                                                  <DragHandle provided={provided} />
                                                 </div>
                                               </div>
                                             )}

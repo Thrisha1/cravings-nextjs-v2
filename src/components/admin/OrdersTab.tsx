@@ -23,10 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { revalidateTag } from "@/app/actions/revalidate";
-import { update } from "firebase/database";
-import { POSMenuItems } from "@/components/pos/POSMenuItems";
-import { POSCart } from "@/components/pos/POSCart";
+import { useOrderSubscriptionStore } from "@/store/orderSubscriptionStore";
 
 const OrdersTab = () => {
   const router = useRouter();
@@ -39,8 +36,7 @@ const OrdersTab = () => {
     updateOrderStatus,
     updateOrderStatusHistory,
   } = useOrderStore();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { orders , setOrders , removeOrder , loading , setLoading } = useOrderSubscriptionStore();
   const [activeTab, setActiveTab] = useState<"table" | "delivery" | "pos">(
     "delivery"
   );
@@ -79,10 +75,17 @@ const OrdersTab = () => {
   useEffect(() => {
     if (!userData?.id) return;
 
-    setLoading(true);
+    // Only set loading to true if we don't have any orders yet
+    if (orders.length === 0) {
+      setLoading(true);
+    }
+
     // Set up subscription immediately
     const unsubscribe = subscribeOrders((allOrders) => {
       const prevOrders = prevOrdersRef.current;
+
+      console.log(allOrders);
+      
 
       // Count new pending orders
       const newTableOrders = allOrders.filter(
@@ -149,9 +152,7 @@ const OrdersTab = () => {
     try {
       const success = await deleteOrder(orderId);
       if (success) {
-        setOrders((prevOrders) =>
-          prevOrders.filter((order) => order.id !== orderId)
-        );
+        removeOrder(orderId);
         toast.success("Order deleted successfully");
         return true;
       } else {
