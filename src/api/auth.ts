@@ -154,6 +154,18 @@ export const partnerMutation = `
   }
 }`;
 
+export const updatePartnerBannerMutation = `
+  mutation UpdatePartnerBanner($id: uuid!, $store_banner: String!) {
+    update_partners_by_pk(
+      pk_columns: { id: $id }
+      _set: { store_banner: $store_banner }
+    ) {
+      id
+      store_banner
+    }
+  }
+`;
+
 export const deleteUserMutation = `
   mutation DeleteUser($id: uuid!) {
     delete_users_by_pk(id: $id) {
