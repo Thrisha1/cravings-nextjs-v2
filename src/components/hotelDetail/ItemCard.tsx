@@ -233,22 +233,25 @@ const ItemCard = ({
                   >
                     <div className="grid">
                       <span className="font-semibold ">{variant.name}</span>
-                      <div
-                        style={{
-                          color: !item.is_available
-                            ? styles.color
-                            : styles.accent,
-                        }}
-                        className="text-2xl font-black text-nowrap"
-                      >
-                        {currency}{" "}
-                        {hotelData?.id ===
-                        "767da2a8-746d-42b6-9539-528b6b96ae09"
-                          ? variant.price.toFixed(3)
-                          : variant.price}
-                      </div>
+
+                      {(hasOrderingFeature || hasDeliveryFeature) && (
+                        <div
+                          style={{
+                            color: !item.is_available
+                              ? styles.color
+                              : styles.accent,
+                          }}
+                          className="text-2xl font-black text-nowrap"
+                        >
+                          {currency}{" "}
+                          {hotelData?.id ===
+                          "767da2a8-746d-42b6-9539-528b6b96ae09"
+                            ? variant.price.toFixed(3)
+                            : variant.price}
+                        </div>
+                      )}
                     </div>
-                    {(hasOrderingFeature || hasDeliveryFeature) && (
+                    {hasOrderingFeature || hasDeliveryFeature ? (
                       <div className="flex gap-2 items-center justify-end w-full mt-2">
                         {getVariantQuantity(variant.name) > 0 ? (
                           <div
@@ -288,6 +291,21 @@ const ItemCard = ({
                             {"Add"}
                           </div>
                         )}
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          color: !item.is_available
+                            ? styles.color
+                            : styles.accent,
+                        }}
+                        className="text-2xl font-black text-nowrap"
+                      >
+                        {currency}{" "}
+                        {hotelData?.id ===
+                        "767da2a8-746d-42b6-9539-528b6b96ae09"
+                          ? variant.price.toFixed(3)
+                          : variant.price}
                       </div>
                     )}
                   </div>
