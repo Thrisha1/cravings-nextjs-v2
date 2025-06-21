@@ -1,4 +1,5 @@
 import { getPartnerAndOffersQuery, getPartnerSubscriptionQuery } from "@/api/partners";
+import { GET_QR_CODES_WITH_GROUPS_BY_PARTNER } from "@/api/qrcodes";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import HotelMenuPage from "@/screens/HotelMenuPage_v2";
 import { MenuItem } from "@/store/menuStore_hasura";
@@ -76,6 +77,7 @@ export interface HotelDataMenus extends Omit<MenuItem, "category"> {
   offers: {
     offer_price: number;
   }[];
+  variantSelections?: any;
 }
 
 const isUUID = (str: string) =>
@@ -158,6 +160,42 @@ const HotelPage = async ({
 
   const socialLinks = getSocialLinks(hoteldata as HotelData);
 
+  // Fetch QR codes with groups to find table 0 extra charges
+  let table0QrGroup = null;
+  try {
+    const qrCodesResponse = await fetchFromHasura(GET_QR_CODES_WITH_GROUPS_BY_PARTNER, {
+      partner_id: hoteldata?.id || "",
+    });
+    
+    if (qrCodesResponse?.qr_codes) {
+      // Find QR code with table_number = 0
+      const table0QrCode = qrCodesResponse.qr_codes.find(
+        (qr: any) => qr.table_number === 0 && qr.qr_group
+      );
+      
+      if (table0QrCode?.qr_group) {
+        // Transform the extra_charge to handle both old numeric format and new JSON format
+        const extraCharge = table0QrCode.qr_group.extra_charge;
+        const transformedExtraCharge = Array.isArray(extraCharge)
+          ? extraCharge
+          : typeof extraCharge === 'number'
+            ? [{ min_amount: 0, max_amount: null, charge: extraCharge }]
+            : typeof extraCharge === 'object' && extraCharge?.rules
+              ? extraCharge.rules
+              : [{ min_amount: 0, max_amount: null, charge: 0 }];
+        
+        table0QrGroup = {
+          id: table0QrCode.qr_group.id,
+          name: table0QrCode.qr_group.name,
+          extra_charge: transformedExtraCharge,
+          charge_type: table0QrCode.qr_group.charge_type || 'FLAT_FEE',
+        };
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching QR codes:", error);
+  }
+
   const menuItemWithOfferPrice = hoteldata?.menus?.map((item) => {
     return {
       ...item,
@@ -212,6 +250,7 @@ const HotelPage = async ({
         theme={theme}
         tableNumber={0}
         qrId={null}
+        qrGroup={table0QrGroup}
       />
     </>
   );

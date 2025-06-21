@@ -12,6 +12,7 @@ export const getMenu = `
             }
             image_url
             image_source
+            variants
             partner_id
             priority
             price
@@ -76,6 +77,7 @@ export const addMenu = `
             description
             is_top
             is_available
+            variants
         }
     }
 }`;

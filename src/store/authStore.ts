@@ -127,7 +127,12 @@ interface AuthState {
     phone: string,
     upiId: string,
     country: string,
-    state: string
+    state: string,
+    location: string,
+    geoLocation: {
+      latitude: number;
+      longitude: number;
+    }
   ) => Promise<void>;
   createPartner: (
     email: string,
@@ -340,7 +345,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     email: string,
     password: string,
     country: string,
-    state: string
+    state: string,
+    location: string,
+    geoLocation: {
+      latitude: number;
+      longitude: number;
+    }
   ) => {
     set({ loading: true, error: null });
     try {
@@ -363,6 +373,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           phone,
           description: "",
           role: "partner",
+          location,
+          geo_location: {
+            type: "Point",
+            coordinates: [geoLocation.longitude, geoLocation.latitude],
+          }
         },
       })) as { insert_partners_one: Partner };
 
