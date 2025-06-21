@@ -9,6 +9,7 @@ import { useLocationStore } from "@/store/locationStore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { KimiAiLink } from "@/components/ui/KimiAiLink";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, Loader2 } from "lucide-react";
@@ -335,8 +336,14 @@ export default function SuperAdminCreatePartnerPage() {
               </div>
             </div>
             <div className="flex gap-4 justify-center">
-              <Button className="flex-1 h-12 text-base" onClick={() => setShowBulkMenu(v => !v)}>{showBulkMenu ? "Close Bulk Menu Upload" : "Add Bulk Menu"}</Button>
-              <Button className="flex-1 h-12 text-base" onClick={() => setShowBanner(v => !v)}>{showBanner ? "Close Banner Upload" : "Add Banner"}</Button>
+              <Button className="flex-1 h-12 text-base" onClick={() => {
+                setShowBulkMenu(v => !v);
+                setShowBanner(false);
+              }}>{showBulkMenu ? "Close Bulk Menu Upload" : "Add Bulk Menu"}</Button>
+              <Button className="flex-1 h-12 text-base" onClick={() => {
+                setShowBanner(v => !v);
+                setShowBulkMenu(false);
+              }}>{showBanner ? "Close Banner Upload" : "Add Banner"}</Button>
             </div>
             {(!showBulkMenu && !showBanner) && <div className="text-center text-gray-500 text-sm">Select an action above</div>}
             {showBulkMenu && (
@@ -346,6 +353,7 @@ export default function SuperAdminCreatePartnerPage() {
                 
                 {/* JSON Input Section */}
                 <div className="mb-6">
+                <KimiAiLink />
                   <Label className="text-sm font-medium text-gray-700 mb-2 block">JSON Input</Label>
                   <Textarea
                     placeholder="Paste your JSON here..."

@@ -30,28 +30,29 @@ export const MenuItemCard = ({
 }: MenuItemCardProps) => {
   const [itemCategory, setItemCategory] = useState(item.category.name);
   return (
-    <Card className="relative grid">
+    <Card className="relative flex flex-col h-full">
       {item.isAdded && (
-        <div className="absolute top-2 right-1/2 translate-x-1/2 bg-green-500 text-white px-2 py-1 rounded-md">
+        <div className="absolute top-2 right-1/2 translate-x-1/2 bg-green-500 text-white px-2 py-1 rounded-md text-xs font-semibold z-10">
           Added
         </div>
       )}
 
-      <div className="flex justify-between items-center gap-2 px-5 py-6 ">
-        <div className="flex items-center gap-2">
+      <div className="flex justify-between items-start gap-2 px-5 py-6 ">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           <Checkbox
             checked={item.isSelected}
             onCheckedChange={onSelect}
             disabled={!item.category || item.isAdded}
+            className="mt-1"
           />
-          <div className="font-bold text-lg">{item.name}</div>
+          <div className="font-bold text-lg break-words flex-1" title={item.name}>{item.name}</div>
         </div>
-        <p className="font-bold text-2xl text-right">₹{item.price}</p>
+        <p className="font-bold text-2xl text-right shrink-0">₹{item.price}</p>
       </div>
 
-      <CardContent className="space-y-3 ">
+      <CardContent className="space-y-3 px-6 flex-grow">
         {item.image.length > 9 && (
-          <div className="relative w-40 h-40 overflow-hidden rounded-md ">
+          <div className="relative w-full aspect-square overflow-hidden rounded-md ">
             <Img
               src={item.image}
               alt={item.name}
@@ -59,10 +60,10 @@ export const MenuItemCard = ({
             />
           </div>
         )}
-        <p className="text-gray-600">{item.description}</p>
+        <p className="text-gray-600 text-sm break-words">{item.description}</p>
         <div className="flex gap-2 items-center ">
-          <label htmlFor="category" className="text-sm">
-            Category :
+          <label htmlFor="category" className="text-sm font-medium shrink-0">
+            Category:
           </label>
           <Input
             id="category"
@@ -77,9 +78,10 @@ export const MenuItemCard = ({
         </div>
       </CardContent>
 
-      <CardFooter className="flex justify-between">
+      <CardFooter className="flex justify-between px-5 pb-5 mt-auto">
         <div className="flex gap-2">
           <Button
+            size="sm"
             onClick={onAddToMenu}
             disabled={item.isAdded || isUploading || !item.category}
           >
@@ -91,15 +93,15 @@ export const MenuItemCard = ({
             ) : (
               <>
                 <Upload className="w-4 h-4 mr-2" />
-                {item.isAdded ? "Added to Menu" : "Add to Menu"}
+                {item.isAdded ? "Added" : "Add"}
               </>
             )}
           </Button>
-          <Button variant="outline" onClick={onEdit}>
+          <Button size="sm" variant="outline" onClick={onEdit}>
             <Pencil className="w-4 h-4" />
           </Button>
         </div>
-        <Button variant="destructive" onClick={onDelete}>
+        <Button size="sm" variant="destructive" onClick={onDelete}>
           <Trash className="w-4 h-4" />
         </Button>
       </CardFooter>
