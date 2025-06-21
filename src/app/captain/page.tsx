@@ -96,12 +96,12 @@ export default function CaptainDashboard() {
                 {cartItems.length > 0 && (
                   <Button
                     variant="outline"
-                    size="icon"
                     onClick={handleClearCart}
-                    className="h-8 w-8"
+                    className="h-8 flex items-center gap-2"
                     title="Clear Cart"
                   >
                     <Trash2 className="h-4 w-4" />
+                    <span className="text-sm">Clear Cart</span>
                   </Button>
                 )}
                 <Button
