@@ -50,6 +50,16 @@ const PrintKOTPage = () => {
         };
 
         setOrder(formattedOrder);
+        
+        // Log the KOT contents in JSON format
+        console.log('KOT Contents JSON:', JSON.stringify({
+          id: formattedOrder.id,
+          created_at: formattedOrder.created_at,
+          table_number: formattedOrder.tableNumber,
+          type: formattedOrder.type,
+          notes: formattedOrder.notes,
+          items: formattedOrder.items
+        }, null, 2));
       } catch (err) {
         console.error("Error fetching order:", err);
         setError("Failed to load order details");
