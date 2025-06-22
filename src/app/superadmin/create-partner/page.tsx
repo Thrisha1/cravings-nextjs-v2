@@ -306,7 +306,7 @@ export default function SuperAdminCreatePartnerPage() {
               <div className="mt-2 text-gray-700">
                 <div><b>Email:</b> {partner?.email}</div>
                 <div><b>Phone:</b> {partner?.phone}</div>
-                <div><b>UPI ID:</b> {partner?.upi_id}</div>
+                {/* <div><b>UPI ID:</b> {partner?.upi_id}</div> */}
                 <div><b>District:</b> {partner?.district}</div>
                 <div><b>Country:</b> {partner?.country}</div>
                 <div><b>Status:</b> {partner?.status}</div>
