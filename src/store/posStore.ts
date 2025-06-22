@@ -488,7 +488,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         {
           orderItems: cartItems.map((item) => ({
             order_id: orderId,
-            menu_id: item.id,
+            menu_id: item.id?.split("|")[0],
             quantity: item.quantity,
             item: {
               id: item.id,
