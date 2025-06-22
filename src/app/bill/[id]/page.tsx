@@ -112,6 +112,10 @@ const PrintOrderPage = () => {
           table_number: formattedOrder.tableNumber,
           type: formattedOrder.type,
           delivery_address: formattedOrder.deliveryAddress,
+          delivery_location: formattedOrder.delivery_location ? {
+            coordinates: formattedOrder.delivery_location.coordinates,
+            google_maps_link: `https://www.google.com/maps/place/${formattedOrder.delivery_location.coordinates[1]},${formattedOrder.delivery_location.coordinates[0]}`
+          } : null,
           order_items: formattedOrder.items,
           extra_charges: formattedOrder.extra_charges,
           customer_phone: formattedOrder.phone,
