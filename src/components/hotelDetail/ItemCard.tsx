@@ -218,7 +218,7 @@ const ItemCard = ({
           {/* Variants section with smooth height transition */}
           <div
             ref={variantsRef}
-            className="overflow-hidden transition-all duration-500 w-full" 
+            className="overflow-hidden transition-all duration-500 w-full"
             style={{
               height: showVariants ? `${variantsHeight}px` : "0px",
               opacity: showVariants ? 1 : 0,
@@ -227,9 +227,72 @@ const ItemCard = ({
             {hasVariants && (
               <div className="w-full mt-2 space-y-3 divide-y-2 divide-gray-100">
                 {item.variants?.map((variant) => (
-                  <div key={variant.name} className="p-2 rounded-lg flex justify-between items-center gap-5 w-full">
+                  <div
+                    key={variant.name}
+                    className="p-2 rounded-lg flex justify-between items-center gap-5 w-full"
+                  >
                     <div className="grid">
                       <span className="font-semibold ">{variant.name}</span>
+
+                      {(hasOrderingFeature || hasDeliveryFeature) && (
+                        <div
+                          style={{
+                            color: !item.is_available
+                              ? styles.color
+                              : styles.accent,
+                          }}
+                          className="text-2xl font-black text-nowrap"
+                        >
+                          {currency}{" "}
+                          {hotelData?.id ===
+                          "767da2a8-746d-42b6-9539-528b6b96ae09"
+                            ? variant.price.toFixed(3)
+                            : variant.price}
+                        </div>
+                      )}
+                    </div>
+                    {hasOrderingFeature || hasDeliveryFeature ? (
+                      <div className="flex gap-2 items-center justify-end w-full mt-2">
+                        {getVariantQuantity(variant.name) > 0 ? (
+                          <div
+                            style={{
+                              backgroundColor: styles.accent,
+                              ...styles.border,
+                              color: "white",
+                            }}
+                            className="rounded-full transition-all duration-500 px-5 py-2 font-medium flex items-center gap-4"
+                          >
+                            <div
+                              className="cursor-pointer active:scale-95"
+                              onClick={() => {
+                                handleVariantRemove(variant);
+                              }}
+                            >
+                              -
+                            </div>
+                            <div>{getVariantQuantity(variant.name)}</div>
+                            <div
+                              className="cursor-pointer active:scale-95"
+                              onClick={() => handleVariantAdd(variant)}
+                            >
+                              +
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => handleVariantAdd(variant)}
+                            style={{
+                              backgroundColor: styles.accent,
+                              ...styles.border,
+                              color: "white",
+                            }}
+                            className="rounded-full px-6 py-2 font-medium"
+                          >
+                            {"Add"}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
                       <div
                         style={{
                           color: !item.is_available
@@ -239,56 +302,33 @@ const ItemCard = ({
                         className="text-2xl font-black text-nowrap"
                       >
                         {currency}{" "}
-                        {hotelData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09"
+                        {hotelData?.id ===
+                        "767da2a8-746d-42b6-9539-528b6b96ae09"
                           ? variant.price.toFixed(3)
                           : variant.price}
                       </div>
-                    </div>
-                    <div className="flex gap-2 items-center justify-end w-full mt-2">
-                      {getVariantQuantity(variant.name) > 0 ? (
-                        <div
-                          style={{
-                            backgroundColor: styles.accent,
-                            ...styles.border,
-                            color: "white",
-                          }}
-                          className="rounded-full transition-all duration-500 px-5 py-2 font-medium flex items-center gap-4"
-                        >
-                          <div
-                            className="cursor-pointer active:scale-95"
-                            onClick={() => {
-                              handleVariantRemove(variant);
-                            }}
-                          >
-                            -
-                          </div>
-                          <div>{getVariantQuantity(variant.name)}</div>
-                          <div
-                            className="cursor-pointer active:scale-95"
-                            onClick={() => handleVariantAdd(variant)}
-                          >
-                            +
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={() => handleVariantAdd(variant)}
-                          style={{
-                            backgroundColor: styles.accent,
-                            ...styles.border,
-                            color: "white",
-                          }}
-                          className="rounded-full px-6 py-2 font-medium"
-                        >
-                          {"Add"}
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          {!hasOrderingFeature && !hasDeliveryFeature && hasVariants && (
+            <div className="flex transition-all duration-500 gap-2 items-center justify-end w-full mt-2">
+              <div
+                onClick={() => setShowVariants((prev) => !prev)}
+                style={{
+                  backgroundColor: !showVariants ? styles.accent : "white",
+                  ...styles.border,
+                  color: !showVariants ? "white" : "black",
+                }}
+                className="rounded-full px-6 py-2 font-medium"
+              >
+                {showVariants ? "Hide Options" : "Show Options"}
+              </div>
+            </div>
+          )}
 
           {item.is_available &&
             (hasOrderingFeature || hasDeliveryFeature) &&

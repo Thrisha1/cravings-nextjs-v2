@@ -25,11 +25,13 @@ const ItemDetailsModal = ({
   item: HotelDataMenus;
   styles: Styles;
   currency: string;
-  hotelData: HotelData  ;
+  hotelData: HotelData;
 }) => {
+  const hasVariants = (item.variants?.length ?? 0) > 0;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent style={styles.border} className="rounded-[35px] w-[90%]">
+      <DialogContent style={styles.border} className="rounded-[35px] w-[90%] flex h-auto max-h-[90%] overflow-y-auto  ">
         <DialogTitle className="hidden">{item.name}</DialogTitle>
 
         <div className="flex flex-col gap-4">
@@ -68,13 +70,45 @@ const ItemDetailsModal = ({
             </div>
             <div className="text-sm opacity-50 mt-1">{item.description}</div>
           </div>
+
           {item.image_url && (
-            <Img
+           <div className="w-full h-[200px] overflow-hidden rounded-3xl">
+             <Img
               src={item.image_url}
               alt={item.name}
-              className="w-full h-auto rounded-3xl"
+              className="w-full h--full object-cover rounded-3xl"
             />
+           </div>
           )}
+          
+          {hasVariants && (
+            <div className="w-full space-y-3">
+              {item.variants?.map((variant) => (
+                <div
+                  key={variant.name}
+                  className="p-3 rounded-lg flex justify-between items-center gap-5 w-full"
+                  style={styles.border}
+                >
+                  <div className="grid">
+                    <span className="font-semibold">{variant.name}</span>
+                    <div
+                      style={{
+                        color: !item.is_available ? styles.color : styles.accent,
+                      }}
+                      className="text-xl font-black"
+                    >
+                      {currency}{" "}
+                      {hotelData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09"
+                        ? variant.price.toFixed(3)
+                        : variant.price}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+         
         </div>
       </DialogContent>
     </Dialog>
