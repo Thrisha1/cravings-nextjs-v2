@@ -2,16 +2,18 @@
 import React, { useState, useEffect } from "react";
 import { useMenuStore, GroupedItems } from "@/store/menuStore_hasura";
 import { usePOSStore } from "@/store/posStore";
-import { Card, CardContent } from "@/components/ui/card";
+// REMOVED: Card, CardContent, Plus, Minus are no longer needed here
 import { Button } from "@/components/ui/button";
-import { Plus, Minus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuthStore, Captain, Partner } from "@/store/authStore";
 import { fetchFromHasura } from "@/lib/hasuraClient";
+import PosItemCard from "@/components/pos/PosItemCard";
 
 export const CaptainPOS = () => {
     const { items, groupedItems, fetchMenu } = useMenuStore();
-    const { addToCart, cartItems, decreaseQuantity, removeFromCart, setIsCaptainOrder } = usePOSStore();
+    // REMOVED: cartItems, addToCart, decreaseQuantity are no longer directly used
+    const { setIsCaptainOrder } = usePOSStore();
     const { userData, loading: authLoading } = useAuthStore();
     const captainData = userData as Captain;
     const [searchQuery, setSearchQuery] = useState("");
@@ -20,13 +22,12 @@ export const CaptainPOS = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [partnerData, setPartnerData] = useState<Partner | null>(null);
 
-    // Set isCaptainOrder to true when component mounts
+    // All useEffect hooks remain the same...
     useEffect(() => {
         setIsCaptainOrder(true);
-        return () => setIsCaptainOrder(false); // Cleanup when component unmounts
+        return () => setIsCaptainOrder(false);
     }, [setIsCaptainOrder]);
 
-    // Fetch partner data
     useEffect(() => {
         const fetchPartnerData = async () => {
             if (captainData?.partner_id) {
@@ -40,9 +41,7 @@ export const CaptainPOS = () => {
                                 store_name
                             }
                         }`,
-                        {
-                            partner_id: captainData.partner_id
-                        }
+                        { partner_id: captainData.partner_id }
                     );
                     if (response.partners_by_pk) {
                         setPartnerData(response.partners_by_pk);
@@ -52,59 +51,34 @@ export const CaptainPOS = () => {
                 }
             }
         };
-
         fetchPartnerData();
     }, [captainData?.partner_id]);
 
-    // Fetch menu when captain data is available
     useEffect(() => {
         const initializeData = async () => {
             if (authLoading || !captainData?.partner_id) {
-                console.log("Waiting for auth data:", { authLoading, partnerId: captainData?.partner_id });
                 setIsLoading(true);
                 return;
             }
-
             try {
-                const menuItems = await fetchMenu(captainData.partner_id);
+                await fetchMenu(captainData.partner_id);
             } catch (error) {
                 console.error("Error fetching menu:", error);
             } finally {
                 setIsLoading(false);
             }
         };
-
         initializeData();
-    }, [captainData?.partner_id, fetchMenu, authLoading, groupedItems]);
+    }, [captainData?.partner_id, fetchMenu, authLoading]);
 
-    // Set first category as default when groupedItems is loaded
     useEffect(() => {
-        if (!captainData?.partner_id || !groupedItems) {
-            console.log("Cannot set default category:", { 
-                hasPartnerId: !!captainData?.partner_id, 
-                hasGroupedItems: !!groupedItems,
-                groupedItemsKeys: Object.keys(groupedItems)
-            });
-            return;
+        if (Object.keys(groupedItems).length > 0 && !selectedCategory) {
+            setSelectedCategory(Object.keys(groupedItems)[0]);
         }
+    }, [groupedItems, selectedCategory]);
 
-        if (Object.keys(groupedItems).length > 0) {
-            const firstCategory = Object.keys(groupedItems)[0];
-            console.log("Setting default category:", firstCategory);
-            setSelectedCategory(firstCategory);
-        } else {
-            return;
-        }
-    }, [groupedItems, captainData?.partner_id]);
-
-    // Filter items based on search query and selected category
     useEffect(() => {
-        if (!groupedItems) {
-            console.log("No groupedItems available for filtering");
-            return;
-        }
-
-        // If there's a search query, filter across all categories
+        if (!groupedItems) return;
         if (searchQuery) {
             const filtered: GroupedItems = {};
             Object.entries(groupedItems).forEach(([category, categoryItems]) => {
@@ -116,21 +90,15 @@ export const CaptainPOS = () => {
                 }
             });
             setFilteredGroupedItems(filtered);
-            return;
-        }
-
-        // If a category is selected, only show items from that category
-        if (selectedCategory) {
-            const categoryItems = groupedItems[selectedCategory] || [];
+        } else if (selectedCategory) {
             setFilteredGroupedItems({
-                [selectedCategory]: categoryItems
+                [selectedCategory]: groupedItems[selectedCategory] || [],
             });
-            return;
+        } else {
+            setFilteredGroupedItems(groupedItems);
         }
-
-        // If no search query and no selected category, show all items
-        setFilteredGroupedItems(groupedItems);
     }, [searchQuery, groupedItems, selectedCategory]);
+
 
     if (authLoading || isLoading || !captainData?.partner_id) {
         return (
@@ -140,13 +108,13 @@ export const CaptainPOS = () => {
         );
     }
 
-    if (items.length === 0) {
-        return <div>No items found</div>;
+    if (items.length === 0 && !isLoading) {
+        return <div className="p-6">No menu items found for this outlet.</div>;
     }
 
     const handleCategoryClick = (category: string) => {
         setSelectedCategory(category);
-        setSearchQuery(""); // Clear search when selecting category
+        setSearchQuery("");
     };
 
     return (
@@ -160,7 +128,7 @@ export const CaptainPOS = () => {
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
-                            setSelectedCategory(null); // Clear category selection when searching
+                            setSelectedCategory(null);
                         }}
                         className="pl-10"
                     />
@@ -184,69 +152,19 @@ export const CaptainPOS = () => {
             )}
 
             {/* Menu Items */}
-            <div className="px-6 pb-[150px] space-y-6">
+            <div className="px-6 pb-[150px] space-y-6 overflow-y-auto">
                 {Object.entries(filteredGroupedItems).map(([category, items]) => (
                     <div key={category} className="space-y-4">
-                        <h2 className="text-lg font-semibold">{category}</h2>
-                        <div className="grid grid-cols-1 gap-4">
-                            {items.map((item) => {
-                                const cartItem = cartItems.find(
-                                    (cartItem) => cartItem.id === item.id
-                                );
-                                return (
-                                    <Card
-                                        key={item.id}
-                                        className="cursor-pointer hover:shadow-md transition-shadow"
-                                        onClick={() => addToCart(item)}
-                                    >
-                                        <CardContent className="p-4">
-                                            <div className="flex justify-between items-center">
-                                                <div>
-                                                    <h3 className="font-medium">{item.name}</h3>
-                                                    <p className="text-lg font-bold mt-2">
-                                                        {captainData?.currency || "$"}
-                                                        {item.price}
-                                                    </p>
-                                                </div>
-                                                <div
-                                                    className="flex items-center gap-2"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    {cartItem ? (
-                                                        <>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="icon"
-                                                                onClick={() => decreaseQuantity(item.id!)}
-                                                            >
-                                                                <Minus className="h-4 w-4" />
-                                                            </Button>
-                                                            <span className="w-8 text-center">
-                                                                {cartItem.quantity}
-                                                            </span>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="icon"
-                                                                onClick={() => addToCart(item)}
-                                                            >
-                                                                <Plus className="h-4 w-4" />
-                                                            </Button>
-                                                        </>
-                                                    ) : (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            onClick={() => addToCart(item)}
-                                                        >
-                                                            <Plus className="h-4 w-4" />
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                );
-                            })}
+                        <h2 className="text-xl font-semibold">{category}</h2>
+                        {/* 2. USE THE COMPONENT IN A GRID */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {items.map((item) => (
+                                // 3. RENDER PosItemCard, PASSING THE ITEM AND CURRENCY
+                                <PosItemCard
+                                    key={item.id} 
+                                    item={item} 
+                                />
+                            ))}
                         </div>
                     </div>
                 ))}

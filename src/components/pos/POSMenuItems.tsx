@@ -8,11 +8,10 @@ import { Plus, Minus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Partner, useAuthStore } from "@/store/authStore";
 import ShopClosedModalWarning from "../admin/ShopClosedModalWarning";
+import PosItemCard from "./PosItemCard";
  
 export const POSMenuItems = () => {
   const { items, groupedItems, fetchMenu } = useMenuStore();
-  const { addToCart, cartItems, decreaseQuantity, removeFromCart } =
-    usePOSStore();
   const { userData } = useAuthStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -122,68 +121,8 @@ export const POSMenuItems = () => {
           <h2 className="text-2xl font-bold mb-4">{category}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {items.map((item) => {
-              const cartItem = cartItems.find(
-                (cartItem) => cartItem.id === item.id
-              );
               return (
-                <Card
-                  key={item.id}
-                  className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => addToCart(item)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-medium">{item.name}</h3>
-                        <p className="text-lg font-bold mt-2">
-                          {(userData as Partner)?.currency}
-                          {item.price}
-                        </p>
-                      </div>
-                      <div
-                        className="flex items-center gap-2"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {cartItem ? (
-                          <>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="bg-gray-200"
-                              onClick={() => {
-                                if (cartItem.quantity > 1) {
-                                  decreaseQuantity(item.id!);
-                                } else {
-                                  removeFromCart(item.id!);
-                                }
-                              }}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <span className="w-8 text-center">
-                              {cartItem.quantity}
-                            </span>
-                            <Button
-                              size="icon"
-                              onClick={() => addToCart(item)}
-                              className="bg-black"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            size="icon"
-                            onClick={() => addToCart(item)}
-                            className="bg-black"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <PosItemCard item={item} key={item.id} />
               );
             })}
           </div>
