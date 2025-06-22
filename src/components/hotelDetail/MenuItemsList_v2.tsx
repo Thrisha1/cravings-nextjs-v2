@@ -30,21 +30,34 @@ const MenuItemsList = ({
 
   useEffect(() => {
     if (selectedCat) {
-      
       if (selectedCat === "all") {
-        setMenus(menu);
+        const sortedItems = [...menu].sort((a, b) => {
+          if (a.image_url.length && !b.image_url.length) return -1;
+          if (!a.image_url.length && b.image_url.length) return 1;
+          return 0;
+        });
+        const sortByCategoryPriority: any = (
+          a: HotelDataMenus,
+          b: HotelDataMenus
+        ) => {
+          const categoryA = a.category.priority || 0;
+          const categoryB = b.category.priority || 0;
+          return categoryA - categoryB;
+        };
+        sortedItems.sort(sortByCategoryPriority);
+        setMenus(sortedItems);
         return;
+      } else {
+        const filteredItems = menu.filter(
+          (item) => item.category.name === selectedCat
+        );
+        const sortedItems = [...filteredItems].sort((a, b) => {
+          if (a.image_url.length && !b.image_url.length) return -1;
+          if (!a.image_url.length && b.image_url.length) return 1;
+          return 0;
+        });
+        setMenus(sortedItems);
       }
-
-      const filteredItems = menu.filter(
-        (item) => item.category.name === selectedCat
-      );
-      const sortedItems = [...filteredItems].sort((a, b) => {
-        if (a.image_url.length && !b.image_url.length) return -1;
-        if (!a.image_url.length && b.image_url.length) return 1;
-        return 0;
-      });
-      setMenus(sortedItems);
     }
   }, [selectedCat]);
 
