@@ -61,7 +61,7 @@ export default function SuperAdminCreatePartnerPage() {
   const [isBannerUploading, setBannerUploading] = useState(false);
 
   const validateForm = () => {
-    if (!formData.hotelName || !formData.phone || !formData.upiId || !formData.country || (formData.country === "India" && (!formData.state || !formData.area))) {
+    if (!formData.hotelName || !formData.phone || !formData.country || (formData.country === "India" && (!formData.state || !formData.area))) {
       setError("Please fill in all required fields");
       setIsSubmitting(false);
       return false;
@@ -186,19 +186,6 @@ export default function SuperAdminCreatePartnerPage() {
                   placeholder="Enter your phone number"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full"
-                  required
-                />
-              </div>
-
-              {/* UPI ID */}
-              <div className="space-y-2">
-                <Label htmlFor="upiId" className="text-sm font-medium text-gray-700">UPI ID</Label>
-                <Input
-                  id="upiId"
-                  placeholder="Enter your UPI ID"
-                  value={formData.upiId}
-                  onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
                   className="w-full"
                   required
                 />
