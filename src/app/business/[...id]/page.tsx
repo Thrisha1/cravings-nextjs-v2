@@ -11,6 +11,7 @@ import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
 import { Metadata } from "next";
 import { getSocialLinks } from "@/lib/getSocialLinks";
 import { usePartnerStore } from "@/store/usePartnerStore";
+import { HotelData } from "@/app/hotels/[...id]/page";
 // import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
 
 export async function generateMetadata({
@@ -67,31 +68,10 @@ export async function generateMetadata({
   };
 }
 
-export interface HotelDataMenus extends Omit<MenuItem, "category"> {
-  category: {
-    name: string;
-    id: string;
-    priority: number;
-  };
-  offers: {
-    offer_price: number;
-  }[];
-}
 
 const isUUID = (str: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-export interface HotelData extends Partner {
-  offers: Offer[];
-  menus: HotelDataMenus[];
-}
-
-export interface SocialLinks {
-  instagram?: string;
-  whatsapp?: string;
-  googleReview?: string;
-  location?: string;
-}
 
 const HotelPage = async ({
   searchParams,
