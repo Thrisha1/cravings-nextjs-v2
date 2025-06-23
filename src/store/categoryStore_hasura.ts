@@ -48,12 +48,14 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         res.category.map((cat: Category) => ({
           ...cat,
           name: cat.name,
+          is_active: cat.is_active !== false, // Ensure boolean value
         }))
       );
 
       set({ categories : allCategories.map((cat : Category) => ({
         ...cat,
         name: formatDisplayName(cat.name),
+        is_active: cat.is_active !== false, // Ensure boolean value is preserved
       })) });
       return allCategories as Category[];
     } catch (error: unknown) {
@@ -127,33 +129,43 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const updatedCat = {
         id: cat.id,
-        name: (cat.name),
+        name: formatStorageName(cat.name),
         priority: cat.priority,
-        is_active: cat.is_active,
+        is_active: cat.is_active !== false, // Ensure boolean value
       };
 
       const updatedCategory = await fetchFromHasura(update_category, {
         ...updatedCat,
       }).then((res) => res.update_category_by_pk);
 
+      // Format the updated category
+      const formattedUpdatedCategory = {
+        ...updatedCategory,
+        name: formatDisplayName(updatedCategory.name),
+        is_active: updatedCategory.is_active !== false // Ensure boolean value
+      };
+
+      // Get the updated categories list
+      const newCategories = get().categories.map((category) =>
+        category.id === updatedCategory.id
+          ? formattedUpdatedCategory
+          : category
+      );
+
+      // Update the store with the updated categories
       set({
-        categories: get().categories.map((category) =>
-          category.id === updatedCategory.id
-            ? {
-                ...category,
-                name: (updatedCategory.name),
-                priority: updatedCategory.priority,
-                is_active: updatedCategory.is_active,
-              }
-            : category
-        ),
+        categories: newCategories,
       });
 
-      // to update categorys of menu items
+      // Update categories of menu items
       revalidateTag(user?.id as string);
-      updatedCategories(get().categories);
+      updatedCategories(newCategories);
+      
+      // Return the formatted updated category
+      return formattedUpdatedCategory;
     } catch (error) {
-      console.error(error);
+      console.error('Error updating category:', error);
+      throw error; // Re-throw to handle in the component
     }
   },
 }));
