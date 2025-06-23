@@ -492,7 +492,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   updatedCategories: async (categories: Category[]) => {
-    toast.loading("Updating categories...");
+    //toast.loading("Updating categories...");
     const fetchCategories = useCategoryStore.getState().fetchCategories;
     const user = useAuthStore.getState().userData as Partner;
 
@@ -518,7 +518,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     set({ items: updatedItems });
     get().groupItems();
     toast.dismiss();
-    toast.success("Categories updated successfully");
+    //toast.success("Categories updated successfully");
   },
 
   updateCategoriesAsBatch: async (categories: Category[]) => {
