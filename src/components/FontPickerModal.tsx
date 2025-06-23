@@ -46,7 +46,7 @@ export function FontPickerModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95%] max-w-[425px] rounded-xl">
+      <DialogContent className="w-[95%] max-w-[425px] rounded-xl top-[50%] translate-y-[-50%]">
         <DialogHeader>
           <DialogTitle>Change Font</DialogTitle>
         </DialogHeader>

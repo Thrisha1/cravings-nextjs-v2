@@ -87,7 +87,7 @@ const ColorPickerModal = ({
     <>
       {/* Main customization dialog */}
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[90%] max-w-[425px] rounded-xl">
+        <DialogContent className="w-[90%] max-w-[425px] rounded-xl h-fit top-[50%] translate-y-[-50%]">
           <DialogHeader className="flex flex-row items-center justify-between">
             <div></div>
             <DialogTitle>Color Customization</DialogTitle>
