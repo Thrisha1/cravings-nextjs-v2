@@ -36,6 +36,8 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface CategoryManagementFormProps {
   categories: Category[];
@@ -187,6 +189,25 @@ export function CategoryManagementForm({
     );
   };
 
+  const handleStatusChange = async (id: string, isActive: boolean) => {
+    try {
+      setLocalCategories(prev =>
+        prev.map(cat =>
+          cat.id === id ? { ...cat, is_active: isActive } : cat
+        )
+      );
+    } catch (error) {
+      console.error('Error updating category status:', error);
+      // Revert the UI change if the update fails
+      setLocalCategories(prev =>
+        prev.map(cat =>
+          cat.id === id ? { ...cat, is_active: !isActive } : cat
+        )
+      );
+      toast.error('Failed to update category status');
+    }
+  };
+
   const handleSubmit = async () => {
     setIsLoading(true);
 
@@ -272,9 +293,8 @@ export function CategoryManagementForm({
                 <TableHeader className="bg-gray-50 sticky top-0 z-10">
                   <TableRow>
                     <TableHead>Category Name</TableHead>
-                    <TableHead className="w-[100px] text-center hidden sm:table-cell">
-                      Actions
-                    </TableHead>
+                    <TableHead className="w-[120px]">Status</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
                     <TableHead className="w-[80px] text-center">
                       Move
                     </TableHead>
@@ -337,6 +357,19 @@ export function CategoryManagementForm({
                                     onFocus={handleInputFocus}
                                     onBlur={handleInputBlur}
                                   />
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center space-x-2">
+                                    <Switch
+                                      id={`status-${category.id}`}
+                                      checked={category.is_active !== false}
+                                      onCheckedChange={(checked) => handleStatusChange(category.id, checked)}
+                                      className="data-[state=checked]:bg-green-500"
+                                    />
+                                    <Label htmlFor={`status-${category.id}`} className="text-sm">
+                                      {category.is_active !== false ? 'Active' : 'Inactive'}
+                                    </Label>
+                                  </div>
                                 </TableCell>
                                 {/* Desktop Actions */}
                                 <TableCell className="hidden sm:table-cell">

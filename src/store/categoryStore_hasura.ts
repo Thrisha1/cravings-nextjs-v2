@@ -11,6 +11,7 @@ export interface Category {
   name: string;
   partner_id?: string;
   priority?: number;
+  is_active?: boolean;
 }
 
 // Helper function to format category name for display
@@ -128,6 +129,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         id: cat.id,
         name: (cat.name),
         priority: cat.priority,
+        is_active: cat.is_active,
       };
 
       const updatedCategory = await fetchFromHasura(update_category, {
@@ -141,6 +143,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
                 ...category,
                 name: (updatedCategory.name),
                 priority: updatedCategory.priority,
+                is_active: updatedCategory.is_active,
               }
             : category
         ),

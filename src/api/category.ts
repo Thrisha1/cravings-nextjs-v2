@@ -5,6 +5,7 @@ export const getPartnerCategories = `
         category(where: {partner_id: {_eq: $partner_id}, deletion_status: {_eq: 0}, menus: {_not: {deletion_status: {_eq: 1}}}}, limit: 100) {
             id
             name
+            is_active
         }
     }
 `;
@@ -33,6 +34,7 @@ export const getCategory = `
     ) {
       id
       name
+      is_active
     }
   }
 `;

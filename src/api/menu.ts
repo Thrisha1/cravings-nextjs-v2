@@ -27,14 +27,15 @@ export const getMenu = `
 `;
 
 export const update_category = `
-  mutation UpdateCategory($id: uuid!, $name: String, $priority: Int) {
+  mutation UpdateCategory($id: uuid!, $name: String, $priority: Int, $is_active: Boolean) {
     update_category_by_pk(
       pk_columns: { id: $id }
-      _set: { name: $name, priority: $priority }
+      _set: { name: $name, priority: $priority, is_active: $is_active }
     ) {
       id
       name
       priority
+      is_active
     }
   }
 `;
