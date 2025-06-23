@@ -149,7 +149,7 @@ const ColorPickerModal = ({
 
       {/* Color picker dialog */}
       <Dialog open={showColorPicker} onOpenChange={setShowColorPicker}>
-        <DialogContent className="w-[90%] max-w-[425px] rounded-xl">
+        <DialogContent className="w-[90%] max-w-[425px] rounded-xl top-[50%] translate-y-[-50%] h-fit">
           <DialogHeader>
             <DialogTitle className="capitalize">
               Pick {currentPicker} color

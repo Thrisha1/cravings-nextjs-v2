@@ -37,10 +37,11 @@ export interface DefaultHotelPageProps {
   items: HotelDataMenus[];
   pathname: string;
   categories: Category[];
-  selectedCategory: string;
+  setSelectedCategory: (category: string) => void;
   qrGroup?: QrGroup | null;
   qrId?: string | null;
 }
+
 
 const Default = ({
   styles,
@@ -55,7 +56,7 @@ const Default = ({
   items,
   pathname,
   categories,
-  selectedCategory,
+  setSelectedCategory,
   qrGroup,
   qrId,
 }: DefaultHotelPageProps) => {
@@ -169,8 +170,8 @@ const Default = ({
               items={items}
               hotelData={hoteldata}
               categories={categories}
-              selectedCategory={selectedCategory}
-              menu={hoteldata?.menus}
+              setSelectedCategory={setSelectedCategory}
+              menu={hoteldata?.fillteredMenus}
               tableNumber={tableNumber}
             />
           </section>

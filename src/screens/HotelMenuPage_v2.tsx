@@ -16,7 +16,7 @@ import RateThis from "@/components/RateThis";
 import OrderDrawer from "@/components/hotelDetail/OrderDrawer";
 import useOrderStore from "@/store/orderStore";
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import SocialLinkList from "@/components/SocialLinkList";
 import { getFeatures } from "@/lib/getFeatures";
 import { QrGroup } from "@/app/admin/qr-management/page";
@@ -26,6 +26,7 @@ import { getQrScanCookie, setQrScanCookie } from "@/app/auth/actions";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { INCREMENT_QR_CODE_SCAN_COUNT } from "@/api/qrcodes";
 import Default from "@/components/hotelDetail/styles/Default";
+import Compact from "@/components/hotelDetail/styles/Compact";
 // import { fetchFromHasura } from "@/lib/hasuraClient";
 // import { usePartnerStore } from "@/store/usePartnerStore";
 
@@ -72,6 +73,7 @@ const HotelMenuPage = ({
   qrGroup,
   qrId,
 }: HotelMenuPageProps) => {
+  const router = useRouter();
   const styles: Styles = {
     backgroundColor: theme?.colors?.bg || "#F5F5F5",
     color: theme?.colors?.text || "#000",
@@ -158,38 +160,47 @@ const HotelMenuPage = ({
     return filteredItems;
   };
 
+  const setSelectedCategory = (category: string) => {
+    if (category === "all") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("cat");
+      router.push(url.toString() , { scroll: false });
+    }else{
+      const url = new URL(window.location.href);
+      url.searchParams.set("cat", category);
+      router.push(url.toString() , { scroll: false });
+    }
+  };
+
   const topItems = getTopItems();
   const categories = getCategories();
   const selectedCategory = "all";
   const items = getCategoryItems(selectedCategory);
 
+  const defaultProps = {
+    offers,
+    hoteldata,
+    auth,
+    theme,
+    tableNumber,
+    styles,
+    socialLinks,
+    qrGroup,
+    qrId,
+    categories,
+    setSelectedCategory,
+    items,
+    topItems,
+    open_place_order_modal: open_place_order_modal,
+    pathname: pathname,
+  };
+
+
   switch (theme?.menuStyle) {
     case "compact":
-      return <div>
-
-        <ThemeChangeButton hotelData={hoteldata} theme={theme} />
-        
-      </div>;
+      return <Compact {...defaultProps} />;
     default:
-      return (
-        <Default
-          offers={offers}
-          hoteldata={hoteldata}
-          auth={auth}
-          theme={theme}
-          tableNumber={tableNumber}
-          styles={styles}
-          socialLinks={socialLinks}
-          qrGroup={qrGroup}
-          qrId={qrId}
-          categories={categories}
-          selectedCategory={selectedCategory}
-          items={items}
-          topItems={topItems}
-          open_place_order_modal={open_place_order_modal}
-          pathname={pathname}
-        />
-      );
+      return <Default {...defaultProps} />;
   }
 };
 

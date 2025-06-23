@@ -134,7 +134,7 @@ const ThemeChangeButton = ({
         onSave={(colors) =>
           onSave({
             colors,
-            menuStyle: "default", // Default value
+            menuStyle: theme?.menuStyle || "default", // Default value
           })
         }
       />
@@ -147,9 +147,9 @@ const ThemeChangeButton = ({
         onSave={(style) =>
           onSave({
             colors: {
-              text: "#000000",
-              bg: "#ffffff",
-              accent: "#000000",
+              text: theme?.colors?.text || "#000000",
+              bg: theme?.colors?.bg || "#ffffff",
+              accent: theme?.colors?.accent || "#000000",
             },
             menuStyle: style,
           })
