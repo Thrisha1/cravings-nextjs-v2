@@ -159,7 +159,7 @@ const ItemCard = ({
                           backgroundColor: styles.accent,
                           color: "white",
                         }}
-                        className="rounded-full px-4 py-1 font-medium text-sm whitespace-nowrap"
+                        className="rounded-full px-4 py-1 font-medium text-sm whitespace-nowrap h-fit"
                       >
                         {showVariants ? "Hide Options" : "Add"}
                       </div>
@@ -205,7 +205,7 @@ const ItemCard = ({
                           backgroundColor: styles.accent,
                           color: "white",
                         }}
-                        className="rounded-full px-4 py-1 font-medium text-sm"
+                        className="rounded-full px-4 py-1 font-medium text-sm h-fit"
                       >
                         Add
                       </div>
@@ -216,11 +216,12 @@ const ItemCard = ({
           )}
 
           {/* Add button for items without image */}
-          {!item.image_url &&
+         <div>
+         {!item.image_url &&
             item.is_available &&
             (hasOrderingFeature || hasDeliveryFeature) &&
             (!hasStockFeature || !isOutOfStock) && (
-              <div className="mt-2 flex justify-end">
+              <div className="mt-2 flex justify-end h-28 aspect-square">
                 {hasVariants ? (
                   <div
                     onClick={() => setShowVariants(!showVariants)}
@@ -228,7 +229,7 @@ const ItemCard = ({
                       backgroundColor: styles.accent,
                       color: "white",
                     }}
-                    className="rounded-full px-4 py-1 font-medium text-sm"
+                    className="rounded-full px-4 py-1 font-medium text-sm h-fit"
                   >
                     {showVariants ? "Hide Options" : "Add"}
                   </div>
@@ -238,7 +239,7 @@ const ItemCard = ({
                       backgroundColor: styles.accent,
                       color: "white",
                     }}
-                    className="rounded-full px-3 py-1 font-medium flex items-center gap-3 text-sm"
+                    className="rounded-full px-3 py-1 font-medium flex items-center gap-3 text-sm h-fit"
                   >
                     <div
                       className="cursor-pointer active:scale-95"
@@ -267,13 +268,14 @@ const ItemCard = ({
                       backgroundColor: styles.accent,
                       color: "white",
                     }}
-                    className="rounded-full px-4 py-1 font-medium text-sm"
+                    className="rounded-full px-4 py-1 font-medium text-sm h-fit"
                   >
                     Add
                   </div>
                 )}
               </div>
             )}
+         </div>
         </div>
       </div>
       {/* Variants section */}
@@ -327,7 +329,7 @@ const ItemCard = ({
                         backgroundColor: styles.accent,
                         color: "white",
                       }}
-                      className="rounded-full px-4 py-1 font-medium"
+                      className="rounded-full px-4 py-1 font-medium h-fit"
                     >
                       Add
                     </div>
