@@ -2,14 +2,14 @@
 import { HotelData } from "@/app/hotels/[...id]/page";
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import React from "react";
-import Img from "../Img";
+import Img from "@/components/Img";
 import {
   Dialog,
   DialogClose,
   DialogContent,
   DialogTitle,
   DialogTrigger,
-} from "../ui/dialog";
+} from "@/components/ui/dialog";
 import { X } from "lucide-react";
 
 const HotelBanner = ({ styles, hoteldata }: { styles: Styles; hoteldata: HotelData }) => {

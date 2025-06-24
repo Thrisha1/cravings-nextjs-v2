@@ -1,34 +1,25 @@
 "use client";
 
-import MenuItemsList from "@/components/hotelDetail/MenuItemsList_v2";
+
 import { Offer } from "@/store/offerStore_hasura";
 import { HotelData, SocialLinks } from "@/app/hotels/[...id]/page";
-import ThemeChangeButton, {
+import {
   ThemeConfig,
 } from "@/components/hotelDetail/ThemeChangeButton";
-import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
 import { Category } from "@/store/categoryStore_hasura";
-import PopularItemsList from "@/components/hotelDetail/PopularItemsList";
-import OfferList from "@/components/hotelDetail/OfferList";
-import SearchMenu from "@/components/hotelDetail/SearchMenu";
-import HotelBanner from "@/components/hotelDetail/HotelBanner";
-import RateThis from "@/components/RateThis";
 import OrderDrawer from "@/components/hotelDetail/OrderDrawer";
 import useOrderStore from "@/store/orderStore";
 import { useEffect } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import SocialLinkList from "@/components/SocialLinkList";
+import { usePathname, useRouter } from "next/navigation";
 import { getFeatures } from "@/lib/getFeatures";
 import { QrGroup } from "@/app/admin/qr-management/page";
-import ShopClosedModalWarning from "@/components/admin/ShopClosedModalWarning";
 import { addToRecent } from "@/lib/addToRecent";
 import { getQrScanCookie, setQrScanCookie } from "@/app/auth/actions";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { INCREMENT_QR_CODE_SCAN_COUNT } from "@/api/qrcodes";
-import Default from "@/components/hotelDetail/styles/Default";
-import Compact from "@/components/hotelDetail/styles/Compact";
-// import { fetchFromHasura } from "@/lib/hasuraClient";
-// import { usePartnerStore } from "@/store/usePartnerStore";
+import Default from "@/components/hotelDetail/styles/Default/Default";
+import Compact from "@/components/hotelDetail/styles/Compact/Compact";
+
 
 export type MenuItem = {
   description: string;

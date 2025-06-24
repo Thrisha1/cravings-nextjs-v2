@@ -1,9 +1,9 @@
 "use client";
 import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import React from "react";
-import HeadingWithAccent from "../HeadingWithAccent";
+import HeadingWithAccent from "../../../HeadingWithAccent";
 import { Styles } from "@/screens/HotelMenuPage_v2";
-import { Carousel, CarouselContent, CarouselItem } from "../ui/carousel";
+import { Carousel, CarouselContent, CarouselItem } from "../../../ui/carousel";
 import ItemCard from "./ItemCard";
 import Autoplay from "embla-carousel-autoplay";
 

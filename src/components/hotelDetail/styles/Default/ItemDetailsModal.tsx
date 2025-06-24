@@ -5,12 +5,12 @@ import {
   DialogClose,
   DialogContent,
   DialogTitle,
-} from "../ui/dialog";
+} from "@/components/ui/dialog";
 import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
-import HeadingWithAccent from "../HeadingWithAccent";
+import HeadingWithAccent from "@/components/HeadingWithAccent";
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import { X } from "lucide-react";
-import Img from "../Img";
+import Img from "@/components/Img";
 
 const ItemDetailsModal = ({
   open,

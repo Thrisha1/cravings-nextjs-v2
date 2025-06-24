@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { DefaultHotelPageProps } from "./Default";
+import { DefaultHotelPageProps } from "../Default/Default";
 import { formatDisplayName } from "@/store/categoryStore_hasura";
-import ThemeChangeButton from "../ThemeChangeButton";
+import ThemeChangeButton from "../../ThemeChangeButton";
+import ItemCard from "./ItemCard";
 
 const Compact = ({
   styles,
@@ -131,9 +132,12 @@ const Compact = ({
 
   return (
     <>
-      <main style={{
-        color: styles?.color || "#000",
-      }} className="max-w-xl mx-auto relative">
+      <main
+        style={{
+          color: styles?.color || "#000",
+        }}
+        className="max-w-xl mx-auto relative mb-40"
+      >
         <div className="absolute top-5 right-5 z-20 rounded-full aspect-square w-10 grid place-items-center bg-white shadow-xl active:scale-95 transition-transform">
           <ThemeChangeButton hotelData={hoteldata} theme={theme} />
         </div>
@@ -180,7 +184,9 @@ const Compact = ({
               }}
               onClick={() => handleCategoryClick(index, category)}
               key={category.id}
-              className={`p-3 text-nowrap ${activeCatIndex === index ? "font-semibold" : "font-medium"} flex-shrink-0`}
+              className={`p-3 text-nowrap ${
+                activeCatIndex === index ? "font-semibold" : "font-medium"
+              } flex-shrink-0`}
             >
               {formatDisplayName(category.name)}
             </div>
@@ -198,46 +204,26 @@ const Compact = ({
               }}
               className="py-4"
             >
-              <h2 style={{
-                color: styles?.accent || "#000",
-              }} className="text-xl font-bold mb-2">
+              <h2
+                style={{
+                  color: styles?.accent || "#000",
+                }}
+                className="text-xl font-bold sticky top-[64px] bg-white z-[9] py-4"
+              >
                 {formatDisplayName(category.name)}
               </h2>
               <div className="grid grid-cols-1  gap-4 divide-y-2 divide-gray-200">
                 {hoteldata?.menus
                   .filter((item) => item.category.id === category.id)
                   .map((item) => (
-                    <div key={item.id} className="p-4 flex justify-between">
-                      <div>
-                        <h3 className=" capitalize text-lg font-semibold">
-                          {item.name}
-                        </h3>
-                        <p className="text-sm opacity-50">{item.description}</p>
-                        <p style={{
-                          color: styles?.accent || "#000",
-                        }} className="text-lg font-bold">
-                          {hoteldata?.currency || "₹"}
-                          {item.price}
-                        </p>
-                      </div>
-
-                      <div className="relative">
-                        {item.image_url && (
-                          <div className="overflow-hidden aspect-square h-28 rounded-3xl">
-                            <img
-                              src={item.image_url}
-                              alt={item.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-
-
-                        {/* button  */}
-
-                       
-                      </div>
-                    </div>
+                    <ItemCard
+                      tableNumber={tableNumber}
+                      feature_flags={hoteldata?.feature_flags}
+                      hoteldata={hoteldata}
+                      item={item}
+                      styles={styles}
+                      key={item.id}
+                    />
                   ))}
               </div>
             </section>

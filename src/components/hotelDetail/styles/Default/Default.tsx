@@ -1,15 +1,15 @@
 import ShopClosedModalWarning from "@/components/admin/ShopClosedModalWarning";
 import React from "react";
-import HotelBanner from "../HotelBanner";
+import HotelBanner from "./HotelBanner";
 import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
-import ThemeChangeButton, { ThemeConfig } from "../ThemeChangeButton";
+import ThemeChangeButton, { ThemeConfig } from "../../ThemeChangeButton";
 import SocialLinkList from "@/components/SocialLinkList";
-import SearchMenu from "../SearchMenu";
-import OfferList from "../OfferList";
+import SearchMenu from "../../SearchMenu";
+import OfferList from "./OfferList";
 import { getFeatures } from "@/lib/getFeatures";
-import MenuItemsList from "../MenuItemsList_v2";
-import PopularItemsList from "../PopularItemsList";
-import OrderDrawer from "../OrderDrawer";
+import MenuItemsList from "./MenuItemsList_v2";
+import PopularItemsList from "./PopularItemsList";
+import OrderDrawer from "../../OrderDrawer";
 import RateThis from "@/components/RateThis";
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import {

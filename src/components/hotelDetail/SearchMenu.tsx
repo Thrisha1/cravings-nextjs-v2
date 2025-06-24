@@ -11,7 +11,7 @@ import {
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import { SearchIcon, X } from "lucide-react";
 import Fuse from "fuse.js";
-import ItemCard from "./ItemCard";
+import ItemCard from "./styles/Default/ItemCard";
 
 const SearchMenu = ({
   hotelData,
