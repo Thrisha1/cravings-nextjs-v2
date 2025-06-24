@@ -150,6 +150,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
         name
         id
         priority
+        is_active
       }
       priority
       description

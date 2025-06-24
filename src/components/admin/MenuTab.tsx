@@ -209,6 +209,7 @@ export function MenuTab() {
         id: "temp-id-" + Math.random().toString(36).substring(2, 9),
         name: item.category,
         priority: 0,
+        is_active: true,
       },
       image_source: "local",
       is_top: false,
@@ -253,6 +254,7 @@ export function MenuTab() {
         id: existingItem.category.id,
         name: item.category,
         priority: existingItem.category.priority,
+        is_active: existingItem.category.is_active !== false ? true : false,
       },
       variants: item.variants,
     });
@@ -388,6 +390,7 @@ export function MenuTab() {
             id: items[0].category.id,
             name: category,
             priority: items[0].category.priority || 0,
+            is_active: items[0].category.is_active !== false ? true : false,
           }))}
           onSubmit={async (updatedCategories) => {
             try {
