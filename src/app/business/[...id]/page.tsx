@@ -307,6 +307,7 @@ const HotelPage = async ({
       fillteredMenus: filteredMenus,
     }
   }
+  
 
   return (
     <>

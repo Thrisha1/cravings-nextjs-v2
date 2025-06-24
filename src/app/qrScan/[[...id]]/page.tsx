@@ -8,7 +8,7 @@ import {
   getQrScanCookie,
   setQrScanCookie,
 } from "@/app/auth/actions";
-import { HotelData } from "@/app/hotels/[...id]/page";
+import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
 import { getFeatures } from "@/lib/getFeatures";
 import { getSocialLinks } from "@/lib/getSocialLinks";
@@ -97,7 +97,7 @@ const page = async ({
   searchParams,
 }: {
   params: Promise<{ [key: string]: string | undefined }>;
-  searchParams: Promise<{ query: string; qrScan: string }>;
+  searchParams: Promise<{ query: string; qrScan: string, cat: string }>;
 }) => {
 
 
@@ -176,7 +176,7 @@ const page = async ({
   // console.log("Table Number:", tableNumber);
 
   // if (tableNumber !== 0) {
-  const { query: search } = await searchParams;
+  const { query: search  , cat} = await searchParams;
   const auth = await getAuthCookie();
   const hotelId = qr_codes?.[0].partner_id;
 
@@ -282,6 +282,75 @@ const page = async ({
         </div>
       );
     }
+
+    const menuItemWithOfferPrice = hoteldata?.menus?.map((item) => {
+      return {
+        ...item,
+        price: item.offers?.[0]?.offer_price || item.price,
+      };
+    });
+  
+    let hotelDataWithOfferPrice = {
+      ...hoteldata,
+      menus: menuItemWithOfferPrice,
+    };
+
+
+      let filteredMenus: HotelDataMenus[] = [];
+      const hotelMenus = hotelDataWithOfferPrice?.menus || [];
+    
+      if (hotelMenus && hotelMenus.length > 0) {
+        if (cat === "all" || !cat) {
+          const sortedItems = [...(hotelMenus ?? [])].sort((a, b) => {
+            if (a.image_url.length && !b.image_url.length) return -1;
+            if (!a.image_url.length && b.image_url.length) return 1;
+            filteredMenus.push({
+              ...a,
+              price: a.offers?.[0]?.offer_price || a.price,
+            });
+            return 0;
+          });
+          const sortByCategoryPriority: any = (
+            a: HotelDataMenus,
+            b: HotelDataMenus
+          ) => {
+            const categoryA = a.category.priority || 0;
+            const categoryB = b.category.priority || 0;
+            return categoryA - categoryB;
+          };
+          sortedItems.sort(sortByCategoryPriority);
+          filteredMenus = sortedItems.map((item) => ({
+            ...item,
+            price: item.offers?.[0]?.offer_price || item.price,
+          }));
+        } else {
+          const filteredItems = (hotelMenus ?? []).filter(
+            (item) => item.category.name === cat
+          );
+          const sortedItems = [...filteredItems].sort((a, b) => {
+            if (a.image_url.length && !b.image_url.length) return -1;
+            if (!a.image_url.length && b.image_url.length) return 1;
+            filteredMenus.push({
+              ...a,
+              price: a.offers?.[0]?.offer_price || a.price,
+            });
+            return 0;
+          });
+    
+          filteredMenus = sortedItems.map((item) => ({
+            ...item,
+            price: item.offers?.[0]?.offer_price || item.price,
+          }));
+    
+        }
+      }
+    
+      if (hotelDataWithOfferPrice) {
+        hotelDataWithOfferPrice = {
+          ...hotelDataWithOfferPrice,
+          fillteredMenus: filteredMenus,
+        }
+      }
 
 
     // if (isOrderingEnabled || isDeliveryEnabled) {
