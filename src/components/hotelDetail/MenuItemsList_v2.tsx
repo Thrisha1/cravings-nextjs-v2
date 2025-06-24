@@ -31,7 +31,12 @@ const MenuItemsList = ({
   useEffect(() => {
     if (selectedCat) {
       if (selectedCat === "all") {
-        const sortedItems = [...menu].sort((a, b) => {
+        // Filter menu items to only include those from active categories
+        const activeMenuItems = menu.filter(
+          (item) => item.category.is_active === undefined || item.category.is_active === true
+        );
+        
+        const sortedItems = [...activeMenuItems].sort((a, b) => {
           if (a.image_url.length && !b.image_url.length) return -1;
           if (!a.image_url.length && b.image_url.length) return 1;
           return 0;
