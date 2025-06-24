@@ -109,7 +109,7 @@ const MenuItemsList = ({
       </div>
 
       {/* items  */}
-      <div id="menu-items" className="px-[8%] grid h-fit gap-3 rounded-3xl ">
+      <div id="menu-items" className="px-[8%] grid grid-cols-1 sm:grid-cols-2 h-fit gap-3 rounded-3xl ">
         {menus
           .sort((a, b) => a.priority - b.priority)
           .map((item) => (
