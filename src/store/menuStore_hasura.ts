@@ -116,11 +116,13 @@ const getBatchUpdateMutation = (updates: Category[]) => `
         _set: {
           ${update.name ? `name: "${update.name.replace(/"/g, '\\"')}"` : ""}
           ${update.priority !== undefined ? `priority: ${update.priority}` : ""}
+          ${update.is_active !== undefined ? `is_active: ${update.is_active}` : ""}
         }
       ) {
         id
         name
         priority
+        is_active
       }
     `
       )
