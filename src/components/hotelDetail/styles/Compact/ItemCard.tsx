@@ -128,154 +128,90 @@ const ItemCard = ({
         </div>
 
         <div className="relative">
-          {item.image_url && (
-            <div className="relative">
-              <div className="overflow-hidden aspect-square h-28 rounded-3xl">
-                <img
-                  src={item.image_url}
-                  alt={item.name}
-                  className={`w-full h-full object-cover ${
-                    !item.is_available || (isOutOfStock && hasStockFeature)
-                      ? "grayscale"
-                      : ""
-                  }`}
-                />
+          <div className="relative">
+            <div className="overflow-hidden aspect-square h-28 rounded-3xl">
+              <img
+                src={item.image_url || "/image_placeholder.webp"}
+                alt={item.name}
+                className={`w-full h-full object-cover ${!item.image_url ? "invert opacity-50" : ""} ${
+                  !item.is_available || (isOutOfStock && hasStockFeature)
+                    ? "grayscale"
+                    : ""
+                }`}
+              />
+            </div>
+            {(!item.is_available || (isOutOfStock && hasStockFeature)) && (
+              <div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-center text-xs font-semibold py-1 px-2 w-full">
+                {!item.is_available ? "Unavailable" : "Out of Stock"}
               </div>
-              {(!item.is_available || (isOutOfStock && hasStockFeature)) && (
-                <div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-center text-xs font-semibold py-1 px-2 w-full">
-                  {!item.is_available ? "Unavailable" : "Out of Stock"}
-                </div>
-              )}
+            )}
 
-              {/* Add button positioned at bottom center of image */}
-              {item.is_available &&
-                (hasOrderingFeature || hasDeliveryFeature) &&
-                (!hasStockFeature || !isOutOfStock) && (
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
-                    {hasVariants ? (
+            {/* Add button positioned at bottom center of image */}
+            {item.is_available &&
+              (hasOrderingFeature || hasDeliveryFeature) &&
+              (!hasStockFeature || !isOutOfStock) && (
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
+                  {hasVariants ? (
+                    <div
+                      onClick={() => setShowVariants(!showVariants)}
+                      style={{
+                        backgroundColor: styles.accent,
+                        color: "white",
+                      }}
+                      className="rounded-full px-4 py-1 font-medium text-sm whitespace-nowrap h-fit"
+                    >
+                      {showVariants ? "Hide Options" : "Add"}
+                    </div>
+                  ) : itemQuantity > 0 ? (
+                    <div
+                      style={{
+                        backgroundColor: styles.accent,
+                        color: "white",
+                      }}
+                      className="rounded-full px-3 py-1 font-medium flex items-center gap-3 text-sm"
+                    >
                       <div
-                        onClick={() => setShowVariants(!showVariants)}
-                        style={{
-                          backgroundColor: styles.accent,
-                          color: "white",
+                        className="cursor-pointer active:scale-95"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (itemQuantity > 1) {
+                            decreaseQuantity(item.id as string);
+                          } else {
+                            removeItem(item.id as string);
+                          }
                         }}
-                        className="rounded-full px-4 py-1 font-medium text-sm whitespace-nowrap h-fit"
                       >
-                        {showVariants ? "Hide Options" : "Add"}
+                        -
                       </div>
-                    ) : itemQuantity > 0 ? (
+                      <div>{itemQuantity}</div>
                       <div
-                        style={{
-                          backgroundColor: styles.accent,
-                          color: "white",
-                        }}
-                        className="rounded-full px-3 py-1 font-medium flex items-center gap-3 text-sm"
-                      >
-                        <div
-                          className="cursor-pointer active:scale-95"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (itemQuantity > 1) {
-                              decreaseQuantity(item.id as string);
-                            } else {
-                              removeItem(item.id as string);
-                            }
-                          }}
-                        >
-                          -
-                        </div>
-                        <div>{itemQuantity}</div>
-                        <div
-                          className="cursor-pointer active:scale-95"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddItem();
-                          }}
-                        >
-                          +
-                        </div>
-                      </div>
-                    ) : (
-                      <div
+                        className="cursor-pointer active:scale-95"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleAddItem();
                         }}
-                        style={{
-                          backgroundColor: styles.accent,
-                          color: "white",
-                        }}
-                        className="rounded-full px-4 py-1 font-medium text-sm h-fit"
                       >
-                        Add
+                        +
                       </div>
-                    )}
-                  </div>
-                )}
-            </div>
-          )}
-
-          {/* Add button for items without image */}
-         <div>
-         {!item.image_url &&
-            item.is_available &&
-            (hasOrderingFeature || hasDeliveryFeature) &&
-            (!hasStockFeature || !isOutOfStock) && (
-              <div className="mt-2 flex justify-end h-28 aspect-square">
-                {hasVariants ? (
-                  <div
-                    onClick={() => setShowVariants(!showVariants)}
-                    style={{
-                      backgroundColor: styles.accent,
-                      color: "white",
-                    }}
-                    className="rounded-full px-4 py-1 font-medium text-sm h-fit"
-                  >
-                    {showVariants ? "Hide Options" : "Add"}
-                  </div>
-                ) : itemQuantity > 0 ? (
-                  <div
-                    style={{
-                      backgroundColor: styles.accent,
-                      color: "white",
-                    }}
-                    className="rounded-full px-3 py-1 font-medium flex items-center gap-3 text-sm h-fit"
-                  >
+                    </div>
+                  ) : (
                     <div
-                      className="cursor-pointer active:scale-95"
-                      onClick={() => {
-                        if (itemQuantity > 1) {
-                          decreaseQuantity(item.id as string);
-                        } else {
-                          removeItem(item.id as string);
-                        }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddItem();
                       }}
+                      style={{
+                        backgroundColor: styles.accent,
+                        color: "white",
+                      }}
+                      className="rounded-full px-4 py-1 font-medium text-sm h-fit"
                     >
-                      -
+                      Add
                     </div>
-                    <div>{itemQuantity}</div>
-                    <div
-                      className="cursor-pointer active:scale-95"
-                      onClick={handleAddItem}
-                    >
-                      +
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    onClick={handleAddItem}
-                    style={{
-                      backgroundColor: styles.accent,
-                      color: "white",
-                    }}
-                    className="rounded-full px-4 py-1 font-medium text-sm h-fit"
-                  >
-                    Add
-                  </div>
-                )}
-              </div>
-            )}
-         </div>
+                  )}
+                </div>
+              )}
+          </div>
         </div>
       </div>
       {/* Variants section */}
