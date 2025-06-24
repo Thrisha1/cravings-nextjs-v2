@@ -178,21 +178,7 @@ const Default = ({
         </>
       ) : null}
 
-      {/* order drawer  */}
-      {((pathname.includes("qrScan") &&
-        getFeatures(hoteldata?.feature_flags || "")?.ordering.enabled) ||
-        (!pathname.includes("qrScan") &&
-          getFeatures(hoteldata?.feature_flags || "")?.delivery.enabled)) && (
-        <section>
-          <OrderDrawer
-            qrGroup={qrGroup}
-            styles={styles}
-            qrId={qrId || undefined}
-            hotelData={hoteldata}
-            tableNumber={tableNumber}
-          />
-        </section>
-      )}
+      
 
       {/* rating  */}
       {!open_place_order_modal && (

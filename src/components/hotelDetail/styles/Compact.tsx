@@ -221,15 +221,22 @@ const Compact = ({
                         </p>
                       </div>
 
-                      {item.image_url && (
-                        <div className="overflow-hidden aspect-square h-28 rounded-3xl">
-                          <img
-                            src={item.image_url}
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
+                      <div className="relative">
+                        {item.image_url && (
+                          <div className="overflow-hidden aspect-square h-28 rounded-3xl">
+                            <img
+                              src={item.image_url}
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+
+
+                        {/* button  */}
+
+                       
+                      </div>
                     </div>
                   ))}
               </div>

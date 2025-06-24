@@ -130,7 +130,11 @@ const HotelMenuPage = ({
 
     hoteldata.menus.forEach((item) => {
       // Only add category if it's active (is_active is true) or if is_active is undefined (backward compatibility)
-      if (!uniqueCategoriesMap.has(item.category.name) && (item.category.is_active === undefined || item.category.is_active === true)) {
+      if (
+        !uniqueCategoriesMap.has(item.category.name) &&
+        (item.category.is_active === undefined ||
+          item.category.is_active === true)
+      ) {
         uniqueCategoriesMap.set(item.category.name, item.category);
       }
     });
@@ -143,9 +147,10 @@ const HotelMenuPage = ({
 
   const getCategoryItems = (selectedCategory: string) => {
     const filteredItems = hoteldata?.menus.filter(
-      (item) => 
-        item.category.name === selectedCategory && 
-        (item.category.is_active === undefined || item.category.is_active === true)
+      (item) =>
+        item.category.name === selectedCategory &&
+        (item.category.is_active === undefined ||
+          item.category.is_active === true)
     );
     const sortedItems = [...filteredItems].sort((a, b) => {
       if (a.image_url.length && !b.image_url.length) return -1;
@@ -158,9 +163,10 @@ const HotelMenuPage = ({
 
   const getTopItems = () => {
     const filteredItems = hoteldata?.menus.filter(
-      (item) => 
-        item.is_top === true && 
-        (item.category.is_active === undefined || item.category.is_active === true)
+      (item) =>
+        item.is_top === true &&
+        (item.category.is_active === undefined ||
+          item.category.is_active === true)
     );
     return filteredItems;
   };
@@ -169,11 +175,11 @@ const HotelMenuPage = ({
     if (category === "all") {
       const url = new URL(window.location.href);
       url.searchParams.delete("cat");
-      router.push(url.toString() , { scroll: false });
-    }else{
+      router.push(url.toString(), { scroll: false });
+    } else {
       const url = new URL(window.location.href);
       url.searchParams.set("cat", category);
-      router.push(url.toString() , { scroll: false });
+      router.push(url.toString(), { scroll: false });
     }
   };
 
@@ -200,13 +206,36 @@ const HotelMenuPage = ({
     pathname: pathname,
   };
 
+  const renderPage = () => {
+    switch (theme?.menuStyle) {
+      case "compact":
+        return <Compact {...defaultProps} />;
+      default:
+        return <Default {...defaultProps} />;
+    }
+  };
 
-  switch (theme?.menuStyle) {
-    case "compact":
-      return <Compact {...defaultProps} />;
-    default:
-      return <Default {...defaultProps} />;
-  }
+  return (
+    <>
+      {renderPage()}
+
+      {/* order drawer  */}
+      {((pathname.includes("qrScan") &&
+        getFeatures(hoteldata?.feature_flags || "")?.ordering.enabled) ||
+        (!pathname.includes("qrScan") &&
+          getFeatures(hoteldata?.feature_flags || "")?.delivery.enabled)) && (
+        <section>
+          <OrderDrawer
+            qrGroup={qrGroup}
+            styles={styles}
+            qrId={qrId || undefined}
+            hotelData={hoteldata}
+            tableNumber={tableNumber}
+          />
+        </section>
+      )}
+    </>
+  );
 };
 
 export default HotelMenuPage;
