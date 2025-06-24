@@ -145,7 +145,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     business_type
     delivery_rules
     country_code
-    menus(where: {deletion_status: {_eq: 0}}) {
+    menus(where: {deletion_status: {_eq: 0}, category: {is_active: {_eq: true}}}) {
       category {
         name
         id
