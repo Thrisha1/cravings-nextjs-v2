@@ -76,6 +76,7 @@ export interface HotelDataMenus extends Omit<MenuItem, "category"> {
     name: string;
     id: string;
     priority: number;
+    is_active?: boolean;
   };
   offers: {
     offer_price: number;

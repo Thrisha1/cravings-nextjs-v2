@@ -129,7 +129,8 @@ const HotelMenuPage = ({
     const uniqueCategoriesMap = new Map<string, Category>();
 
     hoteldata.menus.forEach((item) => {
-      if (!uniqueCategoriesMap.has(item.category.name)) {
+      // Only add category if it's active (is_active is true) or if is_active is undefined (backward compatibility)
+      if (!uniqueCategoriesMap.has(item.category.name) && (item.category.is_active === undefined || item.category.is_active === true)) {
         uniqueCategoriesMap.set(item.category.name, item.category);
       }
     });
@@ -142,7 +143,9 @@ const HotelMenuPage = ({
 
   const getCategoryItems = (selectedCategory: string) => {
     const filteredItems = hoteldata?.menus.filter(
-      (item) => item.category.name === selectedCategory
+      (item) => 
+        item.category.name === selectedCategory && 
+        (item.category.is_active === undefined || item.category.is_active === true)
     );
     const sortedItems = [...filteredItems].sort((a, b) => {
       if (a.image_url.length && !b.image_url.length) return -1;
@@ -155,7 +158,9 @@ const HotelMenuPage = ({
 
   const getTopItems = () => {
     const filteredItems = hoteldata?.menus.filter(
-      (item) => item.is_top === true
+      (item) => 
+        item.is_top === true && 
+        (item.category.is_active === undefined || item.category.is_active === true)
     );
     return filteredItems;
   };
