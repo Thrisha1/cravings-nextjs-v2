@@ -1,32 +1,25 @@
 "use client";
 
-import MenuItemsList from "@/components/hotelDetail/MenuItemsList_v2";
+
 import { Offer } from "@/store/offerStore_hasura";
 import { HotelData, SocialLinks } from "@/app/hotels/[...id]/page";
-import ThemeChangeButton, {
+import {
   ThemeConfig,
 } from "@/components/hotelDetail/ThemeChangeButton";
-import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
 import { Category } from "@/store/categoryStore_hasura";
-import PopularItemsList from "@/components/hotelDetail/PopularItemsList";
-import OfferList from "@/components/hotelDetail/OfferList";
-import SearchMenu from "@/components/hotelDetail/SearchMenu";
-import HotelBanner from "@/components/hotelDetail/HotelBanner";
-import RateThis from "@/components/RateThis";
 import OrderDrawer from "@/components/hotelDetail/OrderDrawer";
 import useOrderStore from "@/store/orderStore";
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
-import SocialLinkList from "@/components/SocialLinkList";
+import { usePathname, useRouter } from "next/navigation";
 import { getFeatures } from "@/lib/getFeatures";
 import { QrGroup } from "@/app/admin/qr-management/page";
-import ShopClosedModalWarning from "@/components/admin/ShopClosedModalWarning";
 import { addToRecent } from "@/lib/addToRecent";
 import { getQrScanCookie, setQrScanCookie } from "@/app/auth/actions";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { INCREMENT_QR_CODE_SCAN_COUNT } from "@/api/qrcodes";
-// import { fetchFromHasura } from "@/lib/hasuraClient";
-// import { usePartnerStore } from "@/store/usePartnerStore";
+import Default from "@/components/hotelDetail/styles/Default/Default";
+import Compact from "@/components/hotelDetail/styles/Compact/Compact";
+
 
 export type MenuItem = {
   description: string;
@@ -71,6 +64,7 @@ const HotelMenuPage = ({
   qrGroup,
   qrId,
 }: HotelMenuPageProps) => {
+  const router = useRouter();
   const styles: Styles = {
     backgroundColor: theme?.colors?.bg || "#F5F5F5",
     color: theme?.colors?.text || "#000",
@@ -85,7 +79,6 @@ const HotelMenuPage = ({
   const { setHotelId, genOrderId, open_place_order_modal } = useOrderStore();
 
   const pathname = usePathname();
-  
 
   useEffect(() => {
     const handleUpdateQrCount = async () => {
@@ -95,15 +88,12 @@ const HotelMenuPage = ({
 
       if (canUpdateScanCount) {
         try {
-          await fetchFromHasura(
-            INCREMENT_QR_CODE_SCAN_COUNT,
-            {
-              id: qrId,
-            }
-          );
+          await fetchFromHasura(INCREMENT_QR_CODE_SCAN_COUNT, {
+            id: qrId,
+          });
           await setQrScanCookie(qrId);
         } catch (error) {
-          console.error('Failed to update QR scan count:', error);
+          console.error("Failed to update QR scan count:", error);
         }
       }
     };
@@ -130,7 +120,12 @@ const HotelMenuPage = ({
     const uniqueCategoriesMap = new Map<string, Category>();
 
     hoteldata.menus.forEach((item) => {
-      if (!uniqueCategoriesMap.has(item.category.name)) {
+      // Only add category if it's active (is_active is true) or if is_active is undefined (backward compatibility)
+      if (
+        !uniqueCategoriesMap.has(item.category.name) &&
+        (item.category.is_active === undefined ||
+          item.category.is_active === true)
+      ) {
         uniqueCategoriesMap.set(item.category.name, item.category);
       }
     });
@@ -143,7 +138,10 @@ const HotelMenuPage = ({
 
   const getCategoryItems = (selectedCategory: string) => {
     const filteredItems = hoteldata?.menus.filter(
-      (item) => item.category.name === selectedCategory
+      (item) =>
+        item.category.name === selectedCategory &&
+        (item.category.is_active === undefined ||
+          item.category.is_active === true)
     );
     const sortedItems = [...filteredItems].sort((a, b) => {
       if (a.image_url.length && !b.image_url.length) return -1;
@@ -156,9 +154,24 @@ const HotelMenuPage = ({
 
   const getTopItems = () => {
     const filteredItems = hoteldata?.menus.filter(
-      (item) => item.is_top === true
+      (item) =>
+        item.is_top === true &&
+        (item.category.is_active === undefined ||
+          item.category.is_active === true)
     );
     return filteredItems;
+  };
+
+  const setSelectedCategory = (category: string) => {
+    if (category === "all") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("cat");
+      router.push(url.toString(), { scroll: false });
+    } else {
+      const url = new URL(window.location.href);
+      url.searchParams.set("cat", category);
+      router.push(url.toString(), { scroll: false });
+    }
   };
 
   const topItems = getTopItems();
@@ -166,119 +179,36 @@ const HotelMenuPage = ({
   const selectedCategory = "all";
   const items = getCategoryItems(selectedCategory);
 
+  const defaultProps = {
+    offers,
+    hoteldata,
+    auth,
+    theme,
+    tableNumber,
+    styles,
+    socialLinks,
+    qrGroup,
+    qrId,
+    categories,
+    setSelectedCategory,
+    items,
+    topItems,
+    open_place_order_modal: open_place_order_modal,
+    pathname: pathname,
+  };
+
+  const renderPage = () => {
+    switch (theme?.menuStyle) {
+      case "compact":
+        return <Compact {...defaultProps} />;
+      default:
+        return <Default {...defaultProps} />;
+    }
+  };
+
   return (
-    <main
-      style={{
-        backgroundColor: styles.backgroundColor,
-        color: styles.color,
-        fontFamily: theme?.fontFamily || "Poppins, sans-serif",
-      }}
-      className={`overflow-x-hidden relative min-h-screen flex flex-col gap-6 lg:px-[20%]`}
-    >
-      {/* Only show menu content when not in order placement view */}
-      {!open_place_order_modal ? (
-        <>
-          {/* shop closed modal */}
-          <ShopClosedModalWarning
-            hotelId={hoteldata?.id}
-            isShopOpen={hoteldata?.is_shop_open}
-          />
-
-          {/* top part  */}
-          <section className="px-[8%] pt-[20px]">
-            {/* hotel details  */}
-            <div
-              style={{
-                alignItems: theme?.infoAlignment || "start",
-              }}
-              className="flex flex-col gap-3"
-            >
-              {/* banner image  */}
-              <HotelBanner hoteldata={hoteldata} styles={styles} />
-
-              <h1
-                style={{
-                  textAlign:
-                    theme?.infoAlignment === "center" ? "center" : "left",
-                }}
-                className={"font-black text-3xl max-w-[250px]"}
-                dangerouslySetInnerHTML={{
-                  __html: hoteldata?.store_name || "",
-                }}
-              />
-
-              <DescriptionWithTextBreak
-                style={{
-                  textAlign:
-                    theme?.infoAlignment === "center" ? "center" : "left",
-                }}
-                accent={styles.accent}
-              >
-                {hoteldata?.description}
-              </DescriptionWithTextBreak>
-            </div>
-
-            {/* right top button  */}
-            <div className="absolute right-[8%] top-[20px] flex flex-col items-center gap-3">
-              {hoteldata?.id === auth?.id && (
-                <ThemeChangeButton hotelData={hoteldata} theme={theme} />
-              )}
-              <SocialLinkList styles={styles} socialLinks={socialLinks} hotelId={hoteldata?.id} />
-            </div>
-          </section>
-
-          {/* search bar  */}
-          <section className="px-[8%]">
-            <SearchMenu
-              tableNumber={tableNumber}
-              hotelData={hoteldata}
-              feature_flags={hoteldata?.feature_flags || ""}
-              currency={hoteldata?.currency}
-              styles={styles}
-              menu={hoteldata.menus}
-            />
-          </section>
-
-          {/* offers  */}
-          {offers.length > 0 && (
-            <section className="px-[8%]">
-              <OfferList
-                offers={offers}
-                styles={styles}
-                menus={hoteldata?.menus}
-                features={getFeatures(hoteldata?.feature_flags || "")}
-              />
-            </section>
-          )}
-
-          {/* popular  */}
-          {topItems.length > 0 && (
-            <section>
-              <PopularItemsList
-                hotelData={hoteldata}
-                currency={hoteldata?.currency}
-                items={topItems}
-                styles={styles}
-                tableNumber={tableNumber}
-              />
-            </section>
-          )}
-
-          {/* menu  */}
-          <section>
-            <MenuItemsList
-              currency={hoteldata?.currency}
-              styles={styles}
-              items={items}
-              hotelData={hoteldata}
-              categories={categories}
-              selectedCategory={selectedCategory}
-              menu={hoteldata?.menus}
-              tableNumber={tableNumber}
-            />
-          </section>
-        </>
-      ) : null}
+    <>
+      {renderPage()}
 
       {/* order drawer  */}
       {((pathname.includes("qrScan") &&
@@ -295,36 +225,7 @@ const HotelMenuPage = ({
           />
         </section>
       )}
-
-      {/* rating  */}
-      {!open_place_order_modal && (
-        <section
-          className={`px-[8.5%] mt-10 ${hoteldata?.footnote ? "" : "mb-40"}`}
-        >
-          <RateThis styles={styles} hotel={hoteldata} type="hotel" />
-        </section>
-      )}
-
-      {/* footnote  */}
-      {hoteldata?.footnote && !open_place_order_modal && (
-        <section
-          style={{
-            borderTop: `${styles.border.borderWidth} ${styles.border.borderStyle} ${styles.border.borderColor}`,
-            backgroundColor: `${styles.color}1D`,
-          }}
-          className="px-[8.5%] pt-10 pb-36 mt-10"
-        >
-          <div
-            style={{
-              color: `${styles.color}9D`,
-            }}
-            className="text-center text-sm"
-          >
-            {hoteldata?.footnote}
-          </div>
-        </section>
-      )}
-    </main>
+    </>
   );
 };
 

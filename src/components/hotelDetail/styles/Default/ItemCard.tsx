@@ -2,9 +2,9 @@
 import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import React, { useEffect, useState, useRef } from "react";
-import Img from "../Img";
+import Img from "../../../Img";
 import ItemDetailsModal from "./ItemDetailsModal";
-import DescriptionWithTextBreak from "../DescriptionWithTextBreak";
+import DescriptionWithTextBreak from "../../../DescriptionWithTextBreak";
 import useOrderStore, { OrderItem } from "@/store/orderStore";
 import { getFeatures } from "@/lib/getFeatures";
 

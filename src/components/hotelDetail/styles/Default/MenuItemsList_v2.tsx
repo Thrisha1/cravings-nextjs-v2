@@ -5,6 +5,7 @@ import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import { Category, formatDisplayName } from "@/store/categoryStore_hasura";
 import ItemCard from "./ItemCard";
+import { useSearchParams } from "next/navigation";
 
 const MenuItemsList = ({
   menu,
@@ -12,7 +13,7 @@ const MenuItemsList = ({
   items,
   categories,
   hotelData,
-  selectedCategory,
+  setSelectedCategory,
   currency,
   tableNumber,
 }: {
@@ -21,32 +22,12 @@ const MenuItemsList = ({
   items: HotelDataMenus[];
   categories: Category[];
   hotelData: HotelData;
-  selectedCategory: string;
+  setSelectedCategory: (category: string) => void;
   currency: string;
   tableNumber: number;
 }) => {
-  const [selectedCat, setSelectedCat] = useState(selectedCategory);
-  const [menus, setMenus] = useState<HotelDataMenus[]>(items);
-
-  useEffect(() => {
-    if (selectedCat) {
-      
-      if (selectedCat === "all") {
-        setMenus(menu);
-        return;
-      }
-
-      const filteredItems = menu.filter(
-        (item) => item.category.name === selectedCat
-      );
-      const sortedItems = [...filteredItems].sort((a, b) => {
-        if (a.image_url.length && !b.image_url.length) return -1;
-        if (!a.image_url.length && b.image_url.length) return 1;
-        return 0;
-      });
-      setMenus(sortedItems);
-    }
-  }, [selectedCat]);
+  const serachParaams = useSearchParams();
+  const selectedCat = serachParaams.get("cat") || "all";
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,7 +47,7 @@ const MenuItemsList = ({
       >
         <button
           onClick={() => {
-            setSelectedCat("all");
+            setSelectedCategory("all");
             window.scrollTo({
               top: document.getElementById("menu-items")?.offsetTop,
               behavior: "smooth",
@@ -87,7 +68,7 @@ const MenuItemsList = ({
         {categories.map((category, index) => (
           <button
             onClick={() => {
-              setSelectedCat(category.name);
+              setSelectedCategory(category.name);
               window.scrollTo({
                 top: document.getElementById("menu-items")?.offsetTop,
                 behavior: "smooth",
@@ -109,10 +90,10 @@ const MenuItemsList = ({
       </div>
 
       {/* items  */}
-      <div id="menu-items" className="px-[8%] grid grid-cols-1 sm:grid-cols-2 h-fit gap-3 rounded-3xl ">
-        {menus
-          .sort((a, b) => a.priority - b.priority)
-          .map((item) => (
+      <div id="menu-items" className="px-[8%] grid h-fit gap-3 rounded-3xl ">
+        {hotelData?.fillteredMenus
+          ?.sort((a, b) => a.priority - b.priority)
+          ?.map((item) => (
             <ItemCard
               hotelData={hotelData}
               feature_flags={hotelData?.feature_flags}

@@ -18,7 +18,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Category, formatDisplayName, formatStorageName } from "@/store/categoryStore_hasura";
+import { Category, formatDisplayName, formatStorageName, useCategoryStore } from "@/store/categoryStore_hasura";
+import { useAuthStore } from "@/store/authStore";
 import {
   DragDropContext,
   Droppable,
@@ -36,6 +37,8 @@ import {
   ArrowUp,
   ArrowDown,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface CategoryManagementFormProps {
   categories: Category[];
@@ -57,21 +60,72 @@ export function CategoryManagementForm({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Initialize input refs for categories
+  // Get the authenticated user
+  const user = useAuthStore(state => state.userData);
+  
+  // Initialize input refs for categories and refresh categories when modal opens
   useEffect(() => {
-    if (initialCategories.length > 0) {
-      const refs: {[key: string]: React.RefObject<HTMLInputElement | null>} = {};
-      initialCategories.forEach(cat => {
-        refs[cat.id] = createRef<HTMLInputElement | null>();
-      });
-      setInputRefs(refs);
-      
-      setLocalCategories(initialCategories.map(cat => ({
-        ...cat,
-        name: formatDisplayName(cat.name)
-      })));
-      setSearchTerm("");
-    }
+    const refreshCategories = async () => {
+      try {
+        if (!user) {
+          throw new Error('User not authenticated');
+        }
+        
+        // Fetch the latest categories from the store
+        const { fetchCategories } = useCategoryStore.getState();
+        
+        // Use the authenticated user's ID as the partner ID
+        const partnerId = user.id;
+        if (!partnerId) {
+          throw new Error('No partner ID found for the authenticated user');
+        }
+        
+        // Fetch and ensure we have categories
+        const latestCategories = await fetchCategories(partnerId);
+        if (!latestCategories || !Array.isArray(latestCategories)) {
+          throw new Error('Failed to fetch categories');
+        }
+        
+        // Create refs for each category
+        const refs: {[key: string]: React.RefObject<HTMLInputElement | null>} = {};
+        latestCategories.forEach((cat: Category) => {
+          refs[cat.id] = createRef<HTMLInputElement | null>();
+        });
+        
+        // Update local state with the latest categories
+        setInputRefs(refs);
+        setLocalCategories(
+          latestCategories.map((cat: Category) => ({
+            ...cat,
+            name: formatDisplayName(cat.name),
+            is_active: cat.is_active !== false // Ensure boolean value
+          }))
+        );
+        setSearchTerm("");
+      } catch (error) {
+        console.error('Error refreshing categories:', error);
+        
+        // Fallback to initialCategories if there's an error
+        if (initialCategories.length > 0) {
+          const refs: {[key: string]: React.RefObject<HTMLInputElement | null>} = {};
+          initialCategories.forEach((cat: Category) => {
+            refs[cat.id] = createRef<HTMLInputElement | null>();
+          });
+          setInputRefs(refs);
+          
+          setLocalCategories(
+            initialCategories.map((cat: Category) => ({
+              ...cat,
+              name: formatDisplayName(cat.name),
+              is_active: cat.is_active !== false // Ensure boolean value
+            }))
+          );
+          setSearchTerm("");
+        }
+      }
+    };
+
+    refreshCategories();
   }, [initialCategories]);
 
   const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
@@ -187,6 +241,57 @@ export function CategoryManagementForm({
     );
   };
 
+  const handleStatusChange = async (id: string, newIsActive: boolean) => {
+    try {
+      const currentCategories = [...localCategories];
+      const categoryToUpdate = currentCategories.find(cat => cat.id === id);
+      if (!categoryToUpdate) return;
+      
+      // Update local state optimistically
+      const updatedCategories = currentCategories.map(cat => 
+        cat.id === id ? { ...cat, is_active: newIsActive } : cat
+      );
+      setLocalCategories(updatedCategories);
+      
+      // Prepare the update object with all required fields
+      const updateData = {
+        ...categoryToUpdate,
+        is_active: newIsActive,
+        name: formatStorageName(categoryToUpdate.name), // Ensure name is in storage format
+        priority: categoryToUpdate.priority || 0 // Ensure priority is always a number
+      };
+      
+      // Update in the store
+      const { updateCategory } = useCategoryStore.getState();
+      await updateCategory(updateData);
+      
+      // Refresh categories from the store to ensure we have the latest data
+      const { categories } = useCategoryStore.getState();
+      setLocalCategories([...categories]);
+      
+      toast.success(`Category ${newIsActive ? 'enabled' : 'disabled'} successfully`);
+    } catch (error) {
+      console.error('Error toggling category status:', error);
+      toast.error('Failed to update category status');
+      
+      // Revert local state on error
+      const { categories: currentStoreCategories } = useCategoryStore.getState();
+      setLocalCategories(prev => 
+        prev.map(cat => {
+          const currentCat = currentStoreCategories.find(c => c.id === cat.id);
+          return currentCat 
+            ? { 
+                ...currentCat, 
+                name: formatDisplayName(currentCat.name),
+                is_active: currentCat.is_active !== false,
+                priority: currentCat.priority || 0
+              } 
+            : cat;
+        })
+      );
+    }
+  };
+
   const handleSubmit = async () => {
     setIsLoading(true);
 
@@ -195,19 +300,20 @@ export function CategoryManagementForm({
       document.activeElement.blur();
     }
 
-    const updatedCategories = localCategories.map((cat) => ({
+    const updatedCategories = localCategories.map((cat: Category) => ({
       ...cat,
       name: formatStorageName(cat.name)
     }));
 
     try {
       await onSubmit(updatedCategories);
-      setIsLoading(false);
       toast.success("Categories updated successfully");
     } catch (err) {
-      setIsLoading(false);
       console.error("Error updating categories:", err);
       toast.error("Failed to update categories");
+      throw err; // Re-throw to allow parent component to handle the error
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -272,9 +378,8 @@ export function CategoryManagementForm({
                 <TableHeader className="bg-gray-50 sticky top-0 z-10">
                   <TableRow>
                     <TableHead>Category Name</TableHead>
-                    <TableHead className="w-[100px] text-center hidden sm:table-cell">
-                      Actions
-                    </TableHead>
+                    <TableHead className="w-[120px]">Status</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
                     <TableHead className="w-[80px] text-center">
                       Move
                     </TableHead>
@@ -337,6 +442,21 @@ export function CategoryManagementForm({
                                     onFocus={handleInputFocus}
                                     onBlur={handleInputBlur}
                                   />
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center space-x-2">
+                                    <Switch
+                                      id={`status-${category.id}`}
+                                      checked={Boolean(category.is_active)}
+                                      onCheckedChange={(checked) => {
+                                        handleStatusChange(category.id, checked);
+                                      }}
+                                      className="data-[state=checked]:bg-green-500"
+                                    />
+                                    <Label htmlFor={`status-${category.id}`} className="text-sm">
+                                      {category.is_active ? 'Active' : 'Inactive'}
+                                    </Label>
+                                  </div>
                                 </TableCell>
                                 {/* Desktop Actions */}
                                 <TableCell className="hidden sm:table-cell">

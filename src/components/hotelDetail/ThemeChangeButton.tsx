@@ -25,7 +25,7 @@ export interface ThemeConfig {
     bg: string;
     accent: string;
   };
-  menuItemStyle: string;
+  menuStyle: string;
   infoAlignment?: string;
   fontFamily?: string;
 }
@@ -62,7 +62,6 @@ const ThemeChangeButton = ({
 
   return (
     <>
-      {/* Main theme button */}
       <Dialog>
         <DialogTrigger asChild>
           <button aria-label="Change theme">
@@ -76,7 +75,7 @@ const ThemeChangeButton = ({
           </button>
         </DialogTrigger>
 
-        <DialogContent className="w-[95%] max-w-[425px] rounded-xl px-2 sm:px-6">
+        <DialogContent className="w-[95%] max-w-[425px] rounded-xl px-2 sm:px-6 grid h-fit top-[50%] translate-y-[-50%]">
           <DialogHeader>
             <DialogTitle>Theme Customization</DialogTitle>
           </DialogHeader>
@@ -110,19 +109,19 @@ const ThemeChangeButton = ({
               </div>
             </Button>
 
-            {/* <Button
+            <Button
               variant="outline"
               className="flex items-center justify-start gap-3 h-14"
               onClick={() => setMenuStyleModalOpen(true)}
             >
               <LayoutGrid className="h-5 w-5" />
               <div className="text-left">
-                <p className="font-medium">Change Menu Item Style</p>
+                <p className="font-medium">Change Menu Style</p>
                 <p className="text-sm text-muted-foreground">
                   Modify how menu items are displayed
                 </p>
               </div>
-            </Button> */}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -135,23 +134,24 @@ const ThemeChangeButton = ({
         onSave={(colors) =>
           onSave({
             colors,
-            menuItemStyle: "default", // Default value
+            menuStyle: theme?.menuStyle || "default", // Default value
           })
         }
       />
 
       {/* Menu Style Modal */}
       <MenuStyleModal
+        theme={theme}
         open={menuStyleModalOpen}
         onOpenChange={setMenuStyleModalOpen}
         onSave={(style) =>
           onSave({
             colors: {
-              text: "#000000",
-              bg: "#ffffff",
-              accent: "#000000",
+              text: theme?.colors?.text || "#000000",
+              bg: theme?.colors?.bg || "#ffffff",
+              accent: theme?.colors?.accent || "#000000",
             },
-            menuItemStyle: style,
+            menuStyle: style,
           })
         }
       />
@@ -167,7 +167,7 @@ const ThemeChangeButton = ({
               bg: "#ffffff",
               accent: "#000000",
             },
-            menuItemStyle: theme?.menuItemStyle || "default",
+            menuStyle: theme?.menuStyle || "default",
             fontFamily,
           })
         }

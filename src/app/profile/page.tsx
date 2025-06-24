@@ -95,11 +95,7 @@ interface CaptainOrder {
   }>;
 }
 
-interface HotelData extends Partner {
-  social_links?: string;
-  offers: Offer[];
-  menus: any[];
-}
+
 import { countryCodes } from "@/utils/countryCodes";
 import {
   Select,
@@ -108,6 +104,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { HotelData } from "../hotels/[...id]/page";
 
 const Currencies = [
   { label: "INR", value: "₹" },

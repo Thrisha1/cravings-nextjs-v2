@@ -2,8 +2,8 @@
 import { Styles } from "@/screens/HotelMenuPage_v2";
 import { Offer } from "@/store/offerStore_hasura";
 import React from "react";
-import OfferCardMin from "../OfferCardMin";
-import HeadingWithAccent from "../HeadingWithAccent";
+import OfferCardMin from "../../../OfferCardMin";
+import HeadingWithAccent from "../../../HeadingWithAccent";
 import Link from "next/link";
 import { HotelDataMenus } from "@/app/hotels/[...id]/page";
 import useOrderStore from "@/store/orderStore";

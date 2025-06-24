@@ -92,7 +92,7 @@ export function MenuTab() {
   const [isInlineItemOrdering, setIsInlineItemOrdering] = useState(false);
   const [tempItems, setTempItems] = useState<Record<string, MenuItem[]>>({});
   const { updateItemsAsBatch } = useMenuStore();
-  const [currenctCat, setCurrentCat] = useState("");
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (userData?.id) {
@@ -109,58 +109,55 @@ export function MenuTab() {
 
   useEffect(() => {
     if (!groupedItems) return;
-
+  
     const filtered: Record<string, MenuItem[]> = {};
-
+    const newOpenCategories: Record<string, boolean> = {};
+  
     Object.entries(groupedItems).forEach(([category, categoryItems]) => {
       const filteredCategoryItems = categoryItems.filter((item) =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
-
+  
       if (filteredCategoryItems.length > 0) {
         filtered[category] = filteredCategoryItems;
+        // Preserve existing open state or default to false
+        newOpenCategories[category] = openCategories[category] ?? false;
       }
     });
-
+  
     setFilteredGroupedItems(filtered);
-    setTempItems(filtered); // Initialize temp items for drag and drop
-    setTimeout(() => {
-      setIsMenuItemsFetching(false);
-    }, 2000);
+    setTempItems(filtered);
+    setOpenCategories(newOpenCategories);
+    setIsMenuItemsFetching(false);
   }, [groupedItems, searchQuery, searchParams]);
 
   const handleCopyMenu = async () => {
     try {
-      // Check if there are menu items to copy
       if (!menu || menu.length === 0) {
         toast.error("No menu items to copy");
         return;
       }
 
-      // Create a copy of menu items without IDs
       const menuForCopy = menu.map((item) => ({
         name: item.name,
         price: item.price,
         image_url: item.image_url,
         description: item.description,
-        category: item.category.name, // Just the category name as string
+        category: item.category.name,
         is_top: item.is_top,
         is_available: item.is_available,
         priority: item.priority,
         image_source: item.image_source || "local",
       }));
 
-      // Convert to JSON string
       const menuJson = JSON.stringify(menuForCopy, null, 2);
 
-      // Try to use the modern clipboard API first
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(menuJson);
         toast.success(
           "Menu copied to clipboard! You can now paste it in the bulk upload page."
         );
       } else {
-        // Fallback for older browsers or non-HTTPS environments
         const textArea = document.createElement("textarea");
         textArea.value = menuJson;
         textArea.style.position = "fixed";
@@ -212,6 +209,7 @@ export function MenuTab() {
         id: "temp-id-" + Math.random().toString(36).substring(2, 9),
         name: item.category,
         priority: 0,
+        is_active: true,
       },
       image_source: "local",
       is_top: false,
@@ -221,7 +219,7 @@ export function MenuTab() {
     });
   };
 
-  const handleEditItem = (item: {
+  const handleEditItem = async (item: {
     id: string;
     name: string;
     price: string;
@@ -236,12 +234,18 @@ export function MenuTab() {
       | [];
   }) => {
     const existingItem = menu.find((menuItem) => menuItem.id === item.id);
-
+  
     if (!existingItem) {
       throw new Error("Item not found");
     }
-
-    updateItem(item.id, {
+  
+    // Keep the category open during update
+    setOpenCategories(prev => ({
+      ...prev,
+      [item.category]: true
+    }));
+  
+    await updateItem(item.id, {
       name: item.name,
       price: parseFloat(item.price),
       image_url: item.image,
@@ -250,9 +254,13 @@ export function MenuTab() {
         id: existingItem.category.id,
         name: item.category,
         priority: existingItem.category.priority,
+        is_active: existingItem.category.is_active !== false ? true : false,
       },
       variants: item.variants,
     });
+  
+    // Refresh menu while preserving open state
+    await fetchMenu();
   };
 
   const openEditModal = (item: {
@@ -267,6 +275,12 @@ export function MenuTab() {
       price: number;
     }[];
   }) => {
+    // Ensure the category is open when editing an item
+    setOpenCategories(prev => ({
+      ...prev,
+      [item.category]: true
+    }));
+    
     setEditingItem({
       id: item.id,
       name: item.name,
@@ -290,16 +304,14 @@ export function MenuTab() {
     const { source, destination } = result;
 
     if (source.droppableId === destination.droppableId) {
-      // Reordering within the same category
       const category = source.droppableId;
       const items = [...tempItems[category]];
       const [removed] = items.splice(source.index, 1);
       items.splice(destination.index, 0, removed);
 
-      // Update priorities for all items in the category
       const updatedItems = items.map((item, index) => ({
         ...item,
-        priority: index, // Update priority to match new position
+        priority: index,
       }));
 
       setTempItems((prev) => ({
@@ -350,7 +362,6 @@ export function MenuTab() {
         </div>
       </div>
 
-      {/* Tab switch: show add form, edit form, category management, or menu */}
       {isAddModalOpen ? (
         <AddMenuItemForm
           onSubmit={(item) => {
@@ -361,26 +372,31 @@ export function MenuTab() {
         />
       ) : isEditModalOpen && editingItem ? (
         <EditMenuItemForm
-          item={editingItem}
-          onSubmit={(item) => {
-            handleEditItem(item);
-            setIsEditModalOpen(false);
-          }}
-          onCancel={() => setIsEditModalOpen(false)}
-        />
+  item={editingItem}
+  onSubmit={async (item) => {
+    try {
+      await handleEditItem(item);
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error("Failed to update item:", error);
+      toast.error("Failed to update item");
+    }
+  }}
+  onCancel={() => setIsEditModalOpen(false)}
+/>
       ) : isCategoryEditing ? (
         <CategoryManagementForm
           categories={Object.entries(groupedItems).map(([category, items]) => ({
             id: items[0].category.id,
             name: category,
             priority: items[0].category.priority || 0,
+            is_active: items[0].category.is_active !== false ? true : false,
           }))}
           onSubmit={async (updatedCategories) => {
             try {
-              // Use updateCategoriesAsBatch to update both names and priorities
               await updateCategoriesAsBatch(updatedCategories);
               setIsCategoryEditing(false);
-              fetchMenu(); // Refresh the menu to get the new categories
+              fetchMenu();
             } catch (error) {
               console.error("Failed to update categories:", error);
               toast.error("Failed to update categories");
@@ -412,7 +428,7 @@ export function MenuTab() {
 
                 await updateItemsAsBatch(updates);
                 setIsInlineItemOrdering(false);
-                fetchMenu(); // Refresh the menu
+                fetchMenu();
                 toast.success("Item order updated successfully");
               } catch (error) {
                 console.error("Failed to update item order:", error);
@@ -468,15 +484,22 @@ export function MenuTab() {
             />
           )}
 
-          {/* Menu Items */}
           <>
             {Object.entries(tempItems).length > 0 ? (
               <DragDropContext onDragEnd={onDragEnd}>
-                <Accordion
-                  onValueChange={(value: string) => setCurrentCat(value)}
-                  type="single"
-                  className="grid gap-4"
-                  collapsible
+                <Accordion 
+                  type="multiple" 
+                  className="grid gap-4" 
+                  value={Object.entries(openCategories)
+                    .filter(([category, isOpen]) => isOpen)
+                    .map(([category]) => category)}
+                  onValueChange={(values: string[]) => {
+                    const newOpenCategories = {...openCategories};
+                    Object.keys(newOpenCategories).forEach(category => {
+                      newOpenCategories[category] = values.includes(category);
+                    });
+                    setOpenCategories(newOpenCategories);
+                  }}
                 >
                   {Object.entries(tempItems)
                     .sort(([categoryA], [categoryB]) => {

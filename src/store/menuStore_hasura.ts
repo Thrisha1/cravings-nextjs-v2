@@ -15,13 +15,18 @@ import { uploadFileToS3 } from "@/app/actions/aws-s3";
 import { revalidateTag } from "@/app/actions/revalidate";
 import { toast } from "sonner";
 
+interface MenuItemCategory {
+  id: string;
+  name: string;
+  priority: number;
+  is_active: boolean;
+}
+
 export interface MenuItem {
   id?: string;
   name: string;
-  category: {
-    id: string;
-    name: string;
-    priority: number;
+  category: MenuItemCategory & {
+    is_active: boolean;
   };
   category_id?: string;
   image_url: string;
@@ -111,11 +116,13 @@ const getBatchUpdateMutation = (updates: Category[]) => `
         _set: {
           ${update.name ? `name: "${update.name.replace(/"/g, '\\"')}"` : ""}
           ${update.priority !== undefined ? `priority: ${update.priority}` : ""}
+          ${update.is_active !== undefined ? `is_active: ${update.is_active}` : ""}
         }
       ) {
         id
         name
         priority
+        is_active
       }
     `
       )
@@ -185,15 +192,38 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         return [];
       }
 
-      const items = response.menu.map((mi: MenuItem_withOffer_price) => ({
-        ...mi,
-        price: (mi.offers[0]?.offer_price || mi.price) ?? 0,
-        category: {
-          id: mi.category.id,
-          name: mi.category.name,
-          priority: mi.category.priority,
-        },
-      }));
+      const items = response.menu.map((mi: any): MenuItem => {
+        // Create a base menu item with all required fields
+        const menuItem: MenuItem = {
+          id: mi.id,
+          name: mi.name,
+          category: {
+            id: mi.category.id,
+            name: mi.category.name,
+            priority: mi.category.priority || 0,
+            is_active: mi.category.is_active !== false, // Ensure boolean value
+          },
+          category_id: mi.category_id || mi.category.id,
+          image_url: mi.image_url || '',
+          image_source: mi.image_source || '',
+          partner_id: mi.partner_id || '',
+          price: (mi.offers?.[0]?.offer_price || mi.price) ?? 0,
+          description: mi.description || '',
+          is_top: Boolean(mi.is_top),
+          is_available: mi.is_available !== false, // Ensure boolean value
+          priority: mi.priority || 0,
+        };
+
+        // Add optional fields if they exist
+        if (mi.variants) {
+          menuItem.variants = mi.variants;
+        }
+        if (mi.stocks) {
+          menuItem.stocks = mi.stocks;
+        }
+
+        return menuItem;
+      });
 
       /* console.log("Processed menu items:", {
         count: items.length,
@@ -265,14 +295,19 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         menu: [newMenu],
       });
 
+      // Get the full category with is_active from the store
+      const fullCategory = useCategoryStore.getState().categories.find(c => c.id === category_id);
+      
       set({
         items: [
           ...get().items,
           {
             ...insert_menu.returning[0],
             category: {
-              ...insert_menu.returning[0].category,
+              id: insert_menu.returning[0].category.id,
               name: insert_menu.returning[0].category.name,
+              priority: fullCategory?.priority || 0,
+              is_active: fullCategory?.is_active !== false, // Default to true if not set
             },
           },
         ],
@@ -297,7 +332,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
       const { category, ...otherItems } = updatedItem;
 
 
-      let catid;
+      let catid: string | undefined;
       let changedItem = { ...otherItems };
 
       let cat = null;
@@ -342,20 +377,25 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         menu: changedItem,
       });
       
-
-      const items = get().items.map((item) =>
-        item.id === id ? {
-          ...item,
-          ...updatedItem,
-          category: {
-            id : cat?.id || item.category.id,
-            name: cat?.name || item.category.name,
-            priority: cat?.priority || item.category.priority,
-          },
-        } : item
-      );
-      set({ items });
-      
+      set({
+        items: get().items.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                ...updatedItem,
+                category: {
+                  ...item.category,
+                  ...(category && {
+                    id: catid || item.category.id,
+                    name: category.name || item.category.name,
+                    priority: category.priority || item.category.priority,
+                    is_active: category.is_active !== false, // Ensure boolean value
+                  }),
+                },
+              }
+            : item
+        ),
+      });
       revalidateTag(userData?.id);
       get().groupItems();
       toast.dismiss();
@@ -454,7 +494,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
   },
 
   updatedCategories: async (categories: Category[]) => {
-    toast.loading("Updating categories...");
+    //toast.loading("Updating categories...");
     const fetchCategories = useCategoryStore.getState().fetchCategories;
     const user = useAuthStore.getState().userData as Partner;
 
@@ -480,7 +520,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
     set({ items: updatedItems });
     get().groupItems();
     toast.dismiss();
-    toast.success("Categories updated successfully");
+    //toast.success("Categories updated successfully");
   },
 
   updateCategoriesAsBatch: async (categories: Category[]) => {
