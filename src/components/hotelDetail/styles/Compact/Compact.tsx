@@ -22,46 +22,40 @@ const Compact = ({
   qrId,
 }: DefaultHotelPageProps) => {
   const [activeCatIndex, setActiveCatIndex] = useState<number>(0);
-  const categoryRefs = useRef<(HTMLElement | null)[]>([]);
+  const categoryHeadersRef = useRef<(HTMLHeadingElement | null)[]>([]);
   const categoriesContainerRef = useRef<HTMLDivElement>(null);
   const borderRef = useRef<HTMLDivElement>(null);
   const categoryElementsRef = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const index = categoryRefs.current.findIndex(
-              (ref) => ref === entry.target
-            );
-            if (index !== -1) {
-              setActiveCatIndex(index);
-              window.history.replaceState(
-                null,
-                "",
-                `#${categories[index].name}`
-              );
-              scrollCategoryIntoView(index);
-            }
-          }
-        });
-      },
-      {
-        root: null,
-        rootMargin: "0px",
-        threshold: 0.8,
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 64; // 64px is the sticky position
+      let activeIndex = 0;
+      
+      // Find which category header is currently at the top
+      for (let i = categoryHeadersRef.current.length - 1; i >= 0; i--) {
+        const header = categoryHeadersRef.current[i];
+        if (!header) continue;
+        
+        const headerTop = header.offsetTop;
+        
+        // Check if the scroll position is below this header's top position
+        if (scrollPosition >= headerTop) {
+          activeIndex = i;
+          break;
+        }
       }
-    );
-
-    categoryRefs.current.forEach((ref) => {
-      if (ref) observer.observe(ref);
-    });
-
-    return () => {
-      observer.disconnect();
+      
+      if (activeIndex !== activeCatIndex) {
+        setActiveCatIndex(activeIndex);
+        window.history.replaceState(null, "", `#${categories[activeIndex].name}`);
+        scrollCategoryIntoView(activeIndex);
+      }
     };
-  }, [categories]);
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [categories, activeCatIndex]);
 
   useEffect(() => {
     // Update border position whenever activeCatIndex changes
@@ -80,16 +74,12 @@ const Compact = ({
 
     if (categoryRect.left < containerRect.left) {
       container.scrollTo({
-        left:
-          container.scrollLeft + (categoryRect.left - containerRect.left) - 10,
+        left: container.scrollLeft + (categoryRect.left - containerRect.left) - 10,
         behavior: "smooth",
       });
     } else if (categoryRect.right > containerRect.right) {
       container.scrollTo({
-        left:
-          container.scrollLeft +
-          (categoryRect.right - containerRect.right) +
-          10,
+        left: container.scrollLeft + (categoryRect.right - containerRect.right) + 10,
         behavior: "smooth",
       });
     }
@@ -158,7 +148,7 @@ const Compact = ({
             color: styles?.color || "#000",
           }}
           ref={categoriesContainerRef}
-          className="overflow-y-auto w-full flex gap-2 p-2 sticky top-0 z-10  shadow-md scrollbar-hide"
+          className="overflow-y-auto w-full flex gap-2 p-2 sticky top-0 z-10 shadow-md scrollbar-hide"
           onScroll={() => updateBorderPosition(activeCatIndex)}
         >
           {/* Animated border element */}
@@ -167,9 +157,7 @@ const Compact = ({
             className="absolute bottom-0 left-0 h-0.5 transition-all duration-300 ease-in-out"
             style={{
               backgroundColor: styles?.accent || "#000",
-              width:
-                categoryElementsRef.current[0]?.getBoundingClientRect().width ||
-                "0px",
+              width: categoryElementsRef.current[0]?.getBoundingClientRect().width || "0px",
             }}
           />
 
@@ -179,8 +167,7 @@ const Compact = ({
                 categoryElementsRef.current[index] = el;
               }}
               style={{
-                color:
-                  activeCatIndex === index ? styles?.accent || "#000" : "gray",
+                color: activeCatIndex === index ? styles?.accent || "#000" : "gray",
               }}
               onClick={() => handleCategoryClick(index, category)}
               key={category.id}
@@ -194,17 +181,17 @@ const Compact = ({
         </div>
 
         {/* Categories Content */}
-        <div className="grid gap-4 p-4 ">
+        <div className="grid gap-4 p-4">
           {categories.map((category, index) => (
             <section
               key={category.id}
               id={category.name}
-              ref={(el) => {
-                categoryRefs.current[index] = el;
-              }}
               className="py-4"
             >
               <h2
+                ref={(el) => {
+                  categoryHeadersRef.current[index] = el;
+                }}
                 style={{
                   color: styles?.accent || "#000",
                 }}
@@ -212,7 +199,7 @@ const Compact = ({
               >
                 {formatDisplayName(category.name)}
               </h2>
-              <div className="grid grid-cols-1  gap-4 divide-y-2 divide-gray-200">
+              <div className="grid grid-cols-1 gap-4 divide-y-2 divide-gray-200">
                 {hoteldata?.menus
                   .filter((item) => item.category.id === category.id)
                   .map((item) => (
