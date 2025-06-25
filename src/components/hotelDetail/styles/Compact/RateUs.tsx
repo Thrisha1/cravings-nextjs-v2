@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { HotelData, SocialLinks } from "@/app/hotels/[...id]/page";
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
+import useOrderStore from "@/store/orderStore";
 
 const RateUs: React.FC<{ hoteldata: HotelData; socialLinks: SocialLinks }> = ({
   hoteldata,
@@ -16,6 +17,8 @@ const RateUs: React.FC<{ hoteldata: HotelData; socialLinks: SocialLinks }> = ({
   const [hasRated, setHasRated] = useState(false);
   const [isMoveUp, setMoveUp] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const { order , items } = useOrderStore();
+  const [hasItems, setHasItems] = useState(false);
 
   const ratingKey = hoteldata?.id ? `rating_${hoteldata.id}` : "";
 
@@ -27,6 +30,14 @@ const RateUs: React.FC<{ hoteldata: HotelData; socialLinks: SocialLinks }> = ({
       setHasRated(true);
     }
   }, [ratingKey]);
+
+  useEffect(() => {
+    if ((items?.length ?? 0) > 0) {
+      setHasItems(true);
+    }else{
+      setHasItems(false);
+    }
+  }, [items]);
 
   const handleStarClick = (index: number) => {
     if (hasRated || !ratingKey) return;
@@ -97,7 +108,7 @@ const RateUs: React.FC<{ hoteldata: HotelData; socialLinks: SocialLinks }> = ({
       {canRate && (
         <Button
           onClick={() => handleModalOpenChange(true)}
-          className={`fixed left-4 z-50 shadow-lg rounded-full transition-all duration-500 ${isMoveUp ? "bottom-44" : "bottom-28"}`}
+          className={`fixed left-4 z-50 shadow-lg rounded-full transition-all duration-500 ${isMoveUp ? hasItems ? "bottom-44" : "bottom-20" : hasItems ? "bottom-28" : "bottom-4"}`}
         >
           <Star className="mr-2 h-4 w-4" /> Rate Us
         </Button>
