@@ -324,7 +324,7 @@ const OrdersTab = () => {
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList
-          className="flex w-full gap-1 mb-6 rounded-lg p-1 overflow-x-auto"
+          className="flex w-full gap-1 mb-6 rounded-lg p-1"
         >
           {features?.delivery.enabled && (
             <TabsTrigger value="delivery" className="relative flex-1 min-w-[100px] py-2">
