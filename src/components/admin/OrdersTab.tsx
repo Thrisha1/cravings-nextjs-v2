@@ -4,7 +4,7 @@ import useOrderStore, { Order } from "@/store/orderStore";
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Howl } from "howler";
@@ -30,13 +30,28 @@ const OrdersTab = () => {
   const { userData, features } = useAuthStore();
   const prevOrdersRef = useRef<Order[]>([]);
   const {
-    subscribeOrders,
+    subscribePaginatedOrders,
+    subscribeOrdersCount,
     partnerOrders,
     deleteOrder,
     updateOrderStatus,
     updateOrderStatusHistory,
   } = useOrderStore();
-  const { orders , setOrders , removeOrder , loading , setLoading } = useOrderSubscriptionStore();
+  const { 
+    orders, 
+    setOrders, 
+    removeOrder, 
+    loading, 
+    setLoading,
+    totalCount,
+    currentPage,
+    limit,
+    hasNextPage,
+    hasPreviousPage,
+    setTotalCount,
+    nextPage,
+    previousPage
+  } = useOrderSubscriptionStore();
   const [activeTab, setActiveTab] = useState<"table" | "delivery" | "pos">(
     "delivery"
   );
@@ -71,6 +86,19 @@ const OrdersTab = () => {
     };
   }, []);
 
+  // Subscribe to order count
+  useEffect(() => {
+    if (!userData?.id) return;
+
+    const unsubscribe = subscribeOrdersCount((count) => {
+      setTotalCount(count);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [userData?.id, subscribeOrdersCount, setTotalCount]);
+
   // Priority subscription for new orders - runs before other effects
   useEffect(() => {
     if (!userData?.id) return;
@@ -80,29 +108,29 @@ const OrdersTab = () => {
       setLoading(true);
     }
 
-    // Set up subscription immediately
-    const unsubscribe = subscribeOrders((allOrders) => {
+    // Calculate offset based on current page and limit
+    const offset = (currentPage - 1) * limit;
+
+    // Set up subscription for paginated orders
+    const unsubscribe = subscribePaginatedOrders(limit, offset, (paginatedOrders) => {
       const prevOrders = prevOrdersRef.current;
 
-      console.log(allOrders);
-      
-
       // Count new pending orders
-      const newTableOrders = allOrders.filter(
+      const newTableOrders = paginatedOrders.filter(
         (order) =>
           order.status === "pending" &&
           order.type === "table_order" &&
           !prevOrders.some((prevOrder) => prevOrder.id === order.id)
       );
 
-      const newDeliveryOrders = allOrders.filter(
+      const newDeliveryOrders = paginatedOrders.filter(
         (order) =>
           order.status === "pending" &&
           order.type === "delivery" &&
           !prevOrders.some((prevOrder) => prevOrder.id === order.id)
       );
 
-      const newPOSOrders = allOrders.filter(
+      const newPOSOrders = paginatedOrders.filter(
         (order) =>
           order.status === "pending" &&
           order.type === "pos" &&
@@ -133,20 +161,20 @@ const OrdersTab = () => {
         });
       }
 
-      prevOrdersRef.current = allOrders;
+      prevOrdersRef.current = paginatedOrders;
       setLoading(false);
     });
 
     return () => {
       unsubscribe();
     };
-  }, [userData?.id]);
+  }, [userData?.id, currentPage, limit]);
 
   useEffect(() => {
     if (partnerOrders) {
       setOrders(partnerOrders);
     }
-  }, [partnerOrders]);
+  }, [partnerOrders, setOrders]);
 
   const handleDeleteOrder = async (orderId: string) => {
     try {
@@ -204,6 +232,18 @@ const OrdersTab = () => {
 
   const handleCreateNewOrder = () => {
     router.push("/admin/pos");
+  };
+
+  const handleNextPage = () => {
+    if (hasNextPage) {
+      nextPage();
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (hasPreviousPage) {
+      previousPage();
+    }
   };
 
   return (
@@ -433,6 +473,31 @@ const OrdersTab = () => {
           </>
         )}
       </Tabs>
+
+      {/* Pagination Controls */}
+      <div className="flex justify-between items-center mt-6">
+        <div className="text-sm text-gray-500">
+          Showing {orders.length > 0 ? (currentPage - 1) * limit + 1 : 0} - {Math.min(currentPage * limit, totalCount)} of {totalCount} orders
+        </div>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handlePreviousPage}
+            disabled={!hasPreviousPage || loading}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleNextPage}
+            disabled={!hasNextPage || loading}
+          >
+            Next <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+      </div>
 
       <EditOrderModal />
     </div>
