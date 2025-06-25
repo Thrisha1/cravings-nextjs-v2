@@ -7,6 +7,7 @@ import ItemCard from "./ItemCard";
 import { MapPin } from "lucide-react";
 import SocialLinks from "./SocialLinks";
 import RateUs from "./RateUs";
+import CategoryListBtn from "./CategoryListBtn";
 
 const Compact = ({
   styles,
@@ -133,7 +134,7 @@ const Compact = ({
   const allCategories = React.useMemo(
     () => [
       ...(topItems && topItems.length > 0
-        ? [{ id: "must-try", name: "Must Try" }]
+        ? [{ id: "must-try", name: "must_try" }]
         : []),
       ...categories,
     ],
@@ -148,6 +149,9 @@ const Compact = ({
         }}
         className="max-w-xl mx-auto relative mb-40"
       >
+        {/* category list btn  */}
+        <CategoryListBtn categories={allCategories}  />
+
         {/* rateusbtn  */}
         <RateUs hoteldata={hoteldata} socialLinks={socialLinks} />
 
