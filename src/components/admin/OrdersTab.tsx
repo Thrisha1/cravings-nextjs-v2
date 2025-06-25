@@ -29,6 +29,8 @@ const OrdersTab = () => {
   const router = useRouter();
   const { userData, features } = useAuthStore();
   const prevOrdersRef = useRef<Order[]>([]);
+  const allSeenOrderIds = useRef<Set<string>>(new Set());
+  const initialLoadCompleted = useRef<boolean>(false);
   const {
     subscribePaginatedOrders,
     subscribeOrdersCount,
@@ -113,28 +115,38 @@ const OrdersTab = () => {
 
     // Set up subscription for paginated orders
     const unsubscribe = subscribePaginatedOrders(limit, offset, (paginatedOrders) => {
-      const prevOrders = prevOrdersRef.current;
+      // First load - just record all existing orders
+      if (!initialLoadCompleted.current) {
+        paginatedOrders.forEach(order => {
+          allSeenOrderIds.current.add(order.id);
+        });
+        initialLoadCompleted.current = true;
+        prevOrdersRef.current = paginatedOrders;
+        setLoading(false);
+        return;
+      }
 
-      // Count new pending orders
-      const newTableOrders = paginatedOrders.filter(
-        (order) =>
-          order.status === "pending" &&
-          order.type === "table_order" &&
-          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      // Find truly new orders - ones we haven't seen before in any pagination
+      const genuinelyNewOrders = paginatedOrders.filter(
+        order => !allSeenOrderIds.current.has(order.id)
       );
 
-      const newDeliveryOrders = paginatedOrders.filter(
-        (order) =>
-          order.status === "pending" &&
-          order.type === "delivery" &&
-          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      // Add all current orders to our set of seen orders
+      paginatedOrders.forEach(order => {
+        allSeenOrderIds.current.add(order.id);
+      });
+
+      // Count new pending orders that we haven't seen before
+      const newTableOrders = genuinelyNewOrders.filter(
+        order => order.status === "pending" && order.type === "table_order"
       );
 
-      const newPOSOrders = paginatedOrders.filter(
-        (order) =>
-          order.status === "pending" &&
-          order.type === "pos" &&
-          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      const newDeliveryOrders = genuinelyNewOrders.filter(
+        order => order.status === "pending" && order.type === "delivery"
+      );
+
+      const newPOSOrders = genuinelyNewOrders.filter(
+        order => order.status === "pending" && order.type === "pos"
       );
 
       const totalNewOrders =
@@ -260,6 +272,11 @@ const OrdersTab = () => {
     if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= Math.ceil(totalCount / limit)) {
       useOrderSubscriptionStore.setState({ currentPage: pageNumber });
       setPageInput("");
+      // Explicitly scroll to top for direct page input
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
     } else {
       toast.error("Invalid page number");
     }
@@ -285,6 +302,14 @@ const OrdersTab = () => {
         });
       }
     }
+  }, [currentPage]);
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   }, [currentPage]);
 
   return (
