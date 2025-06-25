@@ -6,6 +6,7 @@ import ThemeChangeButton from "../../ThemeChangeButton";
 import ItemCard from "./ItemCard";
 import { MapPin } from "lucide-react";
 import SocialLinks from "./SocialLinks";
+import RateUs from "./RateUs";
 
 const Compact = ({
   styles,
@@ -47,7 +48,7 @@ const Compact = ({
           break;
         }
       }
-      
+
       if (currentActiveIndex !== activeCatIndex) {
         setActiveCatIndex(currentActiveIndex);
         // Optional: Replace history state without causing a re-render
@@ -78,12 +79,16 @@ const Compact = ({
     // Scroll horizontally if the active category tab is not fully visible
     if (categoryRect.left < containerRect.left) {
       container.scrollTo({
-        left: container.scrollLeft + (categoryRect.left - containerRect.left) - 10,
+        left:
+          container.scrollLeft + (categoryRect.left - containerRect.left) - 10,
         behavior: "smooth",
       });
     } else if (categoryRect.right > containerRect.right) {
       container.scrollTo({
-        left: container.scrollLeft + (categoryRect.right - containerRect.right) + 10,
+        left:
+          container.scrollLeft +
+          (categoryRect.right - containerRect.right) +
+          10,
         behavior: "smooth",
       });
     }
@@ -125,11 +130,15 @@ const Compact = ({
   };
 
   // Memoize the category list to prevent re-creation on every render
-  const allCategories = React.useMemo(() => [
-    ...(topItems && topItems.length > 0 ? [{ id: "must-try", name: "Must Try" }] : []),
-    ...categories,
-  ], [categories, topItems]);
-
+  const allCategories = React.useMemo(
+    () => [
+      ...(topItems && topItems.length > 0
+        ? [{ id: "must-try", name: "Must Try" }]
+        : []),
+      ...categories,
+    ],
+    [categories, topItems]
+  );
 
   return (
     <>
@@ -139,6 +148,9 @@ const Compact = ({
         }}
         className="max-w-xl mx-auto relative mb-40"
       >
+        {/* rateusbtn  */}
+        <RateUs hoteldata={hoteldata} socialLinks={socialLinks} />
+
         {/* hotel banner */}
         <div className="relative">
           {/* image */}
@@ -228,7 +240,6 @@ const Compact = ({
         {/* Categories Content */}
         <div className="grid gap-4 p-4">
           {allCategories.map((category, index) => {
-            
             // FIX: Conditionally determine the list of items to render.
             // If the category is "Must Try", use the `topItems` prop.
             // Otherwise, filter the main `hoteldata.menus` for items matching the current category.
@@ -238,7 +249,7 @@ const Compact = ({
                 : hoteldata?.menus.filter(
                     (item) => item.category.id === category.id
                   );
-            
+
             // Do not render the category section if there are no items to display.
             if (!itemsToDisplay || itemsToDisplay.length === 0) {
               return null;
