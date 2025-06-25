@@ -4,7 +4,7 @@ import useOrderStore, { Order } from "@/store/orderStore";
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Howl } from "howler";
@@ -29,14 +29,31 @@ const OrdersTab = () => {
   const router = useRouter();
   const { userData, features } = useAuthStore();
   const prevOrdersRef = useRef<Order[]>([]);
+  const allSeenOrderIds = useRef<Set<string>>(new Set());
+  const initialLoadCompleted = useRef<boolean>(false);
   const {
-    subscribeOrders,
+    subscribePaginatedOrders,
+    subscribeOrdersCount,
     partnerOrders,
     deleteOrder,
     updateOrderStatus,
     updateOrderStatusHistory,
   } = useOrderStore();
-  const { orders , setOrders , removeOrder , loading , setLoading } = useOrderSubscriptionStore();
+  const { 
+    orders, 
+    setOrders, 
+    removeOrder, 
+    loading, 
+    setLoading,
+    totalCount,
+    currentPage,
+    limit,
+    hasNextPage,
+    hasPreviousPage,
+    setTotalCount,
+    nextPage,
+    previousPage
+  } = useOrderSubscriptionStore();
   const [activeTab, setActiveTab] = useState<"table" | "delivery" | "pos">(
     "delivery"
   );
@@ -71,6 +88,19 @@ const OrdersTab = () => {
     };
   }, []);
 
+  // Subscribe to order count
+  useEffect(() => {
+    if (!userData?.id) return;
+
+    const unsubscribe = subscribeOrdersCount((count) => {
+      setTotalCount(count);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [userData?.id, subscribeOrdersCount, setTotalCount]);
+
   // Priority subscription for new orders - runs before other effects
   useEffect(() => {
     if (!userData?.id) return;
@@ -80,33 +110,43 @@ const OrdersTab = () => {
       setLoading(true);
     }
 
-    // Set up subscription immediately
-    const unsubscribe = subscribeOrders((allOrders) => {
-      const prevOrders = prevOrdersRef.current;
+    // Calculate offset based on current page and limit
+    const offset = (currentPage - 1) * limit;
 
-      console.log(allOrders);
-      
+    // Set up subscription for paginated orders
+    const unsubscribe = subscribePaginatedOrders(limit, offset, (paginatedOrders) => {
+      // First load - just record all existing orders
+      if (!initialLoadCompleted.current) {
+        paginatedOrders.forEach(order => {
+          allSeenOrderIds.current.add(order.id);
+        });
+        initialLoadCompleted.current = true;
+        prevOrdersRef.current = paginatedOrders;
+        setLoading(false);
+        return;
+      }
 
-      // Count new pending orders
-      const newTableOrders = allOrders.filter(
-        (order) =>
-          order.status === "pending" &&
-          order.type === "table_order" &&
-          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      // Find truly new orders - ones we haven't seen before in any pagination
+      const genuinelyNewOrders = paginatedOrders.filter(
+        order => !allSeenOrderIds.current.has(order.id)
       );
 
-      const newDeliveryOrders = allOrders.filter(
-        (order) =>
-          order.status === "pending" &&
-          order.type === "delivery" &&
-          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      // Add all current orders to our set of seen orders
+      paginatedOrders.forEach(order => {
+        allSeenOrderIds.current.add(order.id);
+      });
+
+      // Count new pending orders that we haven't seen before
+      const newTableOrders = genuinelyNewOrders.filter(
+        order => order.status === "pending" && order.type === "table_order"
       );
 
-      const newPOSOrders = allOrders.filter(
-        (order) =>
-          order.status === "pending" &&
-          order.type === "pos" &&
-          !prevOrders.some((prevOrder) => prevOrder.id === order.id)
+      const newDeliveryOrders = genuinelyNewOrders.filter(
+        order => order.status === "pending" && order.type === "delivery"
+      );
+
+      const newPOSOrders = genuinelyNewOrders.filter(
+        order => order.status === "pending" && order.type === "pos"
       );
 
       const totalNewOrders =
@@ -133,20 +173,20 @@ const OrdersTab = () => {
         });
       }
 
-      prevOrdersRef.current = allOrders;
+      prevOrdersRef.current = paginatedOrders;
       setLoading(false);
     });
 
     return () => {
       unsubscribe();
     };
-  }, [userData?.id]);
+  }, [userData?.id, currentPage, limit]);
 
   useEffect(() => {
     if (partnerOrders) {
       setOrders(partnerOrders);
     }
-  }, [partnerOrders]);
+  }, [partnerOrders, setOrders]);
 
   const handleDeleteOrder = async (orderId: string) => {
     try {
@@ -205,6 +245,72 @@ const OrdersTab = () => {
   const handleCreateNewOrder = () => {
     router.push("/admin/pos");
   };
+
+  const handleNextPage = () => {
+    if (hasNextPage) {
+      nextPage();
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (hasPreviousPage) {
+      previousPage();
+    }
+  };
+
+  const handleFirstPage = () => {
+    if (currentPage > 1) {
+      useOrderSubscriptionStore.setState({ currentPage: 1 });
+    }
+  };
+
+  const [pageInput, setPageInput] = useState("");
+  const pagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleGoToPage = () => {
+    const pageNumber = parseInt(pageInput, 10);
+    if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= Math.ceil(totalCount / limit)) {
+      useOrderSubscriptionStore.setState({ currentPage: pageNumber });
+      setPageInput("");
+      // Explicitly scroll to top for direct page input
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    } else {
+      toast.error("Invalid page number");
+    }
+  };
+
+  const maxPages = Math.ceil(totalCount / limit) || 1;
+  const startPage = Math.max(1, currentPage - 4);
+  const endPage = Math.min(maxPages, startPage + 8);
+  
+  useEffect(() => {
+    if (pagesContainerRef.current) {
+      const container = pagesContainerRef.current;
+      const activeButton = container.querySelector("[data-active='true']");
+      
+      if (activeButton) {
+        const containerRect = container.getBoundingClientRect();
+        const buttonRect = activeButton.getBoundingClientRect();
+        
+        const scrollLeft = buttonRect.left - containerRect.left - (containerRect.width / 2) + (buttonRect.width / 2);
+        container.scrollTo({
+          left: container.scrollLeft + scrollLeft,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [currentPage]);
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }, [currentPage]);
 
   return (
     <div className="py-6 px-4 sm:px-[8%] max-w-7xl mx-auto">
@@ -284,7 +390,7 @@ const OrdersTab = () => {
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList
-          className="flex w-full gap-1 mb-6 rounded-lg p-1 overflow-x-auto"
+          className="flex w-full gap-1 mb-6 rounded-lg p-1"
         >
           {features?.delivery.enabled && (
             <TabsTrigger value="delivery" className="relative flex-1 min-w-[100px] py-2">
@@ -433,6 +539,88 @@ const OrdersTab = () => {
           </>
         )}
       </Tabs>
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+        <div className="text-sm text-gray-500">
+          Showing {orders.length > 0 ? (currentPage - 1) * limit + 1 : 0} - {Math.min(currentPage * limit, totalCount)} of {totalCount} orders
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleFirstPage}
+            disabled={currentPage === 1 || loading}
+          >
+            First
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handlePreviousPage}
+            disabled={!hasPreviousPage || loading}
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+          </Button>
+          
+          <div 
+            className="flex overflow-x-auto hide-scrollbar max-w-[280px] transition-all duration-300 ease-in-out"
+            ref={pagesContainerRef}
+          >
+            {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map(page => (
+              <Button
+                key={`page-${page}`}
+                variant={currentPage === page ? "default" : "outline"}
+                size="sm"
+                data-active={currentPage === page}
+                onClick={() => useOrderSubscriptionStore.setState({ currentPage: page })}
+                disabled={loading}
+                className="min-w-[40px] px-3"
+              >
+                {page}
+              </Button>
+            ))}
+          </div>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleNextPage}
+            disabled={!hasNextPage || loading}
+          >
+            Next <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+          
+          <div className="flex items-center gap-1">
+            <input
+              type="text"
+              className="w-12 h-8 border rounded px-2 text-center"
+              placeholder="#"
+              value={pageInput}
+              onChange={(e) => setPageInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleGoToPage()}
+            />
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleGoToPage}
+              disabled={loading}
+            >
+              Go
+            </Button>
+          </div>
+        </div>
+      </div>
+      
+      <style jsx global>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
 
       <EditOrderModal />
     </div>
