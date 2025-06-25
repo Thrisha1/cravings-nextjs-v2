@@ -246,6 +246,47 @@ const OrdersTab = () => {
     }
   };
 
+  const handleFirstPage = () => {
+    if (currentPage > 1) {
+      useOrderSubscriptionStore.setState({ currentPage: 1 });
+    }
+  };
+
+  const [pageInput, setPageInput] = useState("");
+  const pagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleGoToPage = () => {
+    const pageNumber = parseInt(pageInput, 10);
+    if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= Math.ceil(totalCount / limit)) {
+      useOrderSubscriptionStore.setState({ currentPage: pageNumber });
+      setPageInput("");
+    } else {
+      toast.error("Invalid page number");
+    }
+  };
+
+  const maxPages = Math.ceil(totalCount / limit) || 1;
+  const startPage = Math.max(1, currentPage - 4);
+  const endPage = Math.min(maxPages, startPage + 8);
+  
+  useEffect(() => {
+    if (pagesContainerRef.current) {
+      const container = pagesContainerRef.current;
+      const activeButton = container.querySelector("[data-active='true']");
+      
+      if (activeButton) {
+        const containerRect = container.getBoundingClientRect();
+        const buttonRect = activeButton.getBoundingClientRect();
+        
+        const scrollLeft = buttonRect.left - containerRect.left - (containerRect.width / 2) + (buttonRect.width / 2);
+        container.scrollTo({
+          left: container.scrollLeft + scrollLeft,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [currentPage]);
+
   return (
     <div className="py-6 px-4 sm:px-[8%] max-w-7xl mx-auto">
       {/* High Priority New Order Alert Dialog */}
@@ -475,19 +516,47 @@ const OrdersTab = () => {
       </Tabs>
 
       {/* Pagination Controls */}
-      <div className="flex justify-between items-center mt-6">
+      <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
         <div className="text-sm text-gray-500">
           Showing {orders.length > 0 ? (currentPage - 1) * limit + 1 : 0} - {Math.min(currentPage * limit, totalCount)} of {totalCount} orders
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleFirstPage}
+            disabled={currentPage === 1 || loading}
+          >
+            First
+          </Button>
           <Button 
             variant="outline" 
             size="sm" 
             onClick={handlePreviousPage}
             disabled={!hasPreviousPage || loading}
           >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+            <ChevronLeft className="h-4 w-4 mr-1" /> Prev
           </Button>
+          
+          <div 
+            className="flex overflow-x-auto hide-scrollbar max-w-[280px] transition-all duration-300 ease-in-out"
+            ref={pagesContainerRef}
+          >
+            {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map(page => (
+              <Button
+                key={`page-${page}`}
+                variant={currentPage === page ? "default" : "outline"}
+                size="sm"
+                data-active={currentPage === page}
+                onClick={() => useOrderSubscriptionStore.setState({ currentPage: page })}
+                disabled={loading}
+                className="min-w-[40px] px-3"
+              >
+                {page}
+              </Button>
+            ))}
+          </div>
+          
           <Button 
             variant="outline" 
             size="sm" 
@@ -496,8 +565,37 @@ const OrdersTab = () => {
           >
             Next <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
+          
+          <div className="flex items-center gap-1">
+            <input
+              type="text"
+              className="w-12 h-8 border rounded px-2 text-center"
+              placeholder="#"
+              value={pageInput}
+              onChange={(e) => setPageInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleGoToPage()}
+            />
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleGoToPage}
+              disabled={loading}
+            >
+              Go
+            </Button>
+          </div>
         </div>
       </div>
+      
+      <style jsx global>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
 
       <EditOrderModal />
     </div>
