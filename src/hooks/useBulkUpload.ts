@@ -330,7 +330,7 @@ export const useBulkUpload = () => {
     }
   };
 
-  const BATCH_SIZE = 5;
+  const BATCH_SIZE = 2;
 
   const processBatch = async (
     endpoint: string,
