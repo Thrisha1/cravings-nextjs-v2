@@ -4,10 +4,12 @@ import { DefaultHotelPageProps } from "../Default/Default";
 import { formatDisplayName } from "@/store/categoryStore_hasura";
 import ThemeChangeButton from "../../ThemeChangeButton";
 import ItemCard from "./ItemCard";
-import { MapPin } from "lucide-react";
+import { BadgePercent, MapPin, SearchIcon } from "lucide-react";
 import SocialLinks from "./SocialLinks";
 import RateUs from "./RateUs";
 import CategoryListBtn from "./CategoryListBtn";
+import SearchItems from "./SearchItems";
+import OffersList from "./OffersList";
 
 const Compact = ({
   styles,
@@ -33,6 +35,7 @@ const Compact = ({
   const categoryElementsRef = useRef<(HTMLDivElement | null)[]>([]);
   const isOwner = auth && hoteldata ? auth?.id === hoteldata?.id : false;
   const themeButtonRef = useRef<HTMLButtonElement>(null);
+  const hasOffers = offers && offers.length > 0;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -150,7 +153,7 @@ const Compact = ({
         className="max-w-xl mx-auto relative mb-40"
       >
         {/* category list btn  */}
-        <CategoryListBtn categories={allCategories}  />
+        <CategoryListBtn categories={allCategories} />
 
         {/* rateusbtn  */}
         <RateUs hoteldata={hoteldata} socialLinks={socialLinks} />
@@ -179,8 +182,18 @@ const Compact = ({
         </div>
 
         {/* social links */}
-        {(socialLinks || isOwner) && (
+        {(socialLinks || isOwner || hasOffers) && (
           <div className="flex overflow-x-auto scrollbar-hide gap-2 p-4 border-b-[1px] bg-white z-20">
+            {isOwner && (
+              <OffersList
+                offers={offers}
+                hotelName={hoteldata?.store_name}
+                categories={categories}
+                styles={styles}
+                tableNumber={tableNumber}
+                feature_flags={hoteldata?.feature_flags}
+              />
+            )}
             <SocialLinks socialLinks={socialLinks} />
             {isOwner && (
               <div
@@ -201,6 +214,17 @@ const Compact = ({
           </div>
         )}
 
+        {/* search and offers btn  */}
+        <div className="p-4">
+          {/* search  */}
+          <SearchItems
+            menu={hoteldata?.menus}
+            hoteldata={hoteldata}
+            styles={styles}
+            tableNumber={tableNumber}
+          />
+        </div>
+
         {/* Categories Navigation */}
         <div
           style={{
@@ -208,7 +232,7 @@ const Compact = ({
             color: styles?.color || "#000",
           }}
           ref={categoriesContainerRef}
-          className="overflow-x-auto w-full flex gap-2 p-2 sticky top-0 z-10 shadow-md scrollbar-hide"
+          className="overflow-x-auto w-full flex gap-2 p-2 sticky top-0 z-10 shadow-md scrollbar-hide border-[1px]"
           onScroll={() => updateBorderPosition(activeCatIndex)}
         >
           {/* Animated border element */}
