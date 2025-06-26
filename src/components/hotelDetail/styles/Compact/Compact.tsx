@@ -184,7 +184,7 @@ const Compact = ({
         {/* social links */}
         {(socialLinks || isOwner || hasOffers) && (
           <div className="flex overflow-x-auto scrollbar-hide gap-2 p-4 border-b-[1px] bg-white z-20">
-            {isOwner && (
+            {hasOffers && (
               <OffersList
                 offers={offers}
                 hotelName={hoteldata?.store_name}
