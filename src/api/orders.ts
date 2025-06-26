@@ -229,6 +229,94 @@ subscription GetPartnerOrders($partner_id: uuid!) {
 }
 `;
 
+export const paginatedOrdersSubscription = `
+subscription GetPaginatedPartnerOrders($partner_id: uuid!, $limit: Int!, $offset: Int!) {
+  orders(
+    where: { 
+      partner_id: { _eq: $partner_id },
+      _or: [
+        { orderedby: { _is_null: true } },
+        { orderedby: { _eq: "captain" } }
+      ]
+    }
+    order_by: { created_at: desc }
+    limit: $limit
+    offset: $offset
+  ) {
+    id
+    total_price
+    created_at
+    table_number
+    notes
+    qr_id
+    type
+    delivery_address
+    delivery_location
+    status
+    status_history
+    partner_id
+    gst_included
+    extra_charges
+    phone
+    user_id
+    orderedby
+    captain_id
+    captainid {
+      id
+      name
+      email
+    }
+    user {
+      full_name
+      phone
+      email
+    }
+    order_items {
+      id
+      quantity
+      item
+      menu {
+        id
+        name
+        price
+        category {
+          id
+          name
+          priority
+        }
+        description
+        image_url
+        is_top
+        is_available
+        priority
+        stocks {
+          stock_quantity
+          id
+        }
+      }
+    }
+  }
+}
+`;
+
+export const ordersCountSubscription = `
+subscription GetOrdersCount($partner_id: uuid!) {
+  orders_aggregate(
+    where: { 
+      partner_id: { _eq: $partner_id },
+      _or: [
+        { orderedby: { _is_null: true } },
+        { orderedby: { _eq: "captain" } }
+      ]
+    }
+  ) {
+    aggregate {
+      count
+    }
+  }
+}
+`;
+
 export const userSubscriptionQuery = `
 subscription GetUserOrders($user_id: uuid!) {
   orders(
