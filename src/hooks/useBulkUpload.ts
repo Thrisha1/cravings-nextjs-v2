@@ -228,8 +228,58 @@ export const useBulkUpload = () => {
 
       if (image_url.length > 0) {
         debugLog("handleAddToMenu", "Processing image URL", { originalUrl: image_url });
+        
+        // First, convert the remote image to a local blob
         image_url = await convertImageToLocalBlob(item.image);
         debugLog("handleAddToMenu", "Image converted to local blob", { localBlobUrl: image_url });
+
+        // Next, ensure the image is properly sized (important for automatically generated images)
+        // Create a temporary image to get dimensions
+        const tempImg = new Image();
+        tempImg.src = image_url;
+        await new Promise((resolve) => {
+          tempImg.onload = resolve;
+        });
+        
+        const imageSource = getImageSource(item.image);
+        debugLog("handleAddToMenu", "Image source determined", { 
+          imageSource,
+          width: tempImg.width,
+          height: tempImg.height
+        });
+        
+        // Only process if it's not already from S3/cravingsbucket
+        if (imageSource !== 'cravingsbucket' && !item.image.includes('cravingsbucket')) {
+          // Create canvas to normalize the image size
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          if (ctx) {
+            // Use consistent sizing for all images
+            const maxSize = 500;
+            let newWidth, newHeight;
+            
+            if (tempImg.width > tempImg.height) {
+              newWidth = maxSize;
+              newHeight = Math.round((tempImg.height / tempImg.width) * maxSize);
+            } else {
+              newHeight = maxSize;
+              newWidth = Math.round((tempImg.width / tempImg.height) * maxSize);
+            }
+            
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            ctx.drawImage(tempImg, 0, 0, newWidth, newHeight);
+            
+            // Convert to better quality WebP
+            image_url = canvas.toDataURL('image/webp', 0.9);
+            debugLog("handleAddToMenu", "Image resized and optimized", { 
+              newWidth, 
+              newHeight,
+              newImageUrl: image_url.substring(0, 50) + '...' 
+            });
+          }
+        }
       }
 
       const newItem = {
