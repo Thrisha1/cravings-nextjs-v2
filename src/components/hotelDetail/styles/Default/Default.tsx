@@ -128,9 +128,7 @@ const Default = ({
           {/* search bar  */}
           <section className="px-[8%]">
             <SearchMenu
-              tableNumber={tableNumber}
               hotelData={hoteldata}
-              feature_flags={hoteldata?.feature_flags || ""}
               currency={hoteldata?.currency}
               styles={styles}
               menu={hoteldata.menus}
