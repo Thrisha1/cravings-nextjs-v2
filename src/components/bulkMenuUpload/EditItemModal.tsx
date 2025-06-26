@@ -5,6 +5,15 @@ import { ImageGridModal } from "./ImageGridModal";
 import { useState } from "react";
 import Img from "../Img";
 
+// Debug logging function
+const debugLog = (context: string, message: string, data?: any) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[EditItemModal][${timestamp}][${context}] ${message}`);
+  if (data !== undefined) {
+    console.log(`[EditItemModal][${timestamp}][${context}] Data:`, data);
+  }
+};
+
 export interface MenuItem {
   id?: string;
   name: string;
@@ -35,9 +44,63 @@ export const EditItemModal = ({
   onSave,
   onEdit,
 }: EditItemModalProps) => {
+  debugLog("Initialize", "EditItemModal component rendering", {
+    isOpen,
+    hasEditingItem: !!editingItem,
+    itemIndex: editingItem?.index,
+    itemName: editingItem?.item?.name
+  });
+  
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
-  if (!editingItem || !isOpen) return null;
+  if (!editingItem || !isOpen) {
+    debugLog("Render", "Not rendering modal - invalid state", { 
+      hasEditingItem: !!editingItem, 
+      isOpen 
+    });
+    return null;
+  }
+
+  const handleClose = () => {
+    debugLog("Action", "Modal close requested");
+    onOpenChange(false);
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    debugLog("Action", "Save changes form submitted", {
+      itemName: editingItem.item.name,
+      itemPrice: editingItem.item.price,
+      itemDescription: editingItem.item.description?.length || 0
+    });
+    onSave();
+  };
+
+  const handleEditField = (field: keyof MenuItem, value: string | number) => {
+    debugLog("Edit", `Field '${field}' changed`, {
+      oldValue: editingItem.item[field],
+      newValue: value
+    });
+    onEdit(field, value);
+  };
+
+  const handleOpenImageModal = () => {
+    debugLog("Action", "Image selection modal opened", {
+      currentImage: editingItem.item.image
+    });
+    setIsImageModalOpen(true);
+  };
+
+  const handleSelectImage = (newImageUrl: string) => {
+    debugLog("Action", "New image selected", {
+      oldImage: editingItem.item.image,
+      newImage: newImageUrl
+    });
+    onEdit("image", newImageUrl);
+    setIsImageModalOpen(false);
+  };
+  
+  debugLog("Render", "Rendering EditItemModal");
 
   return (
     <>
@@ -49,19 +112,19 @@ export const EditItemModal = ({
             variant="ghost" 
             size="sm" 
             type="button"
-            onClick={() => onOpenChange(false)}
+            onClick={handleClose}
           >
             ×
           </Button>
         </div>
         
-        <form onSubmit={(e) => { e.preventDefault(); onSave(); }} className="space-y-4">
+        <form onSubmit={handleSave} className="space-y-4">
           {/* Image Selection */}
           <div className="w-full flex justify-center mb-2">
             {editingItem.item.image ? (
               <div
                 className="relative h-[160px] w-[160px] cursor-pointer overflow-hidden rounded-lg"
-                onClick={() => setIsImageModalOpen(true)}
+                onClick={handleOpenImageModal}
               >
                 <Img
                   src={editingItem.item.image}
@@ -78,7 +141,7 @@ export const EditItemModal = ({
                 type="button"
                 variant="outline"
                 className="w-[160px] h-[160px]"
-                onClick={() => setIsImageModalOpen(true)}
+                onClick={handleOpenImageModal}
               >
                 Select Image
               </Button>
@@ -91,7 +154,7 @@ export const EditItemModal = ({
             <Input
               id="name"
               value={editingItem.item.name}
-              onChange={(e) => onEdit("name", e.target.value)}
+              onChange={(e) => handleEditField("name", e.target.value)}
               placeholder="Item name"
               autoFocus
             />
@@ -102,7 +165,7 @@ export const EditItemModal = ({
             <Textarea
               id="description"
               value={editingItem.item.description}
-              onChange={(e) => onEdit("description", e.target.value)}
+              onChange={(e) => handleEditField("description", e.target.value)}
               className="min-h-[80px]"
               placeholder="Item description"
             />
@@ -116,13 +179,13 @@ export const EditItemModal = ({
               type="number"
               step="0.01"
               min="0"
-              onChange={(e) => onEdit("price", parseFloat(e.target.value))}
+              onChange={(e) => handleEditField("price", parseFloat(e.target.value))}
               placeholder="0.00"
             />
           </div>
           
           <div className="flex justify-center gap-4 pt-3">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
             <Button type="submit">Save Changes</Button>
@@ -133,14 +196,14 @@ export const EditItemModal = ({
       {/* Image Selection Modal */}
       <ImageGridModal
         isOpen={isImageModalOpen}
-        onOpenChange={setIsImageModalOpen}
+        onOpenChange={(open) => {
+          debugLog("Action", `Image modal visibility changed to ${open}`);
+          setIsImageModalOpen(open);
+        }}
         itemName={editingItem.item.name}
         category={editingItem.item.category.name.toLowerCase()}
         currentImage={editingItem.item.image}
-        onSelectImage={(newImageUrl: string) => {
-          onEdit("image", newImageUrl);
-          setIsImageModalOpen(false);
-        }}
+        onSelectImage={handleSelectImage}
       />
     </>
   );

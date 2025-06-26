@@ -8,6 +8,15 @@ import { Input } from "../ui/input";
 import Image from "next/image";
 import Img from "../Img";
 
+// Debug logging function
+const debugLog = (context: string, message: string, data?: any) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[MenuItemCard][${timestamp}][${context}] ${message}`);
+  if (data !== undefined) {
+    console.log(`[MenuItemCard][${timestamp}][${context}] Data:`, data);
+  }
+};
+
 interface MenuItemCardProps {
   item: MenuItem;
   index: number;
@@ -22,13 +31,33 @@ interface MenuItemCardProps {
 
 export const MenuItemCard = ({
   item,
+  index,
   isUploading,
   onSelect,
   onAddToMenu,
   onEdit,
   onDelete,
 }: MenuItemCardProps) => {
+  debugLog("Render", `Rendering item ${index}`, { 
+    name: item.name, 
+    price: item.price, 
+    isAdded: item.isAdded, 
+    isSelected: item.isSelected,
+    hasCategory: !!item.category,
+    isUploading
+  });
+  
   const [itemCategory, setItemCategory] = useState(item.category.name);
+  
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    debugLog("CategoryChange", `Category changed for item ${index}`, { 
+      oldValue: itemCategory,
+      newValue: e.target.value
+    });
+    setItemCategory(e.target.value);
+    item.category.name = e.target.value;
+  };
+  
   return (
     <Card className="relative grid">
       {item.isAdded && (
@@ -41,7 +70,13 @@ export const MenuItemCard = ({
         <div className="flex items-center gap-2">
           <Checkbox
             checked={item.isSelected}
-            onCheckedChange={onSelect}
+            onCheckedChange={() => {
+              debugLog("Checkbox", `Selection toggled for item ${index}`, {
+                name: item.name,
+                currentSelection: item.isSelected
+              });
+              onSelect();
+            }}
             disabled={!item.category || item.isAdded}
           />
           <div className="font-bold text-lg">{item.name}</div>
@@ -69,10 +104,7 @@ export const MenuItemCard = ({
             className="flex-1"
             placeholder="Enter category name"
             value={itemCategory}
-            onChange={(e) => {
-              setItemCategory(e.target.value);
-              item.category.name = e.target.value;
-            }}
+            onChange={handleCategoryChange}
           />
         </div>
       </CardContent>
@@ -80,7 +112,15 @@ export const MenuItemCard = ({
       <CardFooter className="flex justify-between">
         <div className="flex gap-2">
           <Button
-            onClick={onAddToMenu}
+            onClick={() => {
+              debugLog("Button", `Add to menu clicked for item ${index}`, {
+                name: item.name,
+                isAdded: item.isAdded,
+                isUploading,
+                hasCategory: !!item.category
+              });
+              onAddToMenu();
+            }}
             disabled={item.isAdded || isUploading || !item.category}
           >
             {isUploading ? (
@@ -95,11 +135,27 @@ export const MenuItemCard = ({
               </>
             )}
           </Button>
-          <Button variant="outline" onClick={onEdit}>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              debugLog("Button", `Edit clicked for item ${index}`, {
+                name: item.name
+              });
+              onEdit();
+            }}
+          >
             <Pencil className="w-4 h-4" />
           </Button>
         </div>
-        <Button variant="destructive" onClick={onDelete}>
+        <Button 
+          variant="destructive" 
+          onClick={() => {
+            debugLog("Button", `Delete clicked for item ${index}`, {
+              name: item.name
+            });
+            onDelete();
+          }}
+        >
           <Trash className="w-4 h-4" />
         </Button>
       </CardFooter>
