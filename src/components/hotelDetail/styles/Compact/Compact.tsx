@@ -188,7 +188,7 @@ const Compact = ({
               <OffersList
                 offers={offers}
                 hotelName={hoteldata?.store_name}
-                categories={categories}
+                menu={hoteldata?.menus}
                 styles={styles}
                 tableNumber={tableNumber}
                 feature_flags={hoteldata?.feature_flags}
