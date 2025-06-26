@@ -6,6 +6,8 @@ import { useAuthStore, Captain } from "./authStore";
 import {
   createOrderItemsMutation,
   createOrderMutation,
+  ordersCountSubscription,
+  paginatedOrdersSubscription,
   subscriptionQuery,
   userSubscriptionQuery,
 } from "@/api/orders";
@@ -171,6 +173,12 @@ interface OrderState {
   setUserAddress: (address: string) => void;
   setUserCoordinates: (coords: { lat: number; lng: number }) => void;
   subscribeOrders: (callback?: (orders: Order[]) => void) => () => void;
+  subscribePaginatedOrders: (
+    limit: number,
+    offset: number,
+    callback?: (orders: Order[]) => void
+  ) => () => void;
+  subscribeOrdersCount: (callback?: (count: number) => void) => () => void;
   partnerOrders: Order[];
   userOrders: Order[];
   subscribeUserOrders: (callback?: (orders: Order[]) => void) => () => void;
@@ -416,157 +424,75 @@ const useOrderStore = create(
       },
 
       subscribeOrders: (callback) => {
-        const userData = useAuthStore.getState().userData;
+        const { userData } = useAuthStore.getState();
 
-        if (!userData?.id || !userData?.role) {
-          console.log(
-            "User data not available yet, will retry subscription setup"
-          );
-          const retryInterval = setInterval(() => {
-            const retryUserData = useAuthStore.getState().userData;
-            if (retryUserData?.id && retryUserData?.role) {
-              clearInterval(retryInterval);
-              const unsubscribe = useOrderStore
-                .getState()
-                .subscribeOrders(callback);
-              return () => {
-                clearInterval(retryInterval);
-                unsubscribe();
-              };
-            }
-          }, 1000);
-
-          return () => {
-            clearInterval(retryInterval);
-          };
-        }
-
-        const partnerId =
-          userData?.role === "captain"
-            ? (userData as Captain).partner_id
-            : userData?.id;
-
-        if (!partnerId) {
-          console.error("No partner ID available for subscription");
+        if (!userData?.id) {
           return () => {};
         }
 
-        let subscriptionActive = true;
-        const unsubscribe = subscribeToHasura({
+        return subscribeToHasura({
           query: subscriptionQuery,
-          variables: {
-            partner_id: partnerId,
-          },
+          variables: { partner_id: userData.id },
           onNext: (data) => {
-            if (!subscriptionActive) {
-              console.log("Subscription no longer active, ignoring data");
-              return;
+            if (data?.data?.orders) {
+              const orders = data.data.orders.map(transformOrderFromHasura);
+              set({ partnerOrders: orders });
+
+              if (callback) {
+                callback(orders);
+              }
             }
-
-            if (!data?.data?.orders) {
-              console.log("No orders data in subscription response");
-              if (callback) callback([]);
-              return;
-            }
-
-            const allOrders = data.data.orders
-              .map((order: any) => {
-                console.log("allOrders" , order);
-                
-                // Ensure captain data is properly included
-                const captainData = order.captainid ? {
-                  id: order.captainid.id,
-                  name: order.captainid.name,
-                  email: order.captainid.email
-                } : null;
-
-                return {
-                  id: order.id,
-                  totalPrice: order.total_price,
-                  createdAt: order.created_at,
-                  tableNumber: order.table_number,
-                  qrId: order.qr_id,
-                  status: order.status,
-                  type: order.type,
-                  phone: order.phone,
-                  deliveryAddress: order.delivery_address,
-                  partnerId: order.partner_id,
-                  gstIncluded: order.gst_included,
-                  status_history: order.status_history,
-                  extraCharges: order.extra_charges,
-                  userId: order.user_id,
-                  orderedby: order.orderedby,
-                  captain_id: order.captain_id,
-                  captain: captainData,  // Use the properly structured captain data
-                  user: order.user,
-                  items: order.order_items?.map((i: any) => ({
-                    id: i.item?.id,
-                    quantity: i.quantity,
-                    name: i.item?.name || "Unknown",
-                    price: i.item?.offers?.[0]?.offer_price || i.item?.price || 0,
-                    category: i.item?.category?.name,
-                    description: i.menu?.description || "",
-                    image_url: i.menu?.image_url || "",
-                    is_top: i.menu?.is_top || false,
-                    is_available: i.menu?.is_available || false,
-                    priority: i.menu?.priority || 0,
-                    offers: i.menu?.offers || [],
-                  })) || [],
-                };
-              })
-              .filter((order: any): order is NonNullable<typeof order> => order !== null);
-
-            set({ partnerOrders: allOrders });
-            if (callback) callback(allOrders);
-          },
-          onError: (error) => {
-            console.error("Subscription error in order store:", {
-              error,
-              message: error instanceof Error ? error.message : String(error),
-              timestamp: new Date().toISOString(),
-              userData: {
-                id: userData?.id,
-                role: userData?.role,
-                partnerId:
-                  userData?.role === "captain"
-                    ? (userData as Captain).partner_id
-                    : userData?.id,
-              },
-            });
-
-            // If we get a connection error, try to resubscribe after a delay
-            if (
-              error.message.includes("connection") ||
-              error.message.includes("network")
-            ) {
-              console.log(
-                "Connection error detected, will attempt to resubscribe"
-              );
-              setTimeout(() => {
-                if (subscriptionActive) {
-                  console.log("Attempting to resubscribe...");
-                  const newUnsubscribe = useOrderStore
-                    .getState()
-                    .subscribeOrders(callback);
-                  unsubscribe();
-                  return newUnsubscribe;
-                }
-              }, 5000); // Wait 5 seconds before retrying
-            }
-
-            // Always call callback with empty array to prevent UI from breaking
-            if (callback) callback([]);
           },
         });
+      },
 
-        return () => {
-          console.log("Cleaning up subscription", {
-            partnerId,
-            timestamp: new Date().toISOString(),
-          });
-          subscriptionActive = false;
-          unsubscribe();
-        };
+      subscribePaginatedOrders: (limit, offset, callback) => {
+        const { userData } = useAuthStore.getState();
+
+        if (!userData?.id) {
+          return () => {};
+        }
+
+        return subscribeToHasura({
+          query: paginatedOrdersSubscription,
+          variables: { 
+            partner_id: userData.id,
+            limit,
+            offset
+          },
+          onNext: (data) => {
+            if (data?.data?.orders) {
+              const orders = data.data.orders.map(transformOrderFromHasura);
+              set({ partnerOrders: orders });
+
+              if (callback) {
+                callback(orders);
+              }
+            }
+          },
+        });
+      },
+
+      subscribeOrdersCount: (callback) => {
+        const { userData } = useAuthStore.getState();
+
+        if (!userData?.id) {
+          return () => {};
+        }
+
+        return subscribeToHasura({
+          query: ordersCountSubscription,
+          variables: { partner_id: userData.id },
+          onNext: (data) => {
+            if (data?.data?.orders_aggregate?.aggregate?.count !== undefined) {
+              const count = data.data.orders_aggregate.aggregate.count;
+              
+              if (callback) {
+                callback(count);
+              }
+            }
+          },
+        });
       },
 
       setHotelId: (id: string) => {
@@ -1255,5 +1181,44 @@ const useOrderStore = create(
     }
   )
 );
+
+function transformOrderFromHasura(order: any): Order {
+  return {
+    id: order.id,
+    items: order.order_items.map((item: any) => ({
+      id: item.menu?.id || "",
+      name: item.menu?.name || "",
+      price: item.menu?.price || 0,
+      quantity: item.quantity || 0,
+      category: item.menu?.category?.name || "",
+      image_url: item.menu?.image_url || "",
+      description: item.menu?.description || "",
+      is_top: item.menu?.is_top || false,
+      is_available: item.menu?.is_available || true,
+    })),
+    totalPrice: order.total_price || 0,
+    createdAt: order.created_at,
+    notes: order.notes || null,
+    tableNumber: order.table_number || null,
+    qrId: order.qr_id || null,
+    status: order.status,
+    partnerId: order.partner_id,
+    status_history: order.status_history,
+    partner: order.partner,
+    phone: order.phone,
+    userId: order.user_id,
+    user: order.user,
+    type: order.type,
+    deliveryAddress: order.delivery_address,
+    gstIncluded: order.gst_included || 0,
+    orderedby: order.orderedby,
+    delivery_charge: order.delivery_charge || null,
+    delivery_location: order.delivery_location,
+    order_number: order.order_number,
+    captain_id: order.captain_id,
+    captain: order.captainid,
+    extraCharges: order.extra_charges,
+  };
+}
 
 export default useOrderStore;

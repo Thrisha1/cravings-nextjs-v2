@@ -33,9 +33,13 @@ export interface ThemeConfig {
 const ThemeChangeButton = ({
   hotelData,
   theme,
+  iconSize = 24,
+  ref
 }: {
   hotelData: Partner;
   theme: ThemeConfig | null;
+  iconSize?: number;
+  ref?: React.Ref<HTMLButtonElement>;
 }) => {
   const [colorModalOpen, setColorModalOpen] = useState(false);
   const [menuStyleModalOpen, setMenuStyleModalOpen] = useState(false);
@@ -63,13 +67,13 @@ const ThemeChangeButton = ({
   return (
     <>
       <Dialog>
-        <DialogTrigger asChild>
+        <DialogTrigger ref={ref} asChild>
           <button aria-label="Change theme">
             <Palette
               style={{
                 color: theme?.colors?.text || "#000000",
               }}
-              className="h-8 w-8 "
+              size={iconSize}
               strokeWidth={1.8}
             />
           </button>
