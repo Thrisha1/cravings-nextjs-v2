@@ -167,41 +167,43 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
         set({ loading: true, error: null });
         try {
           const { extractedMenuItems, generatedImages } = get();
-          
+
           if (!extractedMenuItems.length) {
             throw new Error("No menu items to upload");
           }
-      
+
           toast.info("Starting menu upload...");
-      
+
           // Process items in batches of 20
           const batchSize = 20;
           const totalBatches = Math.ceil(extractedMenuItems.length / batchSize);
           let successfulUploads = 0;
-      
+
           for (let i = 0; i < extractedMenuItems.length; i += batchSize) {
             const batch = extractedMenuItems.slice(i, i + batchSize);
-            toast.info(`Uploading batch ${Math.floor(i / batchSize) + 1}/${totalBatches}...`);
-      
+            toast.info(
+              `Uploading batch ${
+                Math.floor(i / batchSize) + 1
+              }/${totalBatches}...`
+            );
+
             // Process each item in the batch
             const menuItemsToUpload = await Promise.all(
               batch.map(async (item) => {
                 try {
                   let s3Url = "";
 
-                 const addCategory = useCategoryStore.getState().addCategory;
+                  const addCategory = useCategoryStore.getState().addCategory;
 
+                  const category = await addCategory(
+                    item.category.trim().toLowerCase(),
+                    partnerId
+                  );
 
-                 const category = await addCategory(
-                  item.category.trim().toLowerCase(),
-                  partnerId
-                );
-          
-                const category_id = category?.id;
-          
-                if (!category_id) throw new Error("Category ID not found");
-                  
-                  
+                  const category_id = category?.id;
+
+                  if (!category_id) throw new Error("Category ID not found");
+
                   // Use generated image if available
                   if (generatedImages[item.name]) {
                     const formattedName = item.name
@@ -212,18 +214,18 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
                       .replace(/[^a-zA-Z0-9]/g, "_")
                       .replace(/\s+/g, "_")
                       .replace(/_+/g, "_");
-      
+
                     const processedImage = await processImage(
                       generatedImages[item.name],
                       "generated"
                     );
-                    
+
                     s3Url = await uploadFileToS3(
                       processedImage,
                       `${partnerId}/menu/${formattedName}_${formattedCategory}_${Date.now()}.webp`
                     );
                   }
-      
+
                   return {
                     name: item.name,
                     category_id: category_id,
@@ -240,15 +242,21 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
                 }
               })
             );
-      
-            // Filter out any failed items
-            const validItems = menuItemsToUpload.filter(item => item !== null) as any[];
 
-            console.log(`Batch ${Math.floor(i / batchSize) + 1} valid items:`, validItems);
-      
+            // Filter out any failed items
+            const validItems = menuItemsToUpload.filter(
+              (item) => item !== null
+            ) as any[];
+
+            console.log(
+              `Batch ${Math.floor(i / batchSize) + 1} valid items:`,
+              validItems
+            );
+
             if (validItems.length > 0) {
               // Upload the batch
-              await fetchFromHasura(`
+              await fetchFromHasura(
+                `
                 mutation InsertMenuBatch($menu: [menu_insert_input!]!) {
                   insert_menu(objects: $menu) {
                     returning {
@@ -256,22 +264,27 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
                     }
                   }
                 }
-              `, {
-                menu: validItems
-              });
-      
+              `,
+                {
+                  menu: validItems,
+                }
+              );
+
               successfulUploads += validItems.length;
             }
           }
-      
+
           set({ loading: false });
-          toast.success(`Successfully uploaded ${successfulUploads} menu items`);
+          toast.success(
+            `Successfully uploaded ${successfulUploads} menu items`
+          );
           return successfulUploads;
         } catch (error) {
           console.error("Menu upload failed:", error);
           set({
             loading: false,
-            error: error instanceof Error ? error.message : "Failed to upload menu",
+            error:
+              error instanceof Error ? error.message : "Failed to upload menu",
           });
           toast.error("Failed to upload menu");
           throw error;
@@ -394,44 +407,59 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
         set({ isGeneratingImages: true, generationError: null });
         try {
           toast.info("Generating images for menu items...");
-
-          const response = await fetch(
-            "http://localhost:4000/api/image-gen/fullImages",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(menuItems),
-            }
-          );
-
-          if (!response.ok) {
-            throw new Error(
-              `Image generation failed with status ${response.status}`
-            );
-          }
-
-          const imageData = await response.json();
-
-          console.log(imageData);
           
-
-          const imageRecord = imageData.reduce(
-            (acc: Record<string, string>, item: { name: string; image: string }) => {
-              acc[item.name] = item.image;
-              return acc;
-            },
-            {} as Record<string, string>
-          );
-
+          // Process items in batches of 2
+          const batchSize = 2;
+          const batches = [];
+          for (let i = 0; i < menuItems.length; i += batchSize) {
+            batches.push(menuItems.slice(i, i + batchSize));
+          }
+      
+          const imageRecord: Record<string, string> = {};
+          
+          // Process each batch sequentially
+          for (const batch of batches) {
+            try {
+              const response = await fetch(
+                process.env.NEXT_PUBLIC_SERVER_URL + "/api/image-gen/fullImages",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(batch),
+                }
+              );
+      
+              if (!response.ok) {
+                throw new Error(
+                  `Image generation failed with status ${response.status}`
+                );
+              }
+      
+              const batchImageData = await response.json();
+              
+              // Add batch results to the main record
+              batchImageData.forEach((item: { name: string; image: string }) => {
+                imageRecord[item.name] = item.image;
+              });
+      
+              // Small delay between batches if needed (optional)
+              await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (batchError) {
+              console.error(`Error processing batch:`, batchError);
+              // Continue with next batch even if one fails, or throw to stop completely
+              throw batchError;
+            }
+          }
+      
           console.log("Generated image record:", imageRecord);
-
+      
           set({
             generatedImages: imageRecord,
             isGeneratingImages: false,
           });
-
+      
           toast.success("Menu item images generated!");
-          return imageData;
+          return imageRecord;
         } catch (error) {
           console.error("Image generation error:", error);
           set({
@@ -470,7 +498,6 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
           return null;
         }
       },
-      
     }),
     {
       name: "super-admin-partner-store",
