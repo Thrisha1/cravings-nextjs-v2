@@ -1,7 +1,7 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Loader2, Check, AlertCircle, Upload, ClipboardPaste } from "lucide-react";
+import { Loader2, Check, AlertCircle, Upload, ClipboardPaste, Image as ImageIcon } from "lucide-react";
 import AIImageGenerateModal from "@/components/AIImageGenerateModal";
 import { useMenuStore } from "@/store/menuStore_hasura";
 import { DialogTitle } from "@radix-ui/react-dialog";
@@ -30,6 +30,7 @@ export function ImageGridModal({
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [isAIImageModalOpen, setAIImageModalOpen] = useState(false);
+  const [isImageGenerateModalOpen, setImageGenerateModalOpen] = useState(false);
   const [pasteStatus, setPasteStatus] = useState<"idle" | "loading" | "error">("idle");
   const { fetchCategorieImages } = useMenuStore();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -94,6 +95,10 @@ export function ImageGridModal({
   const handleAiImageUpload = (url: string) => {
     addNewImage(url);
     setAIImageModalOpen(false);
+  };
+
+  const handleImageGenerate = () => {
+    setImageGenerateModalOpen(true);
   };
 
   useEffect(() => {
@@ -204,6 +209,17 @@ export function ImageGridModal({
               </div>
             </div>
 
+            {/* Image Generate Button */}
+            <div
+              className="aspect-square cursor-pointer group bg-gray-100 rounded-md relative"
+              onClick={handleImageGenerate}
+            >
+              <div className="z-10 absolute grid place-items-center top-1/2 left-1/2 text-center -translate-x-1/2 -translate-y-1/2 text-xl font-bold">
+                <ImageIcon className="w-8 h-8" />
+                Image Generate
+              </div>
+            </div>
+
             {/* Image Grid */}
             {imageUrls.map((url, index) => (
               <div
@@ -253,6 +269,14 @@ export function ImageGridModal({
         itemName={itemName}
         isOpen={isAIImageModalOpen}
         onOpenChange={setAIImageModalOpen}
+      />
+      
+      <AIImageGenerateModal 
+        addNewImage={handleAiImageUpload}
+        category={category}
+        itemName={itemName}
+        isOpen={isImageGenerateModalOpen}
+        onOpenChange={setImageGenerateModalOpen}
       />
     </Dialog>
   );
