@@ -272,7 +272,7 @@ export function ImageGridModal({
             {imageUrls.map((url, index) => (
               <div
                 key={url + index}
-                className="relative aspect-square cursor-pointer group"
+                className="relative aspect-square cursor-pointer group overflow-hidden"
                 onClick={() => onSelectImage(url)}
               >
                 {loadingStates[url] && (
@@ -283,7 +283,7 @@ export function ImageGridModal({
                 <Img
                   src={url}
                   alt={`Option ${index + 1}`}
-                  className="object-cover rounded-md"
+                  className="object-cover rounded-md w-full h-full"
                   onLoad={() =>
                     setLoadingStates((prev) => ({ ...prev, [url]: false }))
                   }
