@@ -6,6 +6,8 @@ import AIImageGenerateModal from "@/components/AIImageGenerateModal";
 import { useMenuStore } from "@/store/menuStore_hasura";
 import { DialogTitle } from "@radix-ui/react-dialog";
 import Img from "../Img";
+import axios from "axios";
+import { toast } from "sonner";
 
 interface ImageGridModalProps {
   isOpen: boolean;
@@ -32,6 +34,7 @@ export function ImageGridModal({
   const [isAIImageModalOpen, setAIImageModalOpen] = useState(false);
   const [isImageGenerateModalOpen, setImageGenerateModalOpen] = useState(false);
   const [pasteStatus, setPasteStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [isGenerating, setIsGenerating] = useState(false);
   const { fetchCategorieImages } = useMenuStore();
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -97,8 +100,47 @@ export function ImageGridModal({
     setAIImageModalOpen(false);
   };
 
-  const handleImageGenerate = () => {
-    setImageGenerateModalOpen(true);
+  const handleImageGenerate = async () => {
+    if (!category || !itemName) {
+      toast.error("Category and item name are required");
+      return;
+    }
+    
+    setIsGenerating(true);
+    try {
+      // Create a single item object with the current item data
+      const item = {
+        name: itemName,
+        category: category,
+      };
+      
+      // Make API call to generate image
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/api/image-gen/fullImages`,
+        [item],
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+        const generatedItem = response.data[0];
+        if (generatedItem.image) {
+          // Add the generated image to the grid
+          addNewImage(generatedItem.image);
+          toast.success("Image generated successfully!");
+        } else {
+          toast.error("No image was generated");
+        }
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast.error("Failed to generate image. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   useEffect(() => {
@@ -215,8 +257,14 @@ export function ImageGridModal({
               onClick={handleImageGenerate}
             >
               <div className="z-10 absolute grid place-items-center top-1/2 left-1/2 text-center -translate-x-1/2 -translate-y-1/2 text-xl font-bold">
-                <ImageIcon className="w-8 h-8" />
-                Image Generate
+                {isGenerating ? (
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                ) : (
+                  <>
+                    <ImageIcon className="w-8 h-8" />
+                    Image Generate
+                  </>
+                )}
               </div>
             </div>
 
