@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, Loader2, Trash2 } from "lucide-react";
+import { ChevronLeft, Loader2, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { MenuItemCard } from "@/components/bulkMenuUpload/MenuItemCard";
 import { EditItemModal } from "@/components/bulkMenuUpload/EditItemModal";
@@ -24,6 +24,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+
+// Log type definition
+interface ImageGenerationLog {
+  id: string;
+  timestamp: string;
+  endpoint: string;
+  requestData: any;
+  responseData?: any;
+  status: 'pending' | 'success' | 'error';
+  itemName?: string;
+  duration?: number;
+}
 
 const BulkUploadPage = () => {
   const router = useRouter();
@@ -31,6 +46,8 @@ const BulkUploadPage = () => {
   const { items: menuItems, fetchMenu } = useMenuStore();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeletingMenu, setIsDeletingMenu] = useState(false);
+  const [showLogs, setShowLogs] = useState(true);
+  const [logs, setLogs] = useState<ImageGenerationLog[]>([]);
 
   const {
     loading,
@@ -60,6 +77,167 @@ const BulkUploadPage = () => {
     handleGenerateAIImages,
     BATCH_SIZE,
   } = useBulkUpload();
+
+  // Modified image generation functions that log information
+  const handleGenerateImagesWithLogs = async () => {
+    // Add initial log
+    const logId = Date.now().toString();
+    const newLog: ImageGenerationLog = {
+      id: logId,
+      timestamp: new Date().toISOString(),
+      endpoint: 'https://finally-enjoyed-oryx.ngrok-free.app/api/generate-image',
+      requestData: { 
+        items: bulkMenuItems.map(item => ({ 
+          name: item.name, 
+          description: item.description 
+        }))
+      },
+      status: 'pending',
+    };
+    
+    setLogs(prevLogs => [newLog, ...prevLogs]);
+    
+    const startTime = performance.now();
+    
+    try {
+      // Call the original function
+      await handleGenerateImages();
+      
+      // Update log with success
+      const endTime = performance.now();
+      setLogs(prevLogs => 
+        prevLogs.map(log => 
+          log.id === logId 
+            ? {
+                ...log, 
+                status: 'success',
+                duration: Math.round(endTime - startTime),
+                responseData: { message: 'Images generated successfully' }
+              } 
+            : log
+        )
+      );
+    } catch (error) {
+      // Update log with error
+      setLogs(prevLogs => 
+        prevLogs.map(log => 
+          log.id === logId 
+            ? {
+                ...log, 
+                status: 'error',
+                responseData: { error: error instanceof Error ? error.message : 'Unknown error' }
+              } 
+            : log
+        )
+      );
+    }
+  };
+
+  const handlePartialImageGenerationWithLogs = async () => {
+    const logId = Date.now().toString();
+    const newLog: ImageGenerationLog = {
+      id: logId,
+      timestamp: new Date().toISOString(),
+      endpoint: 'https://finally-enjoyed-oryx.ngrok-free.app/api/generate-partial-images',
+      requestData: { 
+        batch: BATCH_SIZE,
+        items: bulkMenuItems.map(item => ({ 
+          name: item.name, 
+          description: item.description 
+        }))
+      },
+      status: 'pending',
+    };
+    
+    setLogs(prevLogs => [newLog, ...prevLogs]);
+    
+    const startTime = performance.now();
+    
+    try {
+      await handlePartialImageGeneration();
+      
+      const endTime = performance.now();
+      setLogs(prevLogs => 
+        prevLogs.map(log => 
+          log.id === logId 
+            ? {
+                ...log, 
+                status: 'success',
+                duration: Math.round(endTime - startTime),
+                responseData: { message: 'Partial images generated successfully' }
+              } 
+            : log
+        )
+      );
+    } catch (error) {
+      setLogs(prevLogs => 
+        prevLogs.map(log => 
+          log.id === logId 
+            ? {
+                ...log, 
+                status: 'error',
+                responseData: { error: error instanceof Error ? error.message : 'Unknown error' }
+              } 
+            : log
+        )
+      );
+    }
+  };
+
+  const handleGenerateAIImagesWithLogs = async () => {
+    const logId = Date.now().toString();
+    const newLog: ImageGenerationLog = {
+      id: logId,
+      timestamp: new Date().toISOString(),
+      endpoint: 'https://finally-enjoyed-oryx.ngrok-free.app/api/generate-ai-images',
+      requestData: { 
+        items: bulkMenuItems.map(item => ({ 
+          name: item.name, 
+          description: item.description,
+          imagePrompt: item.description
+        }))
+      },
+      status: 'pending',
+    };
+    
+    setLogs(prevLogs => [newLog, ...prevLogs]);
+    
+    const startTime = performance.now();
+    
+    try {
+      await handleGenerateAIImages();
+      
+      const endTime = performance.now();
+      setLogs(prevLogs => 
+        prevLogs.map(log => 
+          log.id === logId 
+            ? {
+                ...log, 
+                status: 'success',
+                duration: Math.round(endTime - startTime),
+                responseData: { message: 'AI images generated successfully' }
+              } 
+            : log
+        )
+      );
+    } catch (error) {
+      setLogs(prevLogs => 
+        prevLogs.map(log => 
+          log.id === logId 
+            ? {
+                ...log, 
+                status: 'error',
+                responseData: { error: error instanceof Error ? error.message : 'Unknown error' }
+              } 
+            : log
+        )
+      );
+    }
+  };
+
+  const clearLogs = () => {
+    setLogs([]);
+  };
 
   const isAIGenerateEnabled = Array.isArray(bulkMenuItems) && bulkMenuItems.length > 0 && 'image_prompt' in bulkMenuItems[0];
 
@@ -138,6 +316,100 @@ const BulkUploadPage = () => {
           </Button>
         </div>
 
+        {/* Image Generation Logs */}
+        <Card className="mb-6 bg-white/90 border-gray-200">
+          <div className="p-4">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <span>Image Generation Logs</span>
+                <Badge variant={logs.length > 0 ? "default" : "outline"} className="ml-2">
+                  {logs.length}
+                </Badge>
+              </h2>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => setShowLogs(!showLogs)}
+                >
+                  {showLogs ? "Hide" : "Show"}
+                </Button>
+                {logs.length > 0 && (
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={clearLogs}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            {showLogs && logs.length > 0 ? (
+              <ScrollArea className="h-[200px] rounded-md border">
+                <div className="p-4 space-y-3">
+                  {logs.map((log) => (
+                    <div 
+                      key={log.id} 
+                      className={`p-3 rounded-md text-sm ${
+                        log.status === 'success' 
+                          ? 'bg-green-50 border border-green-200' 
+                          : log.status === 'error'
+                            ? 'bg-red-50 border border-red-200'
+                            : 'bg-yellow-50 border border-yellow-200'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="font-medium">
+                          <span className="mr-2">
+                            {new Date(log.timestamp).toLocaleTimeString()}
+                          </span>
+                          <Badge variant={
+                            log.status === 'success' 
+                              ? "default"  
+                              : log.status === 'error' 
+                                ? "destructive" 
+                                : "outline"
+                          }>
+                            {log.status}
+                          </Badge>
+                        </div>
+                        {log.duration && (
+                          <span className="text-xs text-gray-500">
+                            {log.duration}ms
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="mt-1">
+                        <p><strong>Endpoint:</strong> {log.endpoint}</p>
+                        <p className="mt-1"><strong>Request:</strong></p>
+                        <pre className="text-xs bg-gray-50 p-1 rounded overflow-auto max-h-20">
+                          {JSON.stringify(log.requestData, null, 2)}
+                        </pre>
+                        
+                        {log.responseData && (
+                          <>
+                            <p className="mt-1"><strong>Response:</strong></p>
+                            <pre className="text-xs bg-gray-50 p-1 rounded overflow-auto max-h-20">
+                              {JSON.stringify(log.responseData, null, 2)}
+                            </pre>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : showLogs ? (
+              <div className="h-[60px] flex items-center justify-center text-gray-500 text-sm border rounded-md">
+                No logs yet. Generate images to see logs here.
+              </div>
+            ) : null}
+          </div>
+        </Card>
+
         <div className="space-y-4">
           <KimiAiLink />
           <Textarea
@@ -202,7 +474,7 @@ const BulkUploadPage = () => {
         {bulkMenuItems.length > 0 && (
           <div className="flex flex-wrap gap-2 py-4">
             <Button
-              onClick={handleGenerateImages}
+              onClick={handleGenerateImagesWithLogs}
               className="bg-green-600 hover:bg-green-700 text-white h-12 text-sm sm:text-base flex-1"
               disabled={loading}
             >
@@ -214,18 +486,16 @@ const BulkUploadPage = () => {
               ) : "Generate Images One by One"}
             </Button>
             <Button
-              onClick={handlePartialImageGeneration}
+              onClick={handlePartialImageGenerationWithLogs}
               className="bg-yellow-600 hover:bg-yellow-700 text-white h-12 text-sm sm:text-base flex-1"
               disabled={loading}
-              style={{ display: 'none' }}
             >
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Images (Alt)"}
             </Button>
             <Button
-              onClick={handleGenerateAIImages}
+              onClick={handleGenerateAIImagesWithLogs}
               className="bg-purple-600 hover:bg-purple-700 text-white h-12 text-sm sm:text-base flex-1"
               disabled={loading || !isAIGenerateEnabled}
-              style={{ display: 'none' }}
             >
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate AI Images"}
             </Button>
