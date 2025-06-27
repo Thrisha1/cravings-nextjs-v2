@@ -10,8 +10,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing dish parameter' }, { status: 400 });
     }
     
-    // Forward the request to the local server
-    const targetUrl = `http://localhost:5000/search?dish=${encodeURIComponent(dish)}`;  
+    // Forward the request to the server using environment variable
+    const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5000';
+    const targetUrl = `${serverUrl}/search?dish=${encodeURIComponent(dish)}`;
     console.log('Proxying request to:', targetUrl);
     
     const response = await fetch(targetUrl);
