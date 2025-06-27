@@ -332,81 +332,107 @@ export const useBulkUpload = () => {
 
   const BATCH_SIZE = 2;
 
-  const processBatch = async (
-    endpoint: string,
-    items: any[],
-    successMessage: string
-  ) => {
+  // Process a single item
+  const processSingleItem = async (item: any) => {
     try {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_SERVER_URL}/api/image-gen/${endpoint}`,
-        items,
-        {
+      // Build URL for a single dish
+      const dishName = item.name;
+      console.log(`Processing dish: ${dishName}`);
+      
+      // Use our proxy API with a single dish name
+      const endpoint = `/api/image-proxy?dish=${encodeURIComponent(dishName)}`;
+      console.log(`Sending request for individual dish to proxy API: ${endpoint}`);
+      
+      let response;
+      try {
+        response = await axios.get(endpoint, {
           headers: { "Content-Type": "application/json" },
+        });
+        console.log(`Response status for ${dishName}:`, response.status);
+      } catch (error: any) {
+        console.error(`Network error for ${dishName}: ${error.message}`);
+        if (error.response) {
+          console.error(`Response status: ${error.response.status}`);
+          console.error(`Response data:`, error.response.data);
         }
-      );
-
-      if (response.data && Array.isArray(response.data)) {
-        return response.data;
+        throw new Error(`Network error for ${dishName}: ${error.message}`);
       }
-      throw new Error(`Invalid response from ${endpoint} server`);
-    } catch (err) {
-      console.error(
-        `${endpoint} error: ${
-          err instanceof Error ? err.message : "Unknown error"
-        }`
+
+      // Check response
+      if (!response.data || !response.data.results || !Array.isArray(response.data.results)) {
+        console.error(`Invalid response format for ${dishName}:`, response.data);
+        throw new Error(`Invalid response for ${dishName}`);
+      }
+      
+      // Find the matching result for this dish
+      const result = response.data.results.find((r: any) => 
+        r.query.toLowerCase() === dishName.toLowerCase()
       );
-      throw err;
+      
+      if (!result) {
+        console.error(`No matching result found for ${dishName}`);
+        return item;
+      }
+      
+      console.log(`Result for "${result.query}": ${result.success ? "Success" : "Failed"}`);
+      
+      if (result.success) {
+        console.log(`Found image for "${dishName}": ${result.image_url}`);
+        return {
+          ...item,
+          image: result.image_url
+        };
+      } else {
+        console.log(`Image generation failed for "${dishName}": ${result.error}`);
+        return item;
+      }
+    } catch (err) {
+      console.error(`Error processing ${item.name}: ${err instanceof Error ? err.message : "Unknown error"}`);
+      return item; // Return the original item on error
     }
   };
 
   const handleBatchImageGeneration = async (
-    endpoint: string,
     successMessage: string
   ) => {
-    if (!menuItems) return;
+    if (!menuItems || menuItems.length === 0) return;
 
     setLoading(true);
     const totalItems = menuItems.length;
+    console.log(`Starting image generation for ${totalItems} individual items`);
     let updatedItems = [...menuItems];
     let processedCount = 0;
-
+    
     try {
-      // Process in batches
-      for (let i = 0; i < totalItems; i += BATCH_SIZE) {
-        const batch = menuItems.slice(i, i + BATCH_SIZE);
-
-        toast.info(
-          `Processing items ${i + 1}-${Math.min(
-            i + BATCH_SIZE,
-            totalItems
-          )} of ${totalItems}...`
-        );
-
-        const batchResults = await processBatch(
-          endpoint,
-          batch,
-          successMessage
-        );
-        updatedItems = updatedItems.map((item, index) =>
-          index >= i && index < i + BATCH_SIZE ? batchResults[index - i] : item
-        );
-
-        processedCount += batch.length;
+      // Process items one by one
+      for (let i = 0; i < totalItems; i++) {
+        const item = menuItems[i];
+        console.log(`Processing item ${i + 1}/${totalItems}: ${item.name}`);
+        toast.info(`Processing item ${i + 1}/${totalItems}: ${item.name}`);
+        
+        // Process the single item
+        const updatedItem = await processSingleItem(item);
+        
+        // Update just this item in the array
+        updatedItems[i] = updatedItem;
+        processedCount++;
+        
+        // Update state after each item is processed to show immediate results
         setMenuItems([...updatedItems]);
         localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+        
+        console.log(`Processed ${processedCount}/${totalItems} items so far`);
       }
 
+      console.log(`Image generation complete: ${processedCount}/${totalItems} items processed`);
       toast.success(successMessage);
     } catch (err) {
       console.error(
-        `Batch processing error: ${
+        `Processing error: ${
           err instanceof Error ? err.message : "Unknown error"
         }`
       );
-      toast.error(
-        `Failed to generate images. Processed ${processedCount} of ${totalItems} items.`
-      );
+      toast.error(`Failed to generate all images. Processed ${processedCount} of ${totalItems} items.`);
     } finally {
       setLoading(false);
     }
@@ -414,20 +440,11 @@ export const useBulkUpload = () => {
 
   // Updated handlers
   const handleGenerateImages = () =>
-    handleBatchImageGeneration(
-      "fullImages",
-      "Full images generated successfully!"
-    );
+    handleBatchImageGeneration("Images generated successfully!");
   const handlePartialImageGeneration = () =>
-    handleBatchImageGeneration(
-      "partialImages",
-      "Partial images generated successfully!"
-    );
+    handleBatchImageGeneration("Images generated successfully!");
   const handleGenerateAIImages = () =>
-    handleBatchImageGeneration(
-      "generateAIImages",
-      "AI images generated successfully!"
-    );
+    handleBatchImageGeneration("Images generated successfully!");
 
   return {
     loading,
@@ -457,5 +474,6 @@ export const useBulkUpload = () => {
     handleGenerateImages,
     handlePartialImageGeneration,
     handleGenerateAIImages,
+    BATCH_SIZE,
   };
 };

@@ -25,12 +25,74 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Log component to display detailed logs
+const LogDisplay = ({ logs }: { logs: string[] }) => {
+  const logEndRef = React.useRef<HTMLDivElement>(null);
+  
+  // Auto-scroll to bottom when logs update
+  React.useEffect(() => {
+    if (logEndRef.current) {
+      logEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [logs]);
+  
+  if (logs.length === 0) return null;
+  
+  return (
+    <div className="mt-4 mb-6 border border-gray-200 rounded-md">
+      <div className="bg-gray-100 p-2 border-b border-gray-200 flex justify-between items-center">
+        <h3 className="font-medium">Image Generation Logs</h3>
+      </div>
+      <div className="p-3 max-h-64 overflow-y-auto bg-black text-green-400 font-mono text-sm">
+        {logs.map((log, i) => (
+          <div key={i} className="pb-1">{log}</div>
+        ))}
+        <div ref={logEndRef} />
+      </div>
+    </div>
+  );
+};
+
 const BulkUploadPage = () => {
   const router = useRouter();
   const { userData } = useAuthStore();
   const { items: menuItems, fetchMenu } = useMenuStore();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeletingMenu, setIsDeletingMenu] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
+  
+  // Function to capture console logs
+  const addLog = (message: string) => {
+    setLogs(prevLogs => [...prevLogs, `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
+
+  // Override console.log for our component
+  useEffect(() => {
+    const originalLog = console.log;
+    const originalError = console.error;
+    
+    console.log = (...args) => {
+      originalLog(...args);
+      const message = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+      ).join(' ');
+      addLog(message);
+    };
+    
+    console.error = (...args) => {
+      originalError(...args);
+      const message = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+      ).join(' ');
+      addLog(`ERROR: ${message}`);
+    };
+    
+    return () => {
+      console.log = originalLog;
+      console.error = originalError;
+    };
+  }, []);
+
   const {
     loading,
     jsonInput,
@@ -57,14 +119,25 @@ const BulkUploadPage = () => {
     handleGenerateImages,
     handlePartialImageGeneration,
     handleGenerateAIImages,
+    BATCH_SIZE,
   } = useBulkUpload();
 
   const isAIGenerateEnabled = Array.isArray(bulkMenuItems) && bulkMenuItems.length > 0 && 'image_prompt' in bulkMenuItems[0];
 
   useEffect(() => {
-    // console.log("Menu Items:", bulkMenuItems);
-    
-  },[bulkMenuItems]);
+    // Clear logs when component mounts
+    setLogs([]);
+  }, []);
+
+  const handleGenerateImagesWithLogs = async () => {
+    setLogs([]); // Clear previous logs
+    addLog(`Starting image generation process for ${bulkMenuItems.length} items...`);
+    addLog(`Processing each dish individually to display images immediately`);
+    addLog(`Using proxy API to avoid CORS issues`);
+    addLog(`API format for each item: /api/image-proxy?dish=itemName`);
+    addLog('-'.repeat(50));
+    await handleGenerateImages();
+  };
 
   const handleDeleteAllMenu = async () => {
     if (!userData?.id) {
@@ -141,6 +214,9 @@ const BulkUploadPage = () => {
           </Button>
         </div>
 
+        {/* Display logs if available */}
+        <LogDisplay logs={logs} />
+
         <div className="space-y-4">
           <KimiAiLink />
           <Textarea
@@ -205,23 +281,30 @@ const BulkUploadPage = () => {
         {bulkMenuItems.length > 0 && (
           <div className="flex flex-wrap gap-2 py-4">
             <Button
-              onClick={handleGenerateImages}
+              onClick={handleGenerateImagesWithLogs}
               className="bg-green-600 hover:bg-green-700 text-white h-12 text-sm sm:text-base flex-1"
               disabled={loading}
             >
-              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Full Images"}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> 
+                  Loading Images...
+                </>
+              ) : "Generate Images One by One"}
             </Button>
             <Button
               onClick={handlePartialImageGeneration}
               className="bg-yellow-600 hover:bg-yellow-700 text-white h-12 text-sm sm:text-base flex-1"
               disabled={loading}
+              style={{ display: 'none' }}
             >
-              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Partial Images"}
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Images (Alt)"}
             </Button>
             <Button
               onClick={handleGenerateAIImages}
               className="bg-purple-600 hover:bg-purple-700 text-white h-12 text-sm sm:text-base flex-1"
               disabled={loading || !isAIGenerateEnabled}
+              style={{ display: 'none' }}
             >
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate AI Images"}
             </Button>
