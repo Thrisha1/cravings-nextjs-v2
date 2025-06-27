@@ -75,6 +75,8 @@ interface SuperAdminPartnerState {
   uploadMenu: (partnerId: string) => Promise<number>;
 
   clearAll: () => void;
+  isMenuUploaded: boolean;
+  setIsMenuUploaded: (status: boolean) => void;
 }
 
 export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
@@ -90,6 +92,9 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
       isGeneratingImages: false,
       generationError: null,
       generatedImages: {},
+      isMenuUploaded: false,
+      
+      setIsMenuUploaded: (status: boolean) => set({ isMenuUploaded: status }),
 
       clearAll: () => {
         set({

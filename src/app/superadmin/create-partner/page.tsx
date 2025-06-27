@@ -30,7 +30,9 @@ export default function SuperAdminCreatePartnerPage() {
     isGeneratingImages,
     generateMenuImages,
     generatedImages,
-    clearAll
+    clearAll,
+    isMenuUploaded,
+    setIsMenuUploaded
   } = useSuperAdminPartnerStore();
 
   const [formData, setFormData] = useState({
@@ -164,6 +166,7 @@ export default function SuperAdminCreatePartnerPage() {
       const uploadedCount = await useSuperAdminPartnerStore.getState().uploadMenu(partner.id);
       if (uploadedCount > 0) {
         toast.success(`${uploadedCount} menu items uploaded successfully!`);
+        setIsMenuUploaded(true);
         // router.push(`/superadmin/partners/${partner.id}`);
       } else {
         toast.error("No menu items were uploaded. Please try again.");
@@ -296,7 +299,11 @@ export default function SuperAdminCreatePartnerPage() {
           <div className="space-y-6">
 
           <div className="flex justify-between items-center pt-4">
-            <Button className="bg-orange-600" onClick={handleUploadMenu}>Upload Menu</Button>
+            <Button className={
+              ` ${isMenuUploaded ? "cursor-not-allowed bg-green-500" : "bg-orange-600 hover:bg-orange-700"}`
+            } onClick={isMenuUploaded ? ()=>{} : handleUploadMenu}>
+              {isMenuUploaded ? "Menu Uploaded" : "Upload Menu"}
+            </Button>
             <Button variant="outline" onClick={handleCreateAnother}>Create Another Partner</Button>
           </div>
             
