@@ -325,10 +325,11 @@ export default function SuperAdminCreatePartnerPage() {
                 <h4 className="font-bold text-lg">Extracted Menu Items</h4>
                 {extractedMenuItems.length > 0 && (
                   <Button
+                    
                     variant="outline"
                     size="sm"
                     onClick={handleRegenerateAllImages}
-                    disabled={isGeneratingImages}
+                    disabled={isGeneratingImages || isMenuUploaded}
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Regenerate All Images
