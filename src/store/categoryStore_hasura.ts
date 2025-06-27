@@ -29,7 +29,7 @@ export const formatStorageName = (name: string): string => {
 interface CategoryState {
   categories: Category[];
   fetchCategories: (addedBy: string) => Promise<Category[] | void>;
-  addCategory: (cat: string) => Promise<Category | void>;
+  addCategory: (cat: string , userId?: string | null) => Promise<Category | void>;
   updateCategory: (cat: Category) => Promise<void>;
 }
 
@@ -67,7 +67,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
     }
   },
 
-  addCategory: async (cat) => {
+  addCategory: async (cat , userId) => {
     try {
       if (!cat) throw new Error("Category name is required");
 
@@ -79,7 +79,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         name: cat,
         name_with_space: formattedName.replace(/_/g, " "),
         name_with_underscore: formattedName.replace(/ /g, "_"),
-        partner_id: userData?.id,
+        partner_id: userId || userData?.id,
       }).then((res) => res.category);
 
       const existingCategory = existingCategories[0];
@@ -104,7 +104,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         const addedCat = await fetchFromHasura(addCategory, {
           category: {
             name: formattedName,
-            partner_id: userData?.id,
+            partner_id: userId || userData?.id,
           },
         }).then((res) => res.insert_category.returning[0]);
 

@@ -1,6 +1,5 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -9,30 +8,31 @@ import { useLocationStore } from "@/store/locationStore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { KimiAiLink } from "@/components/ui/KimiAiLink";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Loader2 } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-
-// Import superadmin-specific stores and hooks
-import { useSuperAdminBulkUpload } from "@/hooks/useSuperAdminBulkUpload";
+import { ChevronLeft, Loader2, UploadCloud, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { useSuperAdminPartnerStore } from "@/store/superAdminPartnerStore";
-import { Textarea } from "@/components/ui/textarea";
-import { MenuItemCard } from "@/components/bulkMenuUpload/MenuItemCard";
-import { EditItemModal } from "@/components/bulkMenuUpload/EditItemModal";
 import { useCreatedPartnerStore } from "@/store/createdPartnerStore";
-
-// Import banner upload dependencies
-import { fetchFromHasura } from "@/lib/hasuraClient";
-import { updatePartnerBannerMutation } from "@/api/auth";
-import { processImage } from "@/lib/processImage";
-import { uploadFileToS3 } from "@/app/actions/aws-s3";
 
 export default function SuperAdminCreatePartnerPage() {
   const router = useRouter();
-  const { createPartner } = useSuperAdminPartnerStore();
   const { locationData, countries } = useLocationStore();
+  const { partner, setPartner, clearPartner } = useCreatedPartnerStore();
+  const {
+    createPartner,
+    uploadBanner,
+    isExtractingMenu,
+    extractionError,
+    extractedMenuItems,
+    extractMenuFromImages,
+    retryMenuExtraction,
+    clearExtractedMenu,
+    isGeneratingImages,
+    generateMenuImages,
+    generatedImages,
+    clearAll
+  } = useSuperAdminPartnerStore();
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -44,26 +44,55 @@ export default function SuperAdminCreatePartnerPage() {
     state: "",
     country: "India",
   });
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showBulkMenu, setShowBulkMenu] = useState(false);
-  const [showBanner, setShowBanner] = useState(false);
 
-  // Use the new created partner store
-  const { partner, setPartner, clearPartner } = useCreatedPartnerStore();
-
-  // Superadmin bulk menu upload logic
-  const bulkUpload = useSuperAdminBulkUpload();
-
-  // Banner upload state
-  const [bannerImage, setBannerImage] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
-  const [isBannerUploading, setBannerUploading] = useState(false);
+  const [menuImagePreviews, setMenuImagePreviews] = useState<string[]>([]);
+  const [menuImageFiles, setMenuImageFiles] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [partnerBanner, setPartnerBanner] = useState<string | null>(null);
+
+  const handleCreateAnother = () => {
+    clearPartner();
+    clearAll();
+    clearExtractedMenu();
+    setFormData({
+      email: "", password: "", hotelName: "", area: "", phone: "",
+      upiId: "", isInIndia: true, state: "", country: "India",
+    });
+    setBannerPreview(null);
+    setBannerFile(null);
+    setMenuImagePreviews([]);
+    setMenuImageFiles([]);
+    setError(null);
+    setIsSubmitting(false);
+  };
+
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBannerFile(file);
+    setBannerPreview(URL.createObjectURL(file));
+  };
+
+  const handleMenuImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setMenuImageFiles(filesArray);
+      const previews = filesArray.map(file => URL.createObjectURL(file));
+      setMenuImagePreviews(previews);
+    }
+  };
 
   const validateForm = () => {
-    if (!formData.hotelName || !formData.phone || !formData.country || (formData.country === "India" && (!formData.state || !formData.area))) {
-      setError("Please fill in all required fields");
-      setIsSubmitting(false);
+    if (!formData.hotelName || !formData.phone || !formData.country || 
+        (formData.isInIndia && (!formData.state || !formData.area))) {
+      setError("Please fill in all required business and location fields.");
+      return false;
+    }
+    if (!formData.email || !formData.password || formData.password.length < 6) {
+      setError("A valid email and password (min 6 chars) are required.");
       return false;
     }
     return true;
@@ -71,9 +100,11 @@ export default function SuperAdminCreatePartnerPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     setIsSubmitting(true);
     setError(null);
-    if (!validateForm()) return;
+
     try {
       const newPartner = await createPartner(
         formData.email,
@@ -88,418 +119,290 @@ export default function SuperAdminCreatePartnerPage() {
       );
       setPartner(newPartner);
       toast.success("Partner created successfully!");
-    } catch (error: any) {
-      setError(error?.message || "An unexpected error occurred");
+
+      if (bannerFile && bannerPreview) {
+        const banner = await uploadBanner(newPartner.id, bannerFile, bannerPreview);
+        if (banner) {
+          setPartnerBanner(banner);
+        }
+      }
+
+      if (menuImageFiles.length > 0) {
+        const menuItems = await extractMenuFromImages(menuImageFiles);
+        if (menuItems.length > 0) {
+          await generateMenuImages(menuItems);
+        }
+      }
+    } catch (err: any) {
+      console.error("Submission error:", err);
+      setError(err?.message || "An unexpected error occurred.");
+      if (!partner) setIsSubmitting(false);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Banner upload logic
-  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || !files[0]) return;
-    const file = files[0];
-    setBannerFile(file);
-    setBannerImage(URL.createObjectURL(file));
+  const handleRegenerateAllImages = async () => {
+    if (extractedMenuItems.length > 0) {
+      await generateMenuImages(extractedMenuItems);
+    }
   };
 
-  const handleBannerUpload = async () => {
-    if (!partner || !bannerFile) {
-      toast.error("Please select a banner image first");
-      return;
+  const handleRegenerateSingleImage = async (itemName: string) => {
+    const item = extractedMenuItems.find(i => i.name === itemName);
+    if (item) {
+      await generateMenuImages([item]);
     }
+  };
 
-    setBannerUploading(true);
-    try {
-      // Process the image
-      const processedImage = await processImage(
-        bannerImage!,
-        "local"
-      );
-
-      // Upload to S3
-      const s3Url = await uploadFileToS3(
-        processedImage,
-        `${partner.id}/banner/banner_${Date.now()}.webp`
-      );
-
-      // Update partner's store_banner in database
-      const response = await fetchFromHasura(updatePartnerBannerMutation, {
-        id: partner.id,
-        store_banner: s3Url,
-      });
-
-      if (response?.update_partners_by_pk) {
-        // Update the partner object in store with new banner URL
-        setPartner({
-          ...partner,
-          store_banner: s3Url,
-        });
-        toast.success("Banner uploaded successfully!");
-      } else {
-        throw new Error("Failed to update partner banner in database");
+  const handleUploadMenu = async () => {
+    try{
+      if (!partner) {
+        toast.error("Please create a partner first.");
+        return;
       }
-    } catch (error) {
-      console.error("Banner upload error:", error);
-      toast.error("Failed to upload banner");
-    } finally {
-      setBannerUploading(false);
-    }
-  };
+      const uploadedCount = await useSuperAdminPartnerStore.getState().uploadMenu(partner.id);
+      if (uploadedCount > 0) {
+        toast.success(`${uploadedCount} menu items uploaded successfully!`);
+        // router.push(`/superadmin/partners/${partner.id}`);
+      } else {
+        toast.error("No menu items were uploaded. Please try again.");
+      }
 
-  // Check if AI generate is enabled
-  const isAIGenerateEnabled = Array.isArray(bulkUpload.menuItems) && bulkUpload.menuItems.length > 0 && 'image_prompt' in bulkUpload.menuItems[0];
+    }catch(error) {
+      console.error(error);
+    }
+  }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-orange-50 py-8 px-2">
-      <div className="w-full max-w-7xl bg-white rounded-lg shadow p-6">
-        <div className="mb-4">
+    <div className="min-h-screen flex flex-col items-center py-8 px-4">
+      <div className="w-full max-w-4xl bg-white p-8">
+        <div className="mb-6">
           <Link href="/superadmin" className="inline-flex items-center gap-2 px-4 py-2 rounded border border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100 transition font-medium">
             <ChevronLeft size={20} />
             Back to Dashboard
           </Link>
         </div>
-        <h2 className="text-2xl font-bold mb-6 text-center">Create Partner (Superadmin)</h2>
+        
         {!partner ? (
-          <ScrollArea>
+          <>
+            <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Create New Partner</h2>
             <form className="space-y-6" onSubmit={handleSubmit}>
-              {/* Business Name */}
-              <div className="space-y-2">
-                <Label htmlFor="hotelName" className="text-sm font-medium text-gray-700">Business Name</Label>
-                <Input
-                  id="hotelName"
-                  placeholder="Enter your business name"
-                  value={formData.hotelName}
-                  onChange={(e) => setFormData({ ...formData, hotelName: e.target.value })}
-                  className="w-full"
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="hotelName">Business Name</Label>
+                  <Input id="hotelName" placeholder="e.g., The Grand Cafe" value={formData.hotelName} onChange={(e) => setFormData({ ...formData, hotelName: e.target.value })} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input id="phone" type="tel" placeholder="Enter phone number" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Login Email</Label>
+                  <Input id="email" type="email" placeholder="Enter partner's email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input id="password" type="password" placeholder="Min 6 characters" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required minLength={6} />
+                </div>
               </div>
 
-              {/* Phone Number */}
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Phone Number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="Enter your phone number"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full"
-                  required
-                />
-              </div>
-
-              {/* Location Toggle and Selectors */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between space-x-2 mb-4">
-                  <Label htmlFor="location-type" className="text-sm text-gray-600">Is your business located in India?</Label>
-                  <Switch
-                    id="location-type"
-                    checked={formData.isInIndia}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isInIndia: checked, state: '', area: '', country: checked ? 'India' : '' })}
-                    className="data-[state=checked]:bg-orange-600"
-                  />
+              <div className="space-y-4 rounded-md border p-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="location-type" className="text-sm">Is business in India?</Label>
+                  <Switch id="location-type" checked={formData.isInIndia} onCheckedChange={(c) => setFormData({ ...formData, isInIndia: c, state: '', area: '', country: c ? 'India' : '' })} />
                 </div>
                 {formData.isInIndia ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="state" className="text-sm font-medium text-gray-700">State</Label>
-                      <Select
-                        value={formData.state}
-                        onValueChange={(value) => setFormData({ ...formData, state: value, area: '' })}
-                      >
-                        <SelectTrigger id="state" className="w-full">
-                          <SelectValue placeholder="Select your state" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {locationData.map((stateData) => (
-                            <SelectItem key={stateData.state} value={stateData.state}>
-                              {stateData.state}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="area" className="text-sm font-medium text-gray-700">District</Label>
-                      <Select
-                        value={formData.area}
-                        onValueChange={(value) => setFormData({ ...formData, area: value })}
-                        disabled={!formData.state}
-                      >
-                        <SelectTrigger id="area" className="w-full">
-                          <SelectValue placeholder="Select your district" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {formData.state &&
-                            locationData.find((state) => state.state === formData.state)?.districts.map((district) => (
-                              <SelectItem key={district} value={district}>
-                                {district}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </>
-                ) : (
-                  <div className="space-y-2">
-                    <Label htmlFor="country" className="text-sm font-medium text-gray-700">Country</Label>
-                    <Select
-                      value={formData.country}
-                      onValueChange={(value) => setFormData({ ...formData, country: value })}
-                    >
-                      <SelectTrigger id="country" className="w-full">
-                        <SelectValue placeholder="Select your country" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {countries.map((country) => (
-                          <SelectItem key={country} value={country}>
-                            {country}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Select value={formData.state} onValueChange={(v) => setFormData({ ...formData, state: v, area: '' })}>
+                      <SelectTrigger><SelectValue placeholder="Select State" /></SelectTrigger>
+                      <SelectContent>{locationData.map((s) => (<SelectItem key={s.state} value={s.state}>{s.state}</SelectItem>))}</SelectContent>
+                    </Select>
+                    <Select value={formData.area} onValueChange={(v) => setFormData({ ...formData, area: v })} disabled={!formData.state}>
+                      <SelectTrigger><SelectValue placeholder="Select District" /></SelectTrigger>
+                      <SelectContent>{formData.state && locationData.find((s) => s.state === formData.state)?.districts.map((d) => (<SelectItem key={d} value={d}>{d}</SelectItem>))}</SelectContent>
                     </Select>
                   </div>
+                ) : (
+                  <Select value={formData.country} onValueChange={(v) => setFormData({ ...formData, country: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select Country" /></SelectTrigger>
+                    <SelectContent>{countries.map((c) => (<SelectItem key={c} value={c}>{c}</SelectItem>))}</SelectContent>
+                  </Select>
                 )}
               </div>
-
-              {/* Email */}
-              <div className="space-y-2 text-gray-700">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full"
-                  required
-                />
-              </div>
-
-              {/* Password */}
-              <div className="space-y-2 text-gray-700">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full"
-                  required
-                  minLength={6}
-                />
-              </div>
-
-              {error && <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4">{error}</div>}
-              <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white flex items-center justify-center gap-2" disabled={isSubmitting}>{isSubmitting ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-800"></div> : "Create Partner"}</Button>
-            </form>
-          </ScrollArea>
-        ) : (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h3 className="text-xl font-bold mb-2">Partner Created:</h3>
-              <div className="text-lg font-semibold text-orange-700">{partner?.store_name || partner?.name}</div>
-              <div className="mt-2 text-gray-700">
-                <div><b>Email:</b> {partner?.email}</div>
-                <div><b>Phone:</b> {partner?.phone}</div>
-                {/* <div><b>UPI ID:</b> {partner?.upi_id}</div> */}
-                <div><b>District:</b> {partner?.district}</div>
-                <div><b>Country:</b> {partner?.country}</div>
-                <div><b>Status:</b> {partner?.status}</div>
-                {partner?.store_banner && (
-                  <div className="mt-2">
-                    <b>Banner:</b> 
-                    <img 
-                      src={partner.store_banner} 
-                      alt="Partner Banner" 
-                      className="w-full h-24 object-cover rounded mt-1"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-4 justify-center">
-              <Button className="flex-1 h-12 text-base" onClick={() => {
-                setShowBulkMenu(v => !v);
-                setShowBanner(false);
-              }}>{showBulkMenu ? "Close Bulk Menu Upload" : "Add Bulk Menu"}</Button>
-              <Button className="flex-1 h-12 text-base" onClick={() => {
-                setShowBanner(v => !v);
-                setShowBulkMenu(false);
-              }}>{showBanner ? "Close Banner Upload" : "Add Banner"}</Button>
-            </div>
-            {(!showBulkMenu && !showBanner) && <div className="text-center text-gray-500 text-sm">Select an action above</div>}
-            {showBulkMenu && (
-              <div className="mt-6 border rounded-lg p-6 bg-orange-50">
-                {/* Bulk Menu Upload Panel with all features */}
-                <div className="mb-6 font-semibold text-xl">Bulk Menu Upload</div>
-                
-                {/* JSON Input Section */}
-                <div className="mb-6">
-                <KimiAiLink />
-                  <Label className="text-sm font-medium text-gray-700 mb-2 block">JSON Input</Label>
-                  <Textarea
-                    placeholder="Paste your JSON here..."
-                    value={bulkUpload.jsonInput}
-                    onChange={e => bulkUpload.setJsonInput(e.target.value)}
-                    className="min-h-[200px] text-base p-4 w-full"
-                  />
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-2 mb-6">
-                  <Button
-                    className="text-[13px] w-full h-12"
-                    onClick={bulkUpload.handleJsonSubmit}
-                    disabled={!bulkUpload.jsonInput.trim()}
-                  >
-                    {bulkUpload.menuItems.length > 0 ? "Update JSON" : "Convert JSON"}
-                  </Button>
-
-                  {bulkUpload.menuItems.length > 0 && (
-                    <>
-                      <Button
-                        className="text-[13px] w-full h-12"
-                        variant="destructive"
-                        onClick={bulkUpload.handleClear}
-                      >
-                        Clear All
-                      </Button>
-
-                      <Button
-                        className="text-[13px] w-full h-12"
-                        onClick={() => bulkUpload.handleUploadSelected(partner?.id)}
-                        disabled={bulkUpload.isBulkUploading}
-                      >
-                        {bulkUpload.isBulkUploading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Uploading...
-                          </>
-                        ) : (
-                          "Upload Selected"
-                        )}
-                      </Button>
-                    </>
-                  )}
-                </div>
-
-                {/* Select All Checkbox */}
-                {bulkUpload.menuItems.length > 0 && (
-                  <div className="mb-4 flex items-center">
-                    <Checkbox
-                      checked={bulkUpload.selectAll}
-                      onCheckedChange={bulkUpload.handleSelectAll}
-                      id="selectAll"
-                      className="h-5 w-5"
-                    />
-                    <label htmlFor="selectAll" className="ml-2 text-base">
-                      Select All
-                    </label>
-                  </div>
-                )}
-
-                {/* Image Generation Buttons */}
-                {bulkUpload.menuItems.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    <Button
-                      onClick={bulkUpload.handleGenerateImages}
-                      className="bg-green-600 hover:bg-green-700 text-white h-12 text-sm sm:text-base flex-1"
-                      disabled={bulkUpload.loading}
-                    >
-                      {bulkUpload.loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Full Images"}
-                    </Button>
-                    <Button
-                      onClick={bulkUpload.handlePartialImageGeneration}
-                      className="bg-yellow-600 hover:bg-yellow-700 text-white h-12 text-sm sm:text-base flex-1"
-                      disabled={bulkUpload.loading}
-                    >
-                      {bulkUpload.loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Partial Images"}
-                    </Button>
-                    <Button
-                      onClick={bulkUpload.handleGenerateAIImages}
-                      className="bg-purple-600 hover:bg-purple-700 text-white h-12 text-sm sm:text-base flex-1"
-                      disabled={bulkUpload.loading || !isAIGenerateEnabled}
-                    >
-                      {bulkUpload.loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate AI Images"}
-                    </Button>
-                  </div>
-                )}
-
-                {/* Menu Items Grid */}
-                {bulkUpload.menuItems.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                    {bulkUpload.menuItems.map((item, idx) => (
-                      <MenuItemCard
-                        key={idx}
-                        item={item}
-                        index={idx}
-                        isUploading={bulkUpload.isUploading[idx]}
-                        onSelect={() => bulkUpload.handleSelectItem(idx)}
-                        onAddToMenu={() => bulkUpload.handleAddToMenu(item, idx, partner?.id)}
-                        onEdit={() => bulkUpload.handleEdit(idx, item)}
-                        onDelete={() => bulkUpload.handleDelete(idx)}
-                        onImageClick={(index, url) => bulkUpload.handleImageClick(index, url)}
-                        onCategoryChange={(category) => bulkUpload.handleCategoryChange(idx, { name: category, priority: 0, id: item.category.id })}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* Empty State */}
-                {bulkUpload.menuItems.length === 0 && (
-                  <div className="h-[300px] bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
-                    Convert JSON to see menu items here
-                  </div>
-                )}
-
-                {/* Edit Modal */}
-                {bulkUpload.isEditModalOpen && bulkUpload.editingItem && (
-                  <div className="w-full max-w-2xl mx-auto">
-                    <EditItemModal
-                      isOpen={bulkUpload.isEditModalOpen}
-                      onOpenChange={bulkUpload.setIsEditModalOpen}
-                      editingItem={bulkUpload.editingItem}
-                      onSave={bulkUpload.handleSaveEdit}
-                      onEdit={(field, value) => bulkUpload.setEditingItem(
-                        bulkUpload.editingItem
-                          ? { ...bulkUpload.editingItem, item: { ...bulkUpload.editingItem.item, [field]: value } }
-                          : null
-                      )}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-            {showBanner && (
-              <div className="mt-6 border rounded-lg p-4 bg-orange-50">
-                <div className="mb-4 font-semibold text-lg">Upload Banner</div>
-                <div className="flex flex-col items-center gap-4">
-                  <label htmlFor="bannerInput" className="w-full cursor-pointer">
-                    <div className="h-48 w-full bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-                      {bannerImage ? (
-                        <img src={bannerImage} alt="Banner Preview" className="object-cover w-full h-48" />
-                      ) : (
-                        <span className="text-gray-500">Click to select banner image</span>
-                      )}
-                    </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                <div>
+                  <Label className="mb-2 block">Store Banner (Optional)</Label>
+                  <label htmlFor="bannerInput" className="w-full cursor-pointer border-2 border-dashed rounded-lg h-40 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100">
+                    {bannerPreview ? (
+                      <img src={bannerPreview} alt="Banner Preview" className="object-cover w-full h-full rounded-lg"/>
+                    ) : (
+                      <div className="text-center text-gray-500">
+                        <UploadCloud className="mx-auto h-8 w-8" />
+                        <span>Click to upload banner</span>
+                      </div>
+                    )}
                     <input type="file" id="bannerInput" accept="image/*" onChange={handleBannerChange} className="hidden" />
                   </label>
-                  <Button onClick={handleBannerUpload} disabled={isBannerUploading || !bannerImage} className="w-full">{isBannerUploading ? "Uploading..." : "Upload Banner"}</Button>
+                </div>
+                <div>
+                  <Label className="mb-2 block">Menu Images (for AI)</Label>
+                  <label htmlFor="menuImagesInput" className="w-full cursor-pointer border-2 border-dashed rounded-lg h-40 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100">
+                    {menuImagePreviews.length > 0 ? (
+                      <div className="flex items-center gap-2 p-2">
+                        <ImageIcon className="h-8 w-8 text-green-600" />
+                        <span className="font-semibold text-gray-700">{menuImagePreviews.length} menu images selected</span>
+                      </div>
+                    ) : (
+                      <div className="text-center text-gray-500">
+                        <UploadCloud className="mx-auto h-8 w-8" />
+                        <span>Upload menu pages</span>
+                      </div>
+                    )}
+                    <input type="file" id="menuImagesInput" accept="image/*" multiple onChange={handleMenuImagesChange} className="hidden" />
+                  </label>
                 </div>
               </div>
-            )}
-            <div className="flex justify-center mt-6">
-              <Button variant="outline" onClick={clearPartner}>Create Another Partner</Button>
-            </div>
+
+              {extractionError && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
+                  <div className="flex justify-between items-center">
+                    <p className="text-red-700">{extractionError}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => retryMenuExtraction()}
+                      disabled={isExtractingMenu}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Retry Extraction
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {error && <div className="bg-red-50 text-red-600 p-3 rounded-md text-center">{error}</div>}
+              <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white h-12 text-lg flex items-center justify-center gap-2" disabled={isSubmitting || isExtractingMenu || isGeneratingImages}>
+                {isSubmitting ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  "Create Partner & Process Menu"
+                )}
+              </Button>
+            </form>
+          </>
+        ) : (
+          <div className="space-y-6">
+
+          <div className="flex justify-between items-center pt-4">
+            <Button className="bg-orange-600" onClick={handleUploadMenu}>Upload Menu</Button>
+            <Button variant="outline" onClick={handleCreateAnother}>Create Another Partner</Button>
           </div>
+            
+            <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+              <h3 className="text-xl font-bold text-green-800">Partner Created: {partner.store_name}</h3>
+              <p className="text-gray-600">{partner.email} | {partner.phone}</p>
+              <a target="_blank" href={`https://www.cravings.live/hotels/${partner?.store_name || partner?.name}/${partner?.id}`}>Link</a>
+            </div>
+
+            {partnerBanner && (
+              <div>
+                <h4 className="font-bold text-lg mb-2">Partner Banner</h4>
+                <img src={partnerBanner} alt="Partner Banner" className="w-full h-32 object-cover rounded-md border" />
+              </div>
+            )}
+            
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-bold text-lg">Extracted Menu Items</h4>
+                {extractedMenuItems.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRegenerateAllImages}
+                    disabled={isGeneratingImages}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Regenerate All Images
+                  </Button>
+                )}
+              </div>
+              
+              {(isExtractingMenu || isGeneratingImages) && (
+                <div className="flex items-center gap-3 text-orange-600 font-medium p-3 bg-orange-50 rounded-md">
+                  <Loader2 className="animate-spin"/>
+                  {isExtractingMenu ? "AI is analyzing your menu images..." : "Generating images for each item..."}
+                </div>
+              )}
+              
+              {extractionError && (
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
+                  <div className="flex justify-between items-center">
+                    <p className="text-red-700">{extractionError}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => retryMenuExtraction()}
+                      disabled={isExtractingMenu}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Retry Extraction
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {extractedMenuItems.length > 0 && (
+                <ScrollArea className=" mt-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-1">
+                    {extractedMenuItems.map((item) => (
+                      <div key={item.name} className="border rounded-lg p-3 shadow-sm bg-white">
+                        <div className="w-full h-32 bg-gray-200 rounded-md flex items-center justify-center mb-2 relative">
+                          {generatedImages[item.name] ? (
+                            <>
+                              <img src={generatedImages[item.name]} alt={item.name} className="w-full h-full object-cover rounded-md"/>
+                              {/* <button 
+                                onClick={() => handleRegenerateSingleImage(item.name)}
+                                className="absolute top-1 right-1 p-1 bg-white rounded-full shadow hover:bg-gray-100"
+                                disabled={isGeneratingImages}
+                              >
+                                <RefreshCw className="h-3 w-3" />
+                              </button> */}
+                            </>
+                          ) : (
+                            <div className="flex flex-col items-center text-gray-500 text-xs">
+                              <Loader2 className="h-5 w-5 animate-spin mb-1"/>
+                              <span>Generating image...</span>
+                            </div>
+                          )}
+                        </div>
+                        <h5 className="font-bold truncate">{item.name}</h5>
+                        <p className="text-sm font-medium">₹{item.price.toFixed(2)}</p>
+                        <p className="text-sm text-gray-500">{item.category}</p>
+                        <p className="text-sm text-gray-500">{item.description}</p>
+                        {
+                          (item?.variants ?? [])?.length > 0 ? (
+                            <div>
+                              <h6 className="font-semibold mt-2">Options:</h6>
+                              <ul className="list-disc list-inside text-sm text-gray-600">
+                                {(item?.variants ?? []).map((variant) => (
+                                  <li key={variant.name}>{variant.name} - ₹{variant.price.toFixed(2)}</li>
+                                ))}
+                              </ul> 
+                              </div>
+                          ) : null
+                        }
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+
+            </div>
         )}
       </div>
     </div>
   );
-} 
-
+}
