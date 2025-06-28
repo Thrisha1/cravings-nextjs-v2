@@ -125,19 +125,27 @@ export function ImageGridModal({
 
       if (response.data && Array.isArray(response.data) && response.data.length > 0) {
         const generatedItem = response.data[0];
-        if (generatedItem.image) {
-          // Add the generated image to the grid
+        
+        // Check if extra_images array is available in the response
+        if (generatedItem.extra_images && Array.isArray(generatedItem.extra_images) && generatedItem.extra_images.length > 0) {
+          // Add all images from extra_images array
+          generatedItem.extra_images.forEach((imageUrl: string) => {
+            addNewImage(imageUrl);
+          });
+          toast.success("Images generated successfully!");
+        } else if (generatedItem.image) {
+          // Fallback to single image for backward compatibility
           addNewImage(generatedItem.image);
           toast.success("Image generated successfully!");
         } else {
-          toast.error("No image was generated");
+          toast.error("No images were generated");
         }
       } else {
         throw new Error("Invalid response from server");
       }
     } catch (error) {
       console.error("Error generating image:", error);
-      toast.error("Failed to generate image. Please try again.");
+      toast.error("Failed to generate images. Please try again.");
     } finally {
       setIsGenerating(false);
     }
