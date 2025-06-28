@@ -5,7 +5,6 @@ import {
   partnerQuery,
   updatePartnerBannerMutation,
 } from "@/api/auth";
-import { DeliveryRules } from "./orderStore";
 import { toast } from "sonner";
 import { processImage } from "@/lib/processImage";
 import { uploadFileToS3 } from "@/app/actions/aws-s3";
@@ -74,6 +73,10 @@ interface SuperAdminPartnerState {
   // Menu upload
   uploadMenu: (partnerId: string) => Promise<number>;
 
+  // Menu Item Management (NEW)
+  updateMenuItem: (index: number, updatedItem: MenuItem) => void;
+  deleteMenuItem: (index: number) => void;
+
   clearAll: () => void;
   isMenuUploaded: boolean;
   setIsMenuUploaded: (status: boolean) => void;
@@ -93,7 +96,7 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
       generationError: null,
       generatedImages: {},
       isMenuUploaded: false,
-      
+
       setIsMenuUploaded: (status: boolean) => set({ isMenuUploaded: status }),
 
       clearAll: () => {
@@ -107,6 +110,7 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
           isGeneratingImages: false,
           generationError: null,
           generatedImages: {},
+          isMenuUploaded: false,
         });
       },
 
@@ -412,17 +416,15 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
         set({ isGeneratingImages: true, generationError: null });
         try {
           toast.info("Generating images for menu items...");
-          
-          // Process items in batches of 2
+
           const batchSize = 2;
           const batches = [];
           for (let i = 0; i < menuItems.length; i += batchSize) {
             batches.push(menuItems.slice(i, i + batchSize));
           }
-      
+
           const imageRecord: Record<string, string> = {};
-          
-          // Process each batch sequentially
+
           for (const batch of batches) {
             try {
               const response = await fetch(
@@ -433,36 +435,33 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
                   body: JSON.stringify(batch),
                 }
               );
-      
+
               if (!response.ok) {
                 throw new Error(
                   `Image generation failed with status ${response.status}`
                 );
               }
-      
+
               const batchImageData = await response.json();
-              
-              // Add batch results to the main record
+
               batchImageData.forEach((item: { name: string; image: string }) => {
                 imageRecord[item.name] = item.image;
               });
-      
-              // Small delay between batches if needed (optional)
+
               await new Promise(resolve => setTimeout(resolve, 500));
             } catch (batchError) {
               console.error(`Error processing batch:`, batchError);
-              // Continue with next batch even if one fails, or throw to stop completely
               throw batchError;
             }
           }
-      
+
           console.log("Generated image record:", imageRecord);
-      
-          set({
-            generatedImages: imageRecord,
+
+          set((state) => ({
+            generatedImages: { ...state.generatedImages, ...imageRecord },
             isGeneratingImages: false,
-          });
-      
+          }));
+
           toast.success("Menu item images generated!");
           return imageRecord;
         } catch (error) {
@@ -499,13 +498,40 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
         } catch (error) {
           console.error("Banner upload error:", error);
           toast.error("Failed to upload banner");
-          throw error;
           return null;
         }
       },
+      
+      // NEW FUNCTIONS FOR MENU ITEM MANAGEMENT
+      updateMenuItem: (index: number, updatedItem: MenuItem) => {
+        set((state) => {
+          const newItems = [...state.extractedMenuItems];
+          newItems[index] = updatedItem;
+          return { extractedMenuItems: newItems };
+        });
+        toast.success(`"${updatedItem.name}" has been updated.`);
+      },
+
+      deleteMenuItem: (index: number) => {
+        const itemToDelete = get().extractedMenuItems[index];
+        if (!itemToDelete) return;
+
+        set((state) => {
+          const newItems = state.extractedMenuItems.filter((_, i) => i !== index);
+          const newGeneratedImages = { ...state.generatedImages };
+          // Also remove the corresponding image from the generated images record
+          delete newGeneratedImages[itemToDelete.name];
+          
+          return { 
+            extractedMenuItems: newItems,
+            generatedImages: newGeneratedImages 
+          };
+        });
+        toast.success(`"${itemToDelete.name}" has been removed.`);
+      },
     }),
     {
-      name: "super-admin-partner-store",
+      name: "super-admin-partner-store", // Changed name to avoid conflicts with old structure
       storage: createJSONStorage(() => localStorage),
     }
   )

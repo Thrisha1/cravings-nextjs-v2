@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Loader2, UploadCloud, Image as ImageIcon, RefreshCw } from "lucide-react";
+import { ChevronLeft, Loader2, UploadCloud, Image as ImageIcon, RefreshCw, Trash2, Edit, Check, X } from "lucide-react";
 import { useSuperAdminPartnerStore } from "@/store/superAdminPartnerStore";
 import { useCreatedPartnerStore } from "@/store/createdPartnerStore";
 
@@ -32,7 +32,9 @@ export default function SuperAdminCreatePartnerPage() {
     generatedImages,
     clearAll,
     isMenuUploaded,
-    setIsMenuUploaded
+    setIsMenuUploaded,
+    updateMenuItem,
+    deleteMenuItem
   } = useSuperAdminPartnerStore();
 
   const [formData, setFormData] = useState({
@@ -54,6 +56,8 @@ export default function SuperAdminCreatePartnerPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [partnerBanner, setPartnerBanner] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [editedItem, setEditedItem] = useState<Partial<MenuItem>>({});
 
   const handleCreateAnother = () => {
     clearPartner();
@@ -69,6 +73,8 @@ export default function SuperAdminCreatePartnerPage() {
     setMenuImageFiles([]);
     setError(null);
     setIsSubmitting(false);
+    setEditingItem(null);
+    setEditedItem({});
   };
 
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,15 +156,8 @@ export default function SuperAdminCreatePartnerPage() {
     }
   };
 
-  const handleRegenerateSingleImage = async (itemName: string) => {
-    const item = extractedMenuItems.find(i => i.name === itemName);
-    if (item) {
-      await generateMenuImages([item]);
-    }
-  };
-
   const handleUploadMenu = async () => {
-    try{
+    try {
       if (!partner) {
         toast.error("Please create a partner first.");
         return;
@@ -167,15 +166,93 @@ export default function SuperAdminCreatePartnerPage() {
       if (uploadedCount > 0) {
         toast.success(`${uploadedCount} menu items uploaded successfully!`);
         setIsMenuUploaded(true);
-        // router.push(`/superadmin/partners/${partner.id}`);
       } else {
         toast.error("No menu items were uploaded. Please try again.");
       }
-
-    }catch(error) {
+    } catch (error) {
       console.error(error);
     }
   }
+
+  const startEditing = (item: MenuItem) => {
+    setEditingItem(item.name);
+    setEditedItem({
+      name: item.name,
+      price: item.price,
+      description: item.description,
+      category: item.category,
+      variants: [...(item.variants || [])],
+      // Preserve the existing image by default
+      image: generatedImages[item.name] || item.image
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingItem(null);
+    setEditedItem({});
+  };
+
+  const saveEditedItem = async () => {
+    if (!editingItem) return;
+    
+    try {
+      await updateMenuItem(editingItem, {
+        ...editedItem,
+        // Ensure we keep the existing image if no new one was generated
+        image: editedItem.image || generatedImages[editingItem]
+      });
+      setEditingItem(null);
+      setEditedItem({});
+      toast.success("Menu item updated successfully");
+    } catch (error) {
+      toast.error("Failed to update menu item");
+      console.error(error);
+    }
+  };
+
+  const handleDeleteItem = async (itemName: string) => {
+    try {
+      await deleteMenuItem(itemName);
+      toast.success("Menu item deleted successfully");
+    } catch (error) {
+      toast.error("Failed to delete menu item");
+      console.error(error);
+    }
+  };
+
+  const handleVariantChange = (index: number, field: 'name' | 'price', value: string | number) => {
+    if (!editedItem.variants) return;
+    
+    const newVariants = [...editedItem.variants];
+    newVariants[index] = {
+      ...newVariants[index],
+      [field]: field === 'price' ? Number(value) : value
+    };
+    
+    setEditedItem(prev => ({
+      ...prev,
+      variants: newVariants
+    }));
+  };
+
+  const addVariant = () => {
+    setEditedItem(prev => ({
+      ...prev,
+      variants: [...(prev.variants || []), { name: '', price: 0 }]
+    }));
+  };
+
+  const removeVariant = (index: number) => {
+    if (!editedItem.variants) return;
+    
+    const newVariants = [...editedItem.variants];
+    newVariants.splice(index, 1);
+    
+    setEditedItem(prev => ({
+      ...prev,
+      variants: newVariants.length > 0 ? newVariants : undefined
+    }));
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center py-8 px-4">
@@ -297,15 +374,14 @@ export default function SuperAdminCreatePartnerPage() {
           </>
         ) : (
           <div className="space-y-6">
-
-          <div className="flex justify-between items-center pt-4">
-            <Button className={
-              ` ${isMenuUploaded ? "cursor-not-allowed bg-green-500" : "bg-orange-600 hover:bg-orange-700"}`
-            } onClick={isMenuUploaded ? ()=>{} : handleUploadMenu}>
-              {isMenuUploaded ? "Menu Uploaded" : "Upload Menu"}
-            </Button>
-            <Button variant="outline" onClick={handleCreateAnother}>Create Another Partner</Button>
-          </div>
+            <div className="flex justify-between items-center pt-4">
+              <Button className={
+                ` ${isMenuUploaded ? "cursor-not-allowed bg-green-500" : "bg-orange-600 hover:bg-orange-700"}`
+              } onClick={isMenuUploaded ? ()=>{} : handleUploadMenu}>
+                {isMenuUploaded ? "Menu Uploaded" : "Upload Menu"}
+              </Button>
+              <Button variant="outline" onClick={handleCreateAnother}>Create Another Partner</Button>
+            </div>
             
             <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
               <h3 className="text-xl font-bold text-green-800">Partner Created: {partner.store_name}</h3>
@@ -325,7 +401,6 @@ export default function SuperAdminCreatePartnerPage() {
                 <h4 className="font-bold text-lg">Extracted Menu Items</h4>
                 {extractedMenuItems.length > 0 && (
                   <Button
-                    
                     variant="outline"
                     size="sm"
                     onClick={handleRegenerateAllImages}
@@ -362,53 +437,171 @@ export default function SuperAdminCreatePartnerPage() {
               )}
 
               {extractedMenuItems.length > 0 && (
-                <ScrollArea className=" mt-4">
+                <ScrollArea className="mt-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-1">
                     {extractedMenuItems.map((item) => (
-                      <div key={item.name} className="border rounded-lg p-3 shadow-sm bg-white">
-                        <div className="w-full h-32 bg-gray-200 rounded-md flex items-center justify-center mb-2 relative">
-                          {generatedImages[item.name] ? (
-                            <>
-                              <img src={generatedImages[item.name]} alt={item.name} className="w-full h-full object-cover rounded-md"/>
-                              {/* <button 
-                                onClick={() => handleRegenerateSingleImage(item.name)}
-                                className="absolute top-1 right-1 p-1 bg-white rounded-full shadow hover:bg-gray-100"
-                                disabled={isGeneratingImages}
-                              >
-                                <RefreshCw className="h-3 w-3" />
-                              </button> */}
-                            </>
-                          ) : (
-                            <div className="flex flex-col items-center text-gray-500 text-xs">
-                              <Loader2 className="h-5 w-5 animate-spin mb-1"/>
-                              <span>Generating image...</span>
+                      <div key={item.name} className="border rounded-lg p-3 shadow-sm bg-white relative">
+                        {editingItem === item.name ? (
+                          <div className="space-y-3">
+                            <div className="w-full h-32 bg-gray-200 rounded-md flex items-center justify-center mb-2">
+                              {generatedImages[item.name] || editedItem.image ? (
+                                <img 
+                                  src={generatedImages[item.name] || editedItem.image} 
+                                  alt={item.name} 
+                                  className="w-full h-full object-cover rounded-md"
+                                />
+                              ) : (
+                                <div className="flex flex-col items-center text-gray-500 text-xs">
+                                  <ImageIcon className="h-5 w-5 mb-1" />
+                                  <span>No image available</span>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <h5 className="font-bold truncate">{item.name}</h5>
-                        <p className="text-sm font-medium">₹{item.price.toFixed(2)}</p>
-                        <p className="text-sm text-gray-500">{item.category}</p>
-                        <p className="text-sm text-gray-500">{item.description}</p>
-                        {
-                          (item?.variants ?? [])?.length > 0 ? (
-                            <div>
-                              <h6 className="font-semibold mt-2">Options:</h6>
-                              <ul className="list-disc list-inside text-sm text-gray-600">
-                                {(item?.variants ?? []).map((variant) => (
-                                  <li key={variant.name}>{variant.name} - ₹{variant.price.toFixed(2)}</li>
+                            
+                            <Input
+                              value={editedItem.name || ''}
+                              onChange={(e) => setEditedItem({...editedItem, name: e.target.value})}
+                              placeholder="Item name"
+                            />
+                            <Input
+                              type="number"
+                              value={editedItem.price || 0}
+                              onChange={(e) => setEditedItem({...editedItem, price: Number(e.target.value)})}
+                              placeholder="Price"
+                            />
+                            <Input
+                              value={editedItem.description || ''}
+                              onChange={(e) => setEditedItem({...editedItem, description: e.target.value})}
+                              placeholder="Description"
+                            />
+                            <Input
+                              value={editedItem.category || ''}
+                              onChange={(e) => setEditedItem({...editedItem, category: e.target.value})}
+                              placeholder="Category"
+                            />
+                            
+                            {(editedItem.variants || []).length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-sm">Variants</h4>
+                                {editedItem.variants?.map((variant : any, index : number) => (
+                                  <div key={index} className="flex gap-2 items-center">
+                                    <Input
+                                      value={variant.name}
+                                      onChange={(e) => handleVariantChange(index, 'name', e.target.value)}
+                                      placeholder="Variant name"
+                                      className="flex-1"
+                                    />
+                                    <Input
+                                      type="number"
+                                      value={variant.price}
+                                      onChange={(e) => handleVariantChange(index, 'price', e.target.value)}
+                                      placeholder="Price"
+                                      className="w-20"
+                                    />
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => removeVariant(index)}
+                                      className="text-red-500 hover:text-red-700"
+                                    >
+                                      <Trash2 size={16} />
+                                    </Button>
+                                  </div>
                                 ))}
-                              </ul> 
                               </div>
-                          ) : null
-                        }
+                            )}
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={addVariant}
+                              className="w-full"
+                            >
+                              Add Variant
+                            </Button>
+                            
+                            <div className="flex gap-2 pt-2">
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={saveEditedItem}
+                                className="flex-1"
+                              >
+                                <Check size={16} className="mr-2" />
+                                Save
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={cancelEditing}
+                                className="flex-1"
+                              >
+                                <X size={16} className="mr-2" />
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="absolute top-2 right-2 flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => startEditing(item)}
+                                className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                                disabled={isMenuUploaded}
+                              >
+                                <Edit size={16} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteItem(item.name)}
+                                className="h-8 w-8 text-red-500 hover:text-red-700"
+                                disabled={isMenuUploaded}
+                              >
+                                <Trash2 size={16} />
+                              </Button>
+                            </div>
+                            
+                            <div className="w-full h-32 bg-gray-200 rounded-md flex items-center justify-center mb-2">
+                              {generatedImages[item.name] ? (
+                                <img 
+                                  src={generatedImages[item.name]} 
+                                  alt={item.name} 
+                                  className="w-full h-full object-cover rounded-md"
+                                />
+                              ) : (
+                                <div className="flex flex-col items-center text-gray-500 text-xs">
+                                  <ImageIcon className="h-5 w-5 mb-1" />
+                                  <span>No image available</span>
+                                </div>
+                              )}
+                            </div>
+                            <h5 className="font-bold truncate">{item.name}</h5>
+                            <p className="text-sm font-medium">₹{item.price.toFixed(2)}</p>
+                            <p className="text-sm text-gray-500">{item.category}</p>
+                            <p className="text-sm text-gray-500">{item.description}</p>
+                            
+                            {(item?.variants ?? [])?.length > 0 && (
+                              <div>
+                                <h6 className="font-semibold mt-2">Options:</h6>
+                                <ul className="list-disc list-inside text-sm text-gray-600">
+                                  {(item?.variants ?? []).map((variant, index) => (
+                                    <li key={index}>{variant.name} - ₹{variant.price.toFixed(2)}</li>
+                                  ))}
+                                </ul> 
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
                 </ScrollArea>
               )}
             </div>
-
-            </div>
+          </div>
         )}
       </div>
     </div>
