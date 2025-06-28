@@ -2,9 +2,10 @@
 import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import React, { useEffect, useState, useRef } from "react";
 import { Styles } from "@/screens/HotelMenuPage_v2";
-import { SearchIcon, X } from "lucide-react";
+import { SearchIcon, X, Plus, Minus } from "lucide-react";
 import Fuse from "fuse.js";
 import useOrderStore from "@/store/orderStore";
+import { toast } from "sonner";
 
 const SearchMenu = ({
   hotelData,
@@ -22,6 +23,9 @@ const SearchMenu = ({
   const [query, setQuery] = useState<string>("");
   const [fuse, setFuse] = useState<Fuse<HotelDataMenus> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { addItem, removeItem, increaseQuantity, decreaseQuantity, items: orderItems, totalPrice } = useOrderStore();
+  const { setOpenPlaceOrderModal } = useOrderStore();
 
   // Effect to disable body scroll when search is open
   useEffect(() => {
@@ -77,7 +81,34 @@ const SearchMenu = ({
     setQuery(e.target.value);
   };
 
-  const { addItem } = useOrderStore();
+  const handleAddItem = (item: HotelDataMenus) => {
+    addItem(item);
+  };
+
+  const handleIncreaseQuantity = (item: HotelDataMenus) => {
+    if (item.id) {
+      increaseQuantity(item.id);
+    }
+  };
+
+  const handleDecreaseQuantity = (item: HotelDataMenus) => {
+    if (item.id) {
+      decreaseQuantity(item.id);
+    }
+  };
+
+  const getItemQuantity = (itemId: string | undefined) => {
+    if (!itemId) return 0;
+    const orderItem = orderItems?.find(item => item.id === itemId);
+    return orderItem?.quantity || 0;
+  };
+
+  const hasItemsInOrder = orderItems && orderItems.length > 0;
+
+  const handleViewOrder = () => {
+    setIsSearchOpen(false);
+    setOpenPlaceOrderModal(true);
+  };
 
   return (
     <>
@@ -119,54 +150,77 @@ const SearchMenu = ({
           </div>
 
           {/* Results Grid */}
-          <div className="flex-1 overflow-y-auto p-4 md:p-6">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-48 md:pb-64">
             {items.length > 0 ? (
               <div className="grid grid-cols-2 gap-4 md:gap-6 ">
-                {items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden h-[260px] md:h-[300px]"
-                  >
-                    {/* Image */}
-                    <div className="w-full h-[100px] md:h-[120px] bg-gray-100 relative overflow-hidden flex-shrink-0">
-                      {item.image_url ? (
-                        <img
-                          src={item.image_url}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <span className="text-xl font-bold text-gray-400">
-                            {item.name.charAt(0).toUpperCase()}
+                {items.map((item) => {
+                  const quantity = getItemQuantity(item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden h-[260px] md:h-[300px]"
+                    >
+                      {/* Image */}
+                      <div className="w-full h-[100px] md:h-[120px] bg-gray-100 relative overflow-hidden flex-shrink-0">
+                        {item.image_url ? (
+                          <img
+                            src={item.image_url}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-xl font-bold text-gray-400">
+                              {item.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Details */}
+                      <div className="p-3 flex flex-col flex-1">
+                        <h3 className="font-semibold text-gray-800 text-sm md:text-base mb-1 line-clamp-2">
+                          {item.name}
+                        </h3>
+                        {item.description && (
+                          <p className="text-xs text-gray-500 line-clamp-2 mb-2">
+                            {item.description}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between mt-auto pt-2">
+                          <span className="text-sm md:text-base font-bold text-gray-900">
+                            {currency}{item.price}
                           </span>
+                          {quantity === 0 ? (
+                            <button 
+                              onClick={() => handleAddItem(item)}
+                              className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs md:text-sm font-medium rounded-md transition-colors"
+                            >
+                              Add
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-2 bg-orange-500 text-white rounded-md px-2 py-1">
+                              <button
+                                onClick={() => handleDecreaseQuantity(item)}
+                                className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
+                              >
+                                <Minus size={14} />
+                              </button>
+                              <span className="text-sm font-medium min-w-[20px] text-center">
+                                {quantity}
+                              </span>
+                              <button
+                                onClick={() => handleIncreaseQuantity(item)}
+                                className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    {/* Details */}
-                    <div className="p-3 flex flex-col flex-1">
-                      <h3 className="font-semibold text-gray-800 text-sm md:text-base mb-1 line-clamp-2">
-                        {item.name}
-                      </h3>
-                      {item.description && (
-                        <p className="text-xs text-gray-500 line-clamp-2 mb-2">
-                          {item.description}
-                        </p>
-                      )}
-                      <div className="flex items-center justify-between mt-auto pt-2">
-                        <span className="text-sm md:text-base font-bold text-gray-900">
-                          {currency}{item.price}
-                        </span>
-                        <button 
-                          onClick={() => addItem(item)}
-                          className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs md:text-sm font-medium rounded-md transition-colors"
-                        >
-                          Add
-                        </button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center text-center h-full">
