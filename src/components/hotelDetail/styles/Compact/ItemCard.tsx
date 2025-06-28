@@ -220,7 +220,7 @@ const ItemCard = ({
           {item.variants?.map((variant) => (
             <div
               key={variant.name}
-              className="p-2 rounded-lg flex justify-between items-center gap-5 w-full"
+              className="py-2 px-4 rounded-lg flex justify-between items-center gap-5 w-full"
             >
               <div className="grid">
                 <span className="font-semibold">{variant.name}</span>
