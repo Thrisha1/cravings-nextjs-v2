@@ -3,6 +3,8 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectsCommand
 } from "@aws-sdk/client-s3";
 
 const s3Client = new S3Client({
@@ -75,6 +77,62 @@ export async function deleteFileFromS3(fileUrl) {
     return true;
   } catch (error) {
     console.error("Error in deleteFileFromS3:", error);
+    throw error;
+  }
+}
+
+
+export async function deletePartnerFilesFromS3(partnerId) {
+  if (!partnerId) throw new Error("Partner ID is required");
+
+  try {
+    // 1. List all objects under the partner's prefix (including nested "folders")
+    const listParams = {
+      Bucket: process.env.NEXT_PUBLIC_S3_BUCKET,
+      Prefix: `${partnerId}/`, // The trailing slash ensures we target the "folder"
+    };
+
+    let isTruncated = true;
+    let contents = [];
+
+    // Paginate through all objects (S3 returns max 1000 objects per request)
+    while (isTruncated) {
+      const response = await s3Client.send(new ListObjectsV2Command(listParams));
+      if (response.Contents) {
+        contents.push(...response.Contents);
+      }
+      isTruncated = response.IsTruncated;
+      if (isTruncated) {
+        listParams.ContinuationToken = response.NextContinuationToken;
+      }
+    }
+
+    // 2. If no files found, exit early
+    if (contents.length === 0) {
+      console.log(`No files found for partner ${partnerId}`);
+      return true;
+    }
+
+    // 3. Delete all objects in batches (S3 allows up to 1000 objects per delete request)
+    const BATCH_SIZE = 1000;
+    for (let i = 0; i < contents.length; i += BATCH_SIZE) {
+      const batch = contents.slice(i, i + BATCH_SIZE);
+      const deleteParams = {
+        Bucket: process.env.NEXT_PUBLIC_S3_BUCKET,
+        Delete: {
+          Objects: batch.map(({ Key }) => ({ Key })),
+          Quiet: true, // Set to false if you want to see errors per object
+        },
+      };
+
+      await s3Client.send(new DeleteObjectsCommand(deleteParams));
+      console.log(`Deleted batch ${i / BATCH_SIZE + 1}`);
+    }
+
+    console.log(`Successfully deleted all files for partner ${partnerId}`);
+    return true;
+  } catch (error) {
+    console.error(`Failed to delete files for partner ${partnerId}:`, error);
     throw error;
   }
 }
