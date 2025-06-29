@@ -348,7 +348,7 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
             },
           });
 
-          const prompt = `Extract menu items from these images with structure: name, price, description, category. Group variants together. all variants should be included. varaiant should be arrranged in acending order of price. always take the minimum price of the variant as the price of the item. If no variants take the price of the item as the price.`;
+          const prompt = `Extract menu items from these images with structure: name, price, description, category. Group variants together. all variants should be included. varaiant should be arrranged in acending order of price. always take the minimum price of the variant as the price of the item. If no variants take the price of the item as the price. price should not be zero or negative. If no price found then give the price as 1`;
 
           const imageParts = await Promise.all(
             files.map(async (file) => {
