@@ -5,7 +5,6 @@ import { Card } from '@/components/ui/card';
 import Analytics from '@/components/superAdmin/Analytics';
 import { 
   BarChart,
-  Calendar,
   ArrowLeft,
   Users,
   Building,
@@ -23,21 +22,6 @@ const AnalyticsDashboard = () => {
         
         <div className="flex justify-between items-center">
           <h1 className="text-2xl lg:text-4xl font-bold">App Analytics</h1>
-          
-          <div className="flex items-center gap-2">
-            <select className="p-2 rounded border-2 border-[#ffba79]/20 bg-[#fffefd]">
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
-              <option>Last 90 days</option>
-              <option>This year</option>
-              <option>All time</option>
-            </select>
-            
-            <button className="flex items-center gap-1 p-2 rounded bg-orange-500 text-white">
-              <Calendar size={16} />
-              <span>Custom Range</span>
-            </button>
-          </div>
         </div>
       </div>
       

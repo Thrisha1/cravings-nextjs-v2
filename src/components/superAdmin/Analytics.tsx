@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { 
   BarChart, 
@@ -18,44 +18,225 @@ import {
 import { fetchFromHasura } from '@/lib/hasuraClient';
 import { Progress } from '@/components/ui/progress';
 import { getOrderStatusMetrics } from '@/api/analytics';
+import { format, startOfDay, endOfDay, subDays, subMonths } from 'date-fns';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+
+// Define a constant object for time range options
+const TIME_RANGES = {
+  TODAY: 'today',
+  LAST_7_DAYS: 'last_7_days',
+  LAST_30_DAYS: 'last_30_days',
+  LAST_90_DAYS: 'last_90_days',
+  THIS_YEAR: 'this_year',
+  ALL_TIME: 'all_time',
+  CUSTOM: 'custom'
+} as const;
+
+type TimeRangeType = typeof TIME_RANGES[keyof typeof TIME_RANGES];
+
+type DateRange = {
+  startDate: Date;
+  endDate: Date;
+};
+
+// Helper function to calculate date range that doesn't depend on component state
+const getDateRangeFromType = (rangeType: TimeRangeType, customRange: DateRange = { startDate: new Date(), endDate: new Date() }): DateRange => {
+  const today = new Date();
+  
+  switch (rangeType) {
+    case TIME_RANGES.TODAY:
+      return {
+        startDate: startOfDay(today),
+        endDate: endOfDay(today)
+      };
+    case TIME_RANGES.LAST_7_DAYS:
+      return {
+        startDate: subDays(today, 7),
+        endDate: endOfDay(today)
+      };
+    case TIME_RANGES.LAST_30_DAYS:
+      return {
+        startDate: subDays(today, 30),
+        endDate: endOfDay(today)
+      };
+    case TIME_RANGES.LAST_90_DAYS:
+      return {
+        startDate: subDays(today, 90),
+        endDate: endOfDay(today)
+      };
+    case TIME_RANGES.THIS_YEAR:
+      return {
+        startDate: new Date(today.getFullYear(), 0, 1), // January 1st of current year
+        endDate: endOfDay(today)
+      };
+    case TIME_RANGES.ALL_TIME:
+      return {
+        startDate: new Date('2000-01-01'),
+        endDate: endOfDay(today)
+      };
+    case TIME_RANGES.CUSTOM:
+      return customRange;
+    default:
+      return {
+        startDate: subDays(today, 7),
+        endDate: endOfDay(today)
+      };
+  }
+};
+
+interface OrderStats {
+  cancelled: number;
+  completed: number;
+  pending: number;
+  total: number;
+  totalAmount: number;
+}
 
 const Analytics = () => {
-  const [orderStats, setOrderStats] = useState({
+  const [timeRange, setTimeRange] = useState<TimeRangeType>(TIME_RANGES.TODAY);
+  const [customDateRange, setCustomDateRange] = useState<DateRange>({
+    startDate: subDays(new Date(), 30),
+    endDate: new Date()
+  });
+  const [orderStats, setOrderStats] = useState<OrderStats>({
     cancelled: 0,
     completed: 0,
-    pending: 0
+    pending: 0,
+    total: 0,
+    totalAmount: 0
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  
+  // Use a ref to track if we need to fetch data
+  const shouldFetch = useRef(true);
+  
+  // Use a ref to store the current date range to avoid unnecessary fetches
+  const currentFetchParams = useRef({
+    timeRange,
+    startDate: customDateRange.startDate,
+    endDate: customDateRange.endDate
+  });
 
+  // Effect to fetch data
   useEffect(() => {
-    const fetchOrderStats = async () => {
+    // Skip if we don't need to fetch
+    if (!shouldFetch.current) {
+      shouldFetch.current = true;
+      return;
+    }
+    
+    // Check if we actually need to fetch new data
+    const dateRange = getDateRangeFromType(timeRange, customDateRange);
+    
+    // If nothing changed, don't fetch
+    if (
+      currentFetchParams.current.timeRange === timeRange &&
+      currentFetchParams.current.startDate.getTime() === dateRange.startDate.getTime() &&
+      currentFetchParams.current.endDate.getTime() === dateRange.endDate.getTime()
+    ) {
+      return;
+    }
+    
+    const fetchData = async () => {
       try {
-        const result = await fetchFromHasura(getOrderStatusMetrics);
+        setLoading(true);
+        const formattedStartDate = format(dateRange.startDate, "yyyy-MM-dd'T'00:00:00'Z'");
+        const formattedEndDate = format(dateRange.endDate, "yyyy-MM-dd'T'23:59:59'Z'");
+        
+        const result = await fetchFromHasura(getOrderStatusMetrics, {
+          startDate: formattedStartDate,
+          endDate: formattedEndDate
+        });
+        
         if (result) {
           setOrderStats({
             cancelled: result.cancelled.aggregate.count || 0,
             completed: result.completed.aggregate.count || 0,
-            pending: result.pending.aggregate.count || 0
+            pending: result.pending.aggregate.count || 0,
+            total: result.total.aggregate.count || 0,
+            totalAmount: result.total.aggregate.sum?.total_price || 0
           });
         }
+        
+        // Update the current fetch parameters
+        currentFetchParams.current = {
+          timeRange,
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate
+        };
       } catch (error) {
         console.error('Error fetching order stats:', error);
       } finally {
         setLoading(false);
       }
     };
+    
+    fetchData();
+  }, [timeRange, customDateRange]);
 
-    fetchOrderStats();
-  }, []);
-
-  // Calculate total orders and percentages
-  const totalOrders = orderStats.cancelled + orderStats.completed + orderStats.pending;
+  // Calculate percentages
+  const totalOrders = orderStats.total;
   const completedPercentage = totalOrders > 0 ? Math.round((orderStats.completed / totalOrders) * 100) : 0;
   const pendingPercentage = totalOrders > 0 ? Math.round((orderStats.pending / totalOrders) * 100) : 0;
   const cancelledPercentage = totalOrders > 0 ? Math.round((orderStats.cancelled / totalOrders) * 100) : 0;
 
+  // Handle time range selection
+  const handleTimeRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTimeRange(e.target.value as TimeRangeType);
+  };
+  
+  // Handle date range update from DateRangePicker
+  const handleCustomDateChange = (range: DateRange) => {
+    // Prevent unnecessary state updates
+    if (
+      range.startDate.getTime() === customDateRange.startDate.getTime() &&
+      range.endDate.getTime() === customDateRange.endDate.getTime()
+    ) {
+      return;
+    }
+    
+    // Set flag to avoid unnecessary fetches
+    shouldFetch.current = true;
+    
+    // Update state
+    setCustomDateRange(range);
+    
+    // Only update timeRange if needed
+    if (timeRange !== TIME_RANGES.CUSTOM) {
+      setTimeRange(TIME_RANGES.CUSTOM);
+    }
+  };
+
   return (
     <div>
+      {/* Date Range Filters */}
+      <div className="mb-6 flex flex-row justify-between items-center">
+        <h3 className="text-lg font-semibold">Orders Analytics</h3>
+        <div className="flex items-center gap-4">
+          <select 
+            className="p-2 rounded border-2 border-[#ffba79]/20 bg-[#fffefd]"
+            value={timeRange}
+            onChange={handleTimeRangeChange}
+          >
+            <option value={TIME_RANGES.TODAY}>Today</option>
+            <option value={TIME_RANGES.LAST_7_DAYS}>Last 7 days</option>
+            <option value={TIME_RANGES.LAST_30_DAYS}>Last 30 days</option>
+            <option value={TIME_RANGES.LAST_90_DAYS}>Last 90 days</option>
+            <option value={TIME_RANGES.THIS_YEAR}>This year</option>
+            <option value={TIME_RANGES.ALL_TIME}>All time</option>
+            <option value={TIME_RANGES.CUSTOM}>Custom Range</option>
+          </select>
+          
+          {timeRange === TIME_RANGES.CUSTOM && (
+            <DateRangePicker
+              onUpdate={handleCustomDateChange}
+              initialDateFrom={customDateRange.startDate}
+              initialDateTo={customDateRange.endDate}
+            />
+          )}
+        </div>
+      </div>
+
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card className="p-4 border-2 border-[#ffba79]/20 bg-[#fffefd]">
@@ -88,7 +269,7 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">No. of Orders</p>
-              <h3 className="text-2xl font-bold">{loading ? "..." : totalOrders}</h3>
+              <h3 className="text-2xl font-bold">{loading ? "..." : orderStats.total}</h3>
               <p className="text-xs text-green-500">+$$.$$% from last period</p>
             </div>
             <div className="p-3 rounded-full bg-purple-100">
@@ -100,8 +281,8 @@ const Analytics = () => {
         <Card className="p-4 border-2 border-[#ffba79]/20 bg-[#fffefd]">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Average Order Value</p>
-              <h3 className="text-2xl font-bold">₹$$.$$</h3>
+              <p className="text-sm text-gray-600">Total Order Value</p>
+              <h3 className="text-2xl font-bold">₹{loading ? "..." : orderStats.totalAmount.toFixed(2)}</h3>
               <p className="text-xs text-green-500">+$$.$$% from last period</p>
             </div>
             <div className="p-3 rounded-full bg-orange-100">

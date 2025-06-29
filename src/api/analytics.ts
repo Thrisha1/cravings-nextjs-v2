@@ -1,20 +1,39 @@
 // API queries for analytics dashboard
 
 export const getOrderStatusMetrics = `
-  query GetOrderStatus {
-    cancelled: orders_aggregate(where: {status: {_eq: "cancelled"}}) {
+  query GetOrderStatus($startDate: timestamptz, $endDate: timestamptz) {
+    cancelled: orders_aggregate(where: {
+      status: {_eq: "cancelled"},
+      created_at: {_gte: $startDate, _lte: $endDate}
+    }) {
       aggregate {
         count
       }
     }
-    completed: orders_aggregate(where: {status: {_eq: "completed"}}) {
+    completed: orders_aggregate(where: {
+      status: {_eq: "completed"},
+      created_at: {_gte: $startDate, _lte: $endDate}
+    }) {
       aggregate {
         count
       }
     }
-    pending: orders_aggregate(where: {status: {_eq: "pending"}}) {
+    pending: orders_aggregate(where: {
+      status: {_eq: "pending"},
+      created_at: {_gte: $startDate, _lte: $endDate}
+    }) {
       aggregate {
         count
+      }
+    }
+    total: orders_aggregate(where: {
+      created_at: {_gte: $startDate, _lte: $endDate}
+    }) {
+      aggregate {
+        count
+        sum {
+          total_price
+        }
       }
     }
   }
@@ -36,14 +55,19 @@ export const getOrdersByDay = `
 
 // Query to get partners count metrics
 export const getPartnerMetrics = `
-  query GetPartnerMetrics {
-    total_partners: partners_aggregate {
+  query GetPartnerMetrics($startDate: timestamptz, $endDate: timestamptz) {
+    total_partners: partners_aggregate(
+      where: { created_at: { _gte: $startDate, _lte: $endDate } }
+    ) {
       aggregate {
         count
       }
     }
     active_partners: partners_aggregate(
-      where: { _exists: { menu: true } }
+      where: { 
+        _exists: { menu: true },
+        created_at: { _gte: $startDate, _lte: $endDate }
+      }
     ) {
       aggregate {
         count
@@ -54,14 +78,19 @@ export const getPartnerMetrics = `
 
 // Query to get user metrics
 export const getUserMetrics = `
-  query GetUserMetrics {
-    total_users: users_aggregate {
+  query GetUserMetrics($startDate: timestamptz, $endDate: timestamptz) {
+    total_users: users_aggregate(
+      where: { created_at: { _gte: $startDate, _lte: $endDate } }
+    ) {
       aggregate {
         count
       }
     }
     active_users: users_aggregate(
-      where: { _exists: { orders: true } }
+      where: { 
+        _exists: { orders: true },
+        created_at: { _gte: $startDate, _lte: $endDate }
+      }
     ) {
       aggregate {
         count
@@ -72,8 +101,10 @@ export const getUserMetrics = `
 
 // Query to get QR scan metrics
 export const getQRScanMetrics = `
-  query GetQRScanMetrics {
-    total_scans: qr_codes_aggregate {
+  query GetQRScanMetrics($startDate: timestamptz, $endDate: timestamptz) {
+    total_scans: qr_codes_aggregate(
+      where: { created_at: { _gte: $startDate, _lte: $endDate } }
+    ) {
       aggregate {
         sum {
           scan_count
