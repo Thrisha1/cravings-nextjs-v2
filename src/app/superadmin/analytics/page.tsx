@@ -8,9 +8,7 @@ import {
   ArrowLeft,
   Users,
   Building,
-  Scan,
-  ChevronLeft,
-  ChevronRight
+  Scan
 } from 'lucide-react';
 import Link from 'next/link';
 import { fetchFromHasura } from '@/lib/hasuraClient';
@@ -27,14 +25,9 @@ interface QRCodeData {
   };
 }
 
-const ITEMS_PER_PAGE = 5;
-
 const AnalyticsDashboard = () => {
   const [qrCodeData, setQrCodeData] = useState<QRCodeData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     const fetchQRData = async () => {
@@ -42,13 +35,11 @@ const AnalyticsDashboard = () => {
         setLoading(true);
         
         const result = await fetchFromHasura(getTopQRCodes, {
-          limit: 50 // Fetch more items to handle pagination client-side
+          limit: 10
         });
         
         if (result && result.qr_codes) {
           setQrCodeData(result.qr_codes);
-          setTotalItems(result.qr_codes.length);
-          setTotalPages(Math.ceil(result.qr_codes.length / ITEMS_PER_PAGE));
         }
       } catch (error) {
         console.error('Error fetching QR code data:', error);
@@ -65,26 +56,6 @@ const AnalyticsDashboard = () => {
     // Example: assume 10% conversion rate for every 100 scans
     const rate = (scans / 100) * 10;
     return Math.min(Math.max(rate, 0), 100).toFixed(2);
-  };
-
-  // Get current items for pagination
-  const getCurrentItems = () => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return qrCodeData.slice(startIndex, endIndex);
-  };
-
-  // Handle page changes
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
   };
 
   return (
@@ -224,7 +195,7 @@ const AnalyticsDashboard = () => {
                     <td colSpan={6} className="py-4 px-4 text-center">No QR code data available</td>
                   </tr>
                 ) : (
-                  getCurrentItems().map((qr) => (
+                  qrCodeData.map((qr) => (
                     <tr key={qr.id} className="hover:bg-gray-50">
                       <td className="py-3 px-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -250,45 +221,6 @@ const AnalyticsDashboard = () => {
                 )}
               </tbody>
             </table>
-            
-            {/* Pagination Controls */}
-            {!loading && qrCodeData.length > 0 && (
-              <div className="flex items-center justify-between mt-4 px-4">
-                <div className="text-sm text-gray-700">
-                  Showing <span className="font-medium">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to{' '}
-                  <span className="font-medium">
-                    {Math.min(currentPage * ITEMS_PER_PAGE, totalItems)}
-                  </span>{' '}
-                  of <span className="font-medium">{totalItems}</span> results
-                </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handlePreviousPage}
-                    disabled={currentPage === 1}
-                    className={`inline-flex items-center px-3 py-2 border border-gray-300 text-sm rounded-md ${
-                      currentPage === 1
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <ChevronLeft size={16} className="mr-1" />
-                    Previous
-                  </button>
-                  <button
-                    onClick={handleNextPage}
-                    disabled={currentPage === totalPages}
-                    className={`inline-flex items-center px-3 py-2 border border-gray-300 text-sm rounded-md ${
-                      currentPage === totalPages
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    Next
-                    <ChevronRight size={16} className="ml-1" />
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </Card>
       </div>
