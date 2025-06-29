@@ -2,11 +2,11 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Pencil, Trash, Upload, Loader2 } from "lucide-react";
-import { MenuItem } from "@/components/bulkMenuUpload/EditItemModal";
+import { MenuItem, Variant } from "@/components/bulkMenuUpload/EditItemModal"; // Assuming types are here
 import { useState } from "react";
 import { Input } from "../ui/input";
-import Image from "next/image";
 import Img from "../Img";
+import { Badge } from "../ui/badge";
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -27,32 +27,44 @@ export const MenuItemCard = ({
   onAddToMenu,
   onEdit,
   onDelete,
+  onCategoryChange,
 }: MenuItemCardProps) => {
   const [itemCategory, setItemCategory] = useState(item.category.name);
+
+  const handleCategoryBlur = () => {
+    // Only call the prop function when the input loses focus
+    // to avoid excessive re-renders on every keystroke.
+    onCategoryChange(itemCategory);
+  };
+
   return (
-    <Card className="relative flex flex-col h-full">
+    <Card className="relative flex flex-col h-full bg-white shadow-md rounded-lg overflow-hidden">
       {item.isAdded && (
-        <div className="absolute top-2 right-1/2 translate-x-1/2 bg-green-500 text-white px-2 py-1 rounded-md text-xs font-semibold z-10">
+        <Badge className="absolute top-2 right-2 bg-green-600 text-white z-10">
           Added
-        </div>
+        </Badge>
       )}
 
-      <div className="flex justify-between items-start gap-2 px-5 py-6 ">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div className="flex justify-between items-start gap-2 px-5 pt-4 pb-2">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <Checkbox
             checked={item.isSelected}
             onCheckedChange={onSelect}
             disabled={!item.category || item.isAdded}
-            className="mt-1"
+            className="mt-1 h-5 w-5"
           />
-          <div className="font-bold text-lg break-words flex-1" title={item.name}>{item.name}</div>
+          <div className="font-bold text-lg break-words flex-1" title={item.name}>
+            {item.name}
+          </div>
         </div>
-        <p className="font-bold text-2xl text-right shrink-0">₹{item.price}</p>
+        <p className="font-bold text-2xl text-right shrink-0 text-gray-800">
+          ₹{item.price}
+        </p>
       </div>
 
-      <CardContent className="space-y-3 px-6 flex-grow">
-        {item.image.length > 9 && (
-          <div className="relative w-full aspect-square overflow-hidden rounded-md ">
+      <CardContent className="space-y-4 px-5 flex-grow">
+        {item.image && item.image.length > 9 && (
+          <div className="relative w-full aspect-video overflow-hidden rounded-md">
             <Img
               src={item.image}
               alt={item.name}
@@ -60,41 +72,51 @@ export const MenuItemCard = ({
             />
           </div>
         )}
-        <p className="text-gray-600 text-sm break-words">{item.description}</p>
-        <div className="flex gap-2 items-center ">
-          <label htmlFor="category" className="text-sm font-medium shrink-0">
+        <p className="text-gray-600 text-sm break-words min-h-[40px]">
+          {item.description}
+        </p>
+        
+        {/* Display Variants if they exist */}
+        {item.variants && item.variants.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-gray-700">Variants:</h4>
+            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+              {item.variants.map((variant, index) => (
+                <li key={index} className="flex justify-between">
+                  <span>{variant.name}</span>
+                  <span className="font-medium">₹{variant.price}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="flex gap-2 items-center">
+          <label htmlFor={`category-${item.name}`} className="text-sm font-medium shrink-0">
             Category:
           </label>
           <Input
-            id="category"
-            className="flex-1"
+            id={`category-${item.name}`}
+            className="flex-1 h-9"
             placeholder="Enter category name"
             value={itemCategory}
-            onChange={(e) => {
-              setItemCategory(e.target.value);
-              item.category.name = e.target.value;
-            }}
+            onChange={(e) => setItemCategory(e.target.value)}
+            onBlur={handleCategoryBlur} // Update on blur
           />
         </div>
       </CardContent>
 
-      <CardFooter className="flex justify-between px-5 pb-5 mt-auto">
+      <CardFooter className="flex justify-between px-5 py-4 mt-auto border-t">
         <div className="flex gap-2">
           <Button
             size="sm"
             onClick={onAddToMenu}
-            disabled={item.isAdded || isUploading || !item.category}
+            disabled={item.isAdded || isUploading || !item.category?.name}
           >
             {isUploading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Uploading...
-              </>
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <>
-                <Upload className="w-4 h-4 mr-2" />
-                {item.isAdded ? "Added" : "Add"}
-              </>
+              <Upload className="w-4 h-4" />
             )}
           </Button>
           <Button size="sm" variant="outline" onClick={onEdit}>
@@ -105,15 +127,6 @@ export const MenuItemCard = ({
           <Trash className="w-4 h-4" />
         </Button>
       </CardFooter>
-
-      {/* <ImageGridModal
-        isOpen={isImageModalOpen}
-        onOpenChange={setIsImageModalOpen}
-        itemName={item.name}
-        category={item.category}
-        currentImage={item.image}
-        onSelectImage={handleSelectImage}
-      /> */}
     </Card>
   );
 };
