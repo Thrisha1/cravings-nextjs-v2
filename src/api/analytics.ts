@@ -41,10 +41,16 @@ export const getOrderStatusMetrics = `
 
 // Query to get top QR codes by scan count
 export const getTopQRCodes = `
-  query GetTopQRCodes($limit: Int = 10) {
+  query GetTopQRCodes($limit: Int = 10, $offset: Int = 0, $search: String = "") {
     qr_codes(
+      where: {
+        partner: {
+          name: { _ilike: $search }
+        }
+      }
       order_by: { no_of_scans: desc }
       limit: $limit
+      offset: $offset
     ) {
       id
       no_of_scans
@@ -53,6 +59,17 @@ export const getTopQRCodes = `
       partner {
         name
         phone
+      }
+    }
+    qr_codes_aggregate(
+      where: {
+        partner: {
+          name: { _ilike: $search }
+        }
+      }
+    ) {
+      aggregate {
+        count
       }
     }
   }
