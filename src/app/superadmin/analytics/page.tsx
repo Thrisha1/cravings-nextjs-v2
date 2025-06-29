@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import Analytics from '@/components/superAdmin/Analytics';
 import { 
@@ -11,8 +11,53 @@ import {
   Scan
 } from 'lucide-react';
 import Link from 'next/link';
+import { fetchFromHasura } from '@/lib/hasuraClient';
+import { getTopQRCodes } from '@/api/analytics';
+
+interface QRCodeData {
+  id: string;
+  no_of_scans: number;
+  partner_id: string;
+  table_number?: number;
+  partner: {
+    name: string;
+    phone: string;
+  };
+}
 
 const AnalyticsDashboard = () => {
+  const [qrCodeData, setQrCodeData] = useState<QRCodeData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchQRData = async () => {
+      try {
+        setLoading(true);
+        
+        const result = await fetchFromHasura(getTopQRCodes, {
+          limit: 10
+        });
+        
+        if (result && result.qr_codes) {
+          setQrCodeData(result.qr_codes);
+        }
+      } catch (error) {
+        console.error('Error fetching QR code data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchQRData();
+  }, []);
+
+  // Calculate conversion rate (placeholder calculation - adjust as needed)
+  const calculateConversionRate = (scans: number) => {
+    // Example: assume 10% conversion rate for every 100 scans
+    const rate = (scans / 100) * 10;
+    return Math.min(Math.max(rate, 0), 100).toFixed(2);
+  };
+
   return (
     <main className="px-3 py-5 sm:px-[7.5%] bg-[#FFF7EC] min-h-screen">
       <div className="mb-6">
@@ -132,36 +177,48 @@ const AnalyticsDashboard = () => {
             <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hotel</th>
+                  <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner</th>
+                  <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QR ID</th>
+                  <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Table Number</th>
                   <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Scans</th>
-                  <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unique Users</th>
                   <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversion Rate</th>
-                  <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QR Status</th>
+                  <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {[1, 2, 3, 4, 5].map((item) => (
-                  <tr key={item} className="hover:bg-gray-50">
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                          <Scan size={16} />
-                        </div>
-                        <span>Hotel {item}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap">$$.$$</td>
-                    <td className="py-3 px-4 whitespace-nowrap">$$.$$</td>
-                    <td className="py-3 px-4 whitespace-nowrap">$$.$$ %</td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        item % 5 === 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                      }`}>
-                        {item % 5 === 0 ? 'Inactive' : 'Active'}
-                      </span>
-                    </td>
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="py-4 px-4 text-center">Loading scan data...</td>
                   </tr>
-                ))}
+                ) : qrCodeData.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-4 px-4 text-center">No QR code data available</td>
+                  </tr>
+                ) : (
+                  qrCodeData.map((qr) => (
+                    <tr key={qr.id} className="hover:bg-gray-50">
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                            <Building size={16} />
+                          </div>
+                          <span>{qr.partner.name || 'Unknown Partner'}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">{qr.id.substring(0, 8)}...</td>
+                      <td className="py-3 px-4 whitespace-nowrap">{qr.table_number || 'N/A'}</td>
+                      <td className="py-3 px-4 whitespace-nowrap">{qr.no_of_scans}</td>
+                      <td className="py-3 px-4 whitespace-nowrap">{calculateConversionRate(qr.no_of_scans)}%</td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          qr.no_of_scans > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {qr.no_of_scans > 0 ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

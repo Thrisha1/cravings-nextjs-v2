@@ -39,6 +39,25 @@ export const getOrderStatusMetrics = `
   }
 `;
 
+// Query to get top QR codes by scan count
+export const getTopQRCodes = `
+  query GetTopQRCodes($limit: Int = 10) {
+    qr_codes(
+      order_by: { no_of_scans: desc }
+      limit: $limit
+    ) {
+      id
+      no_of_scans
+      partner_id
+      table_number
+      partner {
+        name
+        phone
+      }
+    }
+  }
+`;
+
 // Query to get orders by day for time series analysis
 export const getOrdersByDay = `
   query GetOrdersByDay($startDate: timestamptz!, $endDate: timestamptz!) {
@@ -101,13 +120,11 @@ export const getUserMetrics = `
 
 // Query to get QR scan metrics
 export const getQRScanMetrics = `
-  query GetQRScanMetrics($startDate: timestamptz, $endDate: timestamptz) {
-    total_scans: qr_codes_aggregate(
-      where: { created_at: { _gte: $startDate, _lte: $endDate } }
-    ) {
+  query GetQRScanMetrics {
+    total_scans: qr_codes_aggregate {
       aggregate {
         sum {
-          scan_count
+          no_of_scans
         }
       }
     }

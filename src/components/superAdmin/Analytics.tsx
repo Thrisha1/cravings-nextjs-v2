@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { fetchFromHasura } from '@/lib/hasuraClient';
 import { Progress } from '@/components/ui/progress';
-import { getOrderStatusMetrics } from '@/api/analytics';
+import { getOrderStatusMetrics, getQRScanMetrics } from '@/api/analytics';
 import { format, startOfDay, endOfDay, subDays, subMonths } from 'date-fns';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 
@@ -92,6 +92,10 @@ interface OrderStats {
   totalAmount: number;
 }
 
+interface ScanStats {
+  totalScans: number;
+}
+
 const Analytics = () => {
   const [timeRange, setTimeRange] = useState<TimeRangeType>(TIME_RANGES.TODAY);
   const [customDateRange, setCustomDateRange] = useState<DateRange>({
@@ -105,6 +109,9 @@ const Analytics = () => {
     total: 0,
     totalAmount: 0
   });
+  const [scanStats, setScanStats] = useState<ScanStats>({
+    totalScans: 0
+  });
   const [loading, setLoading] = useState(false);
   
   // Use a ref to track if we need to fetch data
@@ -117,7 +124,26 @@ const Analytics = () => {
     endDate: customDateRange.endDate
   });
 
-  // Effect to fetch data
+  // Fetch QR scan metrics (independent of date range)
+  useEffect(() => {
+    const fetchScanStats = async () => {
+      try {
+        const scanResult = await fetchFromHasura(getQRScanMetrics, {});
+        
+        if (scanResult && scanResult.total_scans) {
+          setScanStats({
+            totalScans: scanResult.total_scans.aggregate.sum?.no_of_scans || 0
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching QR scan stats:', error);
+      }
+    };
+    
+    fetchScanStats();
+  }, []);
+
+  // Effect to fetch order data
   useEffect(() => {
     // Skip if we don't need to fetch
     if (!shouldFetch.current) {
@@ -137,24 +163,25 @@ const Analytics = () => {
       return;
     }
     
-    const fetchData = async () => {
+    const fetchOrderData = async () => {
       try {
         setLoading(true);
         const formattedStartDate = format(dateRange.startDate, "yyyy-MM-dd'T'00:00:00'Z'");
         const formattedEndDate = format(dateRange.endDate, "yyyy-MM-dd'T'23:59:59'Z'");
         
-        const result = await fetchFromHasura(getOrderStatusMetrics, {
+        // Fetch order stats
+        const orderResult = await fetchFromHasura(getOrderStatusMetrics, {
           startDate: formattedStartDate,
           endDate: formattedEndDate
         });
         
-        if (result) {
+        if (orderResult) {
           setOrderStats({
-            cancelled: result.cancelled.aggregate.count || 0,
-            completed: result.completed.aggregate.count || 0,
-            pending: result.pending.aggregate.count || 0,
-            total: result.total.aggregate.count || 0,
-            totalAmount: result.total.aggregate.sum?.total_price || 0
+            cancelled: orderResult.cancelled.aggregate.count || 0,
+            completed: orderResult.completed.aggregate.count || 0,
+            pending: orderResult.pending.aggregate.count || 0,
+            total: orderResult.total.aggregate.count || 0,
+            totalAmount: orderResult.total.aggregate.sum?.total_price || 0
           });
         }
         
@@ -171,7 +198,7 @@ const Analytics = () => {
       }
     };
     
-    fetchData();
+    fetchOrderData();
   }, [timeRange, customDateRange]);
 
   // Calculate percentages
@@ -384,8 +411,8 @@ const Analytics = () => {
         <Card className="p-4 border-2 border-[#ffba79]/20 bg-[#fffefd]">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Scan</p>
-              <h3 className="text-2xl font-bold">$$.$$</h3>
+              <p className="text-sm text-gray-600">Total Scans</p>
+              <h3 className="text-2xl font-bold">{loading ? "..." : scanStats.totalScans}</h3>
               <p className="text-xs text-green-500">+$$.$$% from last period</p>
             </div>
             <div className="p-3 rounded-full bg-orange-100">
