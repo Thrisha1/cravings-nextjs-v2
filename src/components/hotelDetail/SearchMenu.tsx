@@ -6,6 +6,7 @@ import { SearchIcon, X, Plus, Minus } from "lucide-react";
 import Fuse from "fuse.js";
 import useOrderStore from "@/store/orderStore";
 import { toast } from "sonner";
+import ItemDetailsModal from "./styles/Default/ItemDetailsModal";
 
 const SearchMenu = ({
   hotelData,
@@ -23,6 +24,9 @@ const SearchMenu = ({
   const [query, setQuery] = useState<string>("");
   const [fuse, setFuse] = useState<Fuse<HotelDataMenus> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [variantModalItem, setVariantModalItem] = useState<HotelDataMenus | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
+  const [expandedVariantItemId, setExpandedVariantItemId] = useState<string | null>(null);
 
   const { addItem, removeItem, increaseQuantity, decreaseQuantity, items: orderItems, totalPrice } = useOrderStore();
   const { setOpenPlaceOrderModal } = useOrderStore();
@@ -82,7 +86,11 @@ const SearchMenu = ({
   };
 
   const handleAddItem = (item: HotelDataMenus) => {
-    addItem(item);
+    if (item.variants && item.variants.length > 0) {
+      setExpandedVariantItemId(expandedVariantItemId === item.id ? null : (item.id || null));
+    } else {
+      addItem(item);
+    }
   };
 
   const handleIncreaseQuantity = (item: HotelDataMenus) => {
@@ -108,6 +116,33 @@ const SearchMenu = ({
   const handleViewOrder = () => {
     setIsSearchOpen(false);
     setOpenPlaceOrderModal(true);
+  };
+
+  const handleVariantAdd = (item: HotelDataMenus, variant: any) => {
+    addItem({
+      ...item,
+      id: `${item.id}|${variant.name}`,
+      name: `${item.name} (${variant.name})`,
+      price: variant.price,
+      variantSelections: [
+        {
+          name: variant.name,
+          price: variant.price,
+          quantity: 1,
+        },
+      ],
+    });
+  };
+
+  const handleVariantRemove = (item: HotelDataMenus, variant: any) => {
+    const variantId = `${item.id}|${variant.name}`;
+    decreaseQuantity(variantId);
+  };
+
+  const getVariantQuantity = (item: HotelDataMenus, variantName: string) => {
+    const variantId = `${item.id}|${variantName}`;
+    const orderItem = orderItems?.find(item => item.id === variantId);
+    return orderItem?.quantity || 0;
   };
 
   return (
@@ -155,10 +190,12 @@ const SearchMenu = ({
               <div className="grid grid-cols-2 gap-4 md:gap-6 ">
                 {items.map((item) => {
                   const quantity = getItemQuantity(item.id);
+                  const hasVariants = item.variants && item.variants.length > 0;
+                  const isExpanded = expandedVariantItemId === item.id;
                   return (
                     <div
                       key={item.id}
-                      className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden h-[260px] md:h-[300px]"
+                      className={`bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden ${isExpanded ? 'h-auto min-h-[400px]' : 'h-[260px] md:h-[300px]'}`}
                     >
                       {/* Image */}
                       <div className="w-full h-[100px] md:h-[120px] bg-gray-100 relative overflow-hidden flex-shrink-0">
@@ -190,33 +227,81 @@ const SearchMenu = ({
                           <span className="text-sm md:text-base font-bold text-gray-900">
                             {currency}{item.price}
                           </span>
-                          {quantity === 0 ? (
-                            <button 
+                          {!hasVariants ? (
+                            quantity === 0 ? (
+                              <button 
+                                onClick={() => handleAddItem(item)}
+                                className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs md:text-sm font-medium rounded-md transition-colors"
+                              >
+                                Add
+                              </button>
+                            ) : (
+                              <div className="flex items-center gap-2 bg-orange-500 text-white rounded-md px-2 py-1">
+                                <button
+                                  onClick={() => handleDecreaseQuantity(item)}
+                                  className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
+                                >
+                                  <Minus size={14} />
+                                </button>
+                                <span className="text-sm font-medium min-w-[20px] text-center">
+                                  {quantity}
+                                </span>
+                                <button
+                                  onClick={() => handleIncreaseQuantity(item)}
+                                  className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              </div>
+                            )
+                          ) : (
+                            <button
                               onClick={() => handleAddItem(item)}
                               className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs md:text-sm font-medium rounded-md transition-colors"
                             >
-                              Add
+                              {isExpanded ? 'Hide Options' : 'Add'}
                             </button>
-                          ) : (
-                            <div className="flex items-center gap-2 bg-orange-500 text-white rounded-md px-2 py-1">
-                              <button
-                                onClick={() => handleDecreaseQuantity(item)}
-                                className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
-                              >
-                                <Minus size={14} />
-                              </button>
-                              <span className="text-sm font-medium min-w-[20px] text-center">
-                                {quantity}
-                              </span>
-                              <button
-                                onClick={() => handleIncreaseQuantity(item)}
-                                className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
-                              >
-                                <Plus size={14} />
-                              </button>
-                            </div>
                           )}
                         </div>
+                        {/* Variant Options Inline */}
+                        {hasVariants && isExpanded && (
+                          <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
+                            {item.variants?.map((variant) => (
+                              <div key={variant.name} className="flex items-center justify-between border rounded px-3 py-2">
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{variant.name}</span>
+                                  <span className="text-xs text-gray-500">{currency}{variant.price}</span>
+                                </div>
+                                {getVariantQuantity(item, variant.name) > 0 ? (
+                                  <div className="flex items-center gap-1 bg-orange-500 text-white rounded-md px-2 py-1">
+                                    <button
+                                      onClick={() => handleVariantRemove(item, variant)}
+                                      className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors text-xs"
+                                    >
+                                      <Minus size={12} />
+                                    </button>
+                                    <span className="text-xs font-medium min-w-[16px] text-center">
+                                      {getVariantQuantity(item, variant.name)}
+                                    </span>
+                                    <button
+                                      onClick={() => handleVariantAdd(item, variant)}
+                                      className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors text-xs"
+                                    >
+                                      <Plus size={12} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => handleVariantAdd(item, variant)}
+                                    className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded-md transition-colors"
+                                  >
+                                    Add
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
