@@ -22,8 +22,8 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Traffic</p>
-              <h3 className="text-2xl font-bold">12,487</h3>
-              <p className="text-xs text-green-500">+8.2% from last period</p>
+              <h3 className="text-2xl font-bold">$$.$$</h3>
+              <p className="text-xs text-green-500">+$$.$$% from last period</p>
             </div>
             <div className="p-3 rounded-full bg-blue-100">
               <Activity size={24} className="text-blue-600" />
@@ -35,8 +35,8 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">New Users</p>
-              <h3 className="text-2xl font-bold">342</h3>
-              <p className="text-xs text-green-500">+12.3% from last period</p>
+              <h3 className="text-2xl font-bold">$$.$$</h3>
+              <p className="text-xs text-green-500">+$$.$$% from last period</p>
             </div>
             <div className="p-3 rounded-full bg-green-100">
               <Users size={24} className="text-green-600" />
@@ -48,8 +48,8 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">No. of Orders</p>
-              <h3 className="text-2xl font-bold">567</h3>
-              <p className="text-xs text-green-500">+8.7% from last period</p>
+              <h3 className="text-2xl font-bold">$$.$$</h3>
+              <p className="text-xs text-green-500">+$$.$$% from last period</p>
             </div>
             <div className="p-3 rounded-full bg-purple-100">
               <ShoppingBag size={24} className="text-purple-600" />
@@ -61,8 +61,8 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Average Order Value</p>
-              <h3 className="text-2xl font-bold">₹458</h3>
-              <p className="text-xs text-green-500">+3.1% from last period</p>
+              <h3 className="text-2xl font-bold">₹$$.$$</h3>
+              <p className="text-xs text-green-500">+$$.$$% from last period</p>
             </div>
             <div className="p-3 rounded-full bg-orange-100">
               <DollarSign size={24} className="text-orange-600" />
@@ -77,8 +77,8 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Partners</p>
-              <h3 className="text-2xl font-bold">78</h3>
-              <p className="text-xs text-green-500">+5.5% from last period</p>
+              <h3 className="text-2xl font-bold">$$.$$</h3>
+              <p className="text-xs text-green-500">+$$.$$% from last period</p>
             </div>
             <div className="p-3 rounded-full bg-blue-100">
               <Building size={24} className="text-blue-600" />
@@ -90,8 +90,8 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Partners Created Per Day</p>
-              <h3 className="text-2xl font-bold">2.4</h3>
-              <p className="text-xs text-green-500">+1.3% from last period</p>
+              <h3 className="text-2xl font-bold">$$.$$</h3>
+              <p className="text-xs text-green-500">+$$.$$% from last period</p>
             </div>
             <div className="p-3 rounded-full bg-green-100">
               <Building size={24} className="text-green-600" />
@@ -103,8 +103,8 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Per Hotel Scan</p>
-              <h3 className="text-2xl font-bold">45</h3>
-              <p className="text-xs text-green-500">+11.2% from last period</p>
+              <h3 className="text-2xl font-bold">$$.$$</h3>
+              <p className="text-xs text-green-500">+$$.$$% from last period</p>
             </div>
             <div className="p-3 rounded-full bg-purple-100">
               <Scan size={24} className="text-purple-600" />
@@ -116,8 +116,8 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Scan</p>
-              <h3 className="text-2xl font-bold">3,212</h3>
-              <p className="text-xs text-green-500">+14.8% from last period</p>
+              <h3 className="text-2xl font-bold">$$.$$</h3>
+              <p className="text-xs text-green-500">+$$.$$% from last period</p>
             </div>
             <div className="p-3 rounded-full bg-orange-100">
               <Scan size={24} className="text-orange-600" />
@@ -135,8 +135,8 @@ const Analytics = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Active Users</p>
-              <h3 className="text-2xl font-bold">824</h3>
-              <p className="text-xs text-green-500">+6.7% from last period</p>
+              <h3 className="text-2xl font-bold">$$.$$</h3>
+              <p className="text-xs text-green-500">+$$.$$% from last period</p>
             </div>
             <div className="p-3 rounded-full bg-yellow-100">
               <Users size={24} className="text-yellow-600" />

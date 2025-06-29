@@ -74,14 +74,14 @@ const AnalyticsDashboard = () => {
                         <span>Partner {item}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 whitespace-nowrap">{Math.floor(Math.random() * 1000)}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{Math.floor(Math.random() * 100)}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">₹{(Math.random() * 500 + 200).toFixed(2)}</td>
+                    <td className="py-3 px-4 whitespace-nowrap">$$.$$</td>
+                    <td className="py-3 px-4 whitespace-nowrap">$$.$$</td>
+                    <td className="py-3 px-4 whitespace-nowrap">₹$$.$$</td>
                     <td className="py-3 px-4 whitespace-nowrap">
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        Math.random() > 0.3 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        item % 3 === 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
                       }`}>
-                        {Math.random() > 0.3 ? 'Active' : 'Inactive'}
+                        {item % 3 === 0 ? 'Inactive' : 'Active'}
                       </span>
                     </td>
                   </tr>
@@ -120,16 +120,16 @@ const AnalyticsDashboard = () => {
                       </div>
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
-                      {['Scan', 'Order', 'Profile Update', 'Login', 'Registration'][Math.floor(Math.random() * 5)]}
+                      {['Scan', 'Order', 'Profile Update', 'Login', 'Registration'][item % 5]}
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
-                      {Math.random() > 0.3 ? `Partner ${Math.floor(Math.random() * 10)}` : '-'}
+                      {item % 2 === 0 ? `Partner ${item}` : '-'}
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
-                      {new Date(Date.now() - Math.random() * 86400000 * 7).toLocaleDateString()} {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      $$.$$.$$ | $$:$$
                     </td>
                     <td className="py-3 px-4 whitespace-nowrap">
-                      {Math.random() > 0.7 ? 'iOS' : 'Android'}
+                      {item % 2 === 0 ? 'iOS' : 'Android'}
                     </td>
                   </tr>
                 ))}
@@ -166,14 +166,14 @@ const AnalyticsDashboard = () => {
                         <span>Hotel {item}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 whitespace-nowrap">{Math.floor(Math.random() * 500) + 50}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{Math.floor(Math.random() * 200) + 20}</td>
-                    <td className="py-3 px-4 whitespace-nowrap">{(Math.random() * 30 + 10).toFixed(1)}%</td>
+                    <td className="py-3 px-4 whitespace-nowrap">$$.$$</td>
+                    <td className="py-3 px-4 whitespace-nowrap">$$.$$</td>
+                    <td className="py-3 px-4 whitespace-nowrap">$$.$$ %</td>
                     <td className="py-3 px-4 whitespace-nowrap">
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        Math.random() > 0.2 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        item % 5 === 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                       }`}>
-                        {Math.random() > 0.2 ? 'Active' : 'Inactive'}
+                        {item % 5 === 0 ? 'Inactive' : 'Active'}
                       </span>
                     </td>
                   </tr>
