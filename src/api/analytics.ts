@@ -75,6 +75,48 @@ export const getTopQRCodes = `
   }
 `;
 
+// Query to get partner performance data
+export const getPartnerPerformance = `
+  query GetPartnerPerformance($limit: Int = 100, $offset: Int = 0, $search: String = "", $startDate: timestamptz, $endDate: timestamptz) {
+    partners(
+      where: {
+        name: { _ilike: $search }
+      }
+      limit: $limit
+      offset: $offset
+    ) {
+      id
+      name
+      district
+      phone
+      qr_codes_aggregate {
+        aggregate {
+          sum {
+            no_of_scans
+          }
+        }
+      }
+      orders_aggregate(where: { created_at: { _gte: $startDate, _lte: $endDate } }) {
+        aggregate {
+          count
+          sum {
+            total_price
+          }
+        }
+      }
+    }
+    partners_aggregate(
+      where: {
+        name: { _ilike: $search }
+      }
+    ) {
+      aggregate {
+        count
+      }
+    }
+  }
+`;
+
 // Query to get orders by day for time series analysis
 export const getOrdersByDay = `
   query GetOrdersByDay($startDate: timestamptz!, $endDate: timestamptz!) {
@@ -91,18 +133,15 @@ export const getOrdersByDay = `
 
 // Query to get partners count metrics
 export const getPartnerMetrics = `
-  query GetPartnerMetrics($startDate: timestamptz, $endDate: timestamptz) {
-    total_partners: partners_aggregate(
-      where: { created_at: { _gte: $startDate, _lte: $endDate } }
-    ) {
+  query GetPartnerMetrics {
+    total_partners: partners_aggregate {
       aggregate {
         count
       }
     }
     active_partners: partners_aggregate(
       where: { 
-        _exists: { menu: true },
-        created_at: { _gte: $startDate, _lte: $endDate }
+        _exists: { menu: true }
       }
     ) {
       aggregate {
