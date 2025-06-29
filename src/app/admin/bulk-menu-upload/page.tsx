@@ -4,7 +4,13 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, Loader2, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ImageIcon,
+  Loader2,
+  Trash2,
+  UploadCloud,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { MenuItemCard } from "@/components/bulkMenuUpload/MenuItemCard";
 import { EditItemModal } from "@/components/bulkMenuUpload/EditItemModal";
@@ -24,13 +30,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
 
 const BulkUploadPage = () => {
   const router = useRouter();
   const { userData } = useAuthStore();
-  const { items: menuItems, fetchMenu } = useMenuStore();
+  const { fetchMenu } = useMenuStore();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeletingMenu, setIsDeletingMenu] = useState(false);
+  const [inputMode, setInputMode] = useState<'image' | 'text'>('image');
+
   const {
     loading,
     jsonInput,
@@ -57,14 +66,23 @@ const BulkUploadPage = () => {
     handleGenerateImages,
     handlePartialImageGeneration,
     handleGenerateAIImages,
+    menuImagePreviews,
+    handleMenuImagesChange,
+    isExtractingMenu,
+    setIsExtractingMenu,
+    menuImageFiles,
+    extractedMenuItems,
+    handleExtractMenuItemsFromImage,
   } = useBulkUpload();
 
-  const isAIGenerateEnabled = Array.isArray(bulkMenuItems) && bulkMenuItems.length > 0 && 'image_prompt' in bulkMenuItems[0];
+  const isAIGenerateEnabled =
+    Array.isArray(bulkMenuItems) &&
+    bulkMenuItems.length > 0 &&
+    "image_prompt" in bulkMenuItems[0];
 
   useEffect(() => {
     // console.log("Menu Items:", bulkMenuItems);
-    
-  },[bulkMenuItems]);
+  }, [bulkMenuItems]);
 
   const handleDeleteAllMenu = async () => {
     if (!userData?.id) {
@@ -74,7 +92,6 @@ const BulkUploadPage = () => {
 
     setIsDeletingMenu(true);
     try {
-      // Delete all menu items for the partner
       const deleteAllMenuMutation = `
         mutation DeleteAllMenu($partnerId: uuid!) {
           update_menu(
@@ -94,8 +111,9 @@ const BulkUploadPage = () => {
       });
 
       if (result?.update_menu?.affected_rows > 0) {
-        toast.success(`Successfully deleted ${result.update_menu.affected_rows} menu items`);
-        // Refresh the menu to reflect changes
+        toast.success(
+          `Successfully deleted ${result.update_menu.affected_rows} menu items`
+        );
         await fetchMenu(userData.id, true);
       } else {
         toast.info("No menu items found to delete");
@@ -114,13 +132,18 @@ const BulkUploadPage = () => {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between gap-2 sm:gap-4 mb-6 sm:mb-8">
           <div className="flex items-center gap-2 sm:gap-4">
-            <Button variant="ghost" onClick={() => router.back()} className="p-2 sm:p-3">
+            <Button
+              variant="ghost"
+              onClick={() => router.back()}
+              className="p-2 sm:p-3"
+            >
               <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </Button>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Bulk Menu Upload</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+              Bulk Menu Upload
+            </h1>
           </div>
-          
-          {/* Delete Menu Button - moved to top right */}
+
           <Button
             className="text-[13px] h-10 bg-red-600 hover:bg-red-700 text-white"
             variant="destructive"
@@ -141,24 +164,117 @@ const BulkUploadPage = () => {
           </Button>
         </div>
 
-        <div className="space-y-4">
-          <KimiAiLink />
-          <Textarea
-            placeholder="Paste your JSON here..."
-            value={jsonInput}
-            onChange={(e) => setJsonInput(e.target.value)}
-            className="min-h-[200px] text-base p-4"
-          />
+        <div className="grid grid-cols-1 mb-4">
+          {/* Toggle between image and text input */}
+          <div className="flex justify-center mb-4">
+            <div className="inline-flex rounded-md shadow-sm" role="group">
+              <button
+                type="button"
+                onClick={() => setInputMode('image')}
+                className={`px-4 py-2 text-sm font-medium rounded-l-lg ${
+                  inputMode === 'image'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Upload Images
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputMode('text')}
+                className={`px-4 py-2 text-sm font-medium rounded-r-lg ${
+                  inputMode === 'text'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span>{`{ }`}</span>
+                  <span>Paste JSON</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Image upload section */}
+          {inputMode === 'image' && (
+            <div className="space-y-3">
+              <label
+                htmlFor="menuImagesInput"
+                className="w-full cursor-pointer border-2 border-dashed rounded-lg h-40 flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                {menuImagePreviews.length > 0 ? (
+                  <div className="flex items-center gap-3 p-2 text-green-700">
+                    <ImageIcon className="h-10 w-10" />
+                    <span className="font-semibold">
+                      {menuImagePreviews.length} image
+                      {menuImagePreviews.length > 1 ? "s" : ""} selected
+                    </span>
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500">
+                    <UploadCloud className="mx-auto h-10 w-10" />
+                    <span className="font-semibold mt-2 block">
+                      Click to upload menu pages
+                    </span>
+                    <span className="text-xs">PNG, JPG, or WEBP</span>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  id="menuImagesInput"
+                  accept="image/*"
+                  multiple
+                  onChange={handleMenuImagesChange}
+                  className="hidden"
+                />
+              </label>
+              <Button
+                onClick={() => handleExtractMenuItemsFromImage(0)}
+                disabled={isExtractingMenu || menuImageFiles.length === 0}
+                className="w-full h-12 bg-orange-600 hover:bg-orange-700 text-base"
+              >
+                {isExtractingMenu ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Extracting Menu...
+                  </>
+                ) : (
+                  "Extract Menu from Images"
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* Text input section */}
+          {inputMode === 'text' && (
+            <div className="w-full">
+              <KimiAiLink />
+              <Textarea
+                placeholder="Paste your JSON here...&#10;After extracting from an image, the generated JSON will appear here."
+                value={jsonInput}
+                onChange={(e) => setJsonInput(e.target.value)}
+                className="min-h-[200px] text-sm p-4 bg-white"
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 my-4">
-          <Button
-            className="text-[13px] w-full h-12"
-            onClick={handleJsonSubmit}
-            disabled={!jsonInput.trim()}
-          >
-            {bulkMenuItems.length > 0 ? "Update JSON" : "Convert JSON"}
-          </Button>
+          {inputMode === 'text' && jsonInput && (
+            <Button
+              className="text-[13px] w-full h-12"
+              onClick={() => handleJsonSubmit()}
+              disabled={!jsonInput.trim()}
+            >
+              {bulkMenuItems.length > 0
+                ? "Reprocess & Update Items"
+                : "Convert JSON to Items"}
+            </Button>
+          )}
 
           {bulkMenuItems.length > 0 && (
             <>
@@ -181,7 +297,9 @@ const BulkUploadPage = () => {
                     Uploading...
                   </>
                 ) : (
-                  "Upload Selected"
+                  `Upload ${
+                    bulkMenuItems.filter((item) => item.isSelected).length
+                  } Selected`
                 )}
               </Button>
             </>
@@ -189,15 +307,20 @@ const BulkUploadPage = () => {
         </div>
 
         {bulkMenuItems.length > 0 && (
-          <div className="mb-4 mt-5 flex items-center">
+          <div className="mb-4 mt-5 flex items-center p-4 bg-gray-50 rounded-lg">
             <Checkbox
               checked={selectAll}
               onCheckedChange={handleSelectAll}
               id="selectAll"
               className="h-5 w-5"
             />
-            <label htmlFor="selectAll" className="ml-2 text-base">
-              Select All
+            <label
+              htmlFor="selectAll"
+              className="ml-3 text-base font-medium text-gray-800"
+            >
+              Select All (
+              {bulkMenuItems.filter((item) => item.isSelected).length} /{" "}
+              {bulkMenuItems.length})
             </label>
           </div>
         )}
@@ -209,21 +332,33 @@ const BulkUploadPage = () => {
               className="bg-green-600 hover:bg-green-700 text-white h-12 text-sm sm:text-base flex-1"
               disabled={loading}
             >
-              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Full Images"}
+              {loading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                "Generate Full Images"
+              )}
             </Button>
             <Button
               onClick={handlePartialImageGeneration}
               className="bg-yellow-600 hover:bg-yellow-700 text-white h-12 text-sm sm:text-base flex-1"
               disabled={loading}
             >
-              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate Partial Images"}
+              {loading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                "Generate Partial Images"
+              )}
             </Button>
             <Button
               onClick={handleGenerateAIImages}
               className="bg-purple-600 hover:bg-purple-700 text-white h-12 text-sm sm:text-base flex-1"
               disabled={loading || !isAIGenerateEnabled}
             >
-              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Generate AI Images"}
+              {loading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                "Generate AI Images"
+              )}
             </Button>
           </div>
         )}
@@ -243,7 +378,13 @@ const BulkUploadPage = () => {
                 onEdit={() => handleEdit(index, item)}
                 onDelete={() => handleDelete(index)}
                 onImageClick={(index, url) => handleImageClick(index, url)}
-                onCategoryChange={(category) => handleCategoryChange(index, { name: category, priority: 0, id: item.category.id })}
+                onCategoryChange={(category) =>
+                  handleCategoryChange(index, {
+                    name: category,
+                    priority: 0,
+                    id: item.category.id,
+                  })
+                }
               />
             ))}
           </div>
@@ -270,13 +411,13 @@ const BulkUploadPage = () => {
           </div>
         )}
 
-        {/* Delete Menu Confirmation Dialog */}
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Entire Menu</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete all menu items for this restaurant? This action cannot be undone and will permanently remove all menu items from your restaurant.
+                Are you sure you want to delete all menu items for this
+                restaurant? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

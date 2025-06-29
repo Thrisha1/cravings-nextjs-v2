@@ -102,7 +102,7 @@ import {
   
             {/* Menu Items List using shadcn/ui ScrollArea */}
             <ScrollArea className="flex-grow">
-               <div className="pt-2 pb-4">
+               <div className="pt-2 pb-4 px-2">
                   {filteredMenu.length > 0 ? (
                   filteredMenu.map((item) => (
                       <ItemCard

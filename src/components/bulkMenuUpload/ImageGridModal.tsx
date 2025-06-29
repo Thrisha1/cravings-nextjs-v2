@@ -1,11 +1,13 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Loader2, Check, AlertCircle, Upload, ClipboardPaste } from "lucide-react";
+import { Loader2, Check, AlertCircle, Upload, ClipboardPaste, Image as ImageIcon } from "lucide-react";
 import AIImageGenerateModal from "@/components/AIImageGenerateModal";
 import { useMenuStore } from "@/store/menuStore_hasura";
 import { DialogTitle } from "@radix-ui/react-dialog";
 import Img from "../Img";
+import axios from "axios";
+import { toast } from "sonner";
 
 interface ImageGridModalProps {
   isOpen: boolean;
@@ -30,7 +32,9 @@ export function ImageGridModal({
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [isAIImageModalOpen, setAIImageModalOpen] = useState(false);
+  const [isImageGenerateModalOpen, setImageGenerateModalOpen] = useState(false);
   const [pasteStatus, setPasteStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [isGenerating, setIsGenerating] = useState(false);
   const { fetchCategorieImages } = useMenuStore();
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -94,6 +98,57 @@ export function ImageGridModal({
   const handleAiImageUpload = (url: string) => {
     addNewImage(url);
     setAIImageModalOpen(false);
+  };
+
+  const handleImageGenerate = async () => {
+    if (!category || !itemName) {
+      toast.error("Category and item name are required");
+      return;
+    }
+    
+    setIsGenerating(true);
+    try {
+      // Create a single item object with the current item data
+      const item = {
+        name: itemName,
+        category: category,
+      };
+      
+      // Make API call to generate image
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/api/image-gen/fullImages`,
+        [item],
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+        const generatedItem = response.data[0];
+        
+        // Check if extra_images array is available in the response
+        if (generatedItem.extra_images && Array.isArray(generatedItem.extra_images) && generatedItem.extra_images.length > 0) {
+          // Add all images from extra_images array
+          generatedItem.extra_images.forEach((imageUrl: string) => {
+            addNewImage(imageUrl);
+          });
+          toast.success("Images generated successfully!");
+        } else if (generatedItem.image) {
+          // Fallback to single image for backward compatibility
+          addNewImage(generatedItem.image);
+          toast.success("Image generated successfully!");
+        } else {
+          toast.error("No images were generated");
+        }
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast.error("Failed to generate images. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   useEffect(() => {
@@ -204,11 +259,28 @@ export function ImageGridModal({
               </div>
             </div>
 
+            {/* Image Generate Button */}
+            <div
+              className="aspect-square cursor-pointer group bg-gray-100 rounded-md relative"
+              onClick={handleImageGenerate}
+            >
+              <div className="z-10 absolute grid place-items-center top-1/2 left-1/2 text-center -translate-x-1/2 -translate-y-1/2 text-xl font-bold">
+                {isGenerating ? (
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                ) : (
+                  <>
+                    <ImageIcon className="w-8 h-8" />
+                    Image Generate
+                  </>
+                )}
+              </div>
+            </div>
+
             {/* Image Grid */}
             {imageUrls.map((url, index) => (
               <div
                 key={url + index}
-                className="relative aspect-square cursor-pointer group"
+                className="relative aspect-square cursor-pointer group overflow-hidden"
                 onClick={() => onSelectImage(url)}
               >
                 {loadingStates[url] && (
@@ -219,7 +291,7 @@ export function ImageGridModal({
                 <Img
                   src={url}
                   alt={`Option ${index + 1}`}
-                  className="object-cover rounded-md"
+                  className="object-cover rounded-md w-full h-full"
                   onLoad={() =>
                     setLoadingStates((prev) => ({ ...prev, [url]: false }))
                   }
@@ -253,6 +325,14 @@ export function ImageGridModal({
         itemName={itemName}
         isOpen={isAIImageModalOpen}
         onOpenChange={setAIImageModalOpen}
+      />
+      
+      <AIImageGenerateModal 
+        addNewImage={handleAiImageUpload}
+        category={category}
+        itemName={itemName}
+        isOpen={isImageGenerateModalOpen}
+        onOpenChange={setImageGenerateModalOpen}
       />
     </Dialog>
   );
