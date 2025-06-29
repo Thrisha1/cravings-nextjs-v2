@@ -38,9 +38,8 @@ const BulkUploadPage = () => {
   const { fetchMenu } = useMenuStore();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeletingMenu, setIsDeletingMenu] = useState(false);
+  const [inputMode, setInputMode] = useState<'image' | 'text'>('image');
 
-  // Note: The useBulkUpload hook is now expected to manage the new states and functions.
-  // We will implement the extraction logic here and then you can move it into the hook.
   const {
     loading,
     jsonInput,
@@ -166,8 +165,42 @@ const BulkUploadPage = () => {
         </div>
 
         <div className="grid grid-cols-1 mb-4">
-          {/* Left side: Image Upload */}
-          {!jsonInput && (
+          {/* Toggle between image and text input */}
+          <div className="flex justify-center mb-4">
+            <div className="inline-flex rounded-md shadow-sm" role="group">
+              <button
+                type="button"
+                onClick={() => setInputMode('image')}
+                className={`px-4 py-2 text-sm font-medium rounded-l-lg ${
+                  inputMode === 'image'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Upload Images
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInputMode('text')}
+                className={`px-4 py-2 text-sm font-medium rounded-r-lg ${
+                  inputMode === 'text'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span>{`{ }`}</span>
+                  <span>Paste JSON</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Image upload section */}
+          {inputMode === 'image' && (
             <div className="space-y-3">
               <label
                 htmlFor="menuImagesInput"
@@ -216,12 +249,12 @@ const BulkUploadPage = () => {
             </div>
           )}
 
-          {/* Right side: JSON Textarea */}
-          {jsonInput && (
+          {/* Text input section */}
+          {inputMode === 'text' && (
             <div className="w-full">
               <KimiAiLink />
               <Textarea
-                placeholder="Or, paste your JSON here...&#10;After extracting from an image, the generated JSON will appear here."
+                placeholder="Paste your JSON here...&#10;After extracting from an image, the generated JSON will appear here."
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
                 className="min-h-[200px] text-sm p-4 bg-white"
@@ -231,10 +264,10 @@ const BulkUploadPage = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 my-4">
-          {jsonInput && (
+          {inputMode === 'text' && jsonInput && (
             <Button
               className="text-[13px] w-full h-12"
-              onClick={()=>handleJsonSubmit()}
+              onClick={() => handleJsonSubmit()}
               disabled={!jsonInput.trim()}
             >
               {bulkMenuItems.length > 0
