@@ -8,6 +8,12 @@ import { useAuthStore } from "@/store/authStore";
 import { useMenuStore } from "@/store/menuStore_hasura";
 import { getImageSource } from "@/lib/getImageSource";
 import axios from "axios";
+import { GoogleGenerativeAI, Schema } from "@google/generative-ai";
+
+const API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+const genAI = new GoogleGenerativeAI(API_KEY);
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 2000;
 
 export const useBulkUpload = () => {
   const [loading, setLoading] = useState(false);
@@ -30,6 +36,11 @@ export const useBulkUpload = () => {
     {}
   );
   const [isBulkUploading, setIsBulkUploading] = useState(false);
+  const [extractedMenuItems, setExtractedMenuItems] = useState<string>("");
+  const [isExtractingMenu, setIsExtractingMenu] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [menuImageFiles, setMenuImageFiles] = useState<File[]>([]);
+  const [menuImagePreviews , setMenuImagePreviews] = useState<string[]>([]);
 
   const validateMenuItem = (item: MenuItem) => {
     if (!item.name || typeof item.name !== "string") {
@@ -79,10 +90,10 @@ export const useBulkUpload = () => {
   // const delay = (ms: number) =>
   //   new Promise((resolve) => setTimeout(resolve, ms));
 
-  const handleJsonSubmit = async () => {
+  const handleJsonSubmit = async (jsonMenu?: string) => {
     try {
-      const parsedItems = JSON.parse(jsonInput);
-      localStorage.setItem("jsonInput", jsonInput);
+      const parsedItems = JSON.parse(jsonMenu || jsonInput);
+      localStorage.setItem("jsonInput", jsonMenu || jsonInput);
       const items = Array.isArray(parsedItems) ? parsedItems : [parsedItems];
 
       items.forEach(validateMenuItem);
@@ -97,6 +108,7 @@ export const useBulkUpload = () => {
           id: item.category,
           priority: 0,
         },
+        variants: item.variants || [],
       }));
 
       setMenuItems(initialItems);
@@ -153,6 +165,7 @@ export const useBulkUpload = () => {
         image_source: getImageSource(item.image),
         description: item.description,
         category: item.category,
+        variants: item.variants || [],
       } as Omit<MenuItemStore, "id">;
 
       await addItem(newItem);
@@ -412,6 +425,104 @@ export const useBulkUpload = () => {
     }
   };
 
+  const handleExtractMenuItemsFromImage = async (retryCount = 0) => {
+    try {
+      toast.loading(
+        retryCount > 0
+          ? `Retrying menu extraction (attempt ${
+              retryCount + 1
+            }/${MAX_RETRIES})...`
+          : "Extracting menu items..."
+      );
+
+      const model = genAI.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                price: { type: "number" },
+                description: { type: "string" },
+                category: { type: "string" },
+                variants: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      price: { type: "number" },
+                    },
+                    required: ["name", "price"],
+                  },
+                },
+              },
+              required: ["name", "price", "description", "category"],
+            },
+          } as Schema,
+        },
+      });
+
+      const prompt = `Extract menu items from these images with structure: name, price, description, category. Group variants together. all variants should be included. varaiant should be arrranged in acending order of price. always take the minimum price of the variant as the price of the item. If no variants take the price of the item as the price. price should not be zero or negative. If no price found then give the price as 1`;
+
+      const imageParts = await Promise.all(
+        menuImageFiles.map(async (file) => {
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () =>
+              resolve((reader.result as string).split(",")[1]);
+            reader.readAsDataURL(file);
+          });
+          return { inlineData: { data: base64, mimeType: file.type } };
+        })
+      );
+
+      const result = await model.generateContent([prompt, ...imageParts]);
+      const parsedMenu = result.response.text();
+
+      setExtractedMenuItems(parsedMenu);
+      setJsonInput(parsedMenu);
+      setIsExtractingMenu(false);
+      setExtractionError(null);
+      toast.dismiss();
+      toast.success(`Extracted ${parsedMenu.length} menu items`);
+      handleJsonSubmit(parsedMenu);
+      return parsedMenu;
+    } catch (error) {
+      toast.dismiss();
+
+      console.error("Menu extraction error:", error);
+
+      if (retryCount < MAX_RETRIES - 1) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, RETRY_DELAY_MS * (retryCount + 1))
+        );
+        return handleExtractMenuItemsFromImage(retryCount + 1);
+      }
+
+      const errorMsg =
+        "Failed to extract menu after multiple attempts. Please try again.";
+
+      setIsExtractingMenu(false);
+      setExtractionError(errorMsg);
+
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+  };
+
+   const handleMenuImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files) {
+        const filesArray = Array.from(e.target.files);
+        setMenuImageFiles(filesArray);
+        const previews = filesArray.map((file) => URL.createObjectURL(file));
+        setMenuImagePreviews(previews);
+      }
+    };
+
   // Updated handlers
   const handleGenerateImages = () =>
     handleBatchImageGeneration(
@@ -457,5 +568,16 @@ export const useBulkUpload = () => {
     handleGenerateImages,
     handlePartialImageGeneration,
     handleGenerateAIImages,
+    handleExtractMenuItemsFromImage,
+    isExtractingMenu,
+    setIsExtractingMenu,
+    extractedMenuItems,
+    setExtractedMenuItems,
+    extractionError,
+    setExtractionError,
+    menuImageFiles,
+    setMenuImageFiles,
+    menuImagePreviews,
+    handleMenuImagesChange,
   };
 };
