@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useSuperAdminPartnerStore } from "@/store/superAdminPartnerStore";
 import { useCreatedPartnerStore } from "@/store/createdPartnerStore";
+import ImageEdit from "@/components/superAdmin/createPartner/ImageEdit";
 
 interface MenuItem {
   image?: string;
@@ -42,7 +43,8 @@ interface MenuItem {
 export default function SuperAdminCreatePartnerPage() {
   const router = useRouter();
   const { locationData, countries } = useLocationStore();
-  const { partner, setPartner, clearPartner , partnerBanner , setPartnerBanner } = useCreatedPartnerStore();
+  const { partner, setPartner, clearPartner, partnerBanner, setPartnerBanner } =
+    useCreatedPartnerStore();
   const {
     createPartner,
     uploadBanner,
@@ -700,14 +702,7 @@ export default function SuperAdminCreatePartnerPage() {
                             <div className="w-full h-32 bg-gray-200 rounded-md flex items-center justify-center mb-2">
                               {generatedImages[item.name] ||
                               editedItem.image ? (
-                                <img
-                                  src={
-                                    generatedImages[item.name] ||
-                                    editedItem.image
-                                  }
-                                  alt={item.name}
-                                  className="w-full h-full object-cover rounded-md"
-                                />
+                                <ImageEdit editedItem={editedItem} generatedImages={generatedImages} item={item} key={item.name} />
                               ) : (
                                 <div className="flex flex-col items-center text-gray-500 text-xs">
                                   <ImageIcon className="h-5 w-5 mb-1" />
