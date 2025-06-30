@@ -150,24 +150,31 @@ const ItemCard = ({
                   }}
                   className={`font-black text-2xl`}
                 >
-                  {hasVariants ? (
-                    <span className="">
-                      <span className="text-sm font-bold">From </span>
-                      <span>
-                        {currency}{" "}
-                        {hotelData?.id ===
-                        "767da2a8-746d-42b6-9539-528b6b96ae09"
-                          ? item.price.toFixed(3)
-                          : item.price}
-                      </span>
-                    </span>
+                  {item.is_price_as_per_size ? (
+                    <div className="text-base font-normal">{`(Price as per size)`}</div>
                   ) : (
-                    <span>
-                      {currency}{" "}
-                      {hotelData?.id === "767da2a8-746d-42b6-9539-528b6b96ae09"
-                        ? item.price.toFixed(3)
-                        : item.price}
-                    </span>
+                    <>
+                      {hasVariants ? (
+                        <span className="">
+                          <span className="text-sm font-bold">From </span>
+                          <span>
+                            {currency}{" "}
+                            {hotelData?.id ===
+                            "767da2a8-746d-42b6-9539-528b6b96ae09"
+                              ? item.price.toFixed(3)
+                              : item.price}
+                          </span>
+                        </span>
+                      ) : (
+                        <span>
+                          {currency}{" "}
+                          {hotelData?.id ===
+                          "767da2a8-746d-42b6-9539-528b6b96ae09"
+                            ? item.price.toFixed(3)
+                            : item.price}
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
               )}
