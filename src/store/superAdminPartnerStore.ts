@@ -214,7 +214,7 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
                   if (!category_id) throw new Error("Category ID not found");
 
                   // Use generated image if available
-                  if (generatedImages[item.name]) {
+                  if (generatedImages[item.name] || item.image) {
                     const formattedName = item.name
                       .replace(/[^a-zA-Z0-9]/g, "_")
                       .replace(/\s+/g, "_")
@@ -225,7 +225,7 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
                       .replace(/_+/g, "_");
 
                     const processedImage = await processImage(
-                      generatedImages[item.name],
+                      (item.image || generatedImages[item.name]),
                       "generated"
                     );
 

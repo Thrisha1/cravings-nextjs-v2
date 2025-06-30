@@ -247,6 +247,8 @@ export default function SuperAdminCreatePartnerPage() {
       return;
     }
 
+    console.log(editedItem)
+
     try {
       await updateMenuItem(itemIndex, {
         name: editedItem.name || "",
@@ -268,7 +270,7 @@ export default function SuperAdminCreatePartnerPage() {
   const handleDeleteItem = async (itemName: string) => {
     try {
       const itemIndex = extractedMenuItems.findIndex(
-        (item) => item.name === editingItem
+        (item) => item.name === itemName
       );
 
       if (itemIndex === -1) {
@@ -702,7 +704,12 @@ export default function SuperAdminCreatePartnerPage() {
                             <div className="w-full h-32 bg-gray-200 rounded-md flex items-center justify-center mb-2">
                               {generatedImages[item.name] ||
                               editedItem.image ? (
-                                <ImageEdit editedItem={editedItem} generatedImages={generatedImages} item={item} key={item.name} />
+                                <ImageEdit onChange={(img : string) => {
+                                  setEditedItem({
+                                    ...editedItem,
+                                    image: img,
+                                  });
+                                }} editedItem={editedItem} generatedImages={generatedImages} item={item} key={item.name} />
                               ) : (
                                 <div className="flex flex-col items-center text-gray-500 text-xs">
                                   <ImageIcon className="h-5 w-5 mb-1" />
@@ -857,9 +864,9 @@ export default function SuperAdminCreatePartnerPage() {
                             </div>
 
                             <div className="w-full h-32 bg-gray-200 rounded-md flex items-center justify-center mb-2">
-                              {generatedImages[item.name] ? (
+                              {(generatedImages[item.name] || item.image) ? (
                                 <img
-                                  src={generatedImages[item.name]}
+                                  src={item.image || generatedImages[item.name]}
                                   alt={item.name}
                                   className="w-full h-full object-cover rounded-md"
                                 />
