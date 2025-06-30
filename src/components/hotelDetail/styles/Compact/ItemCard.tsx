@@ -110,8 +110,14 @@ const ItemCard = ({
             }}
             className="text-lg font-bold"
           >
-            {hoteldata?.currency || "₹"}
-            {item.price}
+            {(item.is_price_as_per_size != true) ? (
+              <>
+                {hoteldata?.currency || "₹"}
+                {item.price}
+              </>
+            ) : (
+              <div className="text-base font-normal">{`(Price as per size)`}</div>
+            )}
           </p>
 
           {showStock && hasStockFeature && (
@@ -133,7 +139,9 @@ const ItemCard = ({
               <img
                 src={item.image_url || "/image_placeholder.webp"}
                 alt={item.name}
-                className={`w-full h-full object-cover ${!item.image_url ? "invert opacity-50" : ""} ${
+                className={`w-full h-full object-cover ${
+                  !item.image_url ? "invert opacity-50" : ""
+                } ${
                   !item.is_available || (isOutOfStock && hasStockFeature)
                     ? "grayscale"
                     : ""

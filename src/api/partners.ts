@@ -159,6 +159,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
       image_url
       is_top
       is_available
+      is_price_as_per_size
       name
       price
       offers(where: {_and: [{end_time: {_gt: "now()"}}, {deletion_status: {_eq: 0}}]}) {

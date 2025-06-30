@@ -47,6 +47,7 @@ export interface MenuItem {
     name: string;
     price: number;
   }[];
+  is_price_as_per_size?: boolean; 
 }
 
 interface MenuItem_withOffer_price {
@@ -212,6 +213,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           is_top: Boolean(mi.is_top),
           is_available: mi.is_available !== false, // Ensure boolean value
           priority: mi.priority || 0,
+          is_price_as_per_size: mi.is_price_as_per_size || false, // Ensure boolean value
         };
 
         // Add optional fields if they exist

@@ -257,6 +257,7 @@ export function MenuTab() {
         is_active: existingItem.category.is_active !== false ? true : false,
       },
       variants: item.variants,
+      
     });
   
     // Refresh menu while preserving open state
@@ -699,6 +700,38 @@ export function MenuTab() {
                                                   }
                                                 }}
                                               />
+                                              
+                                            </div>
+
+                                            <div className="flex items-center mt-3">
+                                              <label className="mr-2">
+                                                Is Price as per Size:
+                                              </label>
+                                              <Switch
+                                                checked={item.is_price_as_per_size === true}
+                                                onCheckedChange={async () => {
+                                                  console.log(item.is_price_as_per_size);
+                                                  
+                                                  try {
+                                                    await updateItem(
+                                                      item.id as string,
+                                                      {
+                                                        is_price_as_per_size:
+                                                          !item.is_price_as_per_size,
+                                                      }
+                                                    );
+                                                  } catch (error) {
+                                                    toast.error(
+                                                      "Failed to mark item as " +
+                                                        (item.is_price_as_per_size
+                                                          ? "Price Fixed"
+                                                          : "Price as per Size")
+                                                    );
+                                                    console.error(error);
+                                                  }
+                                                }}
+                                              />
+                                              
                                             </div>
                                           </CardContent>
                                           <CardFooter className="flex justify-end space-x-2">
