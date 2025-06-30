@@ -14,11 +14,16 @@ import {
   Loader2,
   Search,
   X,
-  ArrowDown
+  ArrowDown,
+  Calendar
 } from 'lucide-react';
 import Link from 'next/link';
 import { fetchFromHasura } from '@/lib/hasuraClient';
 import { getTopQRCodes, getPartnerPerformance } from '@/api/analytics';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 interface QRCodeData {
   id: string;
@@ -55,6 +60,9 @@ interface PartnerData {
 
 type SortField = 'name' | 'scans' | 'orders' | 'avgOrderValue';
 
+// Add type for date filter
+type DateFilter = 'today' | 'week' | 'month' | 'all' | 'custom';
+
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
 const AnalyticsDashboard = () => {
@@ -75,6 +83,17 @@ const AnalyticsDashboard = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [debouncedPartnerSearchTerm, setDebouncedPartnerSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('name');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('month');
+  const [startDate, setStartDate] = useState<Date>(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return date;
+  });
+  const [endDate, setEndDate] = useState<Date>(new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [datePickerType, setDatePickerType] = useState<'start' | 'end'>('start');
+  const [tempStartDate, setTempStartDate] = useState<Date | undefined>(startDate);
+  const [tempEndDate, setTempEndDate] = useState<Date | undefined>(endDate);
 
   // Debounce search term
   useEffect(() => {
@@ -112,6 +131,72 @@ const AnalyticsDashboard = () => {
     }
   }, [partnerData, partnerPageSize]);
 
+  // Update date range based on selected filter
+  const updateDateRange = (filter: DateFilter) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let start = new Date();
+    const end = new Date();
+    
+    switch (filter) {
+      case 'today':
+        start = new Date(today);
+        break;
+      case 'week':
+        start = new Date(today);
+        start.setDate(today.getDate() - 7);
+        break;
+      case 'month':
+        start = new Date(today);
+        start.setDate(today.getDate() - 30);
+        break;
+      case 'all':
+        start = new Date(2020, 0, 1); // Set a far past date
+        break;
+      case 'custom':
+        // Keep current start and end dates
+        return;
+    }
+    
+    setStartDate(start);
+    setEndDate(end);
+    setDateFilter(filter);
+  };
+  
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    
+    if (datePickerType === 'start') {
+      setTempStartDate(date);
+      setDatePickerType('end');
+    } else {
+      setTempEndDate(date);
+      setCalendarOpen(false);
+      
+      // Ensure end date is after start date
+      if (tempStartDate && date >= tempStartDate) {
+        setStartDate(tempStartDate);
+        setEndDate(date);
+        setDateFilter('custom');
+      } else {
+        // If end date is before start date, swap them
+        if (tempStartDate) {
+          setStartDate(date);
+          setEndDate(tempStartDate);
+          setDateFilter('custom');
+        }
+      }
+    }
+  };
+  
+  const openDatePicker = () => {
+    setTempStartDate(startDate);
+    setTempEndDate(endDate);
+    setDatePickerType('start');
+    setCalendarOpen(true);
+  };
+
   const fetchQRData = async (page: number, itemsPerPage: number, search: string) => {
     try {
       setLoading(true);
@@ -146,11 +231,6 @@ const AnalyticsDashboard = () => {
       setPartnerLoading(true);
       const searchPattern = search ? `%${search}%` : '%';
       
-      // Get current date and 30 days ago for default date range
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 30);
-      
       const result = await fetchFromHasura(getPartnerPerformance, {
         limit: 500, // Fetch a large number to handle client-side pagination
         offset: 0,
@@ -183,7 +263,7 @@ const AnalyticsDashboard = () => {
   
   useEffect(() => {
     fetchPartnerData(debouncedPartnerSearchTerm);
-  }, [debouncedPartnerSearchTerm]);
+  }, [debouncedPartnerSearchTerm, startDate, endDate]);
 
   // Handle page changes
   const handlePreviousPage = () => {
@@ -266,7 +346,7 @@ const AnalyticsDashboard = () => {
   // Get sort icon for column headers
   const getSortIcon = (field: SortField) => {
     if (sortField === field) {
-      return <ArrowDown className="ml-1 h-4 w-4 inline text-orange-500" />;
+      return <ArrowDown className="h-4 w-4 text-orange-500" aria-label="Sorted in descending order" />;
     }
     return null;
   };
@@ -297,27 +377,19 @@ const AnalyticsDashboard = () => {
       const bScans = b.qr_codes_aggregate?.aggregate?.sum?.no_of_scans || 0;
       const bAvgOrder = bOrders > 0 ? bRevenue / bOrders : 0;
       
-      let comparison = 0;
-      
+      // Always sort in descending order for all fields
       switch (sortField) {
         case 'name':
-          comparison = a.name.localeCompare(b.name);
-          break;
+          return b.name.localeCompare(a.name); // Descending alphabetical
         case 'scans':
-          comparison = aScans - bScans;
-          break;
+          return bScans - aScans; // Highest scans first
         case 'orders':
-          comparison = aOrders - bOrders;
-          break;
+          return bOrders - aOrders; // Highest orders first
         case 'avgOrderValue':
-          comparison = aAvgOrder - bAvgOrder;
-          break;
+          return bAvgOrder - aAvgOrder; // Highest average order first
         default:
-          comparison = a.name.localeCompare(b.name);
+          return b.name.localeCompare(a.name); // Default to name descending
       }
-      
-      // Always sort in descending order (negative comparison)
-      return -comparison;
     });
     
     // Then apply pagination
@@ -325,6 +397,78 @@ const AnalyticsDashboard = () => {
     const endIndex = startIndex + partnerPageSize;
     return sorted.slice(startIndex, endIndex);
   }, [partnerData, sortField, partnerCurrentPage, partnerPageSize]);
+
+  // Date range filter component
+  const DateRangeFilter = () => (
+    <div className="flex flex-col md:flex-row items-center gap-2 mb-4">
+      <div className="text-sm text-gray-500">Filter by:</div>
+      <div className="flex flex-wrap gap-2">
+        <Button 
+          variant={dateFilter === 'today' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => updateDateRange('today')}
+        >
+          Today
+        </Button>
+        <Button 
+          variant={dateFilter === 'week' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => updateDateRange('week')}
+        >
+          Last 7 Days
+        </Button>
+        <Button 
+          variant={dateFilter === 'month' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => updateDateRange('month')}
+        >
+          Last 30 Days
+        </Button>
+        <Button 
+          variant={dateFilter === 'all' ? 'default' : 'outline'} 
+          size="sm"
+          onClick={() => updateDateRange('all')}
+        >
+          All Time
+        </Button>
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button 
+              variant={dateFilter === 'custom' ? 'default' : 'outline'} 
+              size="sm" 
+              onClick={openDatePicker}
+              className="flex items-center gap-2"
+            >
+              <Calendar className="h-4 w-4" />
+              {dateFilter === 'custom' 
+                ? `${format(startDate, 'MMM d, yyyy')} - ${format(endDate, 'MMM d, yyyy')}`
+                : 'Custom Range'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="center">
+            <div className="p-3">
+              <div className="text-center mb-2 font-medium">
+                {datePickerType === 'start' ? 'Select Start Date' : 'Select End Date'}
+              </div>
+              <CalendarComponent
+                mode="single"
+                selected={datePickerType === 'start' ? tempStartDate : tempEndDate}
+                onSelect={handleDateSelect}
+                disabled={(date) => {
+                  if (datePickerType === 'end' && tempStartDate) {
+                    // Disable dates before start date when selecting end date
+                    return date < tempStartDate;
+                  }
+                  return false;
+                }}
+                initialFocus
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
+  );
 
   return (
     <main className="px-3 py-5 sm:px-[7.5%] bg-[#FFF7EC] min-h-screen">
@@ -365,6 +509,8 @@ const AnalyticsDashboard = () => {
             </div>
           </div>
           
+          <DateRangeFilter />
+          
           {/* Search Bar */}
           <div className="mb-4">
             <div className="relative">
@@ -396,26 +542,42 @@ const AnalyticsDashboard = () => {
                   <th 
                     className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('name')}
+                    title="Click to sort by partner name (Z-A)"
                   >
-                    Partner {getSortIcon('name')}
+                    <div className="flex items-center justify-start gap-1">
+                      <span>Partner</span>
+                      {getSortIcon('name')}
+                    </div>
                   </th>
                   <th 
-                    className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="py-2 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('scans')}
+                    title="Click to sort by highest scan count first"
                   >
-                    Total Scans {getSortIcon('scans')}
+                    <div className="flex items-center justify-start gap-1">
+                      <span>Total Scans</span>
+                      {getSortIcon('scans')}
+                    </div>
                   </th>
                   <th 
-                    className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="py-2 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('orders')}
+                    title="Click to sort by highest order count first"
                   >
-                    Orders {getSortIcon('orders')}
+                    <div className="flex items-center justify-start gap-1">
+                      <span>Orders</span>
+                      {getSortIcon('orders')}
+                    </div>
                   </th>
                   <th 
-                    className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="py-2 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('avgOrderValue')}
+                    title="Click to sort by highest average order value first"
                   >
-                    Avg Order Value {getSortIcon('avgOrderValue')}
+                    <div className="flex items-center justify-start gap-1">
+                      <span>Avg Order Value</span>
+                      {getSortIcon('avgOrderValue')}
+                    </div>
                   </th>
                   <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
