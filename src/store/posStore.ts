@@ -75,6 +75,8 @@ interface POSState {
   removedQrGroupCharges: string[];
   removeQrGroupCharge: (qrGroupId: string) => void;
   addQrGroupCharge: (qrGroupId: string) => void;
+  orderNote: string;
+  setOrderNote: (note: string) => void;
 }
 
 export const usePOSStore = create<POSState>((set, get) => ({
@@ -94,6 +96,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   isPOSOpen: false,
   qrGroup: null,
   removedQrGroupCharges: [],
+  orderNote: "",
 
   setDeliveryAddress: (address: string) => {
     set({ deliveryAddress: address });
@@ -312,7 +315,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   clearCart: () => {
-    set({ cartItems: [], totalAmount: 0, extraCharges: [], removedQrGroupCharges: [] });
+    set({ cartItems: [], totalAmount: 0, extraCharges: [], removedQrGroupCharges: [], orderNote: "" });
   },
 
   addExtraCharge: (charge: Omit<ExtraCharge, "id">) => {
@@ -363,7 +366,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   checkout: async () => {
     try {
       set({ loading: true });
-      const { cartItems, extraCharges, isCaptainOrder, qrGroup } = get();
+      const { cartItems, extraCharges, isCaptainOrder, qrGroup, orderNote } = get();
       const userData = useAuthStore.getState().userData;
       console.log("User Data:", {
         id: userData?.id,
@@ -433,7 +436,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
         tableNumber: get().tableNumber,
         extraCharges: allExtraCharges,
         gstIncluded: gstPercentage,
-        captainId: isCaptainOrder ? userId : null
+        captainId: isCaptainOrder ? userId : null,
+        orderNote: orderNote
       });
 
       // Create order in database
@@ -452,7 +456,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
         delivery_address: get().deliveryAddress || null,
         delivery_location: null,
         orderedby: isCaptainOrder ? "captain" : null,
-        captain_id: isCaptainOrder ? userId : null
+        captain_id: isCaptainOrder ? userId : null,
+        notes: orderNote || null
       });
 
       if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
@@ -538,6 +543,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         phone: get().userPhone || undefined,
         orderedby: isCaptainOrder ? "captain" : undefined,
         captain_id: isCaptainOrder ? userId : undefined,
+        notes: orderNote || undefined,
       };
 
       set({ order: newOrder, postCheckoutModalOpen: true });
@@ -682,4 +688,6 @@ export const usePOSStore = create<POSState>((set, get) => ({
       }
     }
   },
+
+  setOrderNote: (note: string) => set({ orderNote: note }),
 }));

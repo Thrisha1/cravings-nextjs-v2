@@ -72,6 +72,7 @@ export const EditCaptainOrderModal = () => {
   const [showExtraItems, setShowExtraItems] = useState(false);
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
   const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0 });
+  const [orderNote, setOrderNote] = useState<string>("");
 
   const currency = partnerData?.currency || "$";
   const gstPercentage = partnerData?.gst_percentage || 0;
@@ -104,6 +105,7 @@ export const EditCaptainOrderModal = () => {
     setShowExtraItems(false);
     setExtraCharges([]);
     setNewExtraCharge({ name: "", amount: 0 });
+    setOrderNote("");
   };
 
   useEffect(() => {
@@ -134,6 +136,11 @@ export const EditCaptainOrderModal = () => {
         // Load extra charges if they exist
         if (foundOrder.extraCharges) {
           setExtraCharges(foundOrder.extraCharges);
+        }
+
+        // Load order note if it exists
+        if (foundOrder.notes) {
+          setOrderNote(foundOrder.notes);
         }
       }
     }
@@ -335,6 +342,7 @@ export const EditCaptainOrderModal = () => {
         totalPrice: finalTotal,
         phone: phone || "",
         extraCharges: extraCharges.length > 0 ? extraCharges : null,
+        notes: orderNote || null,
       });
 
       // Update order items
@@ -491,6 +499,22 @@ export const EditCaptainOrderModal = () => {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Order Note */}
+            <div className="border rounded-lg p-4">
+              <h3 className="font-medium mb-3">Order Note</h3>
+              <textarea
+                placeholder="Add any special instructions or notes for this order..."
+                value={orderNote}
+                onChange={(e) => setOrderNote(e.target.value)}
+                className="w-full p-3 border rounded-md resize-none"
+                rows={3}
+                maxLength={500}
+              />
+              <div className="text-xs text-gray-500 mt-1">
+                {orderNote.length}/500 characters
               </div>
             </div>
 

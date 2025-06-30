@@ -35,7 +35,8 @@ export const createOrderMutation = `
     $extra_charges: jsonb,
     $orderedby: String,
     $delivery_location: geography,
-    $captain_id: uuid
+    $captain_id: uuid,
+    $notes: String
   ) {
     insert_orders_one(object: {
       id: $id
@@ -54,6 +55,7 @@ export const createOrderMutation = `
       orderedby: $orderedby
       delivery_location: $delivery_location
       captain_id: $captain_id
+      notes: $notes
     }) {
       id
       total_price
@@ -76,7 +78,8 @@ export const updateOrderMutation = `
     $totalPrice: float8,
     $phone: String,
     $tableNumber: Int,
-    $extraCharges: jsonb
+    $extraCharges: jsonb,
+    $notes: String
   ) {
     update_orders_by_pk(
       pk_columns: { id: $id }
@@ -84,13 +87,15 @@ export const updateOrderMutation = `
         total_price: $totalPrice,
         phone: $phone,
         table_number: $tableNumber,
-        extra_charges: $extraCharges
+        extra_charges: $extraCharges,
+        notes: $notes
       }
     ) {
       id
       total_price
       table_number
       extra_charges
+      notes
     }
   }
 `;

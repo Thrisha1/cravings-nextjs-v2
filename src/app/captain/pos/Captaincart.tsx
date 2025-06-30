@@ -42,6 +42,8 @@ export const Captaincart = () => {
     addQrGroupCharge,
     removeQrGroupCharge,
     extraCharges: storeExtraCharges,
+    orderNote,
+    setOrderNote,
   } = usePOSStore();
   
   const { userData } = useAuthStore();
@@ -138,6 +140,28 @@ export const Captaincart = () => {
     } catch (error) {
       console.error("Checkout failed:", error);
       toast.error("Checkout failed");
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (cartItems.length === 0) {
+      toast.error("Cart is empty");
+      return;
+    }
+
+    if (!tableNumber) {
+      toast.error("Please select a table number");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await checkout();
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast.error("Failed to place order");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -248,20 +272,20 @@ export const Captaincart = () => {
               </div>
 
               {/* Extra Charges */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Extra Charges (Optional)</label>
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-3">Extra Charges</h3>
                 <div className="space-y-3">
                   <div className="flex gap-2">
                     <Input
                       placeholder="Charge name"
                       value={newExtraCharge.name}
-                      onChange={(e) => setNewExtraCharge({...newExtraCharge, name: e.target.value})}
+                      onChange={(e) => setNewExtraCharge({ ...newExtraCharge, name: e.target.value })}
                     />
                     <Input
                       type="number"
                       placeholder="Amount"
                       value={newExtraCharge.amount || ""}
-                      onChange={(e) => setNewExtraCharge({...newExtraCharge, amount: Number(e.target.value)})}
+                      onChange={(e) => setNewExtraCharge({ ...newExtraCharge, amount: Number(e.target.value) })}
                     />
                     <Button onClick={handleAddExtraCharge} className="whitespace-nowrap">
                       Add Charge
@@ -308,6 +332,22 @@ export const Captaincart = () => {
                       </button>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Order Note */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-3">Order Note</h3>
+                <textarea
+                  placeholder="Add any special instructions or notes for this order..."
+                  value={orderNote}
+                  onChange={(e) => setOrderNote(e.target.value)}
+                  className="w-full p-3 border rounded-md resize-none text-white"
+                  rows={3}
+                  maxLength={500}
+                />
+                <div className="text-xs text-white mt-1">
+                  {orderNote.length}/500 characters
                 </div>
               </div>
 
@@ -402,7 +442,7 @@ export const Captaincart = () => {
                   Cancel
                 </Button>
                 <Button
-                  onClick={handleConfirmOrder}
+                  onClick={handleCheckout}
                   disabled={loading || cartItems.length === 0}
                   className="flex-1"
                 >
