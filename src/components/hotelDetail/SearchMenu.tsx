@@ -239,18 +239,18 @@ const SearchMenu = ({
                               <div className="flex items-center gap-2 bg-orange-500 text-white rounded-md px-2 py-1">
                                 <button
                                   onClick={() => handleDecreaseQuantity(item)}
-                                  className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
+                                  className="w-2 h-2 md:w-4 md:h-4 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
                                 >
-                                  <Minus size={14} />
+                                  <Minus size={8} className="md:w-2 md:h-2 w-1.5 h-1.5" />
                                 </button>
                                 <span className="text-sm font-medium min-w-[20px] text-center">
                                   {quantity}
                                 </span>
                                 <button
                                   onClick={() => handleIncreaseQuantity(item)}
-                                  className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
+                                  className="w-2 h-2 md:w-4 md:h-4 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
                                 >
-                                  <Plus size={14} />
+                                  <Plus size={8} className="md:w-2 md:h-2 w-1.5 h-1.5" />
                                 </button>
                               </div>
                             )
@@ -276,18 +276,18 @@ const SearchMenu = ({
                                   <div className="flex items-center gap-1 bg-orange-500 text-white rounded-md px-2 py-1">
                                     <button
                                       onClick={() => handleVariantRemove(item, variant)}
-                                      className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors text-xs"
+                                      className="w-2 h-2 md:w-4 md:h-4 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors text-xs"
                                     >
-                                      <Minus size={12} />
+                                      <Minus size={8} className="md:w-2 md:h-2 w-1.5 h-1.5" />
                                     </button>
                                     <span className="text-xs font-medium min-w-[16px] text-center">
                                       {getVariantQuantity(item, variant.name)}
                                     </span>
                                     <button
                                       onClick={() => handleVariantAdd(item, variant)}
-                                      className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors text-xs"
+                                      className="w-2 h-2 md:w-4 md:h-4 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors text-xs"
                                     >
-                                      <Plus size={12} />
+                                      <Plus size={8} className="md:w-2 md:h-2 w-1.5 h-1.5" />
                                     </button>
                                   </div>
                                 ) : (
