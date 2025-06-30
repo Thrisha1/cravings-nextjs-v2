@@ -19,6 +19,7 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
 
 interface MenuItem {
+  is_price_as_per_size: boolean | undefined;
   name: string;
   price: number;
   description: string;
@@ -244,6 +245,7 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
                     price: item.price,
                     description: item.description || "",
                     variants: item.variants || [],
+                    is_price_as_per_size: item.is_price_as_per_size || false,
                   };
                 } catch (error) {
                   console.error(`Error processing item ${item.name}:`, error);
