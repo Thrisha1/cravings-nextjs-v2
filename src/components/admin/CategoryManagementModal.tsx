@@ -80,8 +80,12 @@ export function CategoryManagementForm({
           throw new Error('No partner ID found for the authenticated user');
         }
         
+        console.log('[CategoryManagement] Fetching categories for partner ID:', partnerId);
+        
         // Fetch and ensure we have categories
         const latestCategories = await fetchCategories(partnerId);
+        console.log('[CategoryManagement] Fetched categories:', latestCategories);
+        
         if (!latestCategories || !Array.isArray(latestCategories)) {
           throw new Error('Failed to fetch categories');
         }
@@ -94,16 +98,16 @@ export function CategoryManagementForm({
         
         // Update local state with the latest categories
         setInputRefs(refs);
-        setLocalCategories(
-          latestCategories.map((cat: Category) => ({
-            ...cat,
-            name: formatDisplayName(cat.name),
-            is_active: cat.is_active !== false // Ensure boolean value
-          }))
-        );
+        const formattedCategories = latestCategories.map((cat: Category) => ({
+          ...cat,
+          name: formatDisplayName(cat.name),
+          is_active: cat.is_active !== false // Ensure boolean value
+        }));
+        console.log('[CategoryManagement] Formatted categories for display:', formattedCategories);
+        setLocalCategories(formattedCategories);
         setSearchTerm("");
       } catch (error) {
-        console.error('Error refreshing categories:', error);
+        console.error('[CategoryManagement] Error refreshing categories:', error);
         
         // Fallback to initialCategories if there's an error
         if (initialCategories.length > 0) {
@@ -113,13 +117,13 @@ export function CategoryManagementForm({
           });
           setInputRefs(refs);
           
-          setLocalCategories(
-            initialCategories.map((cat: Category) => ({
-              ...cat,
-              name: formatDisplayName(cat.name),
-              is_active: cat.is_active !== false // Ensure boolean value
-            }))
-          );
+          const formattedInitialCategories = initialCategories.map((cat: Category) => ({
+            ...cat,
+            name: formatDisplayName(cat.name),
+            is_active: cat.is_active !== false // Ensure boolean value
+          }));
+          console.log('[CategoryManagement] Using initialCategories as fallback:', formattedInitialCategories);
+          setLocalCategories(formattedInitialCategories);
           setSearchTerm("");
         }
       }
@@ -188,6 +192,11 @@ export function CategoryManagementForm({
   const filteredCategories = localCategories.filter((cat) =>
     cat.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  console.log('[CategoryManagement] Filtered categories:', { 
+    searchTerm, 
+    filteredCount: filteredCategories.length,
+    totalCount: localCategories.length 
+  });
 
   const moveToPosition = useCallback(
     (id: string, newIndex: number) => {
@@ -236,6 +245,7 @@ export function CategoryManagementForm({
   };
 
   const handleNameChange = (id: string, newName: string) => {
+    console.log('[CategoryManagement] Category name change:', { id, newName });
     setLocalCategories((prev) =>
       prev.map((cat) => (cat.id === id ? { ...cat, name: (newName) } : cat))
     );
@@ -243,6 +253,8 @@ export function CategoryManagementForm({
 
   const handleStatusChange = async (id: string, newIsActive: boolean) => {
     try {
+      console.log('[CategoryManagement] Category status change:', { id, newIsActive });
+      
       const currentCategories = [...localCategories];
       const categoryToUpdate = currentCategories.find(cat => cat.id === id);
       if (!categoryToUpdate) return;
@@ -260,6 +272,7 @@ export function CategoryManagementForm({
         name: formatStorageName(categoryToUpdate.name), // Ensure name is in storage format
         priority: categoryToUpdate.priority || 0 // Ensure priority is always a number
       };
+      console.log('[CategoryManagement] Updating category with data:', updateData);
       
       // Update in the store
       const { updateCategory } = useCategoryStore.getState();
@@ -267,11 +280,12 @@ export function CategoryManagementForm({
       
       // Refresh categories from the store to ensure we have the latest data
       const { categories } = useCategoryStore.getState();
+      console.log('[CategoryManagement] Categories after status update:', categories);
       setLocalCategories([...categories]);
       
       toast.success(`Category ${newIsActive ? 'enabled' : 'disabled'} successfully`);
     } catch (error) {
-      console.error('Error toggling category status:', error);
+      console.error('[CategoryManagement] Error toggling category status:', error);
       toast.error('Failed to update category status');
       
       // Revert local state on error
@@ -304,12 +318,15 @@ export function CategoryManagementForm({
       ...cat,
       name: formatStorageName(cat.name)
     }));
+    
+    console.log('[CategoryManagement] Submitting categories for update:', updatedCategories);
 
     try {
       await onSubmit(updatedCategories);
+      console.log('[CategoryManagement] Categories updated successfully');
       toast.success("Categories updated successfully");
     } catch (err) {
-      console.error("Error updating categories:", err);
+      console.error("[CategoryManagement] Error updating categories:", err);
       toast.error("Failed to update categories");
       throw err; // Re-throw to allow parent component to handle the error
     } finally {
@@ -615,6 +632,7 @@ export function CategoryManagementModal({
   const { updateCategoriesAsBatch } = useMenuStore();
 
   const handleSubmit = async (updatedCategories: Category[]) => {
+    console.log('[CategoryManagementModal] Submitting batch update for categories:', updatedCategories);
     await updateCategoriesAsBatch(updatedCategories);
     onOpenChange(false);
   };
