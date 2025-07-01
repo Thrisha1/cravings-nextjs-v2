@@ -466,7 +466,20 @@ export const useBulkUpload = () => {
         },
       });
 
-      const prompt = `Extract menu items from these images with structure: name, price, description, category. Group variants together. all variants should be included. varaiant should be arrranged in acending order of price. always take the minimum price of the variant as the price of the item. If no variants take the price of the item as the price. price should not be zero or negative. If no price found then give the price as 1`;
+      const prompt = `Extract each distinct dish as a separate item from the provided images. 
+A 'variant' applies *only* to different sizes (e.g., Quarter, Half, Full, Small, Large, Regular) or quantities of the *same specific menu item*. 
+If a menu item does not have these explicit size/quantity options, it should *not* have a 'variants' field. 
+For example, 'Fresh Lime' and 'Mint Lime' are separate items, not variants of a general 'Lime Juice'.
+
+For each item, provide:
+- name: The name of the dish.
+- price: The minimum price if variants exist, otherwise the item's price. Price must be a number, greater than zero. Use 1 if no price is found.
+- description: A descriptive sentence for each item, maximum 10 words. Elaborate on the item's name and its category, highlighting key attributes like freshness, flavor, or main ingredients. For example:
+    - For 'Watermelon' under 'Fresh Juice': "A refreshing juice made from ripe, sweet watermelon, perfectly hydrating and a great choice on a hot day."
+    - For 'Carrot' under 'Pure Juice': "Experience the pure, wholesome goodness of freshly extracted carrot juice, packed with vitamins and natural sweetness."
+    - For 'Fresh Lime' under 'Lime Juice': "Enjoy a classic, zesty Fresh Lime juice, perfectly balanced and incredibly invigorating, a timeless favorite."
+- category: The main heading under which the item is listed.
+- variants: (Optional) An array of objects, each with 'name' and 'price', if the item has different sizes/portions. Variants must be arranged in ascending order of price.`;
 
       const imageParts = await Promise.all(
         menuImageFiles.map(async (file) => {
