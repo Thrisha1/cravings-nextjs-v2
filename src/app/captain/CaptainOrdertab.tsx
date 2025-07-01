@@ -39,13 +39,10 @@ const CaptainOrdersTab = () => {
   // Helper function to process and filter orders
   const processAndFilterOrders = (fetchedOrders: Order[]) => {
     if (!fetchedOrders) return [];
-    
-    // Filter orders for this captain and completed status
+    // Show all orders taken by this captain, regardless of status
     const captainOrders = fetchedOrders.filter(
-      order => order.captain_id === captainData.id && 
-      order.status === "completed"
+      order => order.captain_id === captainData.id
     );
-
     // Sort orders by date (newest first)
     return sortOrders(captainOrders);
   };
@@ -91,18 +88,16 @@ const CaptainOrdersTab = () => {
       const processedOrders = processAndFilterOrders(updatedOrders);
       setTotalOrders(processedOrders.length);
 
-      // If we're on the first page, update with latest orders
-      if (currentPage === 1) {
-        setOrders(processedOrders.slice(0, ordersPerPage));
-      }
-
+      // Always reset to page 1 and show the latest orders
+      setCurrentPage(1);
+      setOrders(processedOrders.slice(0, ordersPerPage));
       prevOrdersRef.current = processedOrders;
     });
 
     return () => {
       unsubscribe();
     };
-  }, [captainData?.partner_id, captainData?.id, subscribeOrders, currentPage]);
+  }, [captainData?.partner_id, captainData?.id, subscribeOrders, ordersPerPage]);
 
   // Listen for order updates from EditCaptainOrderModal
   useEffect(() => {

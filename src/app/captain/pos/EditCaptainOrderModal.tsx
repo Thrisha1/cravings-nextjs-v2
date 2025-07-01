@@ -7,6 +7,7 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import {
   updateOrderMutation,
   updateOrderItemsMutation,
+  getOrderByIdQuery,
 } from "@/api/orders";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Input } from "@/components/ui/input";
@@ -149,9 +150,9 @@ export const EditCaptainOrderModal = () => {
       }
 
       // Set other order properties
-      setTotalPrice(order.totalPrice || 0);
-      setTableNumber(order.tableNumber || null);
-      setPhone(order.phone || null);
+      setTotalPrice(order.totalPrice ?? 0);
+      setTableNumber(order.tableNumber ?? null);
+      setPhone(order.phone ?? null);
       
       // Set extra charges if they exist
       if (order.extraCharges && Array.isArray(order.extraCharges)) {
@@ -382,7 +383,8 @@ export const EditCaptainOrderModal = () => {
       await fetchFromHasura(updateOrderMutation, {
         id: order?.id,
         totalPrice: finalTotal,
-        phone: phone || "",
+        phone: phone ?? "",
+        tableNumber: tableNumber ?? null,
         extraCharges: extraCharges.length > 0 ? extraCharges : null,
         notes: orderNote || null,
       });
@@ -402,8 +404,8 @@ export const EditCaptainOrderModal = () => {
         setOrder({
           ...order,
           totalPrice: finalTotal,
-          tableNumber: tableNumber || 0,
-          phone: phone || "",
+          tableNumber: tableNumber ?? order.tableNumber ?? null,
+          phone: phone ?? "",
           extraCharges: extraCharges,
           items: items.map((item) => ({
             id: item.id,
@@ -440,6 +442,46 @@ export const EditCaptainOrderModal = () => {
     }
   };
 
+  useEffect(() => {
+    if (isOpen && order?.id) {
+      // Fetch the latest order details from the backend
+      (async () => {
+        try {
+          const response = await fetchFromHasura(getOrderByIdQuery, { orderId: order.id });
+          const orderData = response.orders_by_pk;
+          if (orderData) {
+            // Set all order data directly from the backend response
+            if (orderData.order_items && orderData.order_items.length > 0) {
+              setItems(
+                orderData.order_items.map((item: any) => ({
+                  id: item.menu.id,
+                  quantity: item.quantity,
+                  menu: {
+                    name: item.menu.name,
+                    price: item.menu.price,
+                    category: item.menu.category || { id: "", name: "", priority: 0 },
+                    description: item.menu.description || "",
+                    image_url: item.menu.image_url || "",
+                    is_top: item.menu.is_top || false,
+                    is_available: item.menu.is_available !== false,
+                    priority: item.menu.priority || 0,
+                  },
+                }))
+              );
+            }
+            setTotalPrice(orderData.total_price ?? 0);
+            setTableNumber(orderData.table_number ?? null);
+            setPhone(orderData.phone ?? null);
+            setExtraCharges(orderData.extra_charges && Array.isArray(orderData.extra_charges) ? orderData.extra_charges : []);
+            setOrderNote(orderData.notes || "");
+          }
+        } catch (error) {
+          console.error("Error fetching order details:", error);
+        }
+      })();
+    }
+  }, [isOpen, order?.id]);
+
   if (!isOpen) return null;
 
   return (
@@ -451,7 +493,7 @@ export const EditCaptainOrderModal = () => {
             <div>
               <h2 className="text-xl font-semibold">Edit Order #{order?.id?.split("-")[0]}</h2>
               <p className="text-sm text-gray-500 mt-1">
-                {tableNumber ? `Table ${tableNumber}` : ""}
+                {tableNumber !== null && tableNumber !== undefined ? `Table ${tableNumber}` : ""}
               </p>
             </div>
             <Button
@@ -484,10 +526,11 @@ export const EditCaptainOrderModal = () => {
                   </label>
                   <Input
                     type="number"
-                    value={tableNumber || ""}
-                    onChange={(e) =>
-                      setTableNumber(Number(e.target.value) || null)
-                    }
+                    value={tableNumber === null || tableNumber === undefined ? "" : tableNumber}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setTableNumber(val === "" ? null : Number(val));
+                    }}
                     placeholder="Table number"
                   />
                 </div>
@@ -570,16 +613,16 @@ export const EditCaptainOrderModal = () => {
 
               {/* Order Note */}
               <div className="border rounded-lg p-4">
-                <h3 className="font-medium mb-3">Order Note</h3>
+                <h3 className="font-medium mb-3"> Order Note</h3>
                 <textarea
                   placeholder="Add any special instructions or notes for this order..."
                   value={orderNote}
                   onChange={(e) => setOrderNote(e.target.value)}
-                  className="w-full p-3 border rounded-md resize-none"
+                  className="w-full p-3 border rounded-md resize-none text-black"
                   rows={3}
                   maxLength={500}
                 />
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-black mt-1">
                   {orderNote.length}/500 characters
                 </div>
               </div>

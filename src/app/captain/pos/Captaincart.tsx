@@ -319,7 +319,7 @@ export const Captaincart = () => {
 
               {/* Order Summary */}
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-2">Order Summary</h3>
+                <h3 className="font-semibold mb-2">Order Summary </h3>
                 <div className="space-y-2">
                   {/* Food Items */}
                   {cartItems.map((item, index) => (
