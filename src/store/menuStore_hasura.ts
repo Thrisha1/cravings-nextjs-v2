@@ -107,8 +107,6 @@ export interface GroupedItems {
 }
 
 const getBatchUpdateMutation = (updates: Category[]) => {
-  console.log('[MenuStore] Creating batch update mutation for categories:', updates);
-  
   const mutation = `
   mutation UpdateCategoriesBatch {
     ${updates
@@ -132,8 +130,6 @@ const getBatchUpdateMutation = (updates: Category[]) => {
       .join("\n")}
   }
 `;
-  
-  console.log('[MenuStore] Generated mutation (truncated):', mutation.substring(0, 500) + '...');
   return mutation;
 };
 
@@ -532,11 +528,9 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
   updateCategoriesAsBatch: async (categories: Category[]) => {
     try {
-      console.log('[MenuStore] updateCategoriesAsBatch called with categories:', categories);
       toast.loading("Updating categories..");
 
       if (!categories || categories.length === 0) {
-        console.log('[MenuStore] No categories provided for update');
         throw new Error("No categories provided for update");
       }
 
@@ -546,27 +540,17 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         priority: cat.priority ?? 0,
         is_active: cat.is_active
       }));
-      
-      console.log('[MenuStore] Prepared updates for batch operation:', updates);
 
       const CHUNK_SIZE = 20;
-      console.log('[MenuStore] Processing updates in chunks of size:', CHUNK_SIZE);
 
       for (let i = 0; i < updates.length; i += CHUNK_SIZE) {
         const chunk = updates.slice(i, i + CHUNK_SIZE);
-        console.log(`[MenuStore] Processing chunk ${i/CHUNK_SIZE + 1}, size: ${chunk.length}`);
-
         const mutation = getBatchUpdateMutation(chunk);
-
-        console.log(`[MenuStore] Executing batch update for chunk ${i/CHUNK_SIZE + 1}`);
         const { data, errors } = await fetchFromHasura(mutation, {});
         
         if (errors) {
-          console.error(`[MenuStore] Errors in chunk ${i/CHUNK_SIZE + 1}:`, errors);
           throw new Error(`Failed to update chunk starting at index ${i}`);
         }
-        
-        console.log(`[MenuStore] Successfully updated chunk ${i/CHUNK_SIZE + 1}:`, data);
       }
 
       const updatedItems = get().items.map((item: MenuItem) => {
@@ -585,21 +569,17 @@ export const useMenuStore = create<MenuState>((set, get) => ({
             }
           : item;
       });
-      
-      console.log('[MenuStore] Updating local items with new category data');
 
       set({ items: updatedItems });
       get().groupItems();
       const user = useAuthStore.getState().userData as Partner;
-      console.log('[MenuStore] Revalidating tag for user:', user?.id);
       revalidateTag(user?.id);
 
       toast.dismiss();
       toast.success(`Successfully updated categories`);
-      console.log('[MenuStore] Batch update completed successfully');
       return updates;
     } catch (error) {
-      console.error("[MenuStore] Batch update error:", error);
+      console.error("Batch update error:", error);
       toast.dismiss();
       toast.error("Failed to update categories");
       throw error;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, createRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, createRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   FullModal,
@@ -40,6 +40,33 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
+// Helper function to extract unique categories from menu items
+const extractCategoriesFromMenuItems = (menuItems: any[]): Category[] => {
+  // Use a Map with category NAME as the key to avoid duplicates
+  const categoriesMap = new Map();
+  
+  menuItems.forEach(item => {
+    if (item.category && item.category.name) {
+      const categoryName = item.category.name.toLowerCase(); // Use lowercase for case-insensitive matching
+      
+      // Only add if this category name isn't already in the map
+      if (!categoriesMap.has(categoryName)) {
+        categoriesMap.set(categoryName, {
+          id: item.category.id,
+          name: item.category.name,
+          priority: item.category.priority || 0,
+          is_active: item.category.is_active !== false,
+        });
+      }
+    }
+  });
+  
+  const categories = Array.from(categoriesMap.values());
+  
+  // Sort by priority
+  return categories.sort((a, b) => (a.priority || 0) - (b.priority || 0));
+};
+
 interface CategoryManagementFormProps {
   categories: Category[];
   onSubmit: (categories: Category[]) => Promise<void>;
@@ -59,78 +86,178 @@ export function CategoryManagementForm({
   const { deleteCategoryAndItems } = useMenuStore();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [categoriesInitialized, setCategoriesInitialized] = useState(false);
 
   // Get the authenticated user
   const user = useAuthStore(state => state.userData);
   
-  // Initialize input refs for categories and refresh categories when modal opens
+  // Initialize from passed-in categories props when they change
   useEffect(() => {
-    const refreshCategories = async () => {
-      try {
-        if (!user) {
-          throw new Error('User not authenticated');
-        }
-        
-        // Fetch the latest categories from the store
-        const { fetchCategories } = useCategoryStore.getState();
-        
-        // Use the authenticated user's ID as the partner ID
-        const partnerId = user.id;
-        if (!partnerId) {
-          throw new Error('No partner ID found for the authenticated user');
-        }
-        
-        console.log('[CategoryManagement] Fetching categories for partner ID:', partnerId);
-        
-        // Fetch and ensure we have categories
-        const latestCategories = await fetchCategories(partnerId);
-        console.log('[CategoryManagement] Fetched categories:', latestCategories);
-        
-        if (!latestCategories || !Array.isArray(latestCategories)) {
-          throw new Error('Failed to fetch categories');
-        }
-        
-        // Create refs for each category
-        const refs: {[key: string]: React.RefObject<HTMLInputElement | null>} = {};
-        latestCategories.forEach((cat: Category) => {
-          refs[cat.id] = createRef<HTMLInputElement | null>();
-        });
-        
-        // Update local state with the latest categories
-        setInputRefs(refs);
-        const formattedCategories = latestCategories.map((cat: Category) => ({
-          ...cat,
-          name: formatDisplayName(cat.name),
-          is_active: cat.is_active !== false // Ensure boolean value
-        }));
-        console.log('[CategoryManagement] Formatted categories for display:', formattedCategories);
-        setLocalCategories(formattedCategories);
-        setSearchTerm("");
-      } catch (error) {
-        console.error('[CategoryManagement] Error refreshing categories:', error);
-        
-        // Fallback to initialCategories if there's an error
-        if (initialCategories.length > 0) {
-          const refs: {[key: string]: React.RefObject<HTMLInputElement | null>} = {};
-          initialCategories.forEach((cat: Category) => {
-            refs[cat.id] = createRef<HTMLInputElement | null>();
-          });
-          setInputRefs(refs);
-          
-          const formattedInitialCategories = initialCategories.map((cat: Category) => ({
-            ...cat,
-            name: formatDisplayName(cat.name),
-            is_active: cat.is_active !== false // Ensure boolean value
-          }));
-          console.log('[CategoryManagement] Using initialCategories as fallback:', formattedInitialCategories);
-          setLocalCategories(formattedInitialCategories);
-          setSearchTerm("");
+    if (initialCategories.length > 0 && !categoriesInitialized) {
+      // Create refs for each category
+      const refs: {[key: string]: React.RefObject<HTMLInputElement | null>} = {};
+      initialCategories.forEach((cat: Category) => {
+        refs[cat.id] = createRef<HTMLInputElement | null>();
+      });
+      
+      // Format the category names for display
+      const formattedCategories = initialCategories.map((cat: Category) => ({
+        ...cat,
+        name: formatDisplayName(cat.name),
+        is_active: cat.is_active !== false // Ensure boolean value
+      }));
+      
+      // Update state
+      setInputRefs(refs);
+      setLocalCategories(formattedCategories);
+      setCategoriesInitialized(true);
+    }
+  }, [initialCategories, categoriesInitialized]);
+
+  // Filter the categories based on search term
+  const filteredCategories = useMemo(() => {
+    return localCategories.filter((cat) =>
+      cat.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [localCategories, searchTerm]);
+
+  const moveToPosition = useCallback(
+    (id: string, newIndex: number) => {
+      const currentIndex = localCategories.findIndex((cat) => cat.id === id);
+      if (
+        currentIndex === -1 ||
+        newIndex < 0 ||
+        newIndex >= localCategories.length
+      )
+        return;
+
+      const newCategories = [...localCategories];
+      const [movedItem] = newCategories.splice(currentIndex, 1);
+      newCategories.splice(newIndex, 0, movedItem);
+
+      const updatedCategories = newCategories.map((cat, idx) => ({
+        ...cat,
+        priority: idx + 1,
+      }));
+
+      setLocalCategories(updatedCategories);
+    },
+    [localCategories]
+  );
+
+  const moveCategory = useCallback((id: string, direction: 'up' | 'down') => {
+    const currentIndex = localCategories.findIndex((cat) => cat.id === id);
+    if (currentIndex === -1) return;
+    
+    const newIndex = direction === 'up' 
+      ? Math.max(0, currentIndex - 1) 
+      : Math.min(localCategories.length - 1, currentIndex + 1);
+      
+    if (newIndex !== currentIndex) {
+      moveToPosition(id, newIndex);
+    }
+  }, [localCategories, moveToPosition]);
+
+  const moveToTop = (id: string) => moveToPosition(id, 0);
+  const moveToBottom = (id: string) =>
+    moveToPosition(id, localCategories.length - 1);
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    moveToPosition(result.draggableId, result.destination.index);
+  };
+
+  const handleNameChange = (id: string, newName: string) => {
+    setLocalCategories((prev) =>
+      prev.map((cat) => (cat.id === id ? { ...cat, name: (newName) } : cat))
+    );
+  };
+
+  const handleStatusChange = async (id: string, newIsActive: boolean) => {
+    try {
+      const currentCategories = [...localCategories];
+      const categoryToUpdate = currentCategories.find(cat => cat.id === id);
+      if (!categoryToUpdate) return;
+      
+      // Update local state optimistically
+      const updatedCategories = currentCategories.map(cat => 
+        cat.id === id ? { ...cat, is_active: newIsActive } : cat
+      );
+      setLocalCategories(updatedCategories);
+      
+      // Prepare the update object with all required fields
+      const updateData = {
+        ...categoryToUpdate,
+        is_active: newIsActive,
+        name: formatStorageName(categoryToUpdate.name), // Ensure name is in storage format
+        priority: categoryToUpdate.priority || 0 // Ensure priority is always a number
+      };
+      
+      // Update via menuStore's updateCategoriesAsBatch method to ensure consistency
+      // We only update this single category instead of doing a full batch update
+      const { updateCategoriesAsBatch } = useMenuStore.getState();
+      await updateCategoriesAsBatch([updateData]);
+      
+      // Success notification
+      toast.success(`Category ${newIsActive ? 'enabled' : 'disabled'} successfully`);
+    } catch (error) {
+      toast.error('Failed to update category status');
+      
+      // On error, revert to the previous state
+      if (user?.id) {
+        try {
+          // Find the original category in our local state
+          const originalCategory = localCategories.find(cat => cat.id === id);
+          if (originalCategory) {
+            // Revert just this category
+            const revertedCategories = localCategories.map(cat => 
+              cat.id === id ? { ...cat, is_active: !newIsActive } : cat
+            );
+            setLocalCategories(revertedCategories);
+          }
+        } catch (refreshError) {
+          // Error handling for reverting state
         }
       }
-    };
+    }
+  };
 
-    refreshCategories();
-  }, [initialCategories]);
+  const handleSubmit = async () => {
+    setIsLoading(true);
+
+    // Blur any focused inputs to dismiss keyboard
+    if (document.activeElement instanceof HTMLInputElement) {
+      document.activeElement.blur();
+    }
+
+    const updatedCategories = localCategories.map((cat: Category) => ({
+      ...cat,
+      name: formatStorageName(cat.name)
+    }));
+
+    try {
+      await onSubmit(updatedCategories);
+      toast.success("Categories updated successfully");
+    } catch (err) {
+      toast.error("Failed to update categories");
+      throw err; // Re-throw to allow parent component to handle the error
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReset = () => {
+    // Blur any focused inputs to dismiss keyboard
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    
+    setLocalCategories(initialCategories.map(cat => ({
+      ...cat,
+      name: formatDisplayName(cat.name)
+    })));
+    toast("Changes discarded");
+  };
 
   const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     setKeyboardOpen(true);
@@ -188,164 +315,6 @@ export function CategoryManagementForm({
       }
     };
   }, []);
-
-  const filteredCategories = localCategories.filter((cat) =>
-    cat.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  console.log('[CategoryManagement] Filtered categories:', { 
-    searchTerm, 
-    filteredCount: filteredCategories.length,
-    totalCount: localCategories.length 
-  });
-
-  const moveToPosition = useCallback(
-    (id: string, newIndex: number) => {
-      const currentIndex = localCategories.findIndex((cat) => cat.id === id);
-      if (
-        currentIndex === -1 ||
-        newIndex < 0 ||
-        newIndex >= localCategories.length
-      )
-        return;
-
-      const newCategories = [...localCategories];
-      const [movedItem] = newCategories.splice(currentIndex, 1);
-      newCategories.splice(newIndex, 0, movedItem);
-
-      const updatedCategories = newCategories.map((cat, idx) => ({
-        ...cat,
-        priority: idx + 1,
-      }));
-
-      setLocalCategories(updatedCategories);
-    },
-    [localCategories]
-  );
-
-  const moveCategory = useCallback((id: string, direction: 'up' | 'down') => {
-    const currentIndex = localCategories.findIndex((cat) => cat.id === id);
-    if (currentIndex === -1) return;
-    
-    const newIndex = direction === 'up' 
-      ? Math.max(0, currentIndex - 1) 
-      : Math.min(localCategories.length - 1, currentIndex + 1);
-      
-    if (newIndex !== currentIndex) {
-      moveToPosition(id, newIndex);
-    }
-  }, [localCategories, moveToPosition]);
-
-  const moveToTop = (id: string) => moveToPosition(id, 0);
-  const moveToBottom = (id: string) =>
-    moveToPosition(id, localCategories.length - 1);
-
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-    moveToPosition(result.draggableId, result.destination.index);
-  };
-
-  const handleNameChange = (id: string, newName: string) => {
-    console.log('[CategoryManagement] Category name change:', { id, newName });
-    setLocalCategories((prev) =>
-      prev.map((cat) => (cat.id === id ? { ...cat, name: (newName) } : cat))
-    );
-  };
-
-  const handleStatusChange = async (id: string, newIsActive: boolean) => {
-    try {
-      console.log('[CategoryManagement] Category status change:', { id, newIsActive });
-      
-      const currentCategories = [...localCategories];
-      const categoryToUpdate = currentCategories.find(cat => cat.id === id);
-      if (!categoryToUpdate) return;
-      
-      // Update local state optimistically
-      const updatedCategories = currentCategories.map(cat => 
-        cat.id === id ? { ...cat, is_active: newIsActive } : cat
-      );
-      setLocalCategories(updatedCategories);
-      
-      // Prepare the update object with all required fields
-      const updateData = {
-        ...categoryToUpdate,
-        is_active: newIsActive,
-        name: formatStorageName(categoryToUpdate.name), // Ensure name is in storage format
-        priority: categoryToUpdate.priority || 0 // Ensure priority is always a number
-      };
-      console.log('[CategoryManagement] Updating category with data:', updateData);
-      
-      // Update in the store
-      const { updateCategory } = useCategoryStore.getState();
-      await updateCategory(updateData);
-      
-      // Refresh categories from the store to ensure we have the latest data
-      const { categories } = useCategoryStore.getState();
-      console.log('[CategoryManagement] Categories after status update:', categories);
-      setLocalCategories([...categories]);
-      
-      toast.success(`Category ${newIsActive ? 'enabled' : 'disabled'} successfully`);
-    } catch (error) {
-      console.error('[CategoryManagement] Error toggling category status:', error);
-      toast.error('Failed to update category status');
-      
-      // Revert local state on error
-      const { categories: currentStoreCategories } = useCategoryStore.getState();
-      setLocalCategories(prev => 
-        prev.map(cat => {
-          const currentCat = currentStoreCategories.find(c => c.id === cat.id);
-          return currentCat 
-            ? { 
-                ...currentCat, 
-                name: formatDisplayName(currentCat.name),
-                is_active: currentCat.is_active !== false,
-                priority: currentCat.priority || 0
-              } 
-            : cat;
-        })
-      );
-    }
-  };
-
-  const handleSubmit = async () => {
-    setIsLoading(true);
-
-    // Blur any focused inputs to dismiss keyboard
-    if (document.activeElement instanceof HTMLInputElement) {
-      document.activeElement.blur();
-    }
-
-    const updatedCategories = localCategories.map((cat: Category) => ({
-      ...cat,
-      name: formatStorageName(cat.name)
-    }));
-    
-    console.log('[CategoryManagement] Submitting categories for update:', updatedCategories);
-
-    try {
-      await onSubmit(updatedCategories);
-      console.log('[CategoryManagement] Categories updated successfully');
-      toast.success("Categories updated successfully");
-    } catch (err) {
-      console.error("[CategoryManagement] Error updating categories:", err);
-      toast.error("Failed to update categories");
-      throw err; // Re-throw to allow parent component to handle the error
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleReset = () => {
-    // Blur any focused inputs to dismiss keyboard
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
-    
-    setLocalCategories(initialCategories.map(cat => ({
-      ...cat,
-      name: formatDisplayName(cat.name)
-    })));
-    toast("Changes discarded");
-  };
 
   return (
     <div className="container px-2 sm:px-0 pb-10">
@@ -568,7 +537,6 @@ export function CategoryManagementForm({
                                           toast.error(
                                             `Failed to delete "${category.name}"`
                                           );
-                                          console.error("Delete error:", error);
                                         }
                                       }
                                     }}
@@ -629,11 +597,71 @@ export function CategoryManagementModal({
   open,
   onOpenChange,
 }: CategoryManagementModalProps) {
-  const { updateCategoriesAsBatch } = useMenuStore();
+  const { updateCategoriesAsBatch, fetchMenu } = useMenuStore();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const user = useAuthStore(state => state.userData);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  // Fetch categories from menu items when modal opens
+  useEffect(() => {
+    // Only load once when the modal is opened
+    // Reset the loaded state when modal closes
+    if (!open) {
+      setHasLoaded(false);
+      return;
+    }
+    
+    // Skip if we've already loaded or if there's no user
+    if (hasLoaded || !user?.id) return;
+    
+    const loadCategories = async () => {
+      try {
+        const menuItems = await fetchMenu(user.id, true); // Force refresh
+        
+        // Extract unique categories from menu items using the helper function
+        const extractedCategories = extractCategoriesFromMenuItems(menuItems);
+        
+        setCategories(extractedCategories);
+        setHasLoaded(true);
+      } catch (error) {
+        // If initialCategories is provided, ensure it's deduplicated
+        if (initialCategories && initialCategories.length > 0) {
+          // Use the same approach to deduplicate by name
+          const uniqueMap = new Map();
+          initialCategories.forEach(cat => {
+            if (cat.name) {
+              const catName = cat.name.toLowerCase();
+              if (!uniqueMap.has(catName)) {
+                uniqueMap.set(catName, cat);
+              }
+            }
+          });
+          
+          const uniqueCategories = Array.from(uniqueMap.values());
+          setCategories(uniqueCategories);
+          setHasLoaded(true);
+        }
+      }
+    };
+    
+    loadCategories();
+  }, [open, user, hasLoaded]); // Remove initialCategories and fetchMenu from dependencies
 
   const handleSubmit = async (updatedCategories: Category[]) => {
-    console.log('[CategoryManagementModal] Submitting batch update for categories:', updatedCategories);
-    await updateCategoriesAsBatch(updatedCategories);
+    // Ensure we're only updating unique categories
+    const uniqueUpdatedMap = new Map();
+    updatedCategories.forEach(cat => {
+      if (cat.name) {
+        const catName = formatStorageName(cat.name).toLowerCase();
+        if (!uniqueUpdatedMap.has(catName)) {
+          uniqueUpdatedMap.set(catName, cat);
+        }
+      }
+    });
+    
+    const uniqueUpdatedCategories = Array.from(uniqueUpdatedMap.values());
+    
+    await updateCategoriesAsBatch(uniqueUpdatedCategories);
     onOpenChange(false);
   };
 
@@ -645,7 +673,7 @@ export function CategoryManagementModal({
         </FullModalHeader>
         <FullModalBody className="overflow-auto">
           <CategoryManagementForm 
-            categories={initialCategories}
+            categories={categories}
             onSubmit={handleSubmit}
             onCancel={() => onOpenChange(false)}
           />
