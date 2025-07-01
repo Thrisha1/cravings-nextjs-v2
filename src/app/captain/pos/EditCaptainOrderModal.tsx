@@ -618,7 +618,7 @@ export const EditCaptainOrderModal = () => {
                   placeholder="Add any special instructions or notes for this order..."
                   value={orderNote}
                   onChange={(e) => setOrderNote(e.target.value)}
-                  className="w-full p-3 border rounded-md resize-none text-black"
+                  className="w-full p-3 border rounded-md resize-none bg-white text-black dark:bg-zinc-900 dark:text-white"
                   rows={3}
                   maxLength={500}
                 />
