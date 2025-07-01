@@ -166,6 +166,7 @@ export const useBulkUpload = () => {
         description: item.description,
         category: item.category,
         variants: item.variants || [],
+        is_price_as_per_size: item.is_price_as_per_size || false,
       } as Omit<MenuItemStore, "id">;
 
       await addItem(newItem);
@@ -274,8 +275,6 @@ export const useBulkUpload = () => {
           const urls: string[] = [];
           if (urls && urls.length > 0) {
             validatedItem.image = urls[0];
-          } else {
-            validatedItem.image = "/image_placeholder.webp";
           }
         }
 

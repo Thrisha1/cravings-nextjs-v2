@@ -77,6 +77,7 @@ export const addMenu = `
             partner_id
             price
             description
+            is_price_as_per_size
             is_top
             is_available
             variants

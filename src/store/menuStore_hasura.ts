@@ -290,7 +290,8 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         partner_id: userData.id,
         price: item.price,
         description: item.description || "",
-        variants : item.variants || []
+        variants : item.variants || [],
+        is_price_as_per_size: item.is_price_as_per_size || false,
       };
 
       const { insert_menu } = await fetchFromHasura(addMenu, {

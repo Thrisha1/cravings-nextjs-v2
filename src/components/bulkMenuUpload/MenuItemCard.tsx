@@ -62,7 +62,9 @@ export const MenuItemCard = ({
           </div>
         </div>
         <p className="font-bold text-2xl text-right shrink-0 text-gray-800">
-          ₹{item.price}
+         {
+          item.is_price_as_per_size ? (<div className="text-xs">{`(Price as per size)`}</div>) : (<> ₹{item.price}</>)
+         }
         </p>
       </div>
 
