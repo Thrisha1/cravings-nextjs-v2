@@ -164,7 +164,8 @@ interface OrderState {
           charge_type?: string;
         }[]
       | null,
-    deliveryCharge?: number
+    deliveryCharge?: number,
+    notes?: string
   ) => Promise<Order | null>;
   getCurrentOrder: () => HotelOrderState;
   fetchOrderOfPartner: (partnerId: string) => Promise<Order[] | null>;
@@ -426,13 +427,18 @@ const useOrderStore = create(
       subscribeOrders: (callback) => {
         const { userData } = useAuthStore.getState();
 
-        if (!userData?.id) {
+        let partnerId = userData?.id;
+        if (userData?.role === "captain") {
+          partnerId = userData.partner_id;
+        }
+
+        if (!partnerId) {
           return () => {};
         }
 
         return subscribeToHasura({
           query: subscriptionQuery,
-          variables: { partner_id: userData.id },
+          variables: { partner_id: partnerId },
           onNext: (data) => {
             if (data?.data?.orders) {
               const orders = data.data.orders.map(transformOrderFromHasura);
@@ -822,10 +828,10 @@ const useOrderStore = create(
 
      
       placeOrder: async (
-        hotelData,
-        tableNumber,
-        qrId,
-        gstIncluded,
+        hotelData: HotelData,
+        tableNumber?: number,
+        qrId?: string,
+        gstIncluded?: number,
         extraCharges?:
           | {
               name: string;
@@ -833,7 +839,8 @@ const useOrderStore = create(
               charge_type?: string;
             }[]
           | null,
-        deliveryCharge?: number
+        deliveryCharge?: number,
+        notes?: string
       ) => {
         try {
           const state = get();
@@ -939,6 +946,7 @@ const useOrderStore = create(
                     ],
                   }
                 : null,
+            notes: notes || null,
           });
 
           if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {

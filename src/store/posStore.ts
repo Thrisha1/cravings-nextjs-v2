@@ -6,12 +6,11 @@ import {
   getGstAmount,
 } from "@/components/hotelDetail/OrderDrawer";
 import {
-  createOrderItemsMutation,
   createOrderMutation,
   getOrdersOfPartnerQuery,
 } from "@/api/orders";
 import { deleteBillMutation } from "@/api/pos";
-import { Order, OrderItem } from "./orderStore";
+import { Order } from "./orderStore";
 import { v4 as uuidv4 } from "uuid";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import { getQrGroupForTable } from "@/lib/getQrGroupForTable";
@@ -29,6 +28,14 @@ export interface ExtraCharge {
   name: string;
   amount: number;
   id: string;
+}
+
+interface QrCodeData {
+  id: string;
+  qr_number: string;
+  table_number: number | null;
+  partner_id: string;
+  no_of_scans: number;
 }
 
 interface POSState {
@@ -59,8 +66,11 @@ interface POSState {
   getPartnerTables: () => Promise<void>;
   postCheckoutModalOpen: boolean;
   editOrderModalOpen: boolean;
+  cartModalOpen: boolean;
   setPostCheckoutModalOpen: (open: boolean) => void;
   setEditOrderModalOpen: (open: boolean) => void;
+  setCartModalOpen: (open: boolean) => void;
+  closeAllModalsAndPOS: () => void;
   addExtraCharge: (charge: Omit<ExtraCharge, "id">) => void;
   removeExtraCharge: (chargeId: string) => void;
   calculateTotalWithCharges: () => number;
@@ -75,6 +85,9 @@ interface POSState {
   removedQrGroupCharges: string[];
   removeQrGroupCharge: (qrGroupId: string) => void;
   addQrGroupCharge: (qrGroupId: string) => void;
+  orderNote: string;
+  setOrderNote: (note: string) => void;
+  refreshOrdersAfterUpdate: () => void;
 }
 
 export const usePOSStore = create<POSState>((set, get) => ({
@@ -89,11 +102,13 @@ export const usePOSStore = create<POSState>((set, get) => ({
   tableNumbers: [],
   postCheckoutModalOpen: false,
   editOrderModalOpen: false,
+  cartModalOpen: false,
   isCaptainOrder: false,
   deliveryAddress: "",
   isPOSOpen: false,
   qrGroup: null,
   removedQrGroupCharges: [],
+  orderNote: "",
 
   setDeliveryAddress: (address: string) => {
     set({ deliveryAddress: address });
@@ -116,6 +131,16 @@ export const usePOSStore = create<POSState>((set, get) => ({
     }
   },
   setEditOrderModalOpen: (open) => set({ editOrderModalOpen: open }),
+  setCartModalOpen: (open) => set({ cartModalOpen: open }),
+  closeAllModalsAndPOS: () => {
+    set({ 
+      postCheckoutModalOpen: false,
+      editOrderModalOpen: false,
+      cartModalOpen: false,
+      isPOSOpen: false
+    });
+    get().clearCart();
+  },
   setIsCaptainOrder: (isCaptain) => set({ isCaptainOrder: isCaptain }),
   getPartnerTables: async () => {
     try {
@@ -167,9 +192,10 @@ export const usePOSStore = create<POSState>((set, get) => ({
         }
 
         // Get all table numbers, including 0
-        const tableNumbers = response.qr_codes
-          .filter((qr: any) => qr.table_number !== null && qr.table_number !== undefined)
-          .map((qr: any) => Number(qr.table_number))
+        const qrCodes = response.qr_codes as QrCodeData[];
+        const tableNumbers = qrCodes
+          .filter((qr) => qr.table_number !== null && qr.table_number !== undefined)
+          .map((qr) => Number(qr.table_number))
           .sort((a: number, b: number) => a - b); // Sort numerically
 
         // console.log("Extracted table numbers:", tableNumbers);
@@ -177,7 +203,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         if (tableNumbers.length === 0) {
           console.warn("No table numbers found in qr_codes for partner:", partnerId);
           // Log all QR codes that might have null table numbers
-          response.qr_codes.forEach((qr: any) => {
+          qrCodes.forEach((qr) => {
             if (qr.table_number === null || qr.table_number === undefined) {
               console.log("QR code with null/undefined table number:", qr);
             }
@@ -212,9 +238,10 @@ export const usePOSStore = create<POSState>((set, get) => ({
           return;
         }
 
-        const tableNumbers = response.qr_codes
-          .filter((qr: any) => qr.table_number !== null && qr.table_number !== undefined)
-          .map((qr: any) => Number(qr.table_number))
+        const qrCodes = response.qr_codes as QrCodeData[];
+        const tableNumbers = qrCodes
+          .filter((qr) => qr.table_number !== null && qr.table_number !== undefined)
+          .map((qr) => Number(qr.table_number))
           .sort((a: number, b: number) => a - b);
 
         set({ tableNumbers });
@@ -312,7 +339,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   },
 
   clearCart: () => {
-    set({ cartItems: [], totalAmount: 0, extraCharges: [], removedQrGroupCharges: [] });
+    set({ cartItems: [], totalAmount: 0, extraCharges: [], removedQrGroupCharges: [], orderNote: "" });
   },
 
   addExtraCharge: (charge: Omit<ExtraCharge, "id">) => {
@@ -363,7 +390,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
   checkout: async () => {
     try {
       set({ loading: true });
-      const { cartItems, extraCharges, isCaptainOrder, qrGroup } = get();
+      const { cartItems, extraCharges, isCaptainOrder, qrGroup, orderNote } = get();
       const userData = useAuthStore.getState().userData;
       console.log("User Data:", {
         id: userData?.id,
@@ -433,7 +460,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
         tableNumber: get().tableNumber,
         extraCharges: allExtraCharges,
         gstIncluded: gstPercentage,
-        captainId: isCaptainOrder ? userId : null
+        captainId: isCaptainOrder ? userId : null,
+        orderNote: orderNote
       });
 
       // Create order in database
@@ -452,7 +480,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
         delivery_address: get().deliveryAddress || null,
         delivery_location: null,
         orderedby: isCaptainOrder ? "captain" : null,
-        captain_id: isCaptainOrder ? userId : null
+        captain_id: isCaptainOrder ? userId : null,
+        notes: orderNote || null
       });
 
       if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
@@ -538,6 +567,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         phone: get().userPhone || undefined,
         orderedby: isCaptainOrder ? "captain" : undefined,
         captain_id: isCaptainOrder ? userId : undefined,
+        notes: orderNote || undefined,
       };
 
       set({ order: newOrder, postCheckoutModalOpen: true });
@@ -681,5 +711,14 @@ export const usePOSStore = create<POSState>((set, get) => ({
         }));
       }
     }
+  },
+
+  setOrderNote: (note: string) => set({ orderNote: note }),
+
+  refreshOrdersAfterUpdate: () => {
+    // This function will be used to trigger order refresh in components
+    // Components can listen to this to refetch orders after updates
+    const event = new CustomEvent('orderUpdated', { detail: { timestamp: Date.now() } });
+    window.dispatchEvent(event);
   },
 }));

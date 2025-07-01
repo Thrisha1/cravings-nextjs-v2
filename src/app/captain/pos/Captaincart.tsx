@@ -4,23 +4,13 @@ import { Button } from "@/components/ui/button";
 import { ExtraCharge, usePOSStore } from "@/store/posStore";
 import { Plus, Minus, ShoppingCart, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Captain, useAuthStore } from "@/store/authStore";
 import { Input } from "@/components/ui/input";
-import { getExtraCharge } from "@/lib/getExtraCharge";
 
 export const Captaincart = () => {
   const {
     cartItems,
     totalAmount,
-    increaseQuantity,
     decreaseQuantity,
     checkout,
     setUserPhone,
@@ -29,12 +19,9 @@ export const Captaincart = () => {
     tableNumbers,
     tableNumber,
     loading,
-    order,
-    removeFromCart,
     setLoading,
     setPostCheckoutModalOpen,
     addToCart,
-    setIsCaptainOrder,
     qrGroup,
     getPartnerTables,
     removeExtraCharge,
@@ -42,11 +29,14 @@ export const Captaincart = () => {
     addQrGroupCharge,
     removeQrGroupCharge,
     extraCharges: storeExtraCharges,
+    orderNote,
+    setOrderNote,
+    cartModalOpen,
+    setCartModalOpen,
   } = usePOSStore();
   
   const { userData } = useAuthStore();
   const captainData = userData as Captain;
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [phoneInput, setPhoneInput] = useState("");
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
   const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0, id: "" });
@@ -117,27 +107,27 @@ export const Captaincart = () => {
     }
   };
 
-  const handleConfirmOrder = async () => {
-    try {
-      // Check if cart is empty
-      if (cartItems.length === 0) {
-        toast.error("Cart is empty. Please add items before confirming the order.");
-        return;
-      }
 
-      setUserPhone(phoneInput || null);
-      
-      // Extra charges are already in the store, no need to add them again
-      
+
+  const handleCheckout = async () => {
+    if (cartItems.length === 0) {
+      toast.error("Cart is empty");
+      return;
+    }
+
+    if (!tableNumber) {
+      toast.error("Please select a table number");
+      return;
+    }
+
+    try {
+      setLoading(true);
       await checkout();
-      setIsModalOpen(false);
-      setPostCheckoutModalOpen(true);
-      setPhoneInput("");
-      setExtraCharges([]);
-      setNewExtraCharge({ name: "", amount: 0, id: "" });
     } catch (error) {
-      console.error("Checkout failed:", error);
-      toast.error("Checkout failed");
+      console.error("Checkout error:", error);
+      toast.error("Failed to place order");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -170,7 +160,7 @@ export const Captaincart = () => {
                   toast.error("Cart is empty. Please add items before viewing the order.");
                   return;
                 }
-                setIsModalOpen(true);
+                setCartModalOpen(true);
               }}
               className="bg-black hover:bg-black/90 text-white font-semibold text-sm sm:text-base flex items-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg min-w-[140px] justify-center"
             >
@@ -182,7 +172,7 @@ export const Captaincart = () => {
       </div>
 
       {/* Custom Modal */}
-      {isModalOpen && (
+      {cartModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
           <div className="bg-white rounded-lg w-[95vw] sm:w-[500px] max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b">
@@ -191,7 +181,7 @@ export const Captaincart = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => setCartModalOpen(false)}
                   className="h-8 w-8"
                 >
                   <X className="h-4 w-4" />
@@ -248,20 +238,20 @@ export const Captaincart = () => {
               </div>
 
               {/* Extra Charges */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Extra Charges (Optional)</label>
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-3">Extra Charges</h3>
                 <div className="space-y-3">
                   <div className="flex gap-2">
                     <Input
                       placeholder="Charge name"
                       value={newExtraCharge.name}
-                      onChange={(e) => setNewExtraCharge({...newExtraCharge, name: e.target.value})}
+                      onChange={(e) => setNewExtraCharge({ ...newExtraCharge, name: e.target.value })}
                     />
                     <Input
                       type="number"
                       placeholder="Amount"
                       value={newExtraCharge.amount || ""}
-                      onChange={(e) => setNewExtraCharge({...newExtraCharge, amount: Number(e.target.value)})}
+                      onChange={(e) => setNewExtraCharge({ ...newExtraCharge, amount: Number(e.target.value) })}
                     />
                     <Button onClick={handleAddExtraCharge} className="whitespace-nowrap">
                       Add Charge
@@ -311,9 +301,25 @@ export const Captaincart = () => {
                 </div>
               </div>
 
+              {/* Order Note */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-3">Order Note</h3>
+                <textarea
+                  placeholder="Add any special instructions or notes for this order..."
+                  value={orderNote}
+                  onChange={(e) => setOrderNote(e.target.value)}
+                  className="w-full p-3 border rounded-md resize-none bg-white text-black dark:bg-zinc-900 dark:text-white"
+                  rows={3}
+                  maxLength={500}
+                />
+                <div className="text-xs text-black mt-1">
+                  {orderNote.length}/500 characters
+                </div>
+              </div>
+
               {/* Order Summary */}
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-2">Order Summary</h3>
+                <h3 className="font-semibold mb-2">Order Summary </h3>
                 <div className="space-y-2">
                   {/* Food Items */}
                   {cartItems.map((item, index) => (
@@ -396,13 +402,13 @@ export const Captaincart = () => {
               <div className="p-4 border-t flex gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => setCartModalOpen(false)}
                   className="flex-1"
                 >
                   Cancel
                 </Button>
                 <Button
-                  onClick={handleConfirmOrder}
+                  onClick={handleCheckout}
                   disabled={loading || cartItems.length === 0}
                   className="flex-1"
                 >

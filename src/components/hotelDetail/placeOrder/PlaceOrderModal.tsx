@@ -746,6 +746,7 @@ const PlaceOrderModal = ({
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [orderNote, setOrderNote] = useState("");
 
   const isDelivery = !tableNumber;
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
@@ -932,7 +933,9 @@ const PlaceOrderModal = ({
         tableNumber,
         qrId as string,
         gstAmount,
-        extraCharges.length > 0 ? extraCharges : null
+        extraCharges.length > 0 ? extraCharges : null,
+        undefined, // deliveryCharge
+        orderNote // pass the note
       );
 
       if (result) {
@@ -1026,6 +1029,22 @@ const PlaceOrderModal = ({
                 isDelivery={isDelivery && !isQrScan}
                 qrGroup={qrGroup}
               />
+
+              {/* Note Input */}
+              <div className="border rounded-lg p-4 bg-white">
+                <h3 className="font-medium mb-3">Order Note</h3>
+                <textarea
+                  placeholder="Add any special instructions or notes for this order..."
+                  value={orderNote}
+                  onChange={(e) => setOrderNote(e.target.value)}
+                  className="w-full p-3 border rounded-md resize-none bg-white text-black"
+                  rows={3}
+                  maxLength={500}
+                />
+                <div className="text-xs text-black bg-white mt-1">
+                  {orderNote.length}/500 characters
+                </div>
+              </div>
 
               {/* Login Card (if not logged in) */}
               {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}

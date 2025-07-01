@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { usePOSStore, ExtraCharge } from "@/store/posStore";
-import { Printer, Edit, Loader2 } from "lucide-react";
+import { Printer, Edit, Loader2, X } from "lucide-react";
 import { useReactToPrint } from "react-to-print";
 import { useAuthStore, Captain, Partner } from "@/store/authStore";
 import { fetchFromHasura } from "@/lib/hasuraClient";
@@ -27,6 +27,7 @@ export const CaptainCheckoutModal = () => {
     clearCart,
     extraCharges,
     qrGroup,
+    closeAllModalsAndPOS,
   } = usePOSStore();
 
   const { userData } = useAuthStore();
@@ -99,11 +100,12 @@ export const CaptainCheckoutModal = () => {
               <div className="flex items-center justify-between pt-1">
                 <DialogTitle className="text-xl sm:text-2xl">Order #{order.id.slice(0, 8)}</DialogTitle>
                 <Button
-                  variant="outline"
-                  onClick={() => setPostCheckoutModalOpen(false)}
-                  className="px-4 py-2.5 text-base font-semibold border-2 hover:bg-gray-100"
+                  variant="ghost"
+                  size="icon"
+                  onClick={closeAllModalsAndPOS}
+                  className="h-8 w-8"
                 >
-                  Back
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
               <DialogDescription className="text-base pb-1">
@@ -200,6 +202,14 @@ export const CaptainCheckoutModal = () => {
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Order
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={closeAllModalsAndPOS}
+                  className="flex-1 py-3 text-base font-semibold"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Close
                 </Button>
               </div>
             </div>
