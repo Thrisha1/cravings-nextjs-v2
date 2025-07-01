@@ -517,6 +517,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           ...item.category,
           name: category?.name || item.category.name,
           priority: category?.priority || item.category.priority,
+          is_active: (category?.is_active !== false) // Ensure is_active is always a boolean
         },
       };
     });
@@ -538,7 +539,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         id: cat.id,
         name: cat.name,
         priority: cat.priority ?? 0,
-        is_active: cat.is_active
+        is_active: cat.is_active !== false // Ensure is_active is always a boolean, never undefined
       }));
 
       const CHUNK_SIZE = 20;
@@ -564,7 +565,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
                 ...item.category,
                 name: category.name,
                 priority: category.priority ?? 0,
-                is_active: category.is_active
+                is_active: category.is_active !== false // Ensure is_active is always a boolean
               },
             }
           : item;
