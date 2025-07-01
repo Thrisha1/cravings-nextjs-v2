@@ -15,7 +15,10 @@ import {
   Search,
   X,
   ArrowDown,
-  Calendar
+  Calendar,
+  Phone,
+  MapPin,
+  ShoppingBag
 } from 'lucide-react';
 import Link from 'next/link';
 import { fetchFromHasura } from '@/lib/hasuraClient';
@@ -24,6 +27,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogClose
+} from "@/components/ui/dialog";
 
 interface QRCodeData {
   id: string;
@@ -94,6 +105,8 @@ const AnalyticsDashboard = () => {
   const [datePickerType, setDatePickerType] = useState<'start' | 'end'>('start');
   const [tempStartDate, setTempStartDate] = useState<Date | undefined>(startDate);
   const [tempEndDate, setTempEndDate] = useState<Date | undefined>(endDate);
+  const [selectedPartner, setSelectedPartner] = useState<PartnerData | null>(null);
+  const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
 
   // Debounce search term
   useEffect(() => {
@@ -398,6 +411,12 @@ const AnalyticsDashboard = () => {
     return sorted.slice(startIndex, endIndex);
   }, [partnerData, sortField, partnerCurrentPage, partnerPageSize]);
 
+  // Handle opening partner modal
+  const handlePartnerClick = (partner: PartnerData) => {
+    setSelectedPartner(partner);
+    setIsPartnerModalOpen(true);
+  };
+
   // Date range filter component
   const DateRangeFilter = () => (
     <div className="flex flex-col md:flex-row items-center gap-2 mb-4">
@@ -470,6 +489,89 @@ const AnalyticsDashboard = () => {
     </div>
   );
 
+  // Partner Modal Component
+  const PartnerModal = () => {
+    if (!selectedPartner) return null;
+
+    // Calculate metrics for the selected partner
+    const totalScans = selectedPartner.qr_codes_aggregate?.aggregate?.sum?.no_of_scans || 0;
+    const totalOrders = selectedPartner.orders_aggregate?.aggregate?.count || 0;
+    const totalRevenue = selectedPartner.orders_aggregate?.aggregate?.sum?.total_price || 0;
+    const avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders).toFixed(2) : '0.00';
+
+    return (
+      <Dialog open={isPartnerModalOpen} onOpenChange={setIsPartnerModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">{selectedPartner.name}</DialogTitle>
+            <DialogDescription>
+              Partner Performance Details
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-gray-500">
+                  <Phone className="h-4 w-4" />
+                  <span className="text-sm">Phone:</span>
+                </div>
+                <p className="font-medium">{selectedPartner.phone || 'N/A'}</p>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-gray-500">
+                  <MapPin className="h-4 w-4" />
+                  <span className="text-sm">District:</span>
+                </div>
+                <p className="font-medium">{selectedPartner.district || 'N/A'}</p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-medium text-gray-700 mb-3">Performance Metrics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Scan className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm text-gray-500">Total Scans:</span>
+                  </div>
+                  <p className="text-lg font-semibold">{totalScans}</p>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm text-gray-500">Total Orders:</span>
+                  </div>
+                  <p className="text-lg font-semibold">{totalOrders}</p>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <BarChart className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm text-gray-500">Average Order:</span>
+                  </div>
+                  <p className="text-lg font-semibold">₹{avgOrderValue}</p>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <BarChart className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm text-gray-500">Total Revenue:</span>
+                  </div>
+                  <p className="text-lg font-semibold">₹{totalRevenue.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Close
+              </Button>
+            </DialogClose>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   return (
     <main className="px-3 py-5 sm:px-[7.5%] bg-[#FFF7EC] min-h-screen">
       <div className="mb-6">
@@ -484,6 +586,9 @@ const AnalyticsDashboard = () => {
       
       {/* Include the Analytics component */}
       <Analytics />
+      
+      {/* Include the partner modal */}
+      <PartnerModal />
       
       {/* Additional Data Tables Section */}
       <div className="grid grid-cols-1 gap-6 mt-6">
@@ -629,19 +734,24 @@ const AnalyticsDashboard = () => {
                           <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
                             <Building size={16} />
                           </div>
-                          <span>{partner.name}</span>
+                          <button
+                            onClick={() => handlePartnerClick(partner)}
+                            className="text-blue-600 hover:underline text-left"
+                          >
+                            {partner.name}
+                          </button>
                         </div>
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap">{totalScans}</td>
                       <td className="py-3 px-4 whitespace-nowrap">{totalOrders}</td>
                       <td className="py-3 px-4 whitespace-nowrap">₹{avgOrderValue}</td>
-                                                <td className="py-3 px-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        totalOrders > 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {totalOrders > 0 ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          totalOrders > 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {totalOrders > 0 ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
                     </tr>
                   );
                 })
