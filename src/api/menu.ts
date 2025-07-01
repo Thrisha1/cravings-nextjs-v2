@@ -15,6 +15,7 @@ export const getMenu = `
             variants
             partner_id
             priority
+            is_price_as_per_size
             price
             offers {
               offer_price

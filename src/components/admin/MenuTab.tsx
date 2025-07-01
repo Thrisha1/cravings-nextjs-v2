@@ -92,7 +92,9 @@ export function MenuTab() {
   const [isInlineItemOrdering, setIsInlineItemOrdering] = useState(false);
   const [tempItems, setTempItems] = useState<Record<string, MenuItem[]>>({});
   const { updateItemsAsBatch } = useMenuStore();
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(
+    {}
+  );
 
   useEffect(() => {
     if (userData?.id) {
@@ -109,22 +111,22 @@ export function MenuTab() {
 
   useEffect(() => {
     if (!groupedItems) return;
-  
+
     const filtered: Record<string, MenuItem[]> = {};
     const newOpenCategories: Record<string, boolean> = {};
-  
+
     Object.entries(groupedItems).forEach(([category, categoryItems]) => {
       const filteredCategoryItems = categoryItems.filter((item) =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
-  
+
       if (filteredCategoryItems.length > 0) {
         filtered[category] = filteredCategoryItems;
         // Preserve existing open state or default to false
         newOpenCategories[category] = openCategories[category] ?? false;
       }
     });
-  
+
     setFilteredGroupedItems(filtered);
     setTempItems(filtered);
     setOpenCategories(newOpenCategories);
@@ -234,17 +236,17 @@ export function MenuTab() {
       | [];
   }) => {
     const existingItem = menu.find((menuItem) => menuItem.id === item.id);
-  
+
     if (!existingItem) {
       throw new Error("Item not found");
     }
-  
+
     // Keep the category open during update
-    setOpenCategories(prev => ({
+    setOpenCategories((prev) => ({
       ...prev,
-      [item.category]: true
+      [item.category]: true,
     }));
-  
+
     await updateItem(item.id, {
       name: item.name,
       price: parseFloat(item.price),
@@ -258,7 +260,7 @@ export function MenuTab() {
       },
       variants: item.variants,
     });
-  
+
     // Refresh menu while preserving open state
     await fetchMenu();
   };
@@ -276,11 +278,11 @@ export function MenuTab() {
     }[];
   }) => {
     // Ensure the category is open when editing an item
-    setOpenCategories(prev => ({
+    setOpenCategories((prev) => ({
       ...prev,
-      [item.category]: true
+      [item.category]: true,
     }));
-    
+
     setEditingItem({
       id: item.id,
       name: item.name,
@@ -372,18 +374,18 @@ export function MenuTab() {
         />
       ) : isEditModalOpen && editingItem ? (
         <EditMenuItemForm
-  item={editingItem}
-  onSubmit={async (item) => {
-    try {
-      await handleEditItem(item);
-      setIsEditModalOpen(false);
-    } catch (error) {
-      console.error("Failed to update item:", error);
-      toast.error("Failed to update item");
-    }
-  }}
-  onCancel={() => setIsEditModalOpen(false)}
-/>
+          item={editingItem}
+          onSubmit={async (item) => {
+            try {
+              await handleEditItem(item);
+              setIsEditModalOpen(false);
+            } catch (error) {
+              console.error("Failed to update item:", error);
+              toast.error("Failed to update item");
+            }
+          }}
+          onCancel={() => setIsEditModalOpen(false)}
+        />
       ) : isCategoryEditing ? (
         <CategoryManagementForm
           categories={Object.entries(groupedItems).map(([category, items]) => ({
@@ -487,15 +489,15 @@ export function MenuTab() {
           <>
             {Object.entries(tempItems).length > 0 ? (
               <DragDropContext onDragEnd={onDragEnd}>
-                <Accordion 
-                  type="multiple" 
-                  className="grid gap-4" 
+                <Accordion
+                  type="multiple"
+                  className="grid gap-4"
                   value={Object.entries(openCategories)
                     .filter(([category, isOpen]) => isOpen)
                     .map(([category]) => category)}
                   onValueChange={(values: string[]) => {
-                    const newOpenCategories = {...openCategories};
-                    Object.keys(newOpenCategories).forEach(category => {
+                    const newOpenCategories = { ...openCategories };
+                    Object.keys(newOpenCategories).forEach((category) => {
                       newOpenCategories[category] = values.includes(category);
                     });
                     setOpenCategories(newOpenCategories);
@@ -565,35 +567,57 @@ export function MenuTab() {
                                           <CardContent className="relative">
                                             {/* Price Display - Shows default price or "From" price if variants exist */}
                                             <div className="flex items-baseline gap-2">
-                                              <p className="text-2xl font-bold">
-                                                {(item.variants?.length ?? 0) >
-                                                0 ? (
-                                                  <>
-                                                    <span className="text-xs">
-                                                      From{" "}
-                                                    </span>
-                                                    {(userData as Partner)
-                                                      ?.currency || "₹"}
-                                                    {userData?.id ===
-                                                    "767da2a8-746d-42b6-9539-528b6b96ae09"
-                                                      ? Math.min(
-                                                          ...(
-                                                            item?.variants ?? []
-                                                          ).map((v) => v.price)
-                                                        ).toFixed(3)
-                                                      : Math.min(
-                                                          ...(
-                                                            item?.variants ?? []
-                                                          ).map((v) => v.price)
-                                                        )}
-                                                  </>
-                                                ) : userData?.id ===
-                                                  "767da2a8-746d-42b6-9539-528b6b96ae09" ? (
-                                                  item.price.toFixed(3)
-                                                ) : (
-                                                  item.price
-                                                )}
-                                              </p>
+                                              {item.is_price_as_per_size ? (
+                                                <div className="text-sm font-normal">
+                                                  {" "}
+                                                  {`(Price as per size)`}{" "}
+                                                </div>
+                                              ) : (
+                                                <p className="text-2xl font-bold">
+                                                  {(item.variants?.length ??
+                                                    0) > 0 ? (
+                                                    <>
+                                                      <span className="text-xs">
+                                                        From{" "}
+                                                      </span>
+                                                      {(userData as Partner)
+                                                        ?.currency || "₹"}
+                                                      {userData?.id ===
+                                                      "767da2a8-746d-42b6-9539-528b6b96ae09"
+                                                        ? Math.min(
+                                                            ...(
+                                                              item?.variants ??
+                                                              []
+                                                            ).map(
+                                                              (v) => v.price
+                                                            )
+                                                          ).toFixed(3)
+                                                        : Math.min(
+                                                            ...(
+                                                              item?.variants ??
+                                                              []
+                                                            ).map(
+                                                              (v) => v.price
+                                                            )
+                                                          )}
+                                                    </>
+                                                  ) : userData?.id ===
+                                                    "767da2a8-746d-42b6-9539-528b6b96ae09" ? (
+                                                    <>
+                                                      {(userData as Partner)
+                                                        ?.currency || "₹"}
+                                                      {item.price.toFixed(3)}
+                                                    </>
+                                                  ) : (
+                                                    <>
+                                                      {(userData as Partner)
+                                                        ?.currency || "₹"}
+                                                      {item.price}
+                                                    </>
+                                                  )}
+                                                </p>
+                                              )}
+
                                               {(item.variants?.length ?? 0) >
                                                 0 && (
                                                 <span className="text-sm text-gray-500">
@@ -694,6 +718,41 @@ export function MenuTab() {
                                                         (item.is_available
                                                           ? "Unavailable"
                                                           : "Available")
+                                                    );
+                                                    console.error(error);
+                                                  }
+                                                }}
+                                              />
+                                            </div>
+
+                                            <div className="flex items-center mt-3">
+                                              <label className="mr-2">
+                                                Is Price as per Size:
+                                              </label>
+                                              <Switch
+                                                checked={
+                                                  item.is_price_as_per_size ===
+                                                  true
+                                                }
+                                                onCheckedChange={async () => {
+                                                  console.log(
+                                                    item.is_price_as_per_size
+                                                  );
+
+                                                  try {
+                                                    await updateItem(
+                                                      item.id as string,
+                                                      {
+                                                        is_price_as_per_size:
+                                                          !item.is_price_as_per_size,
+                                                      }
+                                                    );
+                                                  } catch (error) {
+                                                    toast.error(
+                                                      "Failed to mark item as " +
+                                                        (item.is_price_as_per_size
+                                                          ? "Price Fixed"
+                                                          : "Price as per Size")
                                                     );
                                                     console.error(error);
                                                   }

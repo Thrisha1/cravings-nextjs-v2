@@ -19,20 +19,30 @@ const ItemCard = ({
 }) => {
   const [showVariants, setShowVariants] = useState(false);
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
+
+  // --- Feature Flags & Stock Logic ---
   const hasOrderingFeature = getFeatures(feature_flags || "")?.ordering.enabled;
   const hasDeliveryFeature =
     getFeatures(feature_flags || "")?.delivery.enabled && tableNumber === 0;
+  const hasStockFeature = getFeatures(feature_flags || "")?.stockmanagement
+    ?.enabled;
+
+  // An item is "out of stock" if the stock feature is on, the stocks array is not empty, and quantity is 0 or less.
+  // Per your request, an empty 'stocks' array means the item is considered IN STOCK.
+  const isOutOfStock =
+    hasStockFeature &&
+    (item.stocks?.length ?? 0) > 0 &&
+    (item.stocks?.[0]?.stock_quantity ?? 1) <= 0;
+
+  // Whether to display the stock count on the card
+  const showStock = hasStockFeature && (item.stocks?.[0]?.show_stock ?? false);
+  const stockQuantity = item.stocks?.[0]?.stock_quantity; // The actual quantity, may be undefined
+
+  const hasVariants = (item.variants?.length ?? 0) > 0;
   const [itemQuantity, setItemQuantity] = useState<number>(0);
   const [variantQuantities, setVariantQuantities] = useState<
     Record<string, number>
   >({});
-
-  const showStock = item.stocks?.[0]?.show_stock;
-  const stockQuantity = item.stocks?.[0]?.stock_quantity ?? 9999;
-  const isOutOfStock = (item.stocks?.[0]?.stock_quantity ?? 0) <= 0 || false;
-  const hasStockFeature = getFeatures(feature_flags || "")?.stockmanagement
-    ?.enabled;
-  const hasVariants = (item.variants?.length ?? 0) > 0;
 
   useEffect(() => {
     if (item.variants?.length) {
@@ -110,11 +120,17 @@ const ItemCard = ({
             }}
             className="text-lg font-bold"
           >
-            {hoteldata?.currency || "₹"}
-            {item.price}
+            {item.is_price_as_per_size !== true ? (
+              <>
+                {hoteldata?.currency || "₹"}
+                {item.price}
+              </>
+            ) : (
+              <div className="text-base font-normal">{`(Price as per size)`}</div>
+            )}
           </p>
 
-          {showStock && hasStockFeature && (
+          {showStock && (
             <div className="text-xs mt-1">
               {isOutOfStock ? (
                 <span className="text-red-500 font-semibold">Out of Stock</span>
@@ -133,14 +149,14 @@ const ItemCard = ({
               <img
                 src={item.image_url || "/image_placeholder.webp"}
                 alt={item.name}
-                className={`w-full h-full object-cover ${!item.image_url ? "invert opacity-50" : ""} ${
-                  !item.is_available || (isOutOfStock && hasStockFeature)
-                    ? "grayscale"
-                    : ""
+                className={`w-full h-full object-cover ${
+                  !item.image_url ? "invert opacity-50" : ""
+                } ${
+                  !item.is_available || isOutOfStock ? "grayscale" : ""
                 }`}
               />
             </div>
-            {(!item.is_available || (isOutOfStock && hasStockFeature)) && (
+            {(!item.is_available || isOutOfStock) && (
               <div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-center text-xs font-semibold py-1 px-2 w-full">
                 {!item.is_available ? "Unavailable" : "Out of Stock"}
               </div>
@@ -148,8 +164,8 @@ const ItemCard = ({
 
             {/* Add button positioned at bottom center of image */}
             {item.is_available &&
-              (hasOrderingFeature || hasDeliveryFeature) &&
-              (!hasStockFeature || !isOutOfStock) && (
+              !isOutOfStock &&
+              (hasOrderingFeature || hasDeliveryFeature) && (
                 <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
                   {hasVariants ? (
                     <div
@@ -158,7 +174,7 @@ const ItemCard = ({
                         backgroundColor: styles.accent,
                         color: "white",
                       }}
-                      className="rounded-full px-4 py-1 font-medium text-sm whitespace-nowrap h-fit"
+                      className="rounded-full px-4 py-1 font-medium text-sm whitespace-nowrap h-fit cursor-pointer"
                     >
                       {showVariants ? "Hide Options" : "Add"}
                     </div>
@@ -204,7 +220,7 @@ const ItemCard = ({
                         backgroundColor: styles.accent,
                         color: "white",
                       }}
-                      className="rounded-full px-4 py-1 font-medium text-sm h-fit"
+                      className="rounded-full px-4 py-1 font-medium text-sm h-fit cursor-pointer"
                     >
                       Add
                     </div>
@@ -265,7 +281,7 @@ const ItemCard = ({
                         backgroundColor: styles.accent,
                         color: "white",
                       }}
-                      className="rounded-full px-4 py-1 font-medium h-fit"
+                      className="rounded-full px-4 py-1 font-medium h-fit cursor-pointer"
                     >
                       Add
                     </div>
