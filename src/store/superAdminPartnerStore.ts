@@ -19,6 +19,7 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
 
 interface MenuItem {
+  is_price_as_per_size: boolean | undefined;
   name: string;
   price: number;
   description: string;
@@ -214,7 +215,7 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
                   if (!category_id) throw new Error("Category ID not found");
 
                   // Use generated image if available
-                  if (generatedImages[item.name]) {
+                  if (generatedImages[item.name] || item.image) {
                     const formattedName = item.name
                       .replace(/[^a-zA-Z0-9]/g, "_")
                       .replace(/\s+/g, "_")
@@ -225,7 +226,7 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
                       .replace(/_+/g, "_");
 
                     const processedImage = await processImage(
-                      generatedImages[item.name],
+                      (item.image || generatedImages[item.name]),
                       "generated"
                     );
 
@@ -244,6 +245,7 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
                     price: item.price,
                     description: item.description || "",
                     variants: item.variants || [],
+                    is_price_as_per_size: item.is_price_as_per_size || false,
                   };
                 } catch (error) {
                   console.error(`Error processing item ${item.name}:`, error);
@@ -348,7 +350,20 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
             },
           });
 
-          const prompt = `Extract menu items from these images with structure: name, price, description, category. Group variants together. all variants should be included. varaiant should be arrranged in acending order of price. always take the minimum price of the variant as the price of the item. If no variants take the price of the item as the price.`;
+          const prompt = `Extract each distinct dish as a separate item from the provided images. 
+A 'variant' applies *only* to different sizes (e.g., Quarter, Half, Full, Small, Large, Regular) or quantities of the *same specific menu item*. 
+If a menu item does not have these explicit size/quantity options, it should *not* have a 'variants' field. 
+For example, 'Fresh Lime' and 'Mint Lime' are separate items, not variants of a general 'Lime Juice'.
+
+For each item, provide:
+- name: The name of the dish.
+- price: The minimum price if variants exist, otherwise the item's price. Price must be a number, greater than zero. Use 1 if no price is found.
+- description: A descriptive sentence for each item, maximum 10 words. Elaborate on the item's name and its category, highlighting key attributes like freshness, flavor, or main ingredients. For example:
+    - For 'Watermelon' under 'Fresh Juice': "A refreshing juice made from ripe, sweet watermelon, perfectly hydrating and a great choice on a hot day."
+    - For 'Carrot' under 'Pure Juice': "Experience the pure, wholesome goodness of freshly extracted carrot juice, packed with vitamins and natural sweetness."
+    - For 'Fresh Lime' under 'Lime Juice': "Enjoy a classic, zesty Fresh Lime juice, perfectly balanced and incredibly invigorating, a timeless favorite."
+- category: The main heading under which the item is listed.
+- variants: (Optional) An array of objects, each with 'name' and 'price', if the item has different sizes/portions. Variants must be arranged in ascending order of price.`;
 
           const imageParts = await Promise.all(
             files.map(async (file) => {

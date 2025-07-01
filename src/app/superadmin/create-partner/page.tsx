@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useSuperAdminPartnerStore } from "@/store/superAdminPartnerStore";
 import { useCreatedPartnerStore } from "@/store/createdPartnerStore";
+import ImageEdit from "@/components/superAdmin/createPartner/ImageEdit";
 
 interface MenuItem {
   image?: string;
@@ -37,12 +38,14 @@ interface MenuItem {
   name: string;
   price: number;
   variants?: { name: string; price: number }[];
+  is_price_as_per_size?: boolean;
 }
 
 export default function SuperAdminCreatePartnerPage() {
   const router = useRouter();
   const { locationData, countries } = useLocationStore();
-  const { partner, setPartner, clearPartner , partnerBanner , setPartnerBanner } = useCreatedPartnerStore();
+  const { partner, setPartner, clearPartner, partnerBanner, setPartnerBanner } =
+    useCreatedPartnerStore();
   const {
     createPartner,
     uploadBanner,
@@ -245,6 +248,8 @@ export default function SuperAdminCreatePartnerPage() {
       return;
     }
 
+    console.log(editedItem);
+
     try {
       await updateMenuItem(itemIndex, {
         name: editedItem.name || "",
@@ -253,6 +258,7 @@ export default function SuperAdminCreatePartnerPage() {
         category: editedItem.category || "",
         image: editedItem.image || generatedImages[editingItem],
         variants: editedItem.variants,
+        is_price_as_per_size: editedItem.is_price_as_per_size || false,
       });
       setEditingItem(null);
       setEditedItem({});
@@ -266,7 +272,7 @@ export default function SuperAdminCreatePartnerPage() {
   const handleDeleteItem = async (itemName: string) => {
     try {
       const itemIndex = extractedMenuItems.findIndex(
-        (item) => item.name === editingItem
+        (item) => item.name === itemName
       );
 
       if (itemIndex === -1) {
@@ -700,13 +706,17 @@ export default function SuperAdminCreatePartnerPage() {
                             <div className="w-full h-32 bg-gray-200 rounded-md flex items-center justify-center mb-2">
                               {generatedImages[item.name] ||
                               editedItem.image ? (
-                                <img
-                                  src={
-                                    generatedImages[item.name] ||
-                                    editedItem.image
-                                  }
-                                  alt={item.name}
-                                  className="w-full h-full object-cover rounded-md"
+                                <ImageEdit
+                                  onChange={(img: string) => {
+                                    setEditedItem({
+                                      ...editedItem,
+                                      image: img,
+                                    });
+                                  }}
+                                  editedItem={editedItem}
+                                  generatedImages={generatedImages}
+                                  item={item}
+                                  key={item.name}
                                 />
                               ) : (
                                 <div className="flex flex-col items-center text-gray-500 text-xs">
@@ -726,17 +736,20 @@ export default function SuperAdminCreatePartnerPage() {
                               }
                               placeholder="Item name"
                             />
-                            <Input
-                              type="number"
-                              value={editedItem.price || 0}
-                              onChange={(e) =>
-                                setEditedItem({
-                                  ...editedItem,
-                                  price: Number(e.target.value),
-                                })
-                              }
-                              placeholder="Price"
-                            />
+                            {(editedItem.is_price_as_per_size ??
+                              item.is_price_as_per_size) !== true && (
+                              <Input
+                                type="number"
+                                value={editedItem.price || 0}
+                                onChange={(e) =>
+                                  setEditedItem({
+                                    ...editedItem,
+                                    price: Number(e.target.value),
+                                  })
+                                }
+                                placeholder="Price"
+                              />
+                            )}
                             <Input
                               value={editedItem.description || ""}
                               onChange={(e) =>
@@ -757,6 +770,27 @@ export default function SuperAdminCreatePartnerPage() {
                               }
                               placeholder="Category"
                             />
+
+                            <div className="flex items-center mt-3">
+                              <label className="mr-2 text-sm">
+                                Is Price as per Size:
+                              </label>
+                              <Switch
+                                checked={
+                                  editedItem.hasOwnProperty(
+                                    "is_price_as_per_size"
+                                  )
+                                    ? editedItem.is_price_as_per_size
+                                    : item.is_price_as_per_size
+                                }
+                                onCheckedChange={(value) => {
+                                  setEditedItem({
+                                    ...editedItem,
+                                    is_price_as_per_size: value,
+                                  });
+                                }}
+                              />
+                            </div>
 
                             {(editedItem.variants || []).length > 0 && (
                               <div className="space-y-2">
@@ -862,9 +896,9 @@ export default function SuperAdminCreatePartnerPage() {
                             </div>
 
                             <div className="w-full h-32 bg-gray-200 rounded-md flex items-center justify-center mb-2">
-                              {generatedImages[item.name] ? (
+                              {generatedImages[item.name] || item.image ? (
                                 <img
-                                  src={generatedImages[item.name]}
+                                  src={item.image || generatedImages[item.name]}
                                   alt={item.name}
                                   className="w-full h-full object-cover rounded-md"
                                 />
@@ -877,7 +911,11 @@ export default function SuperAdminCreatePartnerPage() {
                             </div>
                             <h5 className="font-bold truncate">{item.name}</h5>
                             <p className="text-sm font-medium">
-                              ₹{item.price.toFixed(2)}
+                              {item.is_price_as_per_size ? (
+                                <>{`(Price as per size)`}</>
+                              ) : (
+                                <> ₹{item.price.toFixed(2)}</>
+                              )}
                             </p>
                             <p className="text-sm text-gray-500">
                               {item.category}

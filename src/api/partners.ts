@@ -145,7 +145,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     business_type
     delivery_rules
     country_code
-    menus(where: {deletion_status: {_eq: 0}, category: {is_active: {_eq: true}}}) {
+    menus(where: {deletion_status: {_eq: 0}, is_available : {_eq :true}  ,category: {is_active: {_eq: true}}}) {
       category {
         name
         id
@@ -159,6 +159,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
       image_url
       is_top
       is_available
+      is_price_as_per_size
       name
       price
       offers(where: {_and: [{end_time: {_gt: "now()"}}, {deletion_status: {_eq: 0}}]}) {
