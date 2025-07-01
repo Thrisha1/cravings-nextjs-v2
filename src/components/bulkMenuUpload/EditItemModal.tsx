@@ -5,6 +5,7 @@ import { ImageGridModal } from "./ImageGridModal";
 import { useState, useEffect } from "react";
 import Img from "../Img";
 import { PlusCircle, Trash2 } from "lucide-react";
+import { Switch } from "@radix-ui/react-switch";
 
 // --- TYPE DEFINITIONS ---
 export interface Variant {
@@ -26,6 +27,7 @@ export interface MenuItem {
     priority: number;
   };
   variants?: Variant[];
+  is_price_as_per_size?: boolean; 
 }
 
 interface EditItemModalProps {
@@ -159,6 +161,19 @@ export const EditItemModal = ({
               placeholder="0.00"
             />
           </div>
+
+          <div className="flex items-center mt-3">
+          <label className="mr-2">Is Price as per Size:</label>
+          <Switch
+            checked={editingItem.item.is_price_as_per_size}
+            onCheckedChange={async () => {
+              console.log(editingItem.item.is_price_as_per_size);
+                
+            
+            }}
+          />
+        </div>
+
 
           {/* --- Variants Section --- */}
           <div className="space-y-3">
