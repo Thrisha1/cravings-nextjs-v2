@@ -17,6 +17,12 @@ const KOTTemplate = ({ ref, order }: { ref: React.RefObject<HTMLDivElement | nul
         <span className="font-medium">Table:</span>
         <span>{order.tableNumber || "Takeaway"}</span>
       </div>
+      {order.notes && (
+        <div className="mb-4 p-2">
+          <div className="font-bold text-sm">Order Notes:</div>
+          <div className="text-sm">{order.notes}</div>
+        </div>
+      )}
       <div className="border-b border-black my-2"></div>
       <h3 className="font-bold mb-2">Items:</h3>
       <ul className="space-y-2">

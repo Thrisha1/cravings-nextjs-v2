@@ -1,20 +1,17 @@
 "use client";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   UtensilsCrossed,
-  ChevronLeft,
   Download,
   ShoppingBag,
   UserCircle,
 } from "lucide-react";
 import { Button } from "./ui/button";
-import { useAuthStore } from "@/store/authStore";
-import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
+import { getFeatures } from "@/lib/getFeatures";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { getAuthCookie } from "@/app/auth/actions";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -26,6 +23,7 @@ const HIDDEN_PATHS = [
   "/hotels/[id]/reviews",
   "/hotels/[id]/menu/[mId]/reviews/new",
   "/hotels/[id]/menu/[mId]/reviews",
+  "/captain",
 ];
 
 export function Navbar({ userData }: { userData: any }) {
