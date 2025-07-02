@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,9 +13,16 @@ import { ArrowLeft } from "lucide-react";
 export default function CaptainLoginPage() {
   const router = useRouter();
   const { signInCaptainWithEmail, loading, error } = useAuthStore();
+  const userData = useAuthStore((state) => state.userData);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (userData && userData.role === "captain") {
+      router.replace("/captain");
+    }
+  }, [userData, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +31,7 @@ export default function CaptainLoginPage() {
     try {
       await signInCaptainWithEmail(email, password);
       toast.success("Login successful!");
-      router.push("/captain"); // Redirect to captain orders page
+      router.replace("/captain"); // Redirect to captain orders page and replace history
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Invalid email or password");
     } finally {

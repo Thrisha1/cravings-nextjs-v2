@@ -163,6 +163,12 @@ export default function Login() {
             </form>
           </div>
         )}
+        {/* Owner login link */}
+        <div className="mt-4 text-center">
+          <Link href="/newlogin" className="text-sm text-orange-600 hover:underline">
+            Are you an owner?
+          </Link>
+        </div>
       </div>
     </div>
   );

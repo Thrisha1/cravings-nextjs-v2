@@ -495,6 +495,9 @@ export const EditCaptainOrderModal = () => {
               <p className="text-sm text-gray-500 mt-1">
                 {tableNumber !== null && tableNumber !== undefined ? `Table ${tableNumber}` : ""}
               </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Customer: {phone || "N/A"}
+              </p>
             </div>
             <Button
               variant="ghost"

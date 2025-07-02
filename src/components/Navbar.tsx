@@ -178,6 +178,8 @@ export function Navbar({ userData }: { userData: any }) {
         ? userData.full_name
         : userData.role === "partner"
         ? userData.store_name
+        : userData.role === "captain"
+        ? "Captain"
         : "Super Admin";
 
     return (

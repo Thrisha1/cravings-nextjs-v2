@@ -107,8 +107,6 @@ export const Captaincart = () => {
     }
   };
 
-
-
   const handleCheckout = async () => {
     if (cartItems.length === 0) {
       toast.error("Cart is empty");
@@ -122,6 +120,7 @@ export const Captaincart = () => {
 
     try {
       setLoading(true);
+      setUserPhone(phoneInput);
       await checkout();
     } catch (error) {
       console.error("Checkout error:", error);
@@ -192,7 +191,7 @@ export const Captaincart = () => {
             <div className="p-4 space-y-4">
               {/* Table Selection */}
               <div>
-                <label className="block text-sm font-medium mb-2">Table Number (Optional)</label>
+                <label className="block text-sm font-medium mb-2">Table Number</label>
                 {tableNumber !== null && (
                   <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
                     Selected: Table {tableNumber}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthStore } from "@/store/authStore";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut, PlusCircle, X, Trash2 } from "lucide-react";
@@ -12,11 +12,27 @@ import { CaptainCheckoutModal } from "./pos/CaptainCheckoutModal";
 import { EditCaptainOrderModal } from "./pos/EditCaptainOrderModal";
 import { toast } from "sonner";
 import { usePOSStore } from "@/store/posStore";
+import { useEffect } from "react";
 
 export default function CaptainDashboard() {
   const router = useRouter();
-  const { signOut } = useAuthStore();
+  const { signOut, userData } = useAuthStore();
   const { cartItems, clearCart, isPOSOpen, setIsPOSOpen } = usePOSStore();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    // Redirect to login if not authenticated as captain
+    if (!userData || userData.role !== "captain") {
+      router.replace("/captainlogin");
+    }
+  }, [userData, router]);
+
+  useEffect(() => {
+    // Trap captain on /captain
+    if (userData && userData.role === "captain" && pathname !== "/captain") {
+      router.replace("/captain");
+    }
+  }, [userData, pathname, router]);
 
   const handleSignOut = () => {
     signOut();

@@ -252,12 +252,15 @@ const OrderItemCard = ({
           {localOrder.orderedby === "captain" && localOrder.captain && (
             <p className="text-sm">Captain: {localOrder.captain.name}</p>
           )}
-          <p className="text-sm">
-            Customer:{" "}
-            {localOrder.user?.phone || localOrder.phone
-              ? `+91${localOrder.user?.phone || localOrder.phone}`
-              : "Unknown"}
-          </p>
+          {localOrder.orderedby === "captain"
+            ? (localOrder.phone && localOrder.phone.trim() !== "" && (
+                <p className="text-sm">Customer: {localOrder.phone}</p>
+              ))
+            : (
+              <p className="text-sm">
+                Customer: {localOrder.user?.phone || localOrder.phone ? `+91${localOrder.user?.phone || localOrder.phone}` : "Unknown"}
+              </p>
+            )}
           {localOrder.type === "delivery" && (
             <div className="flex flex-col gap-3 mt-2">
               <p className="text-sm">

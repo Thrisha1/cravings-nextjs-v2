@@ -481,7 +481,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
         delivery_location: null,
         orderedby: isCaptainOrder ? "captain" : null,
         captain_id: isCaptainOrder ? userId : null,
-        notes: orderNote || null
+        notes: orderNote || null,
+        phone: get().userPhone || null,
       });
 
       if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
@@ -564,7 +565,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         extraCharges: allExtraCharges,
         type: "pos",
         deliveryAddress: get().deliveryAddress || undefined,
-        phone: get().userPhone || undefined,
+        phone: get().userPhone || "N/A",
         orderedby: isCaptainOrder ? "captain" : undefined,
         captain_id: isCaptainOrder ? userId : undefined,
         notes: orderNote || undefined,
