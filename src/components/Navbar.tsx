@@ -33,7 +33,6 @@ export function Navbar({ userData }: { userData: any }) {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const currentPath = pathname.split("?")[0];
 
@@ -49,16 +48,8 @@ export function Navbar({ userData }: { userData: any }) {
     console.log(isInstalled, isApp);
     
 
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+ 
 
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-
-    return () => {
-      window.removeEventListener("resize", checkMobile);
-    };
   }, []);
 
   useEffect(() => {
@@ -194,7 +185,7 @@ export function Navbar({ userData }: { userData: any }) {
   };
 
   const renderNavigationLinks = () => {
-    if (!userData || isMobile) return null;
+    if (!userData) return null;
 
     const roleBasedLinks = [
       ...(userData.role === "partner"
@@ -219,7 +210,7 @@ export function Navbar({ userData }: { userData: any }) {
         key={link.href}
         href={link.href}
         className={cn(
-          "inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors",
+          "items-center px-1 pt-1 text-sm font-medium transition-colors hidden sm:inline-flex",
           currentPath === link.href
             ? "text-orange-600 border-b-2 border-orange-600"
             : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
