@@ -161,6 +161,10 @@ const OrderItemCard = ({
     }
   };
 
+  const isParsel = initialOrder.extraCharges?.some(
+    (charge) => charge.name.toLowerCase() === "parcel"
+  );
+
   return (
     <div className="border rounded-lg p-4 relative shadow-sm">
       {localOrder.status === "pending" && (
@@ -247,7 +251,7 @@ const OrderItemCard = ({
       <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           {localOrder.type === "table_order" && (
-            <p className="text-sm">Table: {localOrder.tableNumber || "N/A"}</p>
+            <p className="text-sm">Table: {localOrder.tableNumber || "N/A"} { isParsel ? `( Parcel )` : ''}</p>
           )}
           {localOrder.orderedby === "captain" && localOrder.captain && (
             <p className="text-sm">Captain: {localOrder.captain.name}</p>

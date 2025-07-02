@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Input } from "../ui/input";
 import Img from "../Img";
 import { Badge } from "../ui/badge";
+import { Switch } from "../ui/switch";
 
 interface MenuItemCardProps {
   item: MenuItem;
@@ -53,12 +54,17 @@ export const MenuItemCard = ({
             disabled={!item.category || item.isAdded}
             className="mt-1 h-5 w-5"
           />
-          <div className="font-bold text-lg break-words flex-1" title={item.name}>
+          <div
+            className="font-bold text-lg break-words flex-1"
+            title={item.name}
+          >
             {item.name}
           </div>
         </div>
         <p className="font-bold text-2xl text-right shrink-0 text-gray-800">
-          ₹{item.price}
+         {
+          item.is_price_as_per_size ? (<div className="text-xs">{`(Price as per size)`}</div>) : (<> ₹{item.price}</>)
+         }
         </p>
       </div>
 
@@ -75,7 +81,8 @@ export const MenuItemCard = ({
         <p className="text-gray-600 text-sm break-words min-h-[40px]">
           {item.description}
         </p>
-        
+
+       
         {/* Display Variants if they exist */}
         {item.variants && item.variants.length > 0 && (
           <div className="space-y-2">
@@ -92,7 +99,10 @@ export const MenuItemCard = ({
         )}
 
         <div className="flex gap-2 items-center">
-          <label htmlFor={`category-${item.name}`} className="text-sm font-medium shrink-0">
+          <label
+            htmlFor={`category-${item.name}`}
+            className="text-sm font-medium shrink-0"
+          >
             Category:
           </label>
           <Input

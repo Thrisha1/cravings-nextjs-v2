@@ -16,12 +16,6 @@ import Link from "next/link";
 import { getGstAmount, calculateDeliveryDistanceAndCost } from "../OrderDrawer";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import { getExtraCharge } from "@/lib/getExtraCharge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
 import { getFeatures } from "@/lib/getFeatures";
 import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
 
@@ -135,7 +129,7 @@ interface AddressCardProps {
   deliveryInfo: DeliveryInfo | null;
   hasLocation: boolean;
   hotelData: HotelData;
-  selectedLocation: string | null;
+  selectedLocation: string;
   setSelectedLocation: (location: string) => void;
 }
 
@@ -180,8 +174,8 @@ const AddressCard = ({
             Select Hotel Location
           </Label>
           <select
-            value={selectedLocation || ""}
-            onChange={(e) => setSelectedLocation(e.target.value)}
+            value={selectedLocation}
+            onChange={(e) => setSelectedLocation(String(e.target.value))}
             className="w-full p-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-black/20"
           >
             <option value="">Select Area</option>
@@ -316,10 +310,10 @@ const BillCard = ({
 
   const qrExtraCharges = qrGroup?.extra_charge
     ? getExtraCharge(
-        items,
-        qrGroup.extra_charge,
-        qrGroup.charge_type || "FLAT_FEE"
-      )
+      items,
+      qrGroup.extra_charge,
+      qrGroup.charge_type || "FLAT_FEE"
+    )
     : 0;
 
   const deliveryCharges =
@@ -666,9 +660,8 @@ const MapModal = ({
 
   return (
     <div
-      className={`fixed top-0 left-0 z-[5000] h-screen w-screen ${
-        showMapModal ? "overflow-hidden" : "hidden"
-      }`}
+      className={`fixed top-0 left-0 z-[5000] h-screen w-screen ${showMapModal ? "overflow-hidden" : "hidden"
+        }`}
     >
       <div className="flex items-center justify-center min-h-screen w-screen">
         <div
@@ -732,6 +725,8 @@ const PlaceOrderModal = ({
     userAddress: address,
     clearOrder,
     deliveryInfo,
+    orderNote,
+    setOrderNote,
   } = useOrderStore();
 
   const { userData: user } = useAuthStore();
@@ -744,9 +739,8 @@ const PlaceOrderModal = ({
   const [showMapModal, setShowMapModal] = useState(false);
   const [showLoginDrawer, setShowLoginDrawer] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [keyboardOpen, setKeyboardOpen] = useState(false);
-  const [orderNote, setOrderNote] = useState("");
 
   const isDelivery = !tableNumber;
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
@@ -807,12 +801,12 @@ const PlaceOrderModal = ({
     if (selectedLocation) {
       setSelectedLocation(selectedLocation.area);
     } else {
-      setSelectedLocation(null);
+      setSelectedLocation("");
     }
   }, [hotelData]);
 
-  const handleSelectHotelLocation = (location: string) => {
-    setSelectedLocation(location);
+  const handleSelectHotelLocation = (location: string | null) => {
+    setSelectedLocation(location || "");
     const phoneNumber = hotelData.whatsapp_numbers?.find(
       (item) => item.area === location
     )?.number;
@@ -935,7 +929,7 @@ const PlaceOrderModal = ({
         gstAmount,
         extraCharges.length > 0 ? extraCharges : null,
         undefined, // deliveryCharge
-        orderNote // pass the note
+        orderNote || "" // pass the note, always a string
       );
 
       if (result) {
@@ -968,9 +962,8 @@ const PlaceOrderModal = ({
   return (
     <>
       <div
-        className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto text-black ${
-          open_place_order_modal ? "block" : "hidden"
-        }`}
+        className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto text-black ${open_place_order_modal ? "block" : "hidden"
+          }`}
       >
         {/* Header */}
         <div className="sticky top-0  bg-white border-b">
@@ -1015,7 +1008,7 @@ const PlaceOrderModal = ({
                   deliveryInfo={deliveryInfo}
                   hasLocation={hasLocation}
                   hotelData={hotelData}
-                  selectedLocation={selectedLocation}
+                  selectedLocation={selectedLocation || ""}
                   setSelectedLocation={handleSelectHotelLocation}
                 />
               ) : null}
@@ -1035,14 +1028,14 @@ const PlaceOrderModal = ({
                 <h3 className="font-medium mb-3">Order Note</h3>
                 <textarea
                   placeholder="Add any special instructions or notes for this order..."
-                  value={orderNote}
+                  value={orderNote ?? ""}
                   onChange={(e) => setOrderNote(e.target.value)}
                   className="w-full p-3 border rounded-md resize-none bg-white text-black"
                   rows={3}
                   maxLength={500}
                 />
                 <div className="text-xs text-black bg-white mt-1">
-                  {orderNote.length}/500 characters
+                  {(orderNote ?? "").length}/500 characters
                 </div>
               </div>
 
@@ -1070,7 +1063,7 @@ const PlaceOrderModal = ({
                     <Button
                       onClick={handlePlaceOrder}
                       disabled={isPlaceOrderDisabled || !user}
-                      className="w-full"
+                      className="w-full" 
                     >
                       {isPlacingOrder ? (
                         <>
