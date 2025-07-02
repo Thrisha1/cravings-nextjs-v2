@@ -52,7 +52,7 @@ const Page = async () => {
           <Captaincart />
         </div>
         <CaptainCheckoutModal />
-        <EditCaptainOrderModal />
+       
       </div>
     </>
   );

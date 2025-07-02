@@ -1,6 +1,7 @@
 "use client";
 
 import { fetchFromHasura } from "@/lib/hasuraClient";
+import { ExtraCharge } from "@/store/posStore";
 import { useParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
@@ -13,6 +14,7 @@ query GetOrder($id: uuid!) {
     table_number
     type
     notes
+    extra_charges
     order_items {
       id
       quantity
@@ -28,12 +30,13 @@ const PrintKOTPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
+  const [isParcel, setIsParcel] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
       try {
         const { orders_by_pk } = await fetchFromHasura(GET_ORDER_QUERY, { id });
-        
+
         if (!orders_by_pk) {
           throw new Error("Order not found");
         }
@@ -47,19 +50,38 @@ const PrintKOTPage = () => {
             notes: item.item.kot_notes,
           })),
           tableNumber: orders_by_pk.table_number,
+          extra_charges: orders_by_pk.extra_charges.map(
+            (charge: any) => ({
+              id: charge.id,
+              name: charge.name,
+              amount: charge.amount,
+            })
+          ),
         };
 
         setOrder(formattedOrder);
-        
+        setIsParcel(
+          formattedOrder.extra_charges.some(
+            (charge: ExtraCharge) => charge.name.toLowerCase() === "parcel"
+          )
+        );
+
         // Log the KOT contents in JSON format
-        console.log('KOT Contents JSON:', JSON.stringify({
-          id: formattedOrder.id,
-          created_at: formattedOrder.created_at,
-          table_number: formattedOrder.tableNumber,
-          type: formattedOrder.type,
-          notes: formattedOrder.notes,
-          items: formattedOrder.items
-        }, null, 2));
+        console.log(
+          "KOT Contents JSON:",
+          JSON.stringify(
+            {
+              id: formattedOrder.id,
+              created_at: formattedOrder.created_at,
+              table_number: formattedOrder.tableNumber,
+              type: formattedOrder.type,
+              notes: formattedOrder.notes,
+              items: formattedOrder.items,
+            },
+            null,
+            2
+          )
+        );
       } catch (err) {
         console.error("Error fetching order:", err);
         setError("Failed to load order details");
@@ -87,23 +109,27 @@ const PrintKOTPage = () => {
   if (!order) return <div>Order not found</div>;
 
   const getOrderTypeText = () => {
-    if (order.type === "delivery") return "DELIVERY";
-    if (!order.tableNumber) return "TAKEAWAY";
-    return `TABLE ${order.tableNumber}`;
+    if (order.tableNumber === 0 || order.type === "delivery") return "Delivery";
+    if (!order.tableNumber) return "Takeaway";
+    return ` ${
+      isParcel
+        ? `Parcel (Table ${order.tableNumber})`
+        : `Table ${order.tableNumber}"`
+    }`;
   };
 
   return (
     <div className="p-4">
-      <div 
-        ref={printRef} 
-        id="printable-content" 
-        className="kot-template" 
-        style={{ 
-          fontFamily: "monospace", 
+      <div
+        ref={printRef}
+        id="printable-content"
+        className="kot-template"
+        style={{
+          fontFamily: "monospace",
           maxWidth: "300px",
           margin: "0 auto",
           padding: "16px",
-          backgroundColor: "white"
+          backgroundColor: "white",
         }}
       >
         {/* Header */}

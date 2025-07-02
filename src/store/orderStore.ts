@@ -130,6 +130,7 @@ interface OrderState {
   hotelId: string | null;
   hotelOrders: Record<string, HotelOrderState>;
   userAddress: string | null;
+  orderNote: string | null;
   open_auth_modal: boolean;
   open_drawer_bottom: boolean;
   order: Order | null;
@@ -172,6 +173,7 @@ interface OrderState {
   setOpenAuthModal: (open: boolean) => void;
   genOrderId: () => string;
   setUserAddress: (address: string) => void;
+  setOrderNote: (note: string) => void;
   setUserCoordinates: (coords: { lat: number; lng: number }) => void;
   subscribeOrders: (callback?: (orders: Order[]) => void) => () => void;
   subscribePaginatedOrders: (
@@ -207,6 +209,7 @@ const useOrderStore = create(
       hotelId: null,
       hotelOrders: {},
       userAddress: null,
+      orderNote: null,
       open_auth_modal: false,
       order: null,
       items: [],
@@ -548,6 +551,10 @@ const useOrderStore = create(
 
       setUserAddress: (address: string) => {
         set({ userAddress: address });
+      },
+
+      setOrderNote: (note: string) => {
+        set({ orderNote: note });
       },
 
       setOpenAuthModal: (open) => set({ open_auth_modal: open }),
@@ -1172,6 +1179,7 @@ const useOrderStore = create(
             orderId: newOrderId,
             totalPrice: 0,
             order: null,
+            orderNote: null,
           };
         });
       },

@@ -42,27 +42,24 @@ const ItemCard = ({
   const hasStockFeature = getFeatures(feature_flags || "")?.stockmanagement
     ?.enabled;
 
-  // Per your request, an item is out of stock ONLY if the stock feature is on,
-  // the 'stocks' array is NOT empty, and the quantity is <= 0.
-  // An empty 'stocks' array means the item is IN STOCK.
-  const isOutOfStock =
-    hasStockFeature &&
-    (item.stocks?.length ?? 0) > 0 &&
-    (item.stocks?.[0]?.stock_quantity ?? 1) <= 0;
+  const isOutOfStock =(hasStockFeature &&
+        (item.stocks?.length ?? 0) > 0 &&
+        (item.stocks?.[0]?.stock_quantity ?? 1) <= 0);
 
-  // Whether to display the stock count on the card
   const showStock = hasStockFeature && (item.stocks?.[0]?.show_stock ?? false);
-  const stockQuantity = item.stocks?.[0]?.stock_quantity; // The actual quantity, may be undefined
+  const stockQuantity = item.stocks?.[0]?.stock_quantity;
 
   const hasVariants = (item.variants?.length ?? 0) > 0;
+  const isPriceAsPerSize = item.is_price_as_per_size;
 
   useEffect(() => {
+    
     if (showVariants && variantsRef.current) {
       setVariantsHeight(variantsRef.current.scrollHeight);
     } else {
       setVariantsHeight(0);
     }
-  }, [showVariants, item.variants]); // Added item.variants to recalculate height if they change
+  }, [showVariants, item.variants]);
 
   useEffect(() => {
     if (item.variants?.length) {
@@ -128,7 +125,9 @@ const ItemCard = ({
     return variantQuantities[name] || 0;
   };
 
-  const isOrderable = item.is_available && !isOutOfStock;
+  const isOrderable = item.is_available && !isOutOfStock ;
+  const showAddButton =
+    isOrderable && (hasOrderingFeature || hasDeliveryFeature) && !item.is_price_as_per_size;
 
   return (
     <div className="h-full relative overflow-hidden">
@@ -163,7 +162,7 @@ const ItemCard = ({
                   className={`font-black text-2xl`}
                 >
                   {item.is_price_as_per_size ? (
-                    <div className="text-base font-normal">{`(Price as per size)`}</div>
+                    <div className="text-sm font-normal">{`(Price as per size)`}</div>
                   ) : (
                     <>
                       {hasVariants ? (
@@ -252,57 +251,65 @@ const ItemCard = ({
                   >
                     <div className="grid">
                       <span className="font-semibold ">{variant.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
                       <div
                         style={{ color: styles.accent }}
                         className="text-2xl font-black text-nowrap"
                       >
-                        {currency}{" "}
-                        {hotelData?.id ===
-                        "767da2a8-746d-42b6-9539-528b6b96ae09"
-                          ? variant.price.toFixed(3)
-                          : variant.price}
-                      </div>
-                    </div>
-                    {isOrderable && (hasOrderingFeature || hasDeliveryFeature) && (
-                      <div className="flex gap-2 items-center justify-end">
-                        {getVariantQuantity(variant.name) > 0 ? (
-                          <div
-                            style={{
-                              backgroundColor: styles.accent,
-                              ...styles.border,
-                              color: "white",
-                            }}
-                            className="rounded-full transition-all duration-500 px-5 py-2 font-medium flex items-center gap-4 cursor-pointer"
-                          >
-                            <div
-                              className="active:scale-95"
-                              onClick={() => handleVariantRemove(variant)}
-                            >
-                              -
-                            </div>
-                            <div>{getVariantQuantity(variant.name)}</div>
-                            <div
-                              className="active:scale-95"
-                              onClick={() => handleVariantAdd(variant)}
-                            >
-                              +
-                            </div>
-                          </div>
+                        {isPriceAsPerSize ? (
+                          <div className="text-sm font-normal">{`(Price as per size)`}</div>
                         ) : (
-                          <div
-                            onClick={() => handleVariantAdd(variant)}
-                            style={{
-                              backgroundColor: styles.accent,
-                              ...styles.border,
-                              color: "white",
-                            }}
-                            className="rounded-full px-6 py-2 font-medium cursor-pointer"
-                          >
-                            {"Add"}
-                          </div>
+                          <>
+                            {currency}{" "}
+                            {hotelData?.id ===
+                            "767da2a8-746d-42b6-9539-528b6b96ae09"
+                              ? variant.price.toFixed(3)
+                              : variant.price}
+                          </>
                         )}
                       </div>
-                    )}
+                      {showAddButton && (
+                        <div className="flex gap-2 items-center justify-end">
+                          {getVariantQuantity(variant.name) > 0 ? (
+                            <div
+                              style={{
+                                backgroundColor: styles.accent,
+                                ...styles.border,
+                                color: "white",
+                              }}
+                              className="rounded-full transition-all duration-500 px-5 py-2 font-medium flex items-center gap-4 cursor-pointer"
+                            >
+                              <div
+                                className="active:scale-95"
+                                onClick={() => handleVariantRemove(variant)}
+                              >
+                                -
+                              </div>
+                              <div>{getVariantQuantity(variant.name)}</div>
+                              <div
+                                className="active:scale-95"
+                                onClick={() => handleVariantAdd(variant)}
+                              >
+                                +
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              onClick={() => handleVariantAdd(variant)}
+                              style={{
+                                backgroundColor: styles.accent,
+                                ...styles.border,
+                                color: "white",
+                              }}
+                              className="rounded-full px-6 py-2 font-medium cursor-pointer"
+                            >
+                              {"Add"}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -310,7 +317,7 @@ const ItemCard = ({
           </div>
 
           {/* ADD BUTTONS LOGIC */}
-          {isOrderable && (hasOrderingFeature || hasDeliveryFeature) ? (
+          {showAddButton ? (
             <>
               {hasVariants ? (
                 <div className="flex transition-all duration-500 gap-2 items-center justify-end w-full mt-2">
@@ -352,10 +359,7 @@ const ItemCard = ({
                         -
                       </div>
                       <div>{itemQuantity}</div>
-                      <div
-                        className="active:scale-95"
-                        onClick={handleAddItem}
-                      >
+                      <div className="active:scale-95" onClick={handleAddItem}>
                         +
                       </div>
                     </div>
@@ -376,9 +380,6 @@ const ItemCard = ({
               )}
             </>
           ) : (
-            // Fallback for non-orderable menus with variants
-            !hasOrderingFeature &&
-            !hasDeliveryFeature &&
             hasVariants && (
               <div className="flex transition-all duration-500 gap-2 items-center justify-end w-full mt-2">
                 <div

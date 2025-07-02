@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthStore } from "@/store/authStore";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut, PlusCircle, X, Trash2 } from "lucide-react";
@@ -12,11 +12,27 @@ import { CaptainCheckoutModal } from "./pos/CaptainCheckoutModal";
 import { EditCaptainOrderModal } from "./pos/EditCaptainOrderModal";
 import { toast } from "sonner";
 import { usePOSStore } from "@/store/posStore";
+import { useEffect } from "react";
 
 export default function CaptainDashboard() {
   const router = useRouter();
-  const { signOut } = useAuthStore();
+  const { signOut, userData } = useAuthStore();
   const { cartItems, clearCart, isPOSOpen, setIsPOSOpen } = usePOSStore();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    // Redirect to login if not authenticated as captain
+    if (!userData || userData.role !== "captain") {
+      router.replace("/captainlogin");
+    }
+  }, [userData, router]);
+
+  useEffect(() => {
+    // Trap captain on /captain
+    if (userData && userData.role === "captain" && pathname !== "/captain") {
+      router.replace("/captain");
+    }
+  }, [userData, pathname, router]);
 
   const handleSignOut = () => {
     signOut();
@@ -38,7 +54,12 @@ export default function CaptainDashboard() {
       <div className="flex-none p-3 sm:p-4 border-b bg-white">
         <div className="container mx-auto">
           <div className="flex justify-between items-center">
-            <h1 className="text-xl sm:text-2xl font-bold">Captain Dashboard</h1>
+            <h1 className="text-md sm:text-xl ">Captain Dashboard</h1>
+            {userData?.role === 'captain' && (userData as any)?.partner?.store_name && (
+              <div className="text-xl sm:text-2xl font-bold mr-6">
+                {(userData as any).partner.store_name}
+              </div>
+            )}
             <Button
               variant="outline"
               onClick={handleSignOut}
