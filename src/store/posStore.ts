@@ -17,6 +17,14 @@ import { getQrGroupForTable } from "@/lib/getQrGroupForTable";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import { toast } from "sonner";
 
+interface QrCodeData {
+  id: string;
+  qr_number: string;
+  table_number: number | null;
+  partner_id: string;
+  no_of_scans: number;
+}
+
 interface CartItem extends MenuItem {
   quantity: number;
   offers?: {
@@ -30,20 +38,12 @@ export interface ExtraCharge {
   id: string;
 }
 
-interface QrCodeData {
-  id: string;
-  qr_number: string;
-  table_number: number | null;
-  partner_id: string;
-  no_of_scans: number;
-}
-
 interface POSState {
   loading: boolean;
   setLoading: (loading: boolean) => void;
   cartItems: CartItem[];
   extraCharges: ExtraCharge[];
-  totalAmount: number ;
+  totalAmount: number;
   userPhone: string | null;
   deliveryAddress?: string;
   setDeliveryAddress: (address: string) => void;
@@ -141,6 +141,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
     });
     get().clearCart();
   },
+
   setIsCaptainOrder: (isCaptain) => set({ isCaptainOrder: isCaptain }),
   getPartnerTables: async () => {
     try {
@@ -481,7 +482,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
         delivery_location: null,
         orderedby: isCaptainOrder ? "captain" : null,
         captain_id: isCaptainOrder ? userId : null,
-        notes: orderNote || null
+        notes: orderNote || null,
+        phone: get().userPhone || null,
       });
 
       if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
@@ -564,7 +566,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         extraCharges: allExtraCharges,
         type: "pos",
         deliveryAddress: get().deliveryAddress || undefined,
-        phone: get().userPhone || undefined,
+        phone: get().userPhone || "N/A",
         orderedby: isCaptainOrder ? "captain" : undefined,
         captain_id: isCaptainOrder ? userId : undefined,
         notes: orderNote || undefined,

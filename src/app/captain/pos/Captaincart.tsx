@@ -55,7 +55,6 @@ export const Captaincart = () => {
         console.error("Error fetching table numbers:", error);
       }
     };
-
     fetchTableNumbers();
   }, [captainData?.partner_id, getPartnerTables]);
 
@@ -66,7 +65,6 @@ export const Captaincart = () => {
   // Calculate totals
   const foodSubtotal = totalAmount; // This is the subtotal of food items only
   const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
-  
   const gstAmount = getGstAmount(foodSubtotal, captainData?.gst_percentage || 0); // GST only on food items
   const grandTotal = foodSubtotal + gstAmount + extraChargesTotal;
 
@@ -75,13 +73,11 @@ export const Captaincart = () => {
       toast.error("Please enter a valid charge name and amount");
       return;
     }
-
     const charge: ExtraCharge = {
       id: Date.now().toString(),
       name: newExtraCharge.name,
       amount: newExtraCharge.amount,
     };
-
     // Add to store instead of local state
     addExtraCharge(charge);
     setNewExtraCharge({ name: "", amount: 0, id: "" });
@@ -89,7 +85,6 @@ export const Captaincart = () => {
 
   const handleRemoveExtraCharge = (index: number) => {
     const chargeToRemove = extraCharges[index];
-    
     // If this was a QR group charge, use the store function
     if (chargeToRemove.id.startsWith('qr-group-')) {
       const qrGroupId = chargeToRemove.id.replace('qr-group-', '');
@@ -107,21 +102,18 @@ export const Captaincart = () => {
     }
   };
 
-
-
   const handleCheckout = async () => {
     if (cartItems.length === 0) {
       toast.error("Cart is empty");
       return;
     }
-
     if (!tableNumber) {
       toast.error("Please select a table number");
       return;
     }
-
     try {
       setLoading(true);
+      setUserPhone(phoneInput);
       await checkout();
     } catch (error) {
       console.error("Checkout error:", error);
@@ -146,14 +138,12 @@ export const Captaincart = () => {
                   {grandTotal.toFixed(2)}
                 </div>
               </div>
-
               {/* total Items */}
               <div className="inline-flex flex-nowrap text-nowrap gap-2 font-medium text-black/50 text-sm">
                 <div>Total Items :</div>
                 <div>{cartItems.reduce((acc, item) => acc + item.quantity, 0)}</div>
               </div>
             </div>
-
             <Button 
               onClick={() => {
                 if (cartItems.length === 0) {
@@ -170,7 +160,6 @@ export const Captaincart = () => {
           </div>
         </div>
       </div>
-
       {/* Custom Modal */}
       {cartModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
@@ -188,11 +177,10 @@ export const Captaincart = () => {
                 </Button>
               </div>
             </div>
-
             <div className="p-4 space-y-4">
               {/* Table Selection */}
               <div>
-                <label className="block text-sm font-medium mb-2">Table Number (Optional)</label>
+                <label className="block text-sm font-medium mb-2">Table Number</label>
                 {tableNumber !== null && (
                   <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
                     Selected: Table {tableNumber}
@@ -225,7 +213,6 @@ export const Captaincart = () => {
                   <p className="text-sm text-gray-500 mt-1">No tables available</p>
                 )}
               </div>
-
               {/* Phone Number */}
               <div>
                 <label className="block text-sm font-medium mb-2">Customer Phone (Optional)</label>
@@ -236,7 +223,6 @@ export const Captaincart = () => {
                   onChange={(e) => setPhoneInput(e.target.value)}
                 />
               </div>
-
               {/* Extra Charges */}
               <div className="border rounded-lg p-4">
                 <h3 className="font-medium mb-3">Extra Charges</h3>
@@ -257,7 +243,6 @@ export const Captaincart = () => {
                       Add Charge
                     </Button>
                   </div>
-
                   {extraCharges.length > 0 && (
                     <div className="border rounded-lg overflow-hidden">
                       <div className="divide-y">
@@ -285,7 +270,6 @@ export const Captaincart = () => {
                       </div>
                     </div>
                   )}
-
                   {/* Show "Add back" message for removed QR group charges */}
                   {qrGroup && removedQrGroupCharges.includes(qrGroup.id) && (
                     <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded border">
@@ -300,7 +284,6 @@ export const Captaincart = () => {
                   )}
                 </div>
               </div>
-
               {/* Order Note */}
               <div className="border rounded-lg p-4">
                 <h3 className="font-medium mb-3">Order Note</h3>
@@ -316,7 +299,6 @@ export const Captaincart = () => {
                   {orderNote.length}/500 characters
                 </div>
               </div>
-
               {/* Order Summary */}
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-2">Order Summary </h3>
@@ -340,11 +322,9 @@ export const Captaincart = () => {
                         >
                           <Minus className="h-3.5 w-3.5" />
                         </Button>
-
                         <span className="w-6 text-center text-sm">
                           {item.quantity}
                         </span>
-
                         <Button
                           variant="outline"
                           size="icon"
@@ -356,13 +336,11 @@ export const Captaincart = () => {
                       </div>
                     </div>
                   ))}
-                  
                   {/* Subtotal (Food only) */}
                   <div className="flex justify-between text-sm border-t pt-2">
                     <span>Subtotal</span>
                     <span>{captainData?.currency || "$"}{foodSubtotal.toFixed(2)}</span>
                   </div>
-
                   {/* GST (on food only) */}
                   {(captainData?.gst_percentage || 0) > 0 && (
                     <div className="flex justify-between text-sm">
@@ -370,7 +348,6 @@ export const Captaincart = () => {
                       <span>{captainData?.currency || "$"}{gstAmount.toFixed(2)}</span>
                     </div>
                   )}
-                  
                   {/* Extra Charges */}
                   {extraCharges.length > 0 && (
                     <>
@@ -389,7 +366,6 @@ export const Captaincart = () => {
                       </div>
                     </>
                   )}
-
                   {/* Grand Total */}
                   <div className="flex justify-between font-semibold mt-2 border-t pt-2">
                     <span>Total</span>
@@ -397,7 +373,6 @@ export const Captaincart = () => {
                   </div>
                 </div>
               </div>
-
               {/* Modal Footer */}
               <div className="p-4 border-t flex gap-2">
                 <Button

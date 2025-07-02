@@ -94,124 +94,119 @@ export const CaptainCheckoutModal = () => {
         open={isOpen}
         onOpenChange={setPostCheckoutModalOpen}
       >
-        <DialogContent className="max-w-none w-[95vw] sm:w-[90vw] md:w-[80vw] lg:w-[70vw] h-[95vh] sm:h-[90vh] p-0 sm:p-0 flex flex-col">
-          <DialogHeader className="p-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] border-b sticky top-0 bg-white z-10">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between pt-1">
-                <DialogTitle className="text-xl sm:text-2xl">Order #{order.id.slice(0, 8)}</DialogTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={closeAllModalsAndPOS}
-                  className="h-8 w-8"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <DialogDescription className="text-base pb-1">
+        <DialogContent className="max-w-lg w-[90vw] h-[75vh] sm:max-h-[85vh] p-0 flex flex-col">
+          <DialogHeader className="p-3 border-b bg-white z-10 shrink-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-lg font-semibold">Order #{order.id.slice(0, 8)}</DialogTitle>
                 {order.tableNumber && (
-                  <span className="text-green-600 font-medium">Table {order.tableNumber}</span>
+                  <DialogDescription className="text-sm text-green-600 font-medium mt-1">
+                    Table {order.tableNumber}
+                  </DialogDescription>
                 )}
-              </DialogDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={closeAllModalsAndPOS}
+                className="h-8 w-8 shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </DialogHeader>
 
           {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="max-w-2xl mx-auto space-y-6">
+          <div className="flex-1 overflow-y-auto p-3">
+            <div className="space-y-3">
               {/* Order Status */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="bg-green-50 border border-green-200 rounded-md p-2">
                 <div className="flex items-center gap-2 text-green-700">
                   <div className="h-2 w-2 rounded-full bg-green-600"></div>
-                  <span className="font-semibold">Status: Complete</span>
+                  <span className="font-medium text-sm">Status: Complete</span>
                 </div>
               </div>
 
-              {/* Order Details */}
-              <div className="bg-white border rounded-lg divide-y">
-                {/* Order Info */}
-                <div className="p-4 border-b">
-                  <div className="flex justify-end">
-                    <div className="space-y-1 text-right">
-                      <div className="text-sm text-gray-500">Order Time</div>
-                      <div className="font-medium">
-                        {orderTime}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              {/* Order Time */}
+              <div className="text-right">
+                <div className="text-xs text-gray-500">Order Time</div>
+                <div className="text-sm font-medium">{orderTime}</div>
+              </div>
 
-                {/* Items List */}
-                <div className="p-4">
-                  <h3 className="font-semibold text-lg mb-3">Order Items</h3>
-                  <div className="space-y-3">
-                    {order.items.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                          <span className="font-medium">{item.quantity}x</span>
-                          <span>{item.name}</span>
-                        </div>
-                        <span className="font-medium">
-                          {currency}{(item.price * item.quantity).toFixed(2)}
-                        </span>
+              {/* Items List */}
+              <div className="bg-white border rounded-md p-3">
+                <h3 className="font-semibold text-base mb-2">Order Items</h3>
+                <div className="space-y-2">
+                  {order.items.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-600">{item.quantity}x</span>
+                        <span className="flex-1">{item.name}</span>
+                      </div>
+                      <span className="font-medium">
+                        {currency}{(item.price * item.quantity).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Extra Charges */}
+              {extraCharges.length > 0 && (
+                <div className="bg-white border rounded-md p-3">
+                  <h3 className="font-semibold text-base mb-2">Extra Charges</h3>
+                  <div className="space-y-2">
+                    {extraCharges.map((charge, index) => (
+                      <div key={index} className="flex justify-between items-center text-sm">
+                        <span>{charge.name}</span>
+                        <span className="font-medium">{currency}{charge.amount.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
                 </div>
+              )}
 
-                {/* Extra Charges */}
-                {extraCharges.length > 0 && (
-                  <div className="p-4">
-                    <h3 className="font-semibold text-lg mb-3">Extra Charges</h3>
-                    <div className="space-y-2">
-                      {extraCharges.map((charge, index) => (
-                        <div key={index} className="flex justify-between items-center">
-                          <span>{charge.name}</span>
-                          <span className="font-medium">{currency}{charge.amount.toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Totals */}
-                <div className="p-4 space-y-2">
+              {/* Totals */}
+              <div className="bg-gray-50 border rounded-md p-3">
+                <div className="space-y-1">
                   <div className="flex justify-between items-center text-sm">
                     <span>Subtotal:</span>
                     <span>{currency}{foodSubtotal.toFixed(2)}</span>
                   </div>
                   {gstPercentage > 0 && (
                     <div className="flex justify-between items-center text-sm">
-                      <span>{`GST (${gstPercentage}%):`}</span>
+                      <span>GST ({gstPercentage}%):</span>
                       <span>{currency}{gstAmount.toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center pt-2 border-t font-semibold text-lg">
+                  <div className="flex justify-between items-center pt-1 border-t border-gray-300 font-semibold">
                     <span>Grand Total:</span>
                     <span>{currency}{grandTotal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 pb-4">
-                <Button
-                  variant="outline"
-                  onClick={handleEditOrder}
-                  className="flex-1 py-3 text-base font-semibold border-2 hover:bg-gray-100"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Order
-                </Button>
-                <Button
-                  variant="default"
-                  onClick={closeAllModalsAndPOS}
-                  className="flex-1 py-3 text-base font-semibold"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Close
-                </Button>
-              </div>
+          {/* Action Buttons */}
+          <div className="p-3 border-t bg-white shrink-0">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleEditOrder}
+                className="flex-1 py-2 text-sm font-medium"
+              >
+                <Edit className="h-4 w-4 mr-1" />
+                Edit Order
+              </Button>
+              <Button
+                variant="default"
+                onClick={closeAllModalsAndPOS}
+                className="flex-1 py-2 text-sm font-medium"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Close
+              </Button>
             </div>
           </div>
         </DialogContent>
