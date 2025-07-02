@@ -58,6 +58,7 @@ const PrintOrderPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
+  const [isParcel , setIsParcel] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -82,6 +83,7 @@ const PrintOrderPage = () => {
         };
 
         setOrder(formattedOrder);
+        setIsParcel(formattedOrder.extra_charges.some((charge: ExtraCharge) => charge.name.toLowerCase() === "parcel"));
         
         // Calculate amounts for logging
         const foodSubtotal = formattedOrder.items.reduce(
@@ -192,7 +194,7 @@ const PrintOrderPage = () => {
   const getOrderTypeText = () => {
     if (order.tableNumber === 0 || order.type === "delivery") return "Delivery";
     if (!order.tableNumber) return "Takeaway";
-    return `Table ${order.tableNumber}`;
+    return ` ${isParcel ? `Parcel (Table ${order.tableNumber})` : `Table ${order.tableNumber}"`}`;
   };
 
   return (
