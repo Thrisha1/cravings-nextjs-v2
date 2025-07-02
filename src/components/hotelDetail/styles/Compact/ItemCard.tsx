@@ -108,6 +108,11 @@ const ItemCard = ({
     return variantQuantities[name] || 0;
   };
 
+  // Determine if we should show add buttons
+  const isOrderable = item.is_available && !isOutOfStock;
+  const showAddButton = 
+    isOrderable && (hasOrderingFeature || hasDeliveryFeature) && !item.is_price_as_per_size;
+
   return (
     <>
       <div className="p-4 flex justify-between relative">
@@ -163,70 +168,71 @@ const ItemCard = ({
             )}
 
             {/* Add button positioned at bottom center of image */}
-            {item.is_available &&
-              !isOutOfStock &&
-              (hasOrderingFeature || hasDeliveryFeature) && (
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
-                  {hasVariants ? (
+            {isOrderable && (
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
+                {hasVariants ? (
+                  <div
+                    onClick={() => setShowVariants(!showVariants)}
+                    style={{
+                      backgroundColor: styles.accent,
+                      color: "white",
+                    }}
+                    className="rounded-full px-4 py-1 font-medium text-sm whitespace-nowrap h-fit cursor-pointer"
+                  >
+                    {showVariants ? "Hide Options" : "Show Options"}
+                  </div>
+                ) : showAddButton && itemQuantity > 0 ? (
+                  <div
+                    style={{
+                      backgroundColor: styles.accent,
+                      color: "white",
+                    }}
+                    className="rounded-full px-3 py-1 font-medium flex items-center gap-3 text-sm"
+                  >
                     <div
-                      onClick={() => setShowVariants(!showVariants)}
-                      style={{
-                        backgroundColor: styles.accent,
-                        color: "white",
+                      className="cursor-pointer active:scale-95"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (itemQuantity > 1) {
+                          decreaseQuantity(item.id as string);
+                        } else {
+                          removeItem(item.id as string);
+                        }
                       }}
-                      className="rounded-full px-4 py-1 font-medium text-sm whitespace-nowrap h-fit cursor-pointer"
                     >
-                      {showVariants ? "Hide Options" : "Add"}
+                      -
                     </div>
-                  ) : itemQuantity > 0 ? (
+                    <div>{itemQuantity}</div>
                     <div
-                      style={{
-                        backgroundColor: styles.accent,
-                        color: "white",
-                      }}
-                      className="rounded-full px-3 py-1 font-medium flex items-center gap-3 text-sm"
-                    >
-                      <div
-                        className="cursor-pointer active:scale-95"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (itemQuantity > 1) {
-                            decreaseQuantity(item.id as string);
-                          } else {
-                            removeItem(item.id as string);
-                          }
-                        }}
-                      >
-                        -
-                      </div>
-                      <div>{itemQuantity}</div>
-                      <div
-                        className="cursor-pointer active:scale-95"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddItem();
-                        }}
-                      >
-                        +
-                      </div>
-                    </div>
-                  ) : (
-                    <div
+                      className="cursor-pointer active:scale-95"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleAddItem();
                       }}
-                      style={{
-                        backgroundColor: styles.accent,
-                        color: "white",
-                      }}
-                      className="rounded-full px-4 py-1 font-medium text-sm h-fit cursor-pointer"
                     >
-                      Add
+                      +
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                ) : showAddButton ? (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddItem();
+                    }}
+                    style={{
+                      backgroundColor: styles.accent,
+                      color: "white",
+                    }}
+                    className="rounded-full px-4 py-1 font-medium text-sm h-fit cursor-pointer"
+                  >
+                    Add
+                  </div>
+                ) : (
+                  
+                  <></>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -240,17 +246,19 @@ const ItemCard = ({
             >
               <div className="grid">
                 <span className="font-semibold">{variant.name}</span>
-                <div
-                  style={{
-                    color: styles?.accent || "#000",
-                  }}
-                  className="text-lg font-bold"
-                >
-                  {hoteldata?.currency || "₹"}
-                  {variant.price}
-                </div>
+                {!item.is_price_as_per_size && (
+                  <div
+                    style={{
+                      color: styles?.accent || "#000",
+                    }}
+                    className="text-lg font-bold"
+                  >
+                    {hoteldata?.currency || "₹"}
+                    {variant.price}
+                  </div>
+                )}
               </div>
-              {hasOrderingFeature || hasDeliveryFeature ? (
+              {showAddButton ? (
                 <div className="flex gap-2 items-center justify-end">
                   {getVariantQuantity(variant.name) > 0 ? (
                     <div
@@ -287,7 +295,18 @@ const ItemCard = ({
                     </div>
                   )}
                 </div>
-              ) : null}
+              ) : (
+                <div
+                  style={{
+                    color: styles?.accent || "#000",
+                  }}
+                  className="text-sm font-bold"
+                >
+                  {item.is_price_as_per_size 
+                    ? "(Price as per size)" 
+                    : `${hoteldata?.currency || "₹"}${variant.price}`}
+                </div>
+              )}
             </div>
           ))}
         </div>
