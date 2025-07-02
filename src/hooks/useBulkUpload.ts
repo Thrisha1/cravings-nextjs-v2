@@ -478,7 +478,25 @@ For each item, provide:
     - For 'Carrot' under 'Pure Juice': "Experience the pure, wholesome goodness of freshly extracted carrot juice, packed with vitamins and natural sweetness."
     - For 'Fresh Lime' under 'Lime Juice': "Enjoy a classic, zesty Fresh Lime juice, perfectly balanced and incredibly invigorating, a timeless favorite."
 - category: The main heading under which the item is listed.
-- variants: (Optional) An array of objects, each with 'name' and 'price', if the item has different sizes/portions. Variants must be arranged in ascending order of price.`;
+- variants: (Optional) An array of objects, each with 'name' and 'price', if the item has different sizes/portions. Variants must be arranged in ascending order of price. Variants should not contain item names or descriptions, only sizes/quantities. If no variants exist, this field should be omitted.
+- invalid variants example : Variants:
+Grilled veg overloaded fries
+₹150
+Scrambled egg overloaded fries
+₹180
+Pulled Chicken overloaded fries
+₹240
+Pulled Mixed loaded fries
+₹300
+- valid variants example : Variants:
+Variants:
+2 pieces Combo
+₹169
+4 pieces Combo
+₹399
+8 pieces Combo
+₹799
+-take the largest text above the items as the category name if the variants is aaslo items`;
 
       const imageParts = await Promise.all(
         menuImageFiles.map(async (file) => {
