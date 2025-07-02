@@ -310,10 +310,10 @@ const BillCard = ({
 
   const qrExtraCharges = qrGroup?.extra_charge
     ? getExtraCharge(
-      items,
-      qrGroup.extra_charge,
-      qrGroup.charge_type || "FLAT_FEE"
-    )
+        items,
+        qrGroup.extra_charge,
+        qrGroup.charge_type || "FLAT_FEE"
+      )
     : 0;
 
   const deliveryCharges =
@@ -661,7 +661,7 @@ const MapModal = ({
   return (
     <div
       className={`fixed top-0 left-0 z-[5000] h-screen w-screen ${showMapModal ? "overflow-hidden" : "hidden"
-        }`}
+      }`}
     >
       <div className="flex items-center justify-center min-h-screen w-screen">
         <div
@@ -963,7 +963,7 @@ const PlaceOrderModal = ({
     <>
       <div
         className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto text-black ${open_place_order_modal ? "block" : "hidden"
-          }`}
+        }`}
       >
         {/* Header */}
         <div className="sticky top-0  bg-white border-b">
@@ -1063,7 +1063,7 @@ const PlaceOrderModal = ({
                     <Button
                       onClick={handlePlaceOrder}
                       disabled={isPlaceOrderDisabled || !user}
-                      className="w-full" 
+                      className="w-full"
                     >
                       {isPlacingOrder ? (
                         <>
