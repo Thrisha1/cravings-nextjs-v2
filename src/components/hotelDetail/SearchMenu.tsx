@@ -7,6 +7,7 @@ import Fuse from "fuse.js";
 import useOrderStore from "@/store/orderStore";
 import { toast } from "sonner";
 import ItemDetailsModal from "./styles/Default/ItemDetailsModal";
+import { getFeatures } from "@/lib/getFeatures";
 
 const SearchMenu = ({
   hotelData,
@@ -165,14 +166,14 @@ const SearchMenu = ({
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-3 flex-1 min-w-0 rounded-full px-4 py-2 bg-gray-100 border border-transparent focus-within:bg-white focus-within:border-gray-300 transition-all">
                 <SearchIcon size={20} className="shrink-0 text-gray-400" />
-                <input
+            <input
                   ref={inputRef}
                   className="bg-transparent flex-1 min-w-0 outline-none text-base md:text-lg placeholder-gray-500"
                   placeholder={`Search...`}
-                  value={query}
-                  onChange={handleSearchChange}
-                />
-              </div>
+              value={query}
+              onChange={handleSearchChange}
+            />
+          </div>
               <button
                 type="button"
                 onClick={() => setIsSearchOpen(false)}
@@ -182,132 +183,123 @@ const SearchMenu = ({
                 <X size={20} className="text-gray-600" />
               </button>
             </div>
-          </div>
+        </div>
 
-          {/* Results List - Single Row Layout */}
+          {/* Results Grid */}
           <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-48 md:pb-64">
-            {items.length > 0 ? (
-              <div className="space-y-4">
+          {items.length > 0 ? (
+              <div className="grid grid-cols-2 gap-4 md:gap-6 ">
                 {items.map((item) => {
                   const quantity = getItemQuantity(item.id);
                   const hasVariants = item.variants && item.variants.length > 0;
                   const isExpanded = expandedVariantItemId === item.id;
+                  const orderingEnabled = getFeatures(hotelData.feature_flags || "")?.ordering?.enabled;
                   return (
                     <div
-                      key={item.id}
-                      className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+                key={item.id}
+                      className={`bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden ${isExpanded ? 'h-auto min-h-[400px]' : 'h-[260px] md:h-[300px]'}`}
                     >
-                      {/* Main Item Content */}
-                      <div className="flex">
-                        {/* Image */}
-                        <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-100 relative overflow-hidden flex-shrink-0">
-                          {item.image_url ? (
-                            <img
-                              src={item.image_url}
-                              alt={item.name}
-                              className="w-full h-full object-cover"
-                            />
+                      {/* Image */}
+                      <div className="w-full h-[100px] md:h-[120px] bg-gray-100 relative overflow-hidden flex-shrink-0">
+                        {item.image_url ? (
+                          <img
+                            src={item.image_url}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-xl font-bold text-gray-400">
+                              {item.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Details */}
+                      <div className="p-3 flex flex-col flex-1">
+                        <h3 className="font-semibold text-gray-800 text-sm md:text-base mb-1 line-clamp-2">
+                          {item.name}
+                        </h3>
+                        {item.description && (
+                          <p className="text-xs text-gray-500 line-clamp-2 mb-2">
+                            {item.description}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between mt-auto pt-2">
+                          <span className="text-sm md:text-base font-bold text-gray-900">
+                            {currency}{item.price}
+                          </span>
+                          {orderingEnabled ? (
+                            !hasVariants ? (
+                              quantity === 0 ? (
+                                <button 
+                                  onClick={() => handleAddItem(item)}
+                                  className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs md:text-sm font-medium rounded-md transition-colors"
+                                >
+                                  Add
+                                </button>
+                              ) : (
+                                <div className="flex items-center gap-2 bg-orange-500 text-white rounded-md px-2 py-1">
+                                  <button
+                                    onClick={() => handleDecreaseQuantity(item)}
+                                    className="w-2 h-2 md:w-4 md:h-4 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
+                                  >
+                                    <Minus size={8} className="md:w-2 md:h-2 w-1.5 h-1.5" />
+                                  </button>
+                                  <span className="text-sm font-medium min-w-[20px] text-center">
+                                    {quantity}
+                                  </span>
+                                  <button
+                                    onClick={() => handleIncreaseQuantity(item)}
+                                    className="w-2 h-2 md:w-4 md:h-4 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
+                                  >
+                                    <Plus size={8} className="md:w-2 md:h-2 w-1.5 h-1.5" />
+                                  </button>
+                                </div>
+                              )
+                            ) : (
+                              <button
+                                onClick={() => handleAddItem(item)}
+                                className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs md:text-sm font-medium rounded-md transition-colors"
+                              >
+                                {isExpanded ? 'Hide Options' : 'Add'}
+                              </button>
+                            )
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <span className="text-xl font-bold text-gray-400">
-                                {item.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
+                            <span className="text-xs text-gray-400 font-medium">Ordering not available</span>
                           )}
                         </div>
-                        
-                        {/* Details */}
-                        <div className="flex-1 p-4 flex flex-col">
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex-1 min-w-0 pr-4">
-                              <h3 className="font-semibold text-gray-800 text-base md:text-lg mb-1 line-clamp-2">
-                                {item.name}
-                              </h3>
-                              {item.description && (
-                                <p className="text-sm text-gray-500 line-clamp-2">
-                                  {item.description}
-                                </p>
-                              )}
-                            </div>
-                            
-                            {/* Price and Add Button */}
-                            <div className="flex flex-col items-end gap-2">
-                              <span className="text-base md:text-lg font-bold text-gray-900">
-                                {currency}{item.price}
-                              </span>
-                              {!hasVariants ? (
-                                quantity === 0 ? (
-                                  <button 
-                                    onClick={() => handleAddItem(item)}
-                                    className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition-colors"
-                                  >
-                                    Add
-                                  </button>
-                                ) : (
-                                  <div className="flex items-center gap-2 bg-orange-500 text-white rounded-md px-3 py-2">
-                                    <button
-                                      onClick={() => handleDecreaseQuantity(item)}
-                                      className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
-                                    >
-                                      <Minus size={14} />
-                                    </button>
-                                    <span className="text-sm font-medium min-w-[24px] text-center">
-                                      {quantity}
-                                    </span>
-                                    <button
-                                      onClick={() => handleIncreaseQuantity(item)}
-                                      className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
-                                    >
-                                      <Plus size={14} />
-                                    </button>
-                                  </div>
-                                )
-                              ) : (
-                                <button
-                                  onClick={() => handleAddItem(item)}
-                                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition-colors"
-                                >
-                                  {isExpanded ? 'Hide Options' : 'View Options'}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Variant Options - Full Width */}
-                      {hasVariants && isExpanded && (
-                        <div className="border-t border-gray-100 p-4">
-                          <h4 className="font-medium text-gray-800 mb-3">Choose your option:</h4>
-                          <div className="space-y-3">
+                        {/* Variant Options Inline */}
+                        {hasVariants && isExpanded && orderingEnabled && (
+                          <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
                             {item.variants?.map((variant) => (
-                              <div key={variant.name} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                <div className="flex-1">
-                                  <div className="font-medium text-gray-800">{variant.name}</div>
-                                  <div className="text-sm text-gray-600">{currency}{variant.price}</div>
+                              <div key={variant.name} className="flex items-center justify-between border rounded px-3 py-2">
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{variant.name}</span>
+                                  <span className="text-xs text-gray-500">{currency}{variant.price}</span>
                                 </div>
                                 {getVariantQuantity(item, variant.name) > 0 ? (
-                                  <div className="flex items-center gap-2 bg-orange-500 text-white rounded-md px-3 py-2">
+                                  <div className="flex items-center gap-1 bg-orange-500 text-white rounded-md px-2 py-1">
                                     <button
                                       onClick={() => handleVariantRemove(item, variant)}
-                                      className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
+                                      className="w-2 h-2 md:w-4 md:h-4 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors text-xs"
                                     >
-                                      <Minus size={14} />
+                                      <Minus size={8} className="md:w-2 md:h-2 w-1.5 h-1.5" />
                                     </button>
-                                    <span className="text-sm font-medium min-w-[24px] text-center">
+                                    <span className="text-xs font-medium min-w-[16px] text-center">
                                       {getVariantQuantity(item, variant.name)}
                                     </span>
                                     <button
                                       onClick={() => handleVariantAdd(item, variant)}
-                                      className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors"
+                                      className="w-2 h-2 md:w-4 md:h-4 flex items-center justify-center rounded-full hover:bg-orange-600 transition-colors text-xs"
                                     >
-                                      <Plus size={14} />
+                                      <Plus size={8} className="md:w-2 md:h-2 w-1.5 h-1.5" />
                                     </button>
                                   </div>
                                 ) : (
                                   <button
                                     onClick={() => handleVariantAdd(item, variant)}
-                                    className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-md transition-colors"
+                                    className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded-md transition-colors"
                                   >
                                     Add
                                   </button>
@@ -315,8 +307,8 @@ const SearchMenu = ({
                               </div>
                             ))}
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -327,15 +319,15 @@ const SearchMenu = ({
                   <SearchIcon size={24} className="text-gray-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No items found
+              No items found
                 </h3>
                 <p className="text-gray-600 max-w-sm">
                   {query.trim() === ""
                     ? "Start typing to search..."
-                    : `We couldn't find any items matching "${query}".`}
+                    : `We couldn't find any items matching \"${query}\".`}
                 </p>
-              </div>
-            )}
+            </div>
+          )}
           </div>
         </div>
       )}
