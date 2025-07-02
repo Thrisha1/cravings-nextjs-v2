@@ -3,17 +3,20 @@ import React, { useEffect, useState } from "react";
 import { DefaultHotelPageProps } from "../Default/Default";
 import { getFeatures } from "@/lib/getFeatures";
 import useOrderStore from "@/store/orderStore";
+import { Offer } from "@/store/offerStore_hasura";
 
 const ItemCard = ({
   item,
   styles,
   hoteldata,
+  offerData,
   feature_flags,
   tableNumber,
 }: {
   item: HotelDataMenus;
   styles: DefaultHotelPageProps["styles"];
   hoteldata: HotelData;
+  offerData?: Offer;
   feature_flags: HotelData["feature_flags"];
   tableNumber: number;
 }) => {
@@ -27,22 +30,24 @@ const ItemCard = ({
   const hasStockFeature = getFeatures(feature_flags || "")?.stockmanagement
     ?.enabled;
 
-  // An item is "out of stock" if the stock feature is on, the stocks array is not empty, and quantity is 0 or less.
-  // Per your request, an empty 'stocks' array means the item is considered IN STOCK.
   const isOutOfStock =
     hasStockFeature &&
     (item.stocks?.length ?? 0) > 0 &&
     (item.stocks?.[0]?.stock_quantity ?? 1) <= 0;
 
-  // Whether to display the stock count on the card
   const showStock = hasStockFeature && (item.stocks?.[0]?.show_stock ?? false);
-  const stockQuantity = item.stocks?.[0]?.stock_quantity; // The actual quantity, may be undefined
+  const stockQuantity = item.stocks?.[0]?.stock_quantity;
 
   const hasVariants = (item.variants?.length ?? 0) > 0;
   const [itemQuantity, setItemQuantity] = useState<number>(0);
   const [variantQuantities, setVariantQuantities] = useState<
     Record<string, number>
   >({});
+
+  // Calculate discount percentage if offer exists
+  const discountPercentage = offerData
+    ? Math.round(((offerData.menu.price - offerData.offer_price) / offerData.menu.price) * 100)
+    : 0;
 
   useEffect(() => {
     if (item.variants?.length) {
@@ -79,6 +84,7 @@ const ItemCard = ({
       addItem({
         ...item,
         variantSelections: [],
+        price: offerData?.offer_price || item.price, // Use offer price if available
       });
     }
   };
@@ -108,7 +114,6 @@ const ItemCard = ({
     return variantQuantities[name] || 0;
   };
 
-  // Determine if we should show add buttons
   const isOrderable = item.is_available && !isOutOfStock;
   const showAddButton = 
     isOrderable && (hasOrderingFeature || hasDeliveryFeature) && !item.is_price_as_per_size;
@@ -119,7 +124,7 @@ const ItemCard = ({
         <div>
           <h3 className="capitalize text-lg font-semibold">{item.name}</h3>
           <p className="text-sm opacity-50">{item.description}</p>
-          <p
+          <div
             style={{
               color: styles?.accent || "#000",
             }}
@@ -127,13 +132,33 @@ const ItemCard = ({
           >
             {item.is_price_as_per_size !== true ? (
               <>
-                {hoteldata?.currency || "₹"}
-                {item.price}
+                {offerData ? (
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className="text-red-500">
+                        {hoteldata?.currency || "₹"}
+                        {offerData.offer_price}
+                      </span>
+                      <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded">
+                        {discountPercentage}% OFF
+                      </span>
+                    </div>
+                    <span className="text-sm line-through opacity-70">
+                      {hoteldata?.currency || "₹"}
+                      {offerData.menu.price }
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    {hoteldata?.currency || "₹"}
+                    {item.price}
+                  </>
+                )}
               </>
             ) : (
               <div className="text-base font-normal">{`(Price as per size)`}</div>
             )}
-          </p>
+          </div>
 
           {showStock && (
             <div className="text-xs mt-1">
@@ -228,7 +253,6 @@ const ItemCard = ({
                     Add
                   </div>
                 ) : (
-                  
                   <></>
                 )}
               </div>

@@ -4,12 +4,13 @@ import { DefaultHotelPageProps } from "../Default/Default";
 import { formatDisplayName } from "@/store/categoryStore_hasura";
 import ThemeChangeButton from "../../ThemeChangeButton";
 import ItemCard from "./ItemCard";
-import { BadgePercent, MapPin, SearchIcon } from "lucide-react";
+import { MapPin } from "lucide-react";
 import SocialLinks from "./SocialLinks";
 import RateUs from "./RateUs";
 import CategoryListBtn from "./CategoryListBtn";
 import SearchItems from "./SearchItems";
 import OffersList from "./OffersList";
+import { Offer } from "@/store/offerStore_hasura";
 
 const Compact = ({
   styles,
@@ -55,8 +56,6 @@ const Compact = ({
 
       if (currentActiveIndex !== activeCatIndex) {
         setActiveCatIndex(currentActiveIndex);
-        // Optional: Replace history state without causing a re-render
-        // window.history.replaceState(null, "", `#${categories[currentActiveIndex].name}`);
         scrollCategoryIntoView(currentActiveIndex);
       }
     };
@@ -134,14 +133,16 @@ const Compact = ({
   };
 
   // Memoize the category list to prevent re-creation on every render
+  // UPDATED: "Offers" is now a category if available.
   const allCategories = React.useMemo(
     () => [
+      ...(hasOffers ? [{ id: "offers", name: "Offers" }] : []),
       ...(topItems && topItems.length > 0
         ? [{ id: "must-try", name: "must_try" }]
         : []),
       ...categories,
     ],
-    [categories, topItems]
+    [categories, topItems, hasOffers]
   );
 
   return (
@@ -182,18 +183,9 @@ const Compact = ({
         </div>
 
         {/* social links */}
-        {(socialLinks || isOwner || hasOffers) && (
+        {/* REMOVED: `hasOffers` check and the OffersList button from here */}
+        {(socialLinks || isOwner) && (
           <div className="flex overflow-x-auto scrollbar-hide gap-2 p-4 border-b-[1px] bg-white z-20">
-            {hasOffers && (
-              <OffersList
-                offers={offers}
-                hotelName={hoteldata?.store_name}
-                menu={hoteldata?.menus}
-                styles={styles}
-                tableNumber={tableNumber}
-                feature_flags={hoteldata?.feature_flags}
-              />
-            )}
             <SocialLinks socialLinks={socialLinks} />
             {isOwner && (
               <div
@@ -214,7 +206,7 @@ const Compact = ({
           </div>
         )}
 
-        {/* search and offers btn  */}
+        {/* search btn  */}
         <div className="p-4">
           {/* search  */}
           <SearchItems
@@ -268,15 +260,27 @@ const Compact = ({
         {/* Categories Content */}
         <div className="grid gap-4 p-4">
           {allCategories.map((category, index) => {
-            // FIX: Conditionally determine the list of items to render.
-            // If the category is "Must Try", use the `topItems` prop.
-            // Otherwise, filter the main `hoteldata.menus` for items matching the current category.
-            const itemsToDisplay =
-              category.id === "must-try"
-                ? topItems
-                : hoteldata?.menus.filter(
-                    (item) => item.category.id === category.id
-                  );
+            // Conditionally determine the list of items to render for other categories.
+            let itemsToDisplay = [];
+
+            switch (category.id) {
+              case "offers":
+                // Create a Set of menu IDs for faster lookups.
+                const offerMenuIdSet = new Set(offers.map((offer) => offer.menu.id));
+                // Filter 'hoteldata.menus' by checking for the item's ID in the Set.
+                itemsToDisplay = hoteldata?.menus.filter((item) =>
+                  offerMenuIdSet.has(item.id as string)
+                );
+                break;
+              case "must-try":
+                // If the category is "must_try", display the top items.
+                itemsToDisplay = topItems;
+                break;
+              default:
+                itemsToDisplay = hoteldata?.menus.filter(
+                  (item) => item.category.id === category.id
+                );
+            }
 
             // Do not render the category section if there are no items to display.
             if (!itemsToDisplay || itemsToDisplay.length === 0) {
@@ -297,16 +301,22 @@ const Compact = ({
                   {formatDisplayName(category.name)}
                 </h2>
                 <div className="grid grid-cols-1 gap-4 divide-y-2 divide-gray-200">
-                  {itemsToDisplay.map((item) => (
-                    <ItemCard
-                      tableNumber={tableNumber}
-                      feature_flags={hoteldata?.feature_flags}
-                      hoteldata={hoteldata}
-                      item={item}
-                      styles={styles}
-                      key={item.id}
-                    />
-                  ))}
+                  {itemsToDisplay.map((item) => {
+
+                    const offerData = offers?.find(offer => offer.menu.id === item.id);
+
+                    return (
+                      <ItemCard
+                        tableNumber={tableNumber}
+                        feature_flags={hoteldata?.feature_flags}
+                        hoteldata={hoteldata}
+                        item={item}
+                        offerData={offerData}
+                        styles={styles}
+                        key={item.id}
+                      />
+                    )
+                  })}
                 </div>
               </section>
             );
