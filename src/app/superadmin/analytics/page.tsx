@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import Analytics from '@/components/superAdmin/Analytics';
 import { 
-  BarChart,
+  BarChart as BarChartIcon,
   ArrowLeft,
   Users,
   Building,
@@ -18,15 +18,21 @@ import {
   Calendar,
   Phone,
   MapPin,
-  ShoppingBag
+  ShoppingBag,
+  Clock,
+  CheckCircle,
+  XCircle,
+  PieChart as PieChartIcon,
+  TrendingUp,
+  LineChart as LineChartIcon
 } from 'lucide-react';
 import Link from 'next/link';
 import { fetchFromHasura } from '@/lib/hasuraClient';
-import { getTopQRCodes, getPartnerPerformance } from '@/api/analytics';
+import { getTopQRCodes, getPartnerPerformance, getOrdersByDay } from '@/api/analytics';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, subDays, isBefore } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +41,13 @@ import {
   DialogTitle,
   DialogClose
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { Skeleton } from "@/components/ui/skeleton";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DateRange } from "react-day-picker";
+import { cn } from "@/lib/utils";
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 
 interface QRCodeData {
   id: string;
@@ -69,12 +82,52 @@ interface PartnerData {
   };
 }
 
+interface OrderData {
+  id?: string;
+  created_at: string;
+  status: string;
+  total_price: number;
+}
+
 type SortField = 'name' | 'scans' | 'orders' | 'avgOrderValue';
 
 // Add type for date filter
 type DateFilter = 'today' | 'week' | 'month' | 'all' | 'custom';
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
+
+// Chart colors
+const CHART_COLORS = {
+  orange: '#ff7849',
+  green: '#00C49F',
+  blue: '#0088FE',
+  purple: '#8884d8',
+  red: '#FF8042',
+  yellow: '#FFBB28',
+};
+
+// Create a wide dialog content component that bypasses the width constraints
+const WideDialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPrimitive.Portal>
+    <DialogPrimitive.Overlay
+      className="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+    />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        'fixed left-[50%] top-[50%] z-50 grid w-[900px] max-w-[90vw] max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background shadow-lg overflow-y-auto duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-lg',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </DialogPrimitive.Content>
+  </DialogPrimitive.Portal>
+));
+WideDialogContent.displayName = "WideDialogContent";
 
 const AnalyticsDashboard = () => {
   const [qrCodeData, setQrCodeData] = useState<QRCodeData[]>([]);
@@ -107,6 +160,18 @@ const AnalyticsDashboard = () => {
   const [tempEndDate, setTempEndDate] = useState<Date | undefined>(endDate);
   const [selectedPartner, setSelectedPartner] = useState<PartnerData | null>(null);
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
+  const [partnerOrderData, setPartnerOrderData] = useState<OrderData[]>([]);
+  const [partnerOrdersLoading, setPartnerOrdersLoading] = useState(false);
+  const [partnerActiveTab, setPartnerActiveTab] = useState<'overview' | 'orders' | 'scans'>('overview');
+  const [partnerDateRange, setPartnerDateRange] = useState({
+    startDate: subDays(new Date(), 30),
+    endDate: new Date()
+  });
+  const [partnerDatePickerOpen, setPartnerDatePickerOpen] = useState(false);
+  
+  // Ref to track if we need to fetch partner data
+  const shouldFetchPartnerData = useRef(false);
+  const currentPartnerId = useRef<string | null>(null);
 
   // Debounce search term
   useEffect(() => {
@@ -411,10 +476,119 @@ const AnalyticsDashboard = () => {
     return sorted.slice(startIndex, endIndex);
   }, [partnerData, sortField, partnerCurrentPage, partnerPageSize]);
 
+  // Memoize the fetchPartnerOrderData function to avoid recreation on each render
+  const fetchPartnerOrderData = useCallback(async (partnerId: string) => {
+    if (!partnerId) return;
+    
+    setPartnerOrdersLoading(true);
+    try {
+      const result = await fetchFromHasura(getOrdersByDay, {
+        startDate: partnerDateRange.startDate.toISOString(),
+        endDate: partnerDateRange.endDate.toISOString(),
+        partnerId: partnerId
+      });
+      
+      if (result && result.orders) {
+        setPartnerOrderData(result.orders);
+      }
+    } catch (error) {
+      console.error('Error fetching partner order data:', error);
+    } finally {
+      setPartnerOrdersLoading(false);
+    }
+  }, [partnerDateRange.startDate, partnerDateRange.endDate]);
+
+  // Handle partner date range change
+  const handlePartnerDateRangeChange = useCallback((range: { startDate: Date; endDate: Date }) => {
+    setPartnerDateRange(range);
+    if (currentPartnerId.current) {
+      shouldFetchPartnerData.current = true;
+    }
+  }, []);
+
+  // Effect to fetch partner data only when necessary
+  useEffect(() => {
+    if (shouldFetchPartnerData.current && currentPartnerId.current && isPartnerModalOpen) {
+      fetchPartnerOrderData(currentPartnerId.current);
+      shouldFetchPartnerData.current = false;
+    }
+  }, [fetchPartnerOrderData, isPartnerModalOpen]);
+
   // Handle opening partner modal
-  const handlePartnerClick = (partner: PartnerData) => {
+  const handlePartnerClick = useCallback((partner: PartnerData) => {
     setSelectedPartner(partner);
     setIsPartnerModalOpen(true);
+    currentPartnerId.current = partner.id;
+    shouldFetchPartnerData.current = true;
+  }, []);
+
+  // Effect to cleanup when modal closes
+  useEffect(() => {
+    if (!isPartnerModalOpen) {
+      currentPartnerId.current = null;
+      shouldFetchPartnerData.current = false;
+    }
+  }, [isPartnerModalOpen]);
+
+  // Prepare chart data for partner orders by day
+  const preparePartnerOrderChartData = () => {
+    if (!partnerOrderData || partnerOrderData.length === 0) return [];
+    
+    const dailyData: { [date: string]: { date: string, orders: number, revenue: number } } = {};
+    
+    partnerOrderData.forEach(order => {
+      const orderDate = format(new Date(order.created_at), 'MMM dd');
+      
+      if (!dailyData[orderDate]) {
+        dailyData[orderDate] = { date: orderDate, orders: 0, revenue: 0 };
+      }
+      
+      dailyData[orderDate].orders++;
+      dailyData[orderDate].revenue += order.total_price;
+    });
+    
+    return Object.values(dailyData);
+  };
+
+  // Prepare chart data for order statuses
+  const prepareOrderStatusChartData = () => {
+    if (!partnerOrderData || partnerOrderData.length === 0) return [];
+    
+    const statusCounts: { [status: string]: number } = {
+      completed: 0,
+      pending: 0,
+      cancelled: 0
+    };
+    
+    partnerOrderData.forEach(order => {
+      if (order.status in statusCounts) {
+        statusCounts[order.status]++;
+      }
+    });
+    
+    return [
+      { name: 'Completed', value: statusCounts.completed },
+      { name: 'Pending', value: statusCounts.pending },
+      { name: 'Cancelled', value: statusCounts.cancelled }
+    ];
+  };
+
+  // Calculate hourly distribution of orders
+  const prepareHourlyOrdersData = () => {
+    if (!partnerOrderData || partnerOrderData.length === 0) return [];
+    
+    const hourlyData = Array(24).fill(0).map((_, i) => ({ 
+      hour: i, 
+      label: `${i}:00`,
+      orders: 0 
+    }));
+    
+    partnerOrderData.forEach(order => {
+      const orderHour = new Date(order.created_at).getHours();
+      hourlyData[orderHour].orders++;
+    });
+    
+    return hourlyData;
   };
 
   // Date range filter component
@@ -489,8 +663,71 @@ const AnalyticsDashboard = () => {
     </div>
   );
 
+  // Handle partner date range selection
+  const handlePartnerDateRangeSelect = useCallback((range: DateRange | undefined) => {
+    if (range?.from && range?.to) {
+      // Set from date to beginning of day
+      const startDate = new Date(range.from);
+      startDate.setHours(0, 0, 0, 0);
+      
+      // Set to date to end of day
+      const endDate = new Date(range.to);
+      endDate.setHours(23, 59, 59, 999);
+      
+      setPartnerDateRange({
+        startDate: startDate,
+        endDate: endDate
+      });
+      
+      if (currentPartnerId.current) {
+        shouldFetchPartnerData.current = true;
+        fetchPartnerOrderData(currentPartnerId.current);
+      }
+    }
+    setPartnerDatePickerOpen(false);
+  }, [fetchPartnerOrderData]);
+
+  // Handle partner date range selection for specific preset ranges
+  const handlePartnerPresetRange = useCallback((range: 'today' | 'week' | 'month' | 'all') => {
+    const today = new Date();
+    let startDate;
+    const endDate = new Date();
+    // Set time to end of day
+    endDate.setHours(23, 59, 59, 999);
+    
+    switch (range) {
+      case 'today':
+        startDate = new Date(today);
+        // Set time to beginning of day
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'week':
+        startDate = new Date();
+        startDate.setDate(today.getDate() - 7);
+        // Set time to beginning of day
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'month':
+        startDate = new Date();
+        startDate.setDate(today.getDate() - 30);
+        // Set time to beginning of day
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'all':
+        startDate = new Date(2020, 0, 1); // Far past date
+        break;
+    }
+    
+    setPartnerDateRange({ startDate, endDate });
+    
+    if (currentPartnerId.current) {
+      shouldFetchPartnerData.current = true;
+      fetchPartnerOrderData(currentPartnerId.current);
+    }
+  }, [fetchPartnerOrderData]);
+
   // Partner Modal Component
-  const PartnerModal = () => {
+  const PartnerModal = React.memo(() => {
     if (!selectedPartner) return null;
 
     // Calculate metrics for the selected partner
@@ -499,78 +736,191 @@ const AnalyticsDashboard = () => {
     const totalRevenue = selectedPartner.orders_aggregate?.aggregate?.sum?.total_price || 0;
     const avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders).toFixed(2) : '0.00';
 
+    const completedOrders = partnerOrderData.filter(order => order.status === 'completed').length;
+    const pendingOrders = partnerOrderData.filter(order => order.status === 'pending').length;
+    const cancelledOrders = partnerOrderData.filter(order => order.status === 'cancelled').length;
+    
+    const completionRate = totalOrders > 0 ? (completedOrders / totalOrders * 100).toFixed(1) : '0';
+
+    const orderStatusData = prepareOrderStatusChartData();
+    const ordersByDayData = preparePartnerOrderChartData();
+    const hourlyOrdersData = prepareHourlyOrdersData();
+
+    // Use a stable handler for the dialog's onOpenChange
+    const handleOpenChange = React.useCallback((open: boolean) => {
+      setIsPartnerModalOpen(open);
+    }, []);
+
     return (
-      <Dialog open={isPartnerModalOpen} onOpenChange={setIsPartnerModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">{selectedPartner.name}</DialogTitle>
-            <DialogDescription>
-              Partner Performance Details
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-gray-500">
-                  <Phone className="h-4 w-4" />
-                  <span className="text-sm">Phone:</span>
-                </div>
-                <p className="font-medium">{selectedPartner.phone || 'N/A'}</p>
+      <Dialog open={isPartnerModalOpen} onOpenChange={handleOpenChange}>
+        <WideDialogContent>
+          <div className="p-6">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <DialogTitle className="text-2xl font-bold mb-1">{selectedPartner.name}</DialogTitle>
+                <DialogDescription className="text-gray-500 text-sm">
+                  Partner Performance Details
+                </DialogDescription>
               </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-gray-500">
-                  <MapPin className="h-4 w-4" />
-                  <span className="text-sm">District:</span>
+              
+              <div className="text-right">
+                <div className="flex items-center justify-end mb-1 text-gray-600">
+                  <Phone className="h-4 w-4 mr-1" />
+                  <span>{selectedPartner.phone || 'N/A'}</span>
                 </div>
-                <p className="font-medium">{selectedPartner.district || 'N/A'}</p>
+                <div className="flex items-center justify-end text-gray-600">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  <span>{selectedPartner.district || 'N/A'}</span>
+                </div>
               </div>
             </div>
-
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-medium text-gray-700 mb-3">Performance Metrics</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Scan className="h-4 w-4 text-orange-500" />
-                    <span className="text-sm text-gray-500">Total Scans:</span>
-                  </div>
-                  <p className="text-lg font-semibold">{totalScans}</p>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <ShoppingBag className="h-4 w-4 text-orange-500" />
-                    <span className="text-sm text-gray-500">Total Orders:</span>
-                  </div>
-                  <p className="text-lg font-semibold">{totalOrders}</p>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <BarChart className="h-4 w-4 text-orange-500" />
-                    <span className="text-sm text-gray-500">Average Order:</span>
-                  </div>
-                  <p className="text-lg font-semibold">₹{avgOrderValue}</p>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <BarChart className="h-4 w-4 text-orange-500" />
-                    <span className="text-sm text-gray-500">Total Revenue:</span>
-                  </div>
-                  <p className="text-lg font-semibold">₹{totalRevenue.toFixed(2)}</p>
-                </div>
+            
+            {/* Date Range Filters */}
+            <div className="mb-6">
+              <div className="text-sm text-gray-600 mb-2">Filter by:</div>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant={partnerDateRange.startDate.toDateString() === new Date().toDateString() ? 'default' : 'outline'} 
+                  size="default"
+                  onClick={() => handlePartnerPresetRange('today')}
+                  className="min-w-[100px]"
+                >
+                  Today
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="default"
+                  onClick={() => handlePartnerPresetRange('week')}
+                  className="min-w-[100px]"
+                >
+                  Last 7 Days
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="default"
+                  onClick={() => handlePartnerPresetRange('month')}
+                  className="min-w-[100px]"
+                >
+                  Last 30 Days
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="default"
+                  onClick={() => handlePartnerPresetRange('all')}
+                  className="min-w-[100px]"
+                >
+                  All Time
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="default"
+                  onClick={() => setPartnerDatePickerOpen(true)}
+                  className="flex items-center min-w-[140px]"
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Custom Range
+                </Button>
               </div>
+            </div>
+            
+            {/* Key Metrics */}
+            <div className="grid grid-cols-6 gap-4 mb-6">
+              <div className="text-center">
+                <div className="text-sm text-gray-600 mb-1">Scans</div>
+                <div className="text-3xl font-semibold">{totalScans}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-gray-600 mb-1">Orders</div>
+                <div className="text-3xl font-semibold">{totalOrders}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-gray-600 mb-1">Avg Order</div>
+                <div className="text-3xl font-semibold">₹{avgOrderValue}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-gray-600 mb-1">Revenue</div>
+                <div className="text-3xl font-semibold">₹{totalRevenue.toFixed(0)}</div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-gray-600 mb-1">Success</div>
+                <div className="text-3xl font-semibold">{completionRate}%</div>
+              </div>
+              <div className="text-center">
+                <div className="text-sm text-gray-600 mb-1">Cancelled</div>
+                <div className="text-3xl font-semibold">{cancelledOrders}</div>
+              </div>
+            </div>
+            
+            {/* Completed Orders List */}
+            <div className="mt-6">
+              <h3 className="font-medium text-gray-700 mb-4 text-lg">Orders</h3>
+              
+              {partnerOrdersLoading ? (
+                <div className="h-64 flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 text-gray-400 animate-spin mr-2" />
+                  <span>Loading orders...</span>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="py-3 px-4 text-left font-medium text-gray-500">Order ID</th>
+                        <th className="py-3 px-4 text-left font-medium text-gray-500">Date & Time</th>
+                        <th className="py-3 px-4 text-left font-medium text-gray-500">Price</th>
+                        <th className="py-3 px-4 text-left font-medium text-gray-500">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {partnerOrderData.length > 0 ? (
+                        partnerOrderData.map((order, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="py-3 px-4">
+                              {order.id && order.id.substring(0, 7)}
+                            </td>
+                            <td className="py-3 px-4">
+                              {format(new Date(order.created_at), 'MMM dd, yyyy HH:mm')}
+                            </td>
+                            <td className="py-3 px-4">₹{order.total_price.toFixed(2)}</td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="py-8 text-center text-gray-500">
+                            No orders found in the selected time period
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
-          <div className="flex justify-end">
+          
+          <div className="flex justify-end border-t p-4">
             <DialogClose asChild>
-              <Button type="button" variant="outline">
+              <Button 
+                type="button" 
+                variant="outline"
+              >
                 Close
               </Button>
             </DialogClose>
           </div>
-        </DialogContent>
+        </WideDialogContent>
       </Dialog>
     );
-  };
+  });
 
   return (
     <main className="px-3 py-5 sm:px-[7.5%] bg-[#FFF7EC] min-h-screen">
@@ -745,13 +1095,13 @@ const AnalyticsDashboard = () => {
                       <td className="py-3 px-4 whitespace-nowrap">{totalScans}</td>
                       <td className="py-3 px-4 whitespace-nowrap">{totalOrders}</td>
                       <td className="py-3 px-4 whitespace-nowrap">₹{avgOrderValue}</td>
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          totalOrders > 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {totalOrders > 0 ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
+                                                <td className="py-3 px-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        totalOrders > 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {totalOrders > 0 ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
                     </tr>
                   );
                 })
@@ -1054,6 +1404,29 @@ const AnalyticsDashboard = () => {
           </div>
         </Card>
       </div>
+      
+      {/* Partner date range picker */}
+      <Popover open={partnerDatePickerOpen} onOpenChange={setPartnerDatePickerOpen}>
+        <PopoverContent className="w-auto p-0" align="end">
+          <div className="p-3">
+            <div className="text-center mb-2 font-medium">
+              Select Date Range
+            </div>
+            <CalendarComponent
+              mode="range"
+              defaultMonth={partnerDateRange.startDate}
+              selected={{
+                from: partnerDateRange.startDate,
+                to: partnerDateRange.endDate
+              }}
+              onSelect={handlePartnerDateRangeSelect}
+              numberOfMonths={2}
+              disabled={(date) => isBefore(date, new Date('2000-01-01'))}
+              initialFocus
+            />
+          </div>
+        </PopoverContent>
+      </Popover>
     </main>
   );
 };

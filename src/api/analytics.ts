@@ -39,17 +39,30 @@ export const getOrderStatusMetrics = `
   }
 `;
 
-// Query to get top QR codes by scan count
+// Query to get QR code scan metrics
+export const getQRScanMetrics = `
+  query GetQRScanMetrics {
+    total_scans: qr_codes_aggregate {
+      aggregate {
+        sum {
+          no_of_scans
+        }
+      }
+    }
+  }
+`;
+
+// Query to get top performing QR codes
 export const getTopQRCodes = `
-  query GetTopQRCodes($limit: Int = 10, $offset: Int = 0, $search: String = "") {
+  query GetTopQRCodes($limit: Int = 10, $offset: Int = 0, $search: String = "%") {
     qr_codes(
       where: {
         partner: {
           name: { _ilike: $search }
         }
-      }
-      order_by: { no_of_scans: desc }
-      limit: $limit
+      },
+      order_by: { no_of_scans: desc },
+      limit: $limit,
       offset: $offset
     ) {
       id
@@ -61,6 +74,7 @@ export const getTopQRCodes = `
         phone
       }
     }
+    
     qr_codes_aggregate(
       where: {
         partner: {
@@ -119,11 +133,15 @@ export const getPartnerPerformance = `
 
 // Query to get orders by day for time series analysis
 export const getOrdersByDay = `
-  query GetOrdersByDay($startDate: timestamptz!, $endDate: timestamptz!) {
+  query GetOrdersByDay($startDate: timestamptz!, $endDate: timestamptz!, $partnerId: uuid!) {
     orders(
-      where: { created_at: { _gte: $startDate, _lte: $endDate } }
-      order_by: { created_at: asc }
+      where: { 
+        created_at: { _gte: $startDate, _lte: $endDate },
+        partner_id: { _eq: $partnerId }
+      }
+      order_by: { created_at: desc }
     ) {
+      id
       created_at
       status
       total_price
@@ -169,19 +187,6 @@ export const getUserMetrics = `
     ) {
       aggregate {
         count
-      }
-    }
-  }
-`;
-
-// Query to get QR scan metrics
-export const getQRScanMetrics = `
-  query GetQRScanMetrics {
-    total_scans: qr_codes_aggregate {
-      aggregate {
-        sum {
-          no_of_scans
-        }
       }
     }
   }
