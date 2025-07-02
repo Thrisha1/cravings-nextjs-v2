@@ -12,6 +12,7 @@ import { Button } from "./ui/button";
 import { getFeatures } from "@/lib/getFeatures";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import UserAvatar from "./UserAvatar";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -164,23 +165,9 @@ export function Navbar({ userData }: { userData: any }) {
   const renderUserProfile = () => {
     if (!userData) return null;
 
-    const displayName =
-      userData.role === "user"
-        ? userData.full_name
-        : userData.role === "partner"
-        ? userData.store_name
-        : userData.role === "captain"
-        ? "Captain"
-        : "Super Admin";
-
+  
     return (
-      <Link
-        href="/profile"
-        className="flex text-sm items-center gap-2 text-gray-500"
-      >
-        <UserCircle className="h-6 w-6 text-gray-500" />
-        <span className="hidden sm:inline">{displayName}</span>
-      </Link>
+      <UserAvatar userData={userData} />
     );
   };
 
