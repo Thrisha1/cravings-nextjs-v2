@@ -225,6 +225,9 @@ const SearchMenu = ({
                               <h3 className="font-semibold text-gray-800 text-base md:text-lg mb-1 line-clamp-2">
                                 {item.name}
                               </h3>
+                              {orderingEnabled && (
+                                <span className="block text-base md:text-lg font-bold text-gray-900 mb-1">{currency}{item.price}</span>
+                              )}
                               {item.description && (
                                 <p className="text-sm text-gray-500 line-clamp-2">
                                   {item.description}
@@ -234,9 +237,9 @@ const SearchMenu = ({
                             
                             {/* Price and Add Button */}
                             <div className="flex flex-col items-end gap-2">
-                              <span className="text-base md:text-lg font-bold text-gray-900">
-                                {currency}{item.price}
-                              </span>
+                              {!orderingEnabled && (
+                                <span className="text-base md:text-lg font-bold text-gray-900 mr-3">{currency}{item.price}</span>
+                              )}
                               {!hasVariants ? (
                                 orderingEnabled ? (
                                   quantity === 0 ? (
@@ -266,7 +269,7 @@ const SearchMenu = ({
                                     </div>
                                   )
                                 ) : (
-                                  <span className="text-xs text-gray-400 font-medium">Ordering not available</span>
+                                  null
                                 )
                               ) : (
                                 <button
@@ -288,10 +291,15 @@ const SearchMenu = ({
                           <div className="space-y-3">
                             {item.variants?.map((variant) => (
                               <div key={variant.name} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                <div className="flex-1">
+                                <div className="flex-1 flex flex-col">
                                   <div className="font-medium text-gray-800">{variant.name}</div>
-                                  <div className="text-sm text-gray-600">{currency}{variant.price}</div>
+                                  {orderingEnabled ? (
+                                    <span className="block text-base md:text-lg font-bold text-gray-900 mb-1">{currency}{variant.price}</span>
+                                  ) : null}
                                 </div>
+                                {!orderingEnabled && (
+                                  <span className="text-base md:text-lg font-bold text-gray-900 mr-3">{currency}{variant.price}</span>
+                                )}
                                 {orderingEnabled ? (
                                   getVariantQuantity(item, variant.name) > 0 ? (
                                     <div className="flex items-center gap-2 bg-orange-500 text-white rounded-md px-3 py-2">
@@ -319,9 +327,7 @@ const SearchMenu = ({
                                       Add
                                     </button>
                                   )
-                                ) : (
-                                  <span className="text-xs text-gray-400 font-medium">Ordering not available</span>
-                                )}
+                                ) : null}
                               </div>
                             ))}
                           </div>
