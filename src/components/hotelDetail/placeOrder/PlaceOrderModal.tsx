@@ -16,12 +16,6 @@ import Link from "next/link";
 import { getGstAmount, calculateDeliveryDistanceAndCost } from "../OrderDrawer";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import { getExtraCharge } from "@/lib/getExtraCharge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
 import { getFeatures } from "@/lib/getFeatures";
 import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
 
@@ -316,10 +310,10 @@ const BillCard = ({
 
   const qrExtraCharges = qrGroup?.extra_charge
     ? getExtraCharge(
-        items,
-        qrGroup.extra_charge,
-        qrGroup.charge_type || "FLAT_FEE"
-      )
+      items,
+      qrGroup.extra_charge,
+      qrGroup.charge_type || "FLAT_FEE"
+    )
     : 0;
 
   const deliveryCharges =
@@ -666,9 +660,8 @@ const MapModal = ({
 
   return (
     <div
-      className={`fixed top-0 left-0 z-[5000] h-screen w-screen ${
-        showMapModal ? "overflow-hidden" : "hidden"
-      }`}
+      className={`fixed top-0 left-0 z-[5000] h-screen w-screen ${showMapModal ? "overflow-hidden" : "hidden"
+        }`}
     >
       <div className="flex items-center justify-center min-h-screen w-screen">
         <div
@@ -732,6 +725,8 @@ const PlaceOrderModal = ({
     userAddress: address,
     clearOrder,
     deliveryInfo,
+    orderNote,
+    setOrderNote,
   } = useOrderStore();
 
   const { userData: user } = useAuthStore();
@@ -932,7 +927,9 @@ const PlaceOrderModal = ({
         tableNumber,
         qrId as string,
         gstAmount,
-        extraCharges.length > 0 ? extraCharges : null
+        extraCharges.length > 0 ? extraCharges : null,
+        undefined, // deliveryCharge
+        orderNote || undefined // pass the note
       );
 
       if (result) {
@@ -965,9 +962,8 @@ const PlaceOrderModal = ({
   return (
     <>
       <div
-        className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto text-black ${
-          open_place_order_modal ? "block" : "hidden"
-        }`}
+        className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto text-black ${open_place_order_modal ? "block" : "hidden"
+          }`}
       >
         {/* Header */}
         <div className="sticky top-0  bg-white border-b">
@@ -1026,6 +1022,22 @@ const PlaceOrderModal = ({
                 isDelivery={isDelivery && !isQrScan}
                 qrGroup={qrGroup}
               />
+
+              {/* Note Input */}
+              <div className="border rounded-lg p-4 bg-white">
+                <h3 className="font-medium mb-3">Order Note</h3>
+                <textarea
+                  placeholder="Add any special instructions or notes for this order..."
+                  value={orderNote || ""}
+                  onChange={(e) => setOrderNote(e.target.value)}
+                  className="w-full p-3 border rounded-md resize-none bg-white text-black"
+                  rows={3}
+                  maxLength={500}
+                />
+                <div className="text-xs text-black bg-white mt-1">
+                  {(orderNote || "").length}/500 characters
+                </div>
+              </div>
 
               {/* Login Card (if not logged in) */}
               {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}

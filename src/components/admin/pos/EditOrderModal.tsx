@@ -61,9 +61,11 @@ export const EditOrderModal = () => {
   const [newItemId, setNewItemId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [showExtraItems, setShowExtraItems] = useState(false);
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
   const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0 });
   const [qrGroup, setQrGroup] = useState<any>(null);
+  const [orderNote, setOrderNote] = useState<string>("");
 
   const currency = (userData as Partner)?.currency || "$";
   const gstPercentage = (userData as Partner)?.gst_percentage || 0;
@@ -78,6 +80,7 @@ export const EditOrderModal = () => {
     setSearchQuery("");
     setExtraCharges([]);
     setNewExtraCharge({ name: "", amount: 0 });
+    setOrderNote("");
   };
 
   // Handle input focus to detect keyboard
@@ -128,6 +131,11 @@ export const EditOrderModal = () => {
         // Load extra charges if they exist
         if (orderData.extra_charges) {
           setExtraCharges(orderData.extra_charges);
+        }
+
+        // Load order note if it exists
+        if (orderData.notes) {
+          setOrderNote(orderData.notes);
         }
       }
     } catch (error) {
@@ -295,6 +303,7 @@ export const EditOrderModal = () => {
         totalPrice: finalTotal,
         phone: phone || "",
         extraCharges: extraCharges.length > 0 ? extraCharges : null,
+        notes: orderNote || null,
       });
 
       // Update order items
@@ -488,6 +497,22 @@ export const EditOrderModal = () => {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Order Note */}
+              <div className="border rounded-lg p-4 bg-white">
+                <h3 className="font-medium mb-3">Order Note</h3>
+                <textarea
+                  placeholder="Add any special instructions or notes for this order..."
+                  value={orderNote}
+                  onChange={(e) => setOrderNote(e.target.value)}
+                  className="w-full p-3 border rounded-md resize-none bg-white text-black"
+                  rows={3}
+                  maxLength={500}
+                />
+                <div className="text-xs text-black bg-white mt-1">
+                  {orderNote.length}/500 characters
                 </div>
               </div>
 

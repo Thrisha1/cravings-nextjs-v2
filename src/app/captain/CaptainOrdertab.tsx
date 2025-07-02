@@ -1,11 +1,10 @@
 "use client";
-import { Captain, Partner, useAuthStore } from "@/store/authStore";
-import useOrderStore, { Order, OrderItem } from "@/store/orderStore";
+import { Captain, useAuthStore } from "@/store/authStore";
+import useOrderStore, { Order } from "@/store/orderStore";
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { usePOSStore } from "@/store/posStore";
 import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
 import OrderItemCard from "@/components/captain/OrderItemCard";
@@ -13,11 +12,10 @@ import { EditCaptainOrderModal } from "./pos/EditCaptainOrderModal";
 import { revalidateTag } from "@/app/actions/revalidate";
 
 const CaptainOrdersTab = () => {
-  const router = useRouter();
   const { userData } = useAuthStore();
   const captainData = userData as Captain;
   const prevOrdersRef = useRef<Order[]>([]);
-  const { subscribeOrders, partnerOrders, deleteOrder, fetchOrderOfPartner, updateOrderStatus } = useOrderStore();
+  const { subscribeOrders, deleteOrder, fetchOrderOfPartner, updateOrderStatus } = useOrderStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -25,9 +23,7 @@ const CaptainOrdersTab = () => {
   const [hasMoreOrders, setHasMoreOrders] = useState(true);
   const [totalOrders, setTotalOrders] = useState(0);
   const {
-    order,
     setOrder,
-    editOrderModalOpen: isOpen,
     setEditOrderModalOpen,
   } = usePOSStore();
 
@@ -43,13 +39,10 @@ const CaptainOrdersTab = () => {
   // Helper function to process and filter orders
   const processAndFilterOrders = (fetchedOrders: Order[]) => {
     if (!fetchedOrders) return [];
-    
-    // Filter orders for this captain and completed status
+    // Show all orders taken by this captain, regardless of status
     const captainOrders = fetchedOrders.filter(
-      order => order.captain_id === captainData.id && 
-      order.status === "completed"
+      order => order.captain_id === captainData.id
     );
-
     // Sort orders by date (newest first)
     return sortOrders(captainOrders);
   };
@@ -74,6 +67,7 @@ const CaptainOrdersTab = () => {
           setOrders(paginatedOrders);
           setHasMoreOrders(processedOrders.length > ordersPerPage);
         } catch (error) {
+          console.error('Failed to load orders:', error);
           toast.error("Failed to load orders");
         } finally {
           setLoading(false);
@@ -94,18 +88,49 @@ const CaptainOrdersTab = () => {
       const processedOrders = processAndFilterOrders(updatedOrders);
       setTotalOrders(processedOrders.length);
 
-      // If we're on the first page, update with latest orders
-      if (currentPage === 1) {
-        setOrders(processedOrders.slice(0, ordersPerPage));
-      }
-
+      // Always reset to page 1 and show the latest orders
+      setCurrentPage(1);
+      setOrders(processedOrders.slice(0, ordersPerPage));
       prevOrdersRef.current = processedOrders;
     });
 
     return () => {
       unsubscribe();
     };
-  }, [captainData?.partner_id, captainData?.id, subscribeOrders, currentPage]);
+  }, [captainData?.partner_id, captainData?.id, subscribeOrders, ordersPerPage]);
+
+  // Listen for order updates from EditCaptainOrderModal
+  useEffect(() => {
+    const handleOrderUpdate = async () => {
+      if (captainData?.partner_id) {
+        try {
+          setLoading(true);
+          const fetchedOrders = await fetchOrderOfPartner(captainData.partner_id);
+          
+          if (fetchedOrders) {
+            const processedOrders = processAndFilterOrders(fetchedOrders);
+            setTotalOrders(processedOrders.length);
+            
+            // Reset to first page and show updated orders
+            setCurrentPage(1);
+            setOrders(processedOrders.slice(0, ordersPerPage));
+            setHasMoreOrders(processedOrders.length > ordersPerPage);
+          }
+        } catch (error) {
+          console.error('Failed to refresh orders:', error);
+          toast.error("Failed to refresh orders");
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    window.addEventListener('orderUpdated', handleOrderUpdate);
+    
+    return () => {
+      window.removeEventListener('orderUpdated', handleOrderUpdate);
+    };
+  }, [captainData?.partner_id, captainData?.id, fetchOrderOfPartner]);
 
   const fetchNextPage = async () => {
     if (!captainData?.partner_id || !hasMoreOrders) return;
@@ -124,6 +149,7 @@ const CaptainOrdersTab = () => {
       setHasMoreOrders(processedOrders.length > offset + ordersPerPage);
       setCurrentPage(prev => prev + 1);
     } catch (error) {
+      console.error('Failed to load more orders:', error);
       toast.error("Failed to load more orders");
     } finally {
       setLoading(false);
@@ -167,6 +193,7 @@ const CaptainOrdersTab = () => {
       }
       toast.success(`Order marked as ${newStatus}`);
     } catch (error) {
+      console.error('Failed to update order status:', error);
       toast.error(`Failed to update order status`);
     }
   };

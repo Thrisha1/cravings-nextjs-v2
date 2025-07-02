@@ -143,7 +143,7 @@ const PrintKOTPage = () => {
 
         {/* Order Notes */}
         {order.notes && (
-          <div className="my-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+          <div className="my-2 p-2">
             <div className="font-bold text-sm">Order Notes:</div>
             <div className="text-sm">{order.notes}</div>
           </div>

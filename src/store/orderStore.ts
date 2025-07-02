@@ -130,6 +130,7 @@ interface OrderState {
   hotelId: string | null;
   hotelOrders: Record<string, HotelOrderState>;
   userAddress: string | null;
+  orderNote: string | null;
   open_auth_modal: boolean;
   open_drawer_bottom: boolean;
   order: Order | null;
@@ -164,13 +165,15 @@ interface OrderState {
           charge_type?: string;
         }[]
       | null,
-    deliveryCharge?: number
+    deliveryCharge?: number,
+    notes?: string
   ) => Promise<Order | null>;
   getCurrentOrder: () => HotelOrderState;
   fetchOrderOfPartner: (partnerId: string) => Promise<Order[] | null>;
   setOpenAuthModal: (open: boolean) => void;
   genOrderId: () => string;
   setUserAddress: (address: string) => void;
+  setOrderNote: (note: string) => void;
   setUserCoordinates: (coords: { lat: number; lng: number }) => void;
   subscribeOrders: (callback?: (orders: Order[]) => void) => () => void;
   subscribePaginatedOrders: (
@@ -206,6 +209,7 @@ const useOrderStore = create(
       hotelId: null,
       hotelOrders: {},
       userAddress: null,
+      orderNote: null,
       open_auth_modal: false,
       order: null,
       items: [],
@@ -426,13 +430,18 @@ const useOrderStore = create(
       subscribeOrders: (callback) => {
         const { userData } = useAuthStore.getState();
 
-        if (!userData?.id) {
+        let partnerId = userData?.id;
+        if (userData?.role === "captain") {
+          partnerId = userData.partner_id;
+        }
+
+        if (!partnerId) {
           return () => {};
         }
 
         return subscribeToHasura({
           query: subscriptionQuery,
-          variables: { partner_id: userData.id },
+          variables: { partner_id: partnerId },
           onNext: (data) => {
             if (data?.data?.orders) {
               const orders = data.data.orders.map(transformOrderFromHasura);
@@ -542,6 +551,10 @@ const useOrderStore = create(
 
       setUserAddress: (address: string) => {
         set({ userAddress: address });
+      },
+
+      setOrderNote: (note: string) => {
+        set({ orderNote: note });
       },
 
       setOpenAuthModal: (open) => set({ open_auth_modal: open }),
@@ -822,10 +835,10 @@ const useOrderStore = create(
 
      
       placeOrder: async (
-        hotelData,
-        tableNumber,
-        qrId,
-        gstIncluded,
+        hotelData: HotelData,
+        tableNumber?: number,
+        qrId?: string,
+        gstIncluded?: number,
         extraCharges?:
           | {
               name: string;
@@ -833,7 +846,8 @@ const useOrderStore = create(
               charge_type?: string;
             }[]
           | null,
-        deliveryCharge?: number
+        deliveryCharge?: number,
+        notes?: string
       ) => {
         try {
           const state = get();
@@ -939,6 +953,7 @@ const useOrderStore = create(
                     ],
                   }
                 : null,
+            notes: notes || null,
           });
 
           if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
@@ -1164,6 +1179,7 @@ const useOrderStore = create(
             orderId: newOrderId,
             totalPrice: 0,
             order: null,
+            orderNote: null,
           };
         });
       },
