@@ -55,6 +55,11 @@ export default function CaptainDashboard() {
         <div className="container mx-auto">
           <div className="flex justify-between items-center">
             <h1 className="text-xl sm:text-2xl font-bold">Captain Dashboard</h1>
+            {userData?.role === 'captain' && (userData as any)?.partner?.store_name && (
+              <div className="text-xl sm:text-2xl font-bold mr-6">
+                {(userData as any).partner.store_name}
+              </div>
+            )}
             <Button
               variant="outline"
               onClick={handleSignOut}

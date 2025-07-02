@@ -7,6 +7,19 @@ export async function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token')?.value;
   const pathname = request.nextUrl.pathname;
 
+  // Try to decrypt token early for captain guard
+  let decrypted: { id: string; role: string; status?: string } | undefined;
+  if (authToken) {
+    try {
+      decrypted = decryptText(authToken) as { id: string; role: string; status?: string };
+    } catch (e) {}
+  }
+
+  // CAPTAIN GUARD: Trap captain on /captain before public route check
+  if (decrypted?.role === 'captain' && pathname !== '/captain') {
+    return NextResponse.redirect(new URL('/captain', request.url));
+  }
+
   // Public routes that don't require authentication
   const publicRoutes = [
     '/login',
@@ -117,6 +130,14 @@ export async function middleware(request: NextRequest) {
     
     if (!decrypted?.id || !decrypted?.role) {
       throw new Error('Invalid token structure');
+    }
+
+    // Captain route guard: trap captain on /captain
+    if (decrypted.role === 'captain') {
+      // Allow only the exact /captain path
+      if (pathname !== '/captain') {
+        return NextResponse.redirect(new URL('/captain', request.url));
+      }
     }
 
     const userRole = decrypted.role as keyof typeof roleAccessRules;
