@@ -259,14 +259,16 @@ const Compact = ({
 
         {/* Categories Content */}
         <div className="grid gap-4 p-4">
-          {allCategories.map((category, index) => {
+          {allCategories.sort((a,b)=> ((a.priority || 0) - (b.priority || 0))).map((category, index) => {
             // Conditionally determine the list of items to render for other categories.
             let itemsToDisplay = [];
 
             switch (category.id) {
               case "offers":
                 // Create a Set of menu IDs for faster lookups.
-                const offerMenuIdSet = new Set(offers.map((offer) => offer.menu.id));
+                const offerMenuIdSet = new Set(
+                  offers.map((offer) => offer.menu.id)
+                );
                 // Filter 'hoteldata.menus' by checking for the item's ID in the Set.
                 itemsToDisplay = hoteldata?.menus.filter((item) =>
                   offerMenuIdSet.has(item.id as string)
@@ -287,6 +289,10 @@ const Compact = ({
               return null;
             }
 
+            itemsToDisplay.sort((a, b) => {
+              return (a.priority || 0) - (b.priority || 0);
+            });
+
             return (
               <section key={category.id} id={category.name} className="py-4">
                 <h2
@@ -302,8 +308,9 @@ const Compact = ({
                 </h2>
                 <div className="grid grid-cols-1 gap-4 divide-y-2 divide-gray-200">
                   {itemsToDisplay.map((item) => {
-
-                    const offerData = offers?.find(offer => offer.menu.id === item.id);
+                    const offerData = offers?.find(
+                      (offer) => offer.menu.id === item.id
+                    );
 
                     return (
                       <ItemCard
@@ -315,7 +322,7 @@ const Compact = ({
                         styles={styles}
                         key={item.id}
                       />
-                    )
+                    );
                   })}
                 </div>
               </section>
