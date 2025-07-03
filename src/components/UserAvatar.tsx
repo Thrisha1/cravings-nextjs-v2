@@ -74,7 +74,7 @@ const UserAvatar = ({ userData }: { userData: any }) => {
       }
 
       
-      router.push("/");
+      router.push("/switching-account");
       setTimeout(() => {
         router.refresh();
       }, 1000); 
