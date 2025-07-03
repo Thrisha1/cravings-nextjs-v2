@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 const UserAvatar = ({ userData }: { userData: any }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
   const {
     userData: user,
     signInCaptainWithEmail,
@@ -23,7 +24,6 @@ const UserAvatar = ({ userData }: { userData: any }) => {
 
   const otherAccounts = async () => {
     const storedAccounts = await getAccounts();
-    console.log("Stored Accounts:", storedAccounts);
     setAccounts(storedAccounts);
   };
 
@@ -73,6 +73,7 @@ const UserAvatar = ({ userData }: { userData: any }) => {
 
   const handleSwitchAccount = async (account: any) => {
     setIsOpen(false);
+    setIsSwitching(true);
 
     try {
       switch (account.role) {
@@ -94,15 +95,18 @@ const UserAvatar = ({ userData }: { userData: any }) => {
           break;
       }
 
-      router.push("/switching-account");
       setTimeout(() => {
+        router.push("/");
         router.refresh();
-      }, 1000); 
-     
+      }, 1000);
+
+      setTimeout(() => {
+        setIsSwitching(false);
+      }, 2000); // Simulate a delay for switching accounts
+
     } catch (error) {
       console.error("Failed to switch account:", error);
-    } finally {
-      setIsOpen(false);
+      setIsSwitching(false);
     }
   };
 
@@ -190,6 +194,16 @@ const UserAvatar = ({ userData }: { userData: any }) => {
               <Plus className="h-4 w-4 mr-2" />
               Add account
             </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Full-screen loading overlay */}
+      {isSwitching && (
+        <div className="fixed inset-0 bg-orange-50  z-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+            <p className="text-lg font-medium text-orange-600">Switching account...</p>
           </div>
         </div>
       )}
