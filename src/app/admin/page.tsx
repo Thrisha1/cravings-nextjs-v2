@@ -9,9 +9,14 @@ import {
 } from "@/api/partners";
 
 import { Partner } from "@/store/authStore";
+import OfferLoadinPage from "@/components/OfferLoadinPage";
 
 const page = async () => {
   const userId = (await getAuthCookie())?.id;
+
+  if(!userId) {
+    return <OfferLoadinPage message="Loading..." />
+  }
 
   const getParnterData = unstable_cache(
     async () => {

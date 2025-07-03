@@ -12,6 +12,7 @@ import { Button } from "./ui/button";
 import { getFeatures } from "@/lib/getFeatures";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import UserAvatar from "./UserAvatar";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -33,7 +34,6 @@ export function Navbar({ userData }: { userData: any }) {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const currentPath = pathname.split("?")[0];
 
@@ -49,16 +49,8 @@ export function Navbar({ userData }: { userData: any }) {
     console.log(isInstalled, isApp);
     
 
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+ 
 
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-
-    return () => {
-      window.removeEventListener("resize", checkMobile);
-    };
   }, []);
 
   useEffect(() => {
@@ -173,28 +165,14 @@ export function Navbar({ userData }: { userData: any }) {
   const renderUserProfile = () => {
     if (!userData) return null;
 
-    const displayName =
-      userData.role === "user"
-        ? userData.full_name
-        : userData.role === "partner"
-        ? userData.store_name
-        : userData.role === "captain"
-        ? "Captain"
-        : "Super Admin";
-
+  
     return (
-      <Link
-        href="/profile"
-        className="flex text-sm items-center gap-2 text-gray-500"
-      >
-        <UserCircle className="h-6 w-6 text-gray-500" />
-        <span className="hidden sm:inline">{displayName}</span>
-      </Link>
+      <UserAvatar userData={userData} />
     );
   };
 
   const renderNavigationLinks = () => {
-    if (!userData || isMobile) return null;
+    if (!userData) return null;
 
     const roleBasedLinks = [
       ...(userData.role === "partner"
@@ -219,7 +197,7 @@ export function Navbar({ userData }: { userData: any }) {
         key={link.href}
         href={link.href}
         className={cn(
-          "inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors",
+          "items-center px-1 pt-1 text-sm font-medium transition-colors hidden sm:inline-flex",
           currentPath === link.href
             ? "text-orange-600 border-b-2 border-orange-600"
             : "text-gray-500 hover:text-gray-700 hover:border-gray-300"

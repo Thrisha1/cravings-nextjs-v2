@@ -44,7 +44,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
 
       const allCategories = await fetchFromHasura(getPartnerCategories, {
         partner_id: addedBy,
-      }).then((res) =>
+      }).then((res) => 
         res.category.map((cat: Category) => ({
           ...cat,
           name: cat.name,
@@ -52,7 +52,7 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
         }))
       );
 
-      set({ categories : allCategories.map((cat : Category) => ({
+      set({ categories: allCategories.map((cat : Category) => ({
         ...cat,
         name: formatDisplayName(cat.name),
         is_active: cat.is_active !== false, // Ensure boolean value is preserved
@@ -85,7 +85,6 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       const existingCategory = existingCategories[0];
 
       if (existingCategory) {
-
         const isAlredyInCategories = get().categories.some(
           (category) => category.id === existingCategory.id
         );
@@ -168,4 +167,4 @@ export const useCategoryStore = create<CategoryState>((set, get) => ({
       throw error; // Re-throw to handle in the component
     }
   },
-}));
+}))

@@ -107,7 +107,8 @@ export interface GroupedItems {
   [key: string]: MenuItem[];
 }
 
-const getBatchUpdateMutation = (updates: Category[]) => `
+const getBatchUpdateMutation = (updates: Category[]) => {
+  const mutation = `
   mutation UpdateCategoriesBatch {
     ${updates
       .map(
@@ -130,6 +131,8 @@ const getBatchUpdateMutation = (updates: Category[]) => `
       .join("\n")}
   }
 `;
+  return mutation;
+};
 
 interface MenuState {
   items: MenuItem[];
@@ -517,6 +520,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           ...item.category,
           name: category?.name || item.category.name,
           priority: category?.priority || item.category.priority,
+          is_active: (category?.is_active !== false) // Ensure is_active is always a boolean
         },
       };
     });
@@ -538,17 +542,16 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         id: cat.id,
         name: cat.name,
         priority: cat.priority ?? 0,
+        is_active: cat.is_active !== false // Ensure is_active is always a boolean, never undefined
       }));
 
       const CHUNK_SIZE = 20;
 
       for (let i = 0; i < updates.length; i += CHUNK_SIZE) {
         const chunk = updates.slice(i, i + CHUNK_SIZE);
-
         const mutation = getBatchUpdateMutation(chunk);
-
         const { data, errors } = await fetchFromHasura(mutation, {});
-
+        
         if (errors) {
           throw new Error(`Failed to update chunk starting at index ${i}`);
         }
@@ -565,6 +568,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
                 ...item.category,
                 name: category.name,
                 priority: category.priority ?? 0,
+                is_active: category.is_active !== false // Ensure is_active is always a boolean
               },
             }
           : item;

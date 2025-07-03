@@ -24,7 +24,7 @@ export async function middleware(request: NextRequest) {
   const publicRoutes = [
     '/login',
     '/signup',
-    '/superlogin', 
+    '/superLogin', 
     '/hotels',
     '/partner',
     '/offers',
@@ -80,19 +80,19 @@ export async function middleware(request: NextRequest) {
   const roleAccessRules = {
     user: {
       allowed: ['/profile', '/my-orders'],
-      redirect: '/login'
+      redirect: '/'
     },
     partner: {
       allowed: ['/admin', '/partner', '/profile', '/admin/orders','/admin/captain-management'],
-      redirect: '/login'
+      redirect: '/'
     },
     superadmin: {
       allowed: ['/superadmin', '/admin', '/profile', '/superadmin/create-partner'],
-      redirect: '/superLogin'
+      redirect: '/'
     },
     captain:{
       allowed:['/captain', '/captain/pos'],
-      redirect:'/captainlogin'
+      redirect:'/'
     }
   };
 
@@ -119,7 +119,7 @@ export async function middleware(request: NextRequest) {
   // If no auth token, redirect based on the route
   if (!authToken) {
     const isSuperadminRoute = pathname.startsWith('/superadmin');
-    const redirectPath = isSuperadminRoute ? '/superlogin' : '/login';
+    const redirectPath = isSuperadminRoute ? '/' : '/';
     return NextResponse.redirect(new URL(redirectPath, request.url));
   }
 
@@ -182,7 +182,7 @@ export async function middleware(request: NextRequest) {
     
   } catch (error) {
     console.error('Auth verification failed:', error);
-    const response = NextResponse.redirect(new URL('/login', request.url));
+    const response = NextResponse.redirect(new URL('/', request.url));
     response.cookies.delete('auth_token');
     return response;
   }

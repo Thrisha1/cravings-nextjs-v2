@@ -270,7 +270,7 @@ const ItemCard = ({
             >
               <div className="grid">
                 <span className="font-semibold">{variant.name}</span>
-                {!item.is_price_as_per_size && (
+                {(!item.is_price_as_per_size && showAddButton) && (
                   <div
                     style={{
                       color: styles?.accent || "#000",
@@ -324,7 +324,7 @@ const ItemCard = ({
                   style={{
                     color: styles?.accent || "#000",
                   }}
-                  className="text-sm font-bold"
+                  className={`${item.is_price_as_per_size ? "text-sm" : "text-lg"} font-bold `}
                 >
                   {item.is_price_as_per_size 
                     ? "(Price as per size)" 

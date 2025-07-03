@@ -11,7 +11,6 @@ import {
   partnerIdQuery,
   superAdminIdQuery,
 } from "@/api/auth";
-import { encryptText, decryptText } from "@/lib/encrtption";
 import {
   getAuthCookie,
   setAuthCookie,
@@ -21,28 +20,17 @@ import {
 import { sendRegistrationWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
 import { DeliveryRules } from "./orderStore";
-import { clearUserToken } from "@/lib/clearUserToken";
 import { Notification } from "@/app/actions/notification";
+import { addAccount, getAccounts, getAllAccounts } from "@/lib/addAccount";
 
-// Interfaces remain the same
 interface BaseUser {
   id: string;
   email: string;
   role: "user" | "partner" | "superadmin" | "captain";
 }
 export interface GeoLocation {
-  type: "Point"; // likely always "Point" in your case
-  coordinates: [number, number]; // [longitude, latitude]
-  crs?: {
-    type: string;
-    properties: {
-      name: string;
-    };
-  };
-}
-export interface GeoLocation {
-  type: "Point"; // likely always "Point" in your case
-  coordinates: [number, number]; // [longitude, latitude]
+  type: "Point";
+  coordinates: [number, number];
   crs?: {
     type: string;
     properties: {
@@ -71,13 +59,13 @@ export interface Partner extends BaseUser {
   upi_id: string;
   description: string | null;
   whatsapp_numbers: {
-    number : string;
-    area : string;
+    number: string;
+    area: string;
   }[];
   phone: string;
   district: string;
   delivery_status: boolean;
-  geo_location: GeoLocation ;
+  geo_location: GeoLocation;
   delivery_rate: number;
   delivery_rules: DeliveryRules;
   place_id?: string;
@@ -88,7 +76,7 @@ export interface Partner extends BaseUser {
   social_links?: string;
   gst_no?: string;
   gst_percentage?: number;
-  business_type?: string; 
+  business_type?: string;
   is_shop_open: boolean;
   country?: string;
   country_code?: string;
@@ -108,24 +96,24 @@ export interface Captain extends BaseUser {
   currency?: string;
   gst_percentage?: number;
   name: string;
+  partner?: Partial<Partner>;
 }
 
 export type AuthUser = User | Partner | SuperAdmin | Captain;
 
- 
 interface AuthState {
   userData: AuthUser | null;
   features: FeatureFlags | null;
   loading: boolean;
   error: string | null;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   signUpWithEmailForPartner: (
-    email: string,
-    password: string,
     hotelName: string,
-    area: string,
     phone: string,
     upiId: string,
+    area: string,
+    email: string,
+    password: string,
     country: string,
     state: string,
     location: string,
@@ -135,15 +123,13 @@ interface AuthState {
     }
   ) => Promise<void>;
   createPartner: (
-    email: string,
-    password: string,
     hotelName: string,
-    area: string,
-    location: string,
     phone: string,
     upiId: string,
-    country: string,
-    state: string
+    area: string,
+    location: string,
+    email: string,
+    password: string
   ) => Promise<Partner>;
   signInWithPhone: (phone: string, partnerId?: string) => Promise<User | null>;
   signInPartnerWithEmail: (email: string, password: string) => Promise<void>;
@@ -154,33 +140,11 @@ interface AuthState {
   setState: (updates: Partial<AuthUser>) => void;
 }
 
-// Cookie management functions
-// const setAuthCookie = async (data: { id: string; role: string }) => {
-//   const encrypted = encryptText(data);
-//   (await cookies()).set('auth_token', encrypted, {
-//     httpOnly: true,
-//     secure: process.env.NODE_ENV === 'production',
-//     maxAge: 60 * 60 * 24 * 7, // 1 week
-//     path: '/',
-//     sameSite: 'lax',
-//   });
-// };
-
-// const getAuthCookie = async () => {
-//   const cookie = (await cookies()).get('auth_token')?.value;
-//   console.log("Cookie value:", cookie);
-//   return cookie ? decryptText(cookie) as { id: string; role: string } : null;
-// };
-
-// const removeAuthCookie = async () => {
-//   (await cookies()).delete('auth_token');
-// };
-
 export const useAuthStore = create<AuthState>((set, get) => ({
   userData: null,
   loading: true,
   error: null,
-  features : null,
+  features: null,
 
   isLoggedIn: () => {
     return !!getAuthCookie();
@@ -211,8 +175,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               location: user.location,
               password: "",
               role: "user",
-              place_id: user.place_id,
-              theme: user.theme,
             } as User,
           });
         }
@@ -226,14 +188,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               ...partner,
               password: "",
               currency: partner.currency,
-              whatsapp_numbers : partner.whatsapp_numbers,
-              geo_location : {
-                type : partner.geo_location?.type,
-                coordinates : partner.geo_location?.coordinates,
+              whatsapp_numbers: partner.whatsapp_numbers,
+              geo_location: {
+                type: partner.geo_location?.type,
+                coordinates: partner.geo_location?.coordinates,
               },
               role: "partner",
             } as Partner,
-            features : getFeatures(partner.feature_flags)
+            features: getFeatures(partner.feature_flags),
           });
         }
       } else if (role === "superadmin") {
@@ -249,8 +211,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
         }
       } else if (role === "captain") {
-        // First get captain data
-        const response = await fetchFromHasura(`
+        const response = await fetchFromHasura(
+          `
           query GetCaptainById($id: uuid!) {
             captain_by_pk(id: $id) {
               id
@@ -260,37 +222,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               name
             }
           }
-        `, { id });
+        `,
+          { id }
+        );
 
         if (response?.captain_by_pk) {
           const captain = response.captain_by_pk;
-          
-          // Fetch partner data
-          const partnerResponse = await fetchFromHasura(`
+
+          const partnerResponse = await fetchFromHasura(
+            `
             query GetPartnerData($partner_id: uuid!) {
               partners_by_pk(id: $partner_id) {
                 id
                 currency
                 gst_percentage
                 store_name
-                store_banner
-                location
-                status
-                upi_id
-                description
-                phone
-                district
-                delivery_status
-                geo_location
-                delivery_rate
-                delivery_rules
-                place_id
-                theme
-                gst_no
-                business_type
               }
             }
-          `, { partner_id: captain.partner_id });
+          `,
+            { partner_id: captain.partner_id }
+          );
 
           if (partnerResponse?.partners_by_pk) {
             const partnerData = partnerResponse.partners_by_pk;
@@ -299,24 +250,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 ...captain,
                 currency: partnerData.currency || "₹",
                 gst_percentage: partnerData.gst_percentage || 0,
-                partner: partnerData // Store full partner data
+                partner: partnerData,
               },
-              loading: false
+              loading: false,
             });
           } else {
             set({
               userData: {
                 ...captain,
                 currency: "₹",
-                gst_percentage: 0
+                gst_percentage: 0,
               },
-              loading: false
+              loading: false,
             });
           }
         }
       }
     } catch (error) {
-      console.error("Error fetching user data:", error);
       await removeAuthCookie();
       set({ userData: null });
     } finally {
@@ -324,36 +274,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  signOut: async() => {
-    const fcmToken = localStorage.getItem('fcmToken');
-    const isApp = localStorage.getItem('isApp');
+  signOut: async () => {
+    const fcmToken = localStorage.getItem("fcmToken");
+    const isApp = localStorage.getItem("isApp");
+    const accounts = await getAllAccounts();
     await Notification.token.remove();
     await removeAuthCookie();
     await removeLocationCookie();
     localStorage.clear();
-    if (fcmToken) localStorage.setItem('fcmToken', fcmToken);
-    if (isApp) localStorage.setItem('isApp', isApp);
-    window.location.href = "/";
+    if (fcmToken) localStorage.setItem("fcmToken", fcmToken);
+    if (isApp) localStorage.setItem("isApp", isApp);
+    if (accounts && accounts.length > 0) {
+      accounts.forEach((account : any) => {
+        addAccount({...account});
+      });
+    }
     set({ userData: null, error: null });
   },
 
   signUpWithEmailForPartner: async (
-    hotelName: string,
-    phone: string,
-    upiId: string,
-    area: string,
-    email: string,
-    password: string,
-    country: string,
-    state: string,
-    location: string,
-    geoLocation: {
-      latitude: number;
-      longitude: number;
-    }
+    hotelName,
+    phone,
+    upiId,
+    area,
+    email,
+    password,
+    country,
+    state,
+    location,
+    geoLocation
   ) => {
     set({ loading: true, error: null });
     try {
+      await get().signOut();
       const existingPartner = await fetchFromHasura(partnerQuery, { email });
       if (existingPartner?.partners?.length > 0) {
         throw new Error("A partner account with this email already exists");
@@ -377,7 +330,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           geo_location: {
             type: "Point",
             coordinates: [geoLocation.longitude, geoLocation.latitude],
-          }
+          },
         },
       })) as { insert_partners_one: Partner };
 
@@ -386,16 +339,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const newPartner = response.insert_partners_one;
-      setAuthCookie({ id: newPartner.id, role: "partner" , feature_flags: newPartner.feature_flags || "" , status : "inactive" });
-      set({ userData: { ...newPartner, role: "partner" }, loading: false , features : getFeatures(newPartner?.feature_flags as string) });
+      setAuthCookie({
+        id: newPartner.id,
+        role: "partner",
+        feature_flags: newPartner.feature_flags || "",
+        status: "inactive",
+      });
+      set({
+        userData: { ...newPartner, role: "partner" },
+        loading: false,
+        features: getFeatures(newPartner?.feature_flags as string),
+      });
     } catch (error) {
-      console.error("Partner registration failed:", error);
       throw error;
     }
   },
 
-  signInPartnerWithEmail: async (email: string, password: string) => {
+  signInPartnerWithEmail: async (email, password) => {
     try {
+      await get().signOut();
+
       const response = (await fetchFromHasura(partnerLoginQuery, {
         email,
         password,
@@ -404,17 +367,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const partner = response?.partners?.[0];
       if (!partner) throw new Error("Invalid credentials");
 
-      await setAuthCookie({ id: partner.id, role: "partner" , feature_flags: partner.feature_flags || "" , status: partner.status || "inactive" });
+      await setAuthCookie({
+        id: partner.id,
+        role: "partner",
+        feature_flags: partner.feature_flags || "",
+        status: partner.status || "inactive",
+      });
       localStorage.setItem("userId", partner.id);
-      set({ userData: { ...partner, role: "partner" } , features : getFeatures(partner?.feature_flags as string) });
+      set({
+        userData: { ...partner, role: "partner" },
+        features: getFeatures(partner?.feature_flags as string),
+      });
+
+      addAccount({
+        name: partner.store_name || "Guest",
+        email: partner.email,
+        store_name: partner.store_name || "Guest",
+        role: "partner",
+        id: partner.id,
+        password: partner.password || "123456",
+      });
     } catch (error) {
-      console.error("Login failed:", error);
       throw error;
     }
   },
 
-  signInWithPhone: async (phone: string, partnerId?: string) => {
+  signInWithPhone: async (phone, partnerId) => {
     try {
+      await get().signOut();
+
+
+      console.log("Signing in with phone:", phone, "Partner ID:", partnerId);
+      
+
       const email = `${phone}@user.com`;
       const response = (await fetchFromHasura(userLoginQuery, { email })) as {
         users: User[];
@@ -448,8 +433,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
 
-      setAuthCookie({ id: user.id, role: "user" , feature_flags: "" , status : "active"});
+      setAuthCookie({
+        id: user.id,
+        role: "user",
+        feature_flags: "",
+        status: "active",
+      });
       localStorage.setItem("userId", user.id);
+
+      addAccount({
+        name: user.phone || "Guest",
+        email: user.phone,
+        store_name: user.phone || "Guest",
+        role: "user",
+        id: user.id,
+        password: user.phone,
+      });
 
       set({ userData: { ...user, role: "user" } });
       return {
@@ -457,13 +456,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         role: "user",
       };
     } catch (error) {
-      console.error("Phone sign-in failed:", error);
       return null;
     }
   },
 
-  signInSuperAdminWithEmail: async (email: string, password: string) => {
+  signInSuperAdminWithEmail: async (email, password) => {
     try {
+            await get().signOut();
+
+
       const response = (await fetchFromHasura(superAdminLoginQuery, {
         email,
         password,
@@ -474,18 +475,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       const superAdmin = response.super_admin[0];
-      setAuthCookie({ id: superAdmin.id, role: "superadmin" , feature_flags: "" , status : "active" });
+      setAuthCookie({
+        id: superAdmin.id,
+        role: "superadmin",
+        feature_flags: "",
+        status: "active",
+      });
       localStorage.setItem("userId", superAdmin.id);
+      addAccount({
+        name: "Super Admin",
+        email: superAdmin.email,
+        store_name: "Super Admin",
+        role: "superadmin",
+        id: superAdmin.id,
+        password: superAdmin.password || "123456",
+      });
       set({ userData: { ...superAdmin, role: "superadmin" } });
     } catch (error) {
-      console.error("Super admin login failed:", error);
       throw error;
     }
   },
 
-  signInCaptainWithEmail: async (email: string, password: string) => {
+  signInCaptainWithEmail: async (email, password) => {
     try {
-      const response = await fetchFromHasura(`
+      await get().signOut();
+
+
+      const response = await fetchFromHasura(
+        `
         query LoginCaptain($email: String!, $password: String!) {
           captain(where: {email: {_eq: $email}, password: {_eq: $password}}) {
             id
@@ -496,7 +513,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             name
           }
         }
-      `, { email, password });
+      `,
+        { email, password }
+      );
 
       if (!response?.captain?.[0]) {
         throw new Error("Invalid email or password");
@@ -504,87 +523,91 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       const captain = response.captain[0];
 
-      // Fetch partner data immediately
-      const partnerResponse = await fetchFromHasura(`
+      const partnerResponse = await fetchFromHasura(
+        `
         query GetPartnerData($partner_id: uuid!) {
           partners_by_pk(id: $partner_id) {
             id
             currency
             gst_percentage
             store_name
-            store_banner
-            location
-            status
-            upi_id
-            description
-            phone
-            district
-            delivery_status
-            geo_location
-            delivery_rate
-            delivery_rules
-            place_id
-            theme
-            gst_no
-            business_type
           }
         }
-      `, { partner_id: captain.partner_id });
+      `,
+        { partner_id: captain.partner_id }
+      );
 
       if (partnerResponse?.partners_by_pk) {
         const partnerData = partnerResponse.partners_by_pk;
-        await setAuthCookie({ 
-          id: captain.id, 
+        await setAuthCookie({
+          id: captain.id,
           role: "captain",
           feature_flags: "",
-          status: "active"
+          status: "active",
         });
-        set({ 
-          userData: { 
-            ...captain, 
+        set({
+          userData: {
+            ...captain,
             role: "captain",
             currency: partnerData.currency || "₹",
             gst_percentage: partnerData.gst_percentage || 0,
-            partner: partnerData
-          } as Captain 
+            partner: partnerData,
+          } as Captain,
+        });
+        addAccount({
+          name: captain.name || "Captain",
+          email: captain.email,
+          store_name: captain.name || "Captain",
+          role: "captain",
+          id: captain.id,
+          password: captain.password || "123456",
         });
       } else {
-        await setAuthCookie({ 
-          id: captain.id, 
+        await setAuthCookie({
+          id: captain.id,
           role: "captain",
           feature_flags: "",
-          status: "active"
+          status: "active",
         });
-        set({ 
-          userData: { 
-            ...captain, 
+        set({
+          userData: {
+            ...captain,
             role: "captain",
             currency: "₹",
-            gst_percentage: 0
-          } as Captain 
+            gst_percentage: 0,
+          } as Captain,
+        });
+        addAccount({
+          name: captain.name || "Captain",
+          email: captain.email,
+          store_name: captain.name || "Captain",
+          role: "captain",
+          id: captain.id,
+          password: captain.password || "123456",
         });
       }
     } catch (error) {
-      console.error("Captain login failed:", error);
       throw error;
     }
   },
 
-  setState: (updates: Partial<AuthUser>) => {
-    set((state: AuthState) => ({
+  setState: (updates) => {
+    set((state) => ({
       ...state,
-      userData: state.userData ? { ...state.userData, ...updates } as AuthUser : null,
+      userData: state.userData
+        ? ({ ...state.userData, ...updates } as AuthUser)
+        : null,
     }));
   },
 
   createPartner: async (
-    hotelName: string,
-    phone: string,
-    upiId: string,
-    area: string,
-    location: string,
-    email: string,
-    password: string
+    hotelName,
+    phone,
+    upiId,
+    area,
+    location,
+    email,
+    password
   ) => {
     try {
       const existingPartner = await fetchFromHasura(partnerQuery, { email });
@@ -614,7 +637,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       return response.insert_partners_one;
     } catch (error) {
-      console.error("Partner creation failed:", error);
       throw error;
     }
   },

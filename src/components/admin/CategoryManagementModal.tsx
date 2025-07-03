@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, createRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, createRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   FullModal,
@@ -40,6 +40,33 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
+// Helper function to extract unique categories from menu items
+const extractCategoriesFromMenuItems = (menuItems: any[]): Category[] => {
+  // Use a Map with category NAME as the key to avoid duplicates
+  const categoriesMap = new Map();
+  
+  menuItems.forEach(item => {
+    if (item.category && item.category.name) {
+      const categoryName = item.category.name.toLowerCase(); // Use lowercase for case-insensitive matching
+      
+      // Only add if this category name isn't already in the map
+      if (!categoriesMap.has(categoryName)) {
+        categoriesMap.set(categoryName, {
+          id: item.category.id,
+          name: item.category.name,
+          priority: item.category.priority || 0,
+          is_active: item.category.is_active !== false,
+        });
+      }
+    }
+  });
+  
+  const categories = Array.from(categoriesMap.values());
+  
+  // Sort by priority
+  return categories.sort((a, b) => (a.priority || 0) - (b.priority || 0));
+};
+
 interface CategoryManagementFormProps {
   categories: Category[];
   onSubmit: (categories: Category[]) => Promise<void>;
@@ -59,135 +86,40 @@ export function CategoryManagementForm({
   const { deleteCategoryAndItems } = useMenuStore();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [categoriesInitialized, setCategoriesInitialized] = useState(false);
 
   // Get the authenticated user
   const user = useAuthStore(state => state.userData);
   
-  // Initialize input refs for categories and refresh categories when modal opens
+  // Initialize from passed-in categories props when they change
   useEffect(() => {
-    const refreshCategories = async () => {
-      try {
-        if (!user) {
-          throw new Error('User not authenticated');
-        }
-        
-        // Fetch the latest categories from the store
-        const { fetchCategories } = useCategoryStore.getState();
-        
-        // Use the authenticated user's ID as the partner ID
-        const partnerId = user.id;
-        if (!partnerId) {
-          throw new Error('No partner ID found for the authenticated user');
-        }
-        
-        // Fetch and ensure we have categories
-        const latestCategories = await fetchCategories(partnerId);
-        if (!latestCategories || !Array.isArray(latestCategories)) {
-          throw new Error('Failed to fetch categories');
-        }
-        
-        // Create refs for each category
-        const refs: {[key: string]: React.RefObject<HTMLInputElement | null>} = {};
-        latestCategories.forEach((cat: Category) => {
-          refs[cat.id] = createRef<HTMLInputElement | null>();
-        });
-        
-        // Update local state with the latest categories
-        setInputRefs(refs);
-        setLocalCategories(
-          latestCategories.map((cat: Category) => ({
-            ...cat,
-            name: formatDisplayName(cat.name),
-            is_active: cat.is_active !== false // Ensure boolean value
-          }))
-        );
-        setSearchTerm("");
-      } catch (error) {
-        console.error('Error refreshing categories:', error);
-        
-        // Fallback to initialCategories if there's an error
-        if (initialCategories.length > 0) {
-          const refs: {[key: string]: React.RefObject<HTMLInputElement | null>} = {};
-          initialCategories.forEach((cat: Category) => {
-            refs[cat.id] = createRef<HTMLInputElement | null>();
-          });
-          setInputRefs(refs);
-          
-          setLocalCategories(
-            initialCategories.map((cat: Category) => ({
-              ...cat,
-              name: formatDisplayName(cat.name),
-              is_active: cat.is_active !== false // Ensure boolean value
-            }))
-          );
-          setSearchTerm("");
-        }
-      }
-    };
-
-    refreshCategories();
-  }, [initialCategories]);
-
-  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    setKeyboardOpen(true);
-    // Scroll to ensure the input is visible when focused
-    setTimeout(() => {
-      if (contentRef.current) {
-        const rect = e.target.getBoundingClientRect();
-        const containerRect = contentRef.current.getBoundingClientRect();
-        
-        if (rect.bottom > containerRect.bottom) {
-          e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-    }, 300);
-  };
-
-  const handleInputBlur = () => {
-    setTimeout(() => {
-      // Check if any category input or search input is focused
-      const anyInputFocused = 
-        document.activeElement === searchInputRef.current || 
-        Object.values(inputRefs).some(ref => document.activeElement === ref.current);
+    if (initialCategories.length > 0 && !categoriesInitialized) {
+      // Create refs for each category
+      const refs: {[key: string]: React.RefObject<HTMLInputElement | null>} = {};
+      initialCategories.forEach((cat: Category) => {
+        refs[cat.id] = createRef<HTMLInputElement | null>();
+      });
       
-      if (!anyInputFocused) {
-        setKeyboardOpen(false);
-      }
-    }, 100);
-  };
-
-  // Effect to handle visual viewport changes (keyboard)
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.visualViewport) {
-        const currentHeight = window.visualViewport.height;
-        const windowHeight = window.innerHeight;
-        
-        // If visual viewport is significantly smaller than window height, keyboard is probably open
-        if (windowHeight - currentHeight > 150) {
-          setKeyboardOpen(true);
-        } else {
-          setKeyboardOpen(false);
-        }
-      }
-    };
-
-    // Add the event listener
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleResize);
+      // Format the category names for display
+      const formattedCategories = initialCategories.map((cat: Category) => ({
+        ...cat,
+        name: formatDisplayName(cat.name),
+        is_active: cat.is_active !== false // Ensure boolean value
+      }));
+      
+      // Update state
+      setInputRefs(refs);
+      setLocalCategories(formattedCategories);
+      setCategoriesInitialized(true);
     }
+  }, [initialCategories, categoriesInitialized]);
 
-    // Clean up
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleResize);
-      }
-    };
-  }, []);
-
-  const filteredCategories = localCategories.filter((cat) =>
-    cat.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter the categories based on search term
+  const filteredCategories = useMemo(() => {
+    return localCategories.filter((cat) =>
+      cat.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [localCategories, searchTerm]);
 
   const moveToPosition = useCallback(
     (id: string, newIndex: number) => {
@@ -261,34 +193,32 @@ export function CategoryManagementForm({
         priority: categoryToUpdate.priority || 0 // Ensure priority is always a number
       };
       
-      // Update in the store
-      const { updateCategory } = useCategoryStore.getState();
-      await updateCategory(updateData);
+      // Update via menuStore's updateCategoriesAsBatch method to ensure consistency
+      // We only update this single category instead of doing a full batch update
+      const { updateCategoriesAsBatch } = useMenuStore.getState();
+      await updateCategoriesAsBatch([updateData]);
       
-      // Refresh categories from the store to ensure we have the latest data
-      const { categories } = useCategoryStore.getState();
-      setLocalCategories([...categories]);
-      
+      // Success notification
       toast.success(`Category ${newIsActive ? 'enabled' : 'disabled'} successfully`);
     } catch (error) {
-      console.error('Error toggling category status:', error);
       toast.error('Failed to update category status');
       
-      // Revert local state on error
-      const { categories: currentStoreCategories } = useCategoryStore.getState();
-      setLocalCategories(prev => 
-        prev.map(cat => {
-          const currentCat = currentStoreCategories.find(c => c.id === cat.id);
-          return currentCat 
-            ? { 
-                ...currentCat, 
-                name: formatDisplayName(currentCat.name),
-                is_active: currentCat.is_active !== false,
-                priority: currentCat.priority || 0
-              } 
-            : cat;
-        })
-      );
+      // On error, revert to the previous state
+      if (user?.id) {
+        try {
+          // Find the original category in our local state
+          const originalCategory = localCategories.find(cat => cat.id === id);
+          if (originalCategory) {
+            // Revert just this category
+            const revertedCategories = localCategories.map(cat => 
+              cat.id === id ? { ...cat, is_active: !newIsActive } : cat
+            );
+            setLocalCategories(revertedCategories);
+          }
+        } catch (refreshError) {
+          // Error handling for reverting state
+        }
+      }
     }
   };
 
@@ -309,7 +239,6 @@ export function CategoryManagementForm({
       await onSubmit(updatedCategories);
       toast.success("Categories updated successfully");
     } catch (err) {
-      console.error("Error updating categories:", err);
       toast.error("Failed to update categories");
       throw err; // Re-throw to allow parent component to handle the error
     } finally {
@@ -329,6 +258,63 @@ export function CategoryManagementForm({
     })));
     toast("Changes discarded");
   };
+
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setKeyboardOpen(true);
+    // Scroll to ensure the input is visible when focused
+    setTimeout(() => {
+      if (contentRef.current) {
+        const rect = e.target.getBoundingClientRect();
+        const containerRect = contentRef.current.getBoundingClientRect();
+        
+        if (rect.bottom > containerRect.bottom) {
+          e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }, 300);
+  };
+
+  const handleInputBlur = () => {
+    setTimeout(() => {
+      // Check if any category input or search input is focused
+      const anyInputFocused = 
+        document.activeElement === searchInputRef.current || 
+        Object.values(inputRefs).some(ref => document.activeElement === ref.current);
+      
+      if (!anyInputFocused) {
+        setKeyboardOpen(false);
+      }
+    }, 100);
+  };
+
+  // Effect to handle visual viewport changes (keyboard)
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        const currentHeight = window.visualViewport.height;
+        const windowHeight = window.innerHeight;
+        
+        // If visual viewport is significantly smaller than window height, keyboard is probably open
+        if (windowHeight - currentHeight > 150) {
+          setKeyboardOpen(true);
+        } else {
+          setKeyboardOpen(false);
+        }
+      }
+    };
+
+    // Add the event listener
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+    }
+
+    // Clean up
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
 
   return (
     <div className="container px-2 sm:px-0 pb-10">
@@ -551,7 +537,6 @@ export function CategoryManagementForm({
                                           toast.error(
                                             `Failed to delete "${category.name}"`
                                           );
-                                          console.error("Delete error:", error);
                                         }
                                       }
                                     }}
@@ -612,10 +597,71 @@ export function CategoryManagementModal({
   open,
   onOpenChange,
 }: CategoryManagementModalProps) {
-  const { updateCategoriesAsBatch } = useMenuStore();
+  const { updateCategoriesAsBatch, fetchMenu } = useMenuStore();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const user = useAuthStore(state => state.userData);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  // Fetch categories from menu items when modal opens
+  useEffect(() => {
+    // Only load once when the modal is opened
+    // Reset the loaded state when modal closes
+    if (!open) {
+      setHasLoaded(false);
+      return;
+    }
+    
+    // Skip if we've already loaded or if there's no user
+    if (hasLoaded || !user?.id) return;
+    
+    const loadCategories = async () => {
+      try {
+        const menuItems = await fetchMenu(user.id, true); // Force refresh
+        
+        // Extract unique categories from menu items using the helper function
+        const extractedCategories = extractCategoriesFromMenuItems(menuItems);
+        
+        setCategories(extractedCategories);
+        setHasLoaded(true);
+      } catch (error) {
+        // If initialCategories is provided, ensure it's deduplicated
+        if (initialCategories && initialCategories.length > 0) {
+          // Use the same approach to deduplicate by name
+          const uniqueMap = new Map();
+          initialCategories.forEach(cat => {
+            if (cat.name) {
+              const catName = cat.name.toLowerCase();
+              if (!uniqueMap.has(catName)) {
+                uniqueMap.set(catName, cat);
+              }
+            }
+          });
+          
+          const uniqueCategories = Array.from(uniqueMap.values());
+          setCategories(uniqueCategories);
+          setHasLoaded(true);
+        }
+      }
+    };
+    
+    loadCategories();
+  }, [open, user, hasLoaded]); // Remove initialCategories and fetchMenu from dependencies
 
   const handleSubmit = async (updatedCategories: Category[]) => {
-    await updateCategoriesAsBatch(updatedCategories);
+    // Ensure we're only updating unique categories
+    const uniqueUpdatedMap = new Map();
+    updatedCategories.forEach(cat => {
+      if (cat.name) {
+        const catName = formatStorageName(cat.name).toLowerCase();
+        if (!uniqueUpdatedMap.has(catName)) {
+          uniqueUpdatedMap.set(catName, cat);
+        }
+      }
+    });
+    
+    const uniqueUpdatedCategories = Array.from(uniqueUpdatedMap.values());
+    
+    await updateCategoriesAsBatch(uniqueUpdatedCategories);
     onOpenChange(false);
   };
 
@@ -627,7 +673,7 @@ export function CategoryManagementModal({
         </FullModalHeader>
         <FullModalBody className="overflow-auto">
           <CategoryManagementForm 
-            categories={initialCategories}
+            categories={categories}
             onSubmit={handleSubmit}
             onCancel={() => onOpenChange(false)}
           />
