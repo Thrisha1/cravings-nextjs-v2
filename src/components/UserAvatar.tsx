@@ -184,6 +184,7 @@ const UserAvatar = ({ userData }: { userData: any }) => {
           <div className="py-1 border-t border-gray-100">
             <Link
               href={"/login"}
+              onClick={() => setIsOpen(false)}
               className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
               <Plus className="h-4 w-4 mr-2" />
