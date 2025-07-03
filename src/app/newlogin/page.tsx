@@ -11,7 +11,7 @@ export default function OwnerLoginPage() {
         <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
         <Button
           className="w-full mb-4 bg-orange-600 hover:bg-orange-700 text-white"
-          onClick={() => router.push("/login")}
+          onClick={() => router.push("/partnerlogin")}
         >
           Sign in as Partner
         </Button>

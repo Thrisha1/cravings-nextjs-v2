@@ -32,6 +32,9 @@ export async function middleware(request: NextRequest) {
     '/captainlogin',
     '/about-us',
     '/api/auth',
+    '/captainlogin',
+    '/partnerlogin',
+    '/newlogin'
   ];
 
   // Check if current route is public
