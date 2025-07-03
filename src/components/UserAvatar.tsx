@@ -1,9 +1,9 @@
-import { getAccounts } from "@/lib/addAccount";
+import { getAccounts, removeAccount } from "@/lib/addAccount";
 import { Partner, useAuthStore, User } from "@/store/authStore";
-import { UserCircle, LogOut, Plus, Settings } from "lucide-react";
+import { UserCircle, LogOut, Plus, Settings, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 
 const UserAvatar = ({ userData }: { userData: any }) => {
@@ -19,6 +19,7 @@ const UserAvatar = ({ userData }: { userData: any }) => {
   const toggleDialog = () => setIsOpen(!isOpen);
   const [accounts, setAccounts] = useState<any[]>([]);
   const router = useRouter();
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const otherAccounts = async () => {
     const storedAccounts = await getAccounts();
@@ -52,6 +53,24 @@ const UserAvatar = ({ userData }: { userData: any }) => {
     }
   }, [user, userData]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dialogRef.current && !dialogRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
   const handleSwitchAccount = async (account: any) => {
     try {
       switch (account.role) {
@@ -73,7 +92,6 @@ const UserAvatar = ({ userData }: { userData: any }) => {
           break;
       }
 
-      
       router.push("/switching-account");
       setTimeout(() => {
         router.refresh();
@@ -81,10 +99,15 @@ const UserAvatar = ({ userData }: { userData: any }) => {
      
     } catch (error) {
       console.error("Failed to switch account:", error);
-      // You might want to show an error message to the user here
     } finally {
       setIsOpen(false);
     }
+  };
+
+  const handleRemoveAccount = async (accountId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await removeAccount(accountId);
+    otherAccounts();
   };
 
   return (
@@ -97,7 +120,10 @@ const UserAvatar = ({ userData }: { userData: any }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+        <div 
+          ref={dialogRef}
+          className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200"
+        >
           {/* Profile Section */}
           <div className="px-4 py-2 border-b border-gray-100">
             <p className="text-sm font-medium text-gray-900">{displayName}</p>
@@ -123,16 +149,23 @@ const UserAvatar = ({ userData }: { userData: any }) => {
           {accounts.length > 0 && (
             <div className="py-1 border-t border-gray-100">
               <p className="px-4 py-2 text-xs text-gray-500">Other accounts</p>
-              {/* Map through other accounts here */}
               {accounts.length > 0 ? (
                 accounts.map((account) => (
                   <div
                     key={account.id}
                     onClick={() => handleSwitchAccount(account)}
-                    className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className="flex w-full items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
-                    <UserCircle className="h-4 w-4 mr-2" />
-                    {account.name || "Guest"}
+                    <div className="flex items-center">
+                      <UserCircle className="h-4 w-4 mr-2" />
+                      {account.name || "Guest"}
+                    </div>
+                    <button
+                      onClick={(e) => handleRemoveAccount(account.id, e)}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
                 ))
               ) : (

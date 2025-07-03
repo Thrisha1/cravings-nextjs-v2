@@ -37,9 +37,9 @@ export async function getAccounts() {
 }
 
 
-export function removeAccount(email: string) {
+export function removeAccount(id: string) {
     const existingAccounts = JSON.parse(localStorage.getItem("accounts") || "[]");
-    const updatedAccounts = existingAccounts.filter((account: any) => account.email !== email);
+    const updatedAccounts = existingAccounts.filter((account: any) => account.id !== id);
     localStorage.setItem("accounts", JSON.stringify(updatedAccounts));
     toast.success("Account removed successfully");
 }
