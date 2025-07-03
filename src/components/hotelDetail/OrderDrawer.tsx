@@ -56,7 +56,7 @@ export const calculateDeliveryDistanceAndCost = async (
     const distanceInKm = Math.ceil(exactDistance);
     const deliveryRate = hotelData?.delivery_rate || 0;
 
-    const { delivery_radius, first_km_range, is_fixed_rate } =
+    const { delivery_radius, first_km_range, is_fixed_rate , minimum_order_amount } =
       hotelData?.delivery_rules || {};
 
     if (delivery_radius && distanceInKm > delivery_radius) {
@@ -65,6 +65,7 @@ export const calculateDeliveryDistanceAndCost = async (
         cost: 0,
         ratePerKm: deliveryRate,
         isOutOfRange: true,
+        minimumOrderAmount: minimum_order_amount || 0,
       });
       return;
     }
@@ -91,6 +92,7 @@ export const calculateDeliveryDistanceAndCost = async (
       cost: calculatedCost,
       ratePerKm: deliveryRate,
       isOutOfRange: false,
+      minimumOrderAmount: minimum_order_amount || 0,
     });
   } catch (error) {
     console.error("Error calculating delivery distance:", error);

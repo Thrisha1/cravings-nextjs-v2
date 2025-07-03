@@ -198,12 +198,16 @@ export function DeliveryAndGeoLocationSettings({
                 placeholder="Enter your location link"
               />
               <div className="h-px"></div>
-              <a className="text-orange-600 underline" href="https://www.google.com/maps">Get Link {"-->"} </a>
+              <a
+                className="text-orange-600 underline"
+                href="https://www.google.com/maps"
+              >
+                Get Link {"-->"}{" "}
+              </a>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
-            
             <div className="h-48 w-full rounded-md overflow-hidden relative border">
               {geoLocation.latitude && geoLocation.longitude ? (
                 <div className="h-full w-full bg-gray-100 relative">
@@ -421,6 +425,29 @@ export function DeliveryAndGeoLocationSettings({
                 } km`}
           </p>
         )}
+
+        <div className="space-y-2">
+          <Label>Minimum Order Amount ({currency?.value})</Label>
+          {isEditingDelivery ? (
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={deliveryRules.minimum_order_amount}
+              onChange={(e) =>
+                setDeliveryRules({
+                  ...deliveryRules,
+                  minimum_order_amount: Number(e.target.value),
+                })
+              }
+              placeholder="Enter amount"
+            />
+          ) : (
+            <div className="p-3 rounded-md border bg-muted/50">
+              {deliveryRules.minimum_order_amount.toFixed(2)}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Map Dialog */}

@@ -714,6 +714,7 @@ const PlaceOrderModal = ({
     setOpenDrawerBottom,
     setOpenPlaceOrderModal,
     items,
+    totalPrice,
     orderId,
     placeOrder,
     increaseQuantity,
@@ -953,6 +954,8 @@ const PlaceOrderModal = ({
 
   // Determine if place order button should be disabled
 
+  const minimumOrderAmount =deliveryInfo?.minimumOrderAmount || 0;
+
   const isPlaceOrderDisabled =
     isPlacingOrder ||
     (isDelivery && hasDelivery && !selectedCoords && !isQrScan) ||
@@ -1048,6 +1051,19 @@ const PlaceOrderModal = ({
                 </div>
               )}
 
+              {/* minimum amount msg  */}
+              {
+                items?.length === 0 || (isDelivery && (totalPrice ?? 0) < minimumOrderAmount) && (
+                  <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
+                    Minimum order amount for delivery is{" "}
+                    {hotelData?.currency || "₹"}
+                    {deliveryInfo?.minimumOrderAmount.toFixed(2)}
+                  </div>
+                )
+              }
+
+              
+
               {/* Place Order and Back Buttons */}
               <div className="flex flex-col gap-3 mt-6">
                 {user ? (
@@ -1062,7 +1078,7 @@ const PlaceOrderModal = ({
                   >
                     <Button
                       onClick={handlePlaceOrder}
-                      disabled={isPlaceOrderDisabled || !user}
+                      disabled={isPlaceOrderDisabled || !user || items?.length === 0 || (isDelivery && (totalPrice ?? 0) < minimumOrderAmount)}
                       className="w-full"
                     >
                       {isPlacingOrder ? (

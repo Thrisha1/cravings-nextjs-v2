@@ -270,7 +270,7 @@ const ItemCard = ({
             >
               <div className="grid">
                 <span className="font-semibold">{variant.name}</span>
-                {!item.is_price_as_per_size && (
+                {/* {!item.is_price_as_per_size && (
                   <div
                     style={{
                       color: styles?.accent || "#000",
@@ -280,7 +280,7 @@ const ItemCard = ({
                     {hoteldata?.currency || "₹"}
                     {variant.price}
                   </div>
-                )}
+                )} */}
               </div>
               {showAddButton ? (
                 <div className="flex gap-2 items-center justify-end">
