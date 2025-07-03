@@ -2,7 +2,8 @@ import { getAuthCookie } from "@/app/auth/actions";
 import { toast } from "sonner";
 import CryptoJS from "crypto-js";
 
-const ENCRYPTION_KEY = process.env.NEXT_PUBLIC_ENCRYPTION_KEY || "default-secret-key";
+const ENCRYPTION_KEY =
+  process.env.NEXT_PUBLIC_ENCRYPTION_KEY || "default-secret-key";
 
 function encryptData(data: any): string {
   return CryptoJS.AES.encrypt(JSON.stringify(data), ENCRYPTION_KEY).toString();
@@ -12,7 +13,6 @@ function decryptData(ciphertext: string): any {
   const bytes = CryptoJS.AES.decrypt(ciphertext, ENCRYPTION_KEY);
   return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 }
-
 
 export function addAccount(user: any) {
   const newUser = {
@@ -44,6 +44,15 @@ export function addAccount(user: any) {
   // Add new account and encrypt before storing
   existingAccounts.push(newUser);
   localStorage.setItem("accounts", encryptData(existingAccounts));
+}
+
+export async function getAllAccounts() {
+  const encryptedAccounts = localStorage.getItem("accounts");
+  if (!encryptedAccounts) {
+    return [];
+  }
+  let accounts = decryptData(encryptedAccounts);
+  return accounts;
 }
 
 export async function getAccounts() {

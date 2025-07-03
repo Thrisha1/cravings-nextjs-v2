@@ -21,7 +21,7 @@ import { sendRegistrationWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
 import { DeliveryRules } from "./orderStore";
 import { Notification } from "@/app/actions/notification";
-import { addAccount } from "@/lib/addAccount";
+import { addAccount, getAccounts, getAllAccounts } from "@/lib/addAccount";
 
 interface BaseUser {
   id: string;
@@ -277,7 +277,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     const fcmToken = localStorage.getItem("fcmToken");
     const isApp = localStorage.getItem("isApp");
-    const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+    const accounts = await getAllAccounts();
     await Notification.token.remove();
     await removeAuthCookie();
     await removeLocationCookie();
@@ -285,7 +285,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (fcmToken) localStorage.setItem("fcmToken", fcmToken);
     if (isApp) localStorage.setItem("isApp", isApp);
     if (accounts && accounts.length > 0) {
-      localStorage.setItem("accounts", JSON.stringify(accounts));
+      accounts.forEach((account : any) => {
+        addAccount({...account});
+      });
     }
     set({ userData: null, error: null });
   },
@@ -355,7 +357,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signInPartnerWithEmail: async (email, password) => {
     try {
-      await removeAuthCookie();
+      await get().signOut();
 
       const response = (await fetchFromHasura(partnerLoginQuery, {
         email,
@@ -392,7 +394,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signInWithPhone: async (phone, partnerId) => {
     try {
-      await removeAuthCookie();
+      await get().signOut();
+
 
       console.log("Signing in with phone:", phone, "Partner ID:", partnerId);
       
@@ -459,7 +462,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signInSuperAdminWithEmail: async (email, password) => {
     try {
-      await removeAuthCookie();
+            await get().signOut();
+
 
       const response = (await fetchFromHasura(superAdminLoginQuery, {
         email,
@@ -494,7 +498,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signInCaptainWithEmail: async (email, password) => {
     try {
-      await removeAuthCookie();
+      await get().signOut();
+
 
       const response = await fetchFromHasura(
         `
