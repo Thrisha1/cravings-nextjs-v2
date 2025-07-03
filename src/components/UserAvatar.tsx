@@ -72,6 +72,8 @@ const UserAvatar = ({ userData }: { userData: any }) => {
   }, [isOpen]);
 
   const handleSwitchAccount = async (account: any) => {
+    setIsOpen(false);
+
     try {
       switch (account.role) {
         case "partner":
@@ -105,6 +107,7 @@ const UserAvatar = ({ userData }: { userData: any }) => {
   };
 
   const handleRemoveAccount = async (accountId: string, e: React.MouseEvent) => {
+    setIsOpen(false);
     e.stopPropagation();
     await removeAccount(accountId);
     otherAccounts();
@@ -138,6 +141,7 @@ const UserAvatar = ({ userData }: { userData: any }) => {
           <div className="py-1">
             <Link
               href={"/profile"}
+              onClick={() => setIsOpen(false)}
               className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
               <UserCircle className="h-4 w-4 mr-2" />
