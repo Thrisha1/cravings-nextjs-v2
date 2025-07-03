@@ -90,7 +90,7 @@ const CaptainOrdersTab = () => {
 
       // Always reset to page 1 and show the latest orders
       setCurrentPage(1);
-      setOrders(processedOrders.slice(0, ordersPerPage));
+        setOrders(processedOrders.slice(0, ordersPerPage));
       prevOrdersRef.current = processedOrders;
     });
 

@@ -310,10 +310,10 @@ const BillCard = ({
 
   const qrExtraCharges = qrGroup?.extra_charge
     ? getExtraCharge(
-      items,
-      qrGroup.extra_charge,
-      qrGroup.charge_type || "FLAT_FEE"
-    )
+        items,
+        qrGroup.extra_charge,
+        qrGroup.charge_type || "FLAT_FEE"
+      )
     : 0;
 
   const deliveryCharges =
@@ -661,7 +661,7 @@ const MapModal = ({
   return (
     <div
       className={`fixed top-0 left-0 z-[5000] h-screen w-screen ${showMapModal ? "overflow-hidden" : "hidden"
-        }`}
+      }`}
     >
       <div className="flex items-center justify-center min-h-screen w-screen">
         <div
@@ -714,6 +714,7 @@ const PlaceOrderModal = ({
     setOpenDrawerBottom,
     setOpenPlaceOrderModal,
     items,
+    totalPrice,
     orderId,
     placeOrder,
     increaseQuantity,
@@ -953,6 +954,8 @@ const PlaceOrderModal = ({
 
   // Determine if place order button should be disabled
 
+  const minimumOrderAmount =deliveryInfo?.minimumOrderAmount || 0;
+
   const isPlaceOrderDisabled =
     isPlacingOrder ||
     (isDelivery && hasDelivery && !selectedCoords && !isQrScan) ||
@@ -963,7 +966,7 @@ const PlaceOrderModal = ({
     <>
       <div
         className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto text-black ${open_place_order_modal ? "block" : "hidden"
-          }`}
+        }`}
       >
         {/* Header */}
         <div className="sticky top-0  bg-white border-b">
@@ -1048,6 +1051,19 @@ const PlaceOrderModal = ({
                 </div>
               )}
 
+              {/* minimum amount msg  */}
+              {
+                items?.length === 0 || (isDelivery && (totalPrice ?? 0) < minimumOrderAmount) && (
+                  <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
+                    Minimum order amount for delivery is{" "}
+                    {hotelData?.currency || "₹"}
+                    {deliveryInfo?.minimumOrderAmount.toFixed(2)}
+                  </div>
+                )
+              }
+
+              
+
               {/* Place Order and Back Buttons */}
               <div className="flex flex-col gap-3 mt-6">
                 {user ? (
@@ -1062,8 +1078,8 @@ const PlaceOrderModal = ({
                   >
                     <Button
                       onClick={handlePlaceOrder}
-                      disabled={isPlaceOrderDisabled || !user}
-                      className="w-full" 
+                      disabled={isPlaceOrderDisabled || !user || items?.length === 0 || (isDelivery && (totalPrice ?? 0) < minimumOrderAmount)}
+                      className="w-full"
                     >
                       {isPlacingOrder ? (
                         <>
