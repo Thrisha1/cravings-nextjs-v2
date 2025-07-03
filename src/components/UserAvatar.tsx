@@ -158,7 +158,7 @@ const UserAvatar = ({ userData }: { userData: any }) => {
                   <div
                     key={account.id}
                     onClick={() => handleSwitchAccount(account)}
-                    className="flex w-full items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className="flex cursor-pointer select-none w-full items-center justify-between px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
                     <div className="flex items-center">
                       <UserCircle className="h-4 w-4 mr-2" />
