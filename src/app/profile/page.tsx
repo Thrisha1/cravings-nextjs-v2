@@ -181,6 +181,7 @@ export default function ProfilePage() {
       rate: 0,
     },
     is_fixed_rate: false,
+    minimum_order_amount: 0,
   });
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [whatsappNumbers, setWhatsappNumbers] = useState<
@@ -259,6 +260,7 @@ export default function ProfilePage() {
           rate: userData.delivery_rules?.first_km_range?.rate || 0,
         },
         is_fixed_rate: userData.delivery_rules?.is_fixed_rate || false,
+        minimum_order_amount: userData.delivery_rules?.minimum_order_amount || 0,
       });
       setGeoLocation({
         latitude: userData?.geo_location?.coordinates?.[1] || 0,
@@ -1148,6 +1150,7 @@ export default function ProfilePage() {
           rate: deliveryRules?.first_km_range?.rate || 0,
         },
         is_fixed_rate: deliveryRules?.is_fixed_rate || false,
+        minimum_order_amount: deliveryRules?.minimum_order_amount || 0,
       } as DeliveryRules;
 
       await fetchFromHasura(updatePartnerMutation, {

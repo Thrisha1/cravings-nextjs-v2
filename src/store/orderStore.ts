@@ -40,16 +40,9 @@ export interface DeliveryRules {
     rate: number;
   };
   is_fixed_rate: boolean;
+  minimum_order_amount: number;
 }
 
-export interface DeliveryRules {
-  delivery_radius: number;
-  first_km_range: {
-    km: number;
-    rate: number;
-  };
-  is_fixed_rate: boolean;
-}
 
 export interface Order {
   id: string;
@@ -105,13 +98,7 @@ export interface DeliveryInfo {
   distance: number;
   cost: number;
   ratePerKm: number;
-  isOutOfRange: boolean;
-}
-
-export interface DeliveryInfo {
-  distance: number;
-  cost: number;
-  ratePerKm: number;
+  minimumOrderAmount: number;
   isOutOfRange: boolean;
 }
 

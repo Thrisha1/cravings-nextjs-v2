@@ -20,6 +20,8 @@ export const setAuthCookie = async (data: { id: string; role: string , feature_f
 };
 
 export const removeAuthCookie = async () => {
+  console.log('Removing auth cookie');
+  
   (await cookies()).delete('auth_token');
 };
 
