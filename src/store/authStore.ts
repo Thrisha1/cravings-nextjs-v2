@@ -394,6 +394,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await removeAuthCookie();
 
+      console.log("Signing in with phone:", phone, "Partner ID:", partnerId);
+      
+
       const email = `${phone}@user.com`;
       const response = (await fetchFromHasura(userLoginQuery, { email })) as {
         users: User[];

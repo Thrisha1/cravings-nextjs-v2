@@ -16,13 +16,11 @@ export function addAccount(user: any) {
     const isAccountExists = existingAccounts.some((account: any) => account.email === newUser.email);
 
     if (isAccountExists) {
-        toast.error("Account already exists");
         return;
     }
 
     existingAccounts.push(newUser);
     localStorage.setItem("accounts", JSON.stringify(existingAccounts));
-    toast.success("Account added successfully");
 
 }
 

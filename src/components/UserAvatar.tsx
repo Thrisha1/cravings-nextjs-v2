@@ -2,6 +2,7 @@ import { getAccounts } from "@/lib/addAccount";
 import { Partner, useAuthStore, User } from "@/store/authStore";
 import { UserCircle, LogOut, Plus, Settings } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -17,6 +18,7 @@ const UserAvatar = ({ userData }: { userData: any }) => {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const toggleDialog = () => setIsOpen(!isOpen);
   const [accounts, setAccounts] = useState<any[]>([]);
+  const router = useRouter();
 
   const otherAccounts = async () => {
     const storedAccounts = await getAccounts();
@@ -71,9 +73,12 @@ const UserAvatar = ({ userData }: { userData: any }) => {
           break;
       }
 
-      // Refresh the page to ensure all state is updated
-      window.location.reload();
-      window.location.href = "/";
+      
+      router.push("/");
+      setTimeout(() => {
+        router.refresh();
+      }, 1000); 
+     
     } catch (error) {
       console.error("Failed to switch account:", error);
       // You might want to show an error message to the user here
