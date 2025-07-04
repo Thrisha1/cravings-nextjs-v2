@@ -139,6 +139,7 @@ export default function Login() {
                 <Input
                   id="password"
                   type="password"
+                  
                   placeholder="Enter your password"
                   value={partnerData.password}
                   onChange={(e) =>
@@ -146,12 +147,12 @@ export default function Login() {
                   }
                   required
                 />
-                <Link
+                {/* <Link
                   href="/login/forgot-password"
                   className="text-right flex flex-1 justify-end w-full  text-sm text-gray-500 hover:text-orange-600"
                 >
                   Forgot Password?
-                </Link>
+                </Link> */}
               </div>
               <Button
                 type="submit"

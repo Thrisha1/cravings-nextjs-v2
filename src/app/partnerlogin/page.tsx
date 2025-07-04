@@ -68,12 +68,12 @@ export default function PartnerLoginPage() {
               }
               required
             />
-            <Link
+            {/* <Link
               href="/login/forgot-password"
               className="text-right flex flex-1 justify-end w-full  text-sm text-gray-500 hover:text-orange-600"
             >
               Forgot Password?
-            </Link>
+            </Link> */}
           </div>
           <Button
             type="submit"

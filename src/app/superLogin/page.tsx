@@ -70,7 +70,7 @@ export default function page() {
                 onChange={(e) => setPartnerData({ ...partnerData, password: e.target.value })}
                 required
               />
-              <Link href="/login/forgot-password" className="text-right flex flex-1 justify-end w-full  text-sm text-gray-500 hover:text-orange-600">Forgot Password?</Link>
+              {/* <Link href="/login/forgot-password" className="text-right flex flex-1 justify-end w-full  text-sm text-gray-500 hover:text-orange-600">Forgot Password?</Link> */}
             </div>
             <Button
               type="submit"
