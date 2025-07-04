@@ -177,7 +177,7 @@ const ItemCard = ({
           <div className="relative">
             <div className="overflow-hidden aspect-square h-28 rounded-3xl">
               <img
-                src={item.image_url || "/image_placeholder.webp"}
+                src={item.image_url || "/image_placeholder.png"}
                 alt={item.name}
                 className={`w-full h-full object-cover ${
                   !item.image_url ? "invert opacity-50" : ""

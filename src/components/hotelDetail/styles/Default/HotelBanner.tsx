@@ -21,7 +21,7 @@ const HotelBanner = ({ styles, hoteldata }: { styles: Styles; hoteldata: HotelDa
           className="relative h-[130px] aspect-square rounded-full overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
         >
           <Img
-            src={hoteldata?.store_banner || "/image_placeholder.webp"}
+            src={hoteldata?.store_banner || "/image_placeholder.png"}
             alt={hoteldata?.store_name}
             className="w-full h-full object-cover"
           />
@@ -40,7 +40,7 @@ const HotelBanner = ({ styles, hoteldata }: { styles: Styles; hoteldata: HotelDa
           
           {/* Full-size image */}
           <Img
-            src={hoteldata?.store_banner || "/image_placeholder.webp"}
+            src={hoteldata?.store_banner || "/image_placeholder.png"}
             alt={hoteldata?.store_name}
             className="w-full h-full object-contain"
           />
