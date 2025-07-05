@@ -106,19 +106,21 @@ const CHART_COLORS = {
   yellow: '#FFBB28',
 };
 
-// Create a wide dialog content component that bypasses the width constraints
+// Create a wide dialog content component that bypasses the width constraints and has improved animation
 const WideDialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
   <DialogPrimitive.Portal>
     <DialogPrimitive.Overlay
-      className="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+      className="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 transition-opacity duration-300"
     />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-[50%] top-[50%] z-50 grid w-[900px] max-w-[90vw] max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background shadow-lg overflow-y-auto duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-lg',
+        'fixed left-[50%] top-[50%] z-50 grid w-[900px] max-w-[90vw] max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background shadow-lg overflow-y-auto rounded-lg',
+        'transition-all duration-300 ease-in-out',
+        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
         className
       )}
       {...props}
@@ -516,11 +518,24 @@ const AnalyticsDashboard = () => {
 
   // Handle opening partner modal
   const handlePartnerClick = useCallback((partner: PartnerData) => {
+    // First set the partner date range to match the main table's date range
+    setPartnerDateRange({
+      startDate: startDate,
+      endDate: endDate
+    });
+    
+    // Then set the selected partner
     setSelectedPartner(partner);
-    setIsPartnerModalOpen(true);
+    
+    // Set the partner ID and fetch flag
     currentPartnerId.current = partner.id;
     shouldFetchPartnerData.current = true;
-  }, []);
+    
+    // Slight delay to avoid UI glitches when opening the modal
+    setTimeout(() => {
+      setIsPartnerModalOpen(true);
+    }, 10);
+  }, [startDate, endDate]);
 
   // Effect to cleanup when modal closes
   useEffect(() => {
@@ -751,9 +766,12 @@ const AnalyticsDashboard = () => {
       setIsPartnerModalOpen(open);
     }, []);
 
+    // Add CSS transition classes to smooth the dialog's opening
+    const dialogContentClass = "transition-transform duration-200 ease-in-out transform";
+
     return (
       <Dialog open={isPartnerModalOpen} onOpenChange={handleOpenChange}>
-        <WideDialogContent>
+        <WideDialogContent className={dialogContentClass}>
           <div className="p-6">
             <div className="flex justify-between items-start mb-6">
               <div>
@@ -780,7 +798,7 @@ const AnalyticsDashboard = () => {
               <div className="text-sm text-gray-600 mb-2">Filter by:</div>
               <div className="flex flex-wrap gap-2">
                 <Button 
-                  variant={partnerDateRange.startDate.toDateString() === new Date().toDateString() ? 'default' : 'outline'} 
+                  variant={dateFilter === 'today' ? 'default' : 'outline'} 
                   size="default"
                   onClick={() => handlePartnerPresetRange('today')}
                   className="min-w-[100px]"
@@ -788,7 +806,7 @@ const AnalyticsDashboard = () => {
                   Today
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant={dateFilter === 'week' ? 'default' : 'outline'} 
                   size="default"
                   onClick={() => handlePartnerPresetRange('week')}
                   className="min-w-[100px]"
@@ -796,7 +814,7 @@ const AnalyticsDashboard = () => {
                   Last 7 Days
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant={dateFilter === 'month' ? 'default' : 'outline'} 
                   size="default"
                   onClick={() => handlePartnerPresetRange('month')}
                   className="min-w-[100px]"
@@ -804,7 +822,7 @@ const AnalyticsDashboard = () => {
                   Last 30 Days
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant={dateFilter === 'all' ? 'default' : 'outline'} 
                   size="default"
                   onClick={() => handlePartnerPresetRange('all')}
                   className="min-w-[100px]"
@@ -812,13 +830,15 @@ const AnalyticsDashboard = () => {
                   All Time
                 </Button>
                 <Button 
-                  variant="outline" 
+                  variant={dateFilter === 'custom' ? 'default' : 'outline'} 
                   size="default"
                   onClick={() => setPartnerDatePickerOpen(true)}
                   className="flex items-center min-w-[140px]"
                 >
                   <Calendar className="mr-2 h-4 w-4" />
-                  Custom Range
+                  {dateFilter === 'custom' 
+                    ? `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d')}`
+                    : 'Custom Range'}
                 </Button>
               </div>
             </div>
