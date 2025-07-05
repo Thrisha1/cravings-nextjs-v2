@@ -515,7 +515,7 @@ const AnalyticsDashboard = () => {
         end: queryEndDate.toISOString()
       });
       
-      let orders = [];
+      let orders: OrderData[] = [];
       if (result && result.orders) {
         // Force a fresh array to ensure state update
         orders = [...result.orders];
@@ -538,7 +538,7 @@ const AnalyticsDashboard = () => {
         setPartnerOrderData([]);
         setTimeout(resolve, 0); // Ensure state is updated before continuing
       });
-      return [];
+      return [] as OrderData[];
     } finally {
       setPartnerOrdersLoading(false);
     }
