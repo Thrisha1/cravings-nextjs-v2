@@ -346,13 +346,16 @@ export const useBulkUpload = () => {
 
   const processBatch = async (
     endpoint: string,
-    items: any[],
+    items: MenuItem[],
     successMessage: string
   ) => {
     try {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_SERVER_URL}/api/image-gen/${endpoint}`,
-        items,
+        items.map((item) => ({
+          ...item,
+          name : item.name + " " + item?.category?.name
+        })),
         {
           headers: { "Content-Type": "application/json" },
         }

@@ -175,11 +175,11 @@ const ItemCard = ({
                             {hotelData?.id ===
                             "767da2a8-746d-42b6-9539-528b6b96ae09"
                               ? item.variants
-                                  ?.sort((a, b) => a.price - b.price)[0]
-                                  .price.toFixed(3) || item.price.toFixed(3)
+                                  ?.sort((a, b) => a?.price - b?.price)[0]
+                                  ?.price?.toFixed(3) || item.price.toFixed(3)
                               : item.variants?.sort(
-                                  (a, b) => a.price - b.price
-                                )[0].price || item.price}
+                                  (a, b) => a?.price - b?.price
+                                )[0]?.price || item.price}
                           </span>
                         </span>
                       ) : (

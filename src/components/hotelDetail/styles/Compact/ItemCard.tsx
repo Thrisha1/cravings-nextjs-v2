@@ -155,10 +155,11 @@ const ItemCard = ({
                     </span>
                   </div>
                 ) : (
-                  <>
+                  <div className="contents">
+                    {hasVariants  ? (<span className="text-sm ">From{" "}</span>) : null}
                     {hoteldata?.currency || "₹"}
-                    {item.variants?.sort((a, b) => a.price - b.price)[0].price || item.price}
-                  </>
+                    {item.variants?.sort((a, b) => a?.price - b?.price)[0]?.price || item.price}
+                  </div>
                 )}
               </>
             ) : (
