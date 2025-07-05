@@ -46,7 +46,11 @@ const ItemCard = ({
 
   // Calculate discount percentage if offer exists
   const discountPercentage = offerData
-    ? Math.round(((offerData.menu.price - offerData.offer_price) / offerData.menu.price) * 100)
+    ? Math.round(
+        ((offerData.menu.price - offerData.offer_price) /
+          offerData.menu.price) *
+          100
+      )
     : 0;
 
   useEffect(() => {
@@ -115,8 +119,10 @@ const ItemCard = ({
   };
 
   const isOrderable = item.is_available && !isOutOfStock;
-  const showAddButton = 
-    isOrderable && (hasOrderingFeature || hasDeliveryFeature) && !item.is_price_as_per_size;
+  const showAddButton =
+    isOrderable &&
+    (hasOrderingFeature || hasDeliveryFeature) &&
+    !item.is_price_as_per_size;
 
   return (
     <>
@@ -145,13 +151,13 @@ const ItemCard = ({
                     </div>
                     <span className="text-sm line-through opacity-70">
                       {hoteldata?.currency || "₹"}
-                      {offerData.menu.price }
+                      {offerData.menu.price}
                     </span>
                   </div>
                 ) : (
                   <>
                     {hoteldata?.currency || "₹"}
-                    {item.price}
+                    {item.variants?.sort((a, b) => a.price - b.price)[0].price || item.price}
                   </>
                 )}
               </>
@@ -177,13 +183,11 @@ const ItemCard = ({
           <div className="relative">
             <div className="overflow-hidden aspect-square h-28 rounded-3xl">
               <img
-                src={item.image_url || "/image_placeholder.webp"}
+                src={item.image_url || "/image_placeholder.png"}
                 alt={item.name}
                 className={`w-full h-full object-cover ${
                   !item.image_url ? "invert opacity-50" : ""
-                } ${
-                  !item.is_available || isOutOfStock ? "grayscale" : ""
-                }`}
+                } ${!item.is_available || isOutOfStock ? "grayscale" : ""}`}
               />
             </div>
             {(!item.is_available || isOutOfStock) && (
@@ -270,7 +274,7 @@ const ItemCard = ({
             >
               <div className="grid">
                 <span className="font-semibold">{variant.name}</span>
-                {(!item.is_price_as_per_size && showAddButton) && (
+                {!item.is_price_as_per_size && showAddButton && (
                   <div
                     style={{
                       color: styles?.accent || "#000",
@@ -324,10 +328,12 @@ const ItemCard = ({
                   style={{
                     color: styles?.accent || "#000",
                   }}
-                  className={`${item.is_price_as_per_size ? "text-sm" : "text-lg"} font-bold `}
+                  className={`${
+                    item.is_price_as_per_size ? "text-sm" : "text-lg"
+                  } font-bold `}
                 >
-                  {item.is_price_as_per_size 
-                    ? "(Price as per size)" 
+                  {item.is_price_as_per_size
+                    ? "(Price as per size)"
                     : `${hoteldata?.currency || "₹"}${variant.price}`}
                 </div>
               )}

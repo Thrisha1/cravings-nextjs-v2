@@ -42,9 +42,10 @@ const ItemCard = ({
   const hasStockFeature = getFeatures(feature_flags || "")?.stockmanagement
     ?.enabled;
 
-  const isOutOfStock =(hasStockFeature &&
-        (item.stocks?.length ?? 0) > 0 &&
-        (item.stocks?.[0]?.stock_quantity ?? 1) <= 0);
+  const isOutOfStock =
+    hasStockFeature &&
+    (item.stocks?.length ?? 0) > 0 &&
+    (item.stocks?.[0]?.stock_quantity ?? 1) <= 0;
 
   const showStock = hasStockFeature && (item.stocks?.[0]?.show_stock ?? false);
   const stockQuantity = item.stocks?.[0]?.stock_quantity;
@@ -53,7 +54,6 @@ const ItemCard = ({
   const isPriceAsPerSize = item.is_price_as_per_size;
 
   useEffect(() => {
-    
     if (showVariants && variantsRef.current) {
       setVariantsHeight(variantsRef.current.scrollHeight);
     } else {
@@ -125,9 +125,11 @@ const ItemCard = ({
     return variantQuantities[name] || 0;
   };
 
-  const isOrderable = item.is_available && !isOutOfStock ;
+  const isOrderable = item.is_available && !isOutOfStock;
   const showAddButton =
-    isOrderable && (hasOrderingFeature || hasDeliveryFeature) && !item.is_price_as_per_size;
+    isOrderable &&
+    (hasOrderingFeature || hasDeliveryFeature) &&
+    !item.is_price_as_per_size;
 
   return (
     <div className="h-full relative overflow-hidden">
@@ -172,8 +174,12 @@ const ItemCard = ({
                             {currency}{" "}
                             {hotelData?.id ===
                             "767da2a8-746d-42b6-9539-528b6b96ae09"
-                              ? item.price.toFixed(3)
-                              : item.price}
+                              ? item.variants
+                                  ?.sort((a, b) => a.price - b.price)[0]
+                                  .price.toFixed(3) || item.price.toFixed(3)
+                              : item.variants?.sort(
+                                  (a, b) => a.price - b.price
+                                )[0].price || item.price}
                           </span>
                         </span>
                       ) : (

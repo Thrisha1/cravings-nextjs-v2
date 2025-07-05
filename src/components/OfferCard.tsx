@@ -33,7 +33,7 @@ const OfferCard = ({
         {/* image container  */}
         <div className="relative">
           <Img
-            src={offer.menu.image_url || "/image_placeholder.webp"}
+            src={offer.menu.image_url || "/image_placeholder.png"}
             alt={offer.menu.name}
             width={200}
             height={200}
