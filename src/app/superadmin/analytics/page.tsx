@@ -174,6 +174,12 @@ const AnalyticsDashboard = () => {
   const [partnerDateFilter, setPartnerDateFilter] = useState<DateFilter>('month'); // Add separate date filter state for partner dialog
   const [partnerDatePickerOpen, setPartnerDatePickerOpen] = useState(false);
   
+  // Add temporary state for the calendar selection
+  const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>({
+    from: partnerDateRange.startDate,
+    to: partnerDateRange.endDate
+  });
+  
   // Ref to track if we need to fetch partner data
   const shouldFetchPartnerData = useRef(false);
   const currentPartnerId = useRef<string | null>(null);
@@ -757,7 +763,7 @@ const AnalyticsDashboard = () => {
 
   // Handle partner date range selection
   const handlePartnerDateRangeSelect = useCallback(async (range: DateRange | undefined) => {
-    if (range?.from && range?.to) {
+    if (range?.from) {
       // Set loading state immediately to show feedback
       setPartnerOrdersLoading(true);
       
@@ -771,8 +777,8 @@ const AnalyticsDashboard = () => {
         const startDate = new Date(range.from);
         startDate.setHours(0, 0, 0, 0);
         
-        // Set to date to end of day
-        const endDate = new Date(range.to);
+        // Set to date to end of day - if no 'to' date is selected, use the from date
+        const endDate = range.to ? new Date(range.to) : new Date(range.from);
         endDate.setHours(23, 59, 59, 999);
         
         // Force a completely new date range object to ensure React detects the change
@@ -789,6 +795,9 @@ const AnalyticsDashboard = () => {
         // Update the date range state with the new object
         setPartnerDateRange(newDateRange);
         
+        // Close the date picker dialog
+        setPartnerDatePickerOpen(false);
+        
         // Always refetch data regardless of current filter
         if (currentPartnerId.current) {
           // Wait a small amount of time to ensure state updates have propagated
@@ -801,7 +810,6 @@ const AnalyticsDashboard = () => {
         setPartnerOrdersLoading(false);
       }
     }
-    setPartnerDatePickerOpen(false);
   }, [fetchPartnerOrderData]);
 
   // Handle partner date range selection for specific preset ranges
@@ -1031,6 +1039,55 @@ const AnalyticsDashboard = () => {
                 </Button>
               </div>
             </div>
+            
+            {/* Add a separate Dialog for the date picker */}
+            <Dialog open={partnerDatePickerOpen} onOpenChange={(open) => {
+              if (open) {
+                // When opening, initialize the temp date range with the current date range
+                setTempDateRange({
+                  from: partnerDateRange.startDate,
+                  to: partnerDateRange.endDate
+                });
+              }
+              setPartnerDatePickerOpen(open);
+            }}>
+              <DialogContent className="p-0 sm:max-w-[425px]">
+                <DialogHeader className="p-4 pb-0">
+                  <DialogTitle>Select Date Range</DialogTitle>
+                </DialogHeader>
+                <div className="p-4">
+                  <CalendarComponent
+                    mode="range"
+                    defaultMonth={partnerDateRange.startDate}
+                    selected={tempDateRange}
+                    onSelect={setTempDateRange}
+                    numberOfMonths={1}
+                    disabled={(date) => isBefore(date, new Date('2000-01-01'))}
+                    initialFocus
+                  />
+                  <div className="mt-4 flex justify-end">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setPartnerDatePickerOpen(false)}
+                      className="mr-2"
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        if (currentPartnerId.current && tempDateRange?.from) {
+                          handlePartnerDateRangeSelect(tempDateRange);
+                        } else {
+                          setPartnerDatePickerOpen(false);
+                        }
+                      }}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
             
             {/* Key Metrics */}
             <div className="relative grid grid-cols-6 gap-4 mb-6">
@@ -1612,29 +1669,6 @@ const AnalyticsDashboard = () => {
           </div>
         </Card>
       </div>
-      
-      {/* Partner date range picker */}
-      <Popover open={partnerDatePickerOpen} onOpenChange={setPartnerDatePickerOpen}>
-        <PopoverContent className="w-auto p-0" align="end">
-          <div className="p-3">
-            <div className="text-center mb-2 font-medium">
-              Select Date Range
-            </div>
-            <CalendarComponent
-              mode="range"
-              defaultMonth={partnerDateRange.startDate}
-              selected={{
-                from: partnerDateRange.startDate,
-                to: partnerDateRange.endDate
-              }}
-              onSelect={handlePartnerDateRangeSelect}
-              numberOfMonths={2}
-              disabled={(date) => isBefore(date, new Date('2000-01-01'))}
-              initialFocus
-            />
-          </div>
-        </PopoverContent>
-      </Popover>
     </main>
   );
 };
