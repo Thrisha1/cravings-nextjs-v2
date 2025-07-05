@@ -106,26 +106,28 @@ const CHART_COLORS = {
   yellow: '#FFBB28',
 };
 
-// Create a wide dialog content component that bypasses the width constraints and has improved animation
+// Create a wide dialog content component that bypasses the width constraints with stable animation
 const WideDialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
   <DialogPrimitive.Portal>
     <DialogPrimitive.Overlay
-      className="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 transition-opacity duration-300"
+      className="fixed inset-0 z-50 bg-black/80 transition-opacity duration-100 ease-out"
     />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-[50%] top-[50%] z-50 grid w-[900px] max-w-[90vw] max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background shadow-lg overflow-y-auto rounded-lg',
-        'transition-all duration-300 ease-in-out',
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+        'fixed left-[50%] top-[50%] z-50 grid w-[900px] max-w-[90vw] max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background shadow-lg rounded-lg',
+        'overflow-hidden', // Changed from overflow-y-auto to prevent layout shifts
+        'transition-opacity duration-200 ease-out',
         className
       )}
       {...props}
     >
-      {children}
+      <div className="overflow-y-auto max-h-[90vh]">
+        {children}
+      </div>
     </DialogPrimitive.Content>
   </DialogPrimitive.Portal>
 ));
@@ -169,6 +171,7 @@ const AnalyticsDashboard = () => {
     startDate: subDays(new Date(), 30),
     endDate: new Date()
   });
+  const [partnerDateFilter, setPartnerDateFilter] = useState<DateFilter>('month'); // Add separate date filter state for partner dialog
   const [partnerDatePickerOpen, setPartnerDatePickerOpen] = useState(false);
   
   // Ref to track if we need to fetch partner data
@@ -480,25 +483,60 @@ const AnalyticsDashboard = () => {
 
   // Memoize the fetchPartnerOrderData function to avoid recreation on each render
   const fetchPartnerOrderData = useCallback(async (partnerId: string) => {
-    if (!partnerId) return;
+    if (!partnerId) return [];
+    
+    console.log("Fetching partner order data:", { 
+      partnerId,
+      startDate: partnerDateRange.startDate.toISOString(),
+      endDate: partnerDateRange.endDate.toISOString()
+    });
     
     setPartnerOrdersLoading(true);
     try {
+      // Create fresh date objects to prevent caching issues
+      const queryStartDate = new Date(partnerDateRange.startDate.getTime());
+      const queryEndDate = new Date(partnerDateRange.endDate.getTime());
+      
       const result = await fetchFromHasura(getOrdersByDay, {
-        startDate: partnerDateRange.startDate.toISOString(),
-        endDate: partnerDateRange.endDate.toISOString(),
+        startDate: queryStartDate.toISOString(),
+        endDate: queryEndDate.toISOString(),
         partnerId: partnerId
       });
       
+      console.log(`Fetched ${result?.orders?.length || 0} orders for date range:`, {
+        filter: partnerDateFilter,
+        start: queryStartDate.toISOString(),
+        end: queryEndDate.toISOString()
+      });
+      
+      let orders = [];
       if (result && result.orders) {
-        setPartnerOrderData(result.orders);
+        // Force a fresh array to ensure state update
+        orders = [...result.orders];
+        await new Promise<void>(resolve => {
+          setPartnerOrderData(orders);
+          setTimeout(resolve, 0); // Ensure state is updated before continuing
+        });
+      } else {
+        // Clear the data if no results
+        await new Promise<void>(resolve => {
+          setPartnerOrderData([]);
+          setTimeout(resolve, 0); // Ensure state is updated before continuing
+        });
       }
+      return orders;
     } catch (error) {
       console.error('Error fetching partner order data:', error);
+      // Clear data on error to ensure we don't show stale data
+      await new Promise<void>(resolve => {
+        setPartnerOrderData([]);
+        setTimeout(resolve, 0); // Ensure state is updated before continuing
+      });
+      return [];
     } finally {
       setPartnerOrdersLoading(false);
     }
-  }, [partnerDateRange.startDate, partnerDateRange.endDate]);
+  }, [partnerDateRange.startDate, partnerDateRange.endDate, partnerDateFilter]);
 
   // Handle partner date range change
   const handlePartnerDateRangeChange = useCallback((range: { startDate: Date; endDate: Date }) => {
@@ -507,35 +545,74 @@ const AnalyticsDashboard = () => {
       shouldFetchPartnerData.current = true;
     }
   }, []);
-
-  // Effect to fetch partner data only when necessary
+  
+  // Effect to fetch partner data when necessary
   useEffect(() => {
+    // Only fetch data when modal is actually visible
     if (shouldFetchPartnerData.current && currentPartnerId.current && isPartnerModalOpen) {
-      fetchPartnerOrderData(currentPartnerId.current);
-      shouldFetchPartnerData.current = false;
+      // Use a slight delay to ensure the dialog is fully rendered before data loading
+      const timer = setTimeout(() => {
+        fetchPartnerOrderData(currentPartnerId.current!)
+          .finally(() => {
+            shouldFetchPartnerData.current = false;
+          });
+      }, 50);
+      
+      return () => clearTimeout(timer);
     }
   }, [fetchPartnerOrderData, isPartnerModalOpen]);
+  
+  // Function to fetch partner metrics with time filter
+  const fetchPartnerMetrics = useCallback(async (partnerId: string, forceRefresh = false) => {
+    try {
+      console.log("Fetching partner metrics with time filter:", { 
+        startDate: partnerDateRange.startDate.toISOString(), 
+        endDate: partnerDateRange.endDate.toISOString(),
+        filter: partnerDateFilter
+      });
+      
+      // Force a refetch of orders with the current date range
+      if (partnerId && (forceRefresh || selectedPartner?.id === partnerId)) {
+        // Always fetch fresh data when requested
+        const orders = await fetchPartnerOrderData(partnerId);
+        return orders.length > 0;
+      }
+    } catch (error) {
+      console.error('Error fetching partner metrics:', error);
+    }
+    return false;
+  }, [selectedPartner, partnerDateRange.startDate, partnerDateRange.endDate, partnerDateFilter, fetchPartnerOrderData]);
 
   // Handle opening partner modal
   const handlePartnerClick = useCallback((partner: PartnerData) => {
     // First set the partner date range to match the main table's date range
     setPartnerDateRange({
-      startDate: startDate,
-      endDate: endDate
+      startDate: new Date(startDate.getTime()),
+      endDate: new Date(endDate.getTime())
     });
     
-    // Then set the selected partner
-    setSelectedPartner(partner);
+    // Also set the partner date filter to match the main date filter
+    setPartnerDateFilter(dateFilter);
     
-    // Set the partner ID and fetch flag
+    // Pre-load the partner data before opening the dialog
     currentPartnerId.current = partner.id;
     shouldFetchPartnerData.current = true;
+    setPartnerOrdersLoading(true);
     
-    // Slight delay to avoid UI glitches when opening the modal
+    // Start data loading process before opening modal
+    // Wait a small amount of time to ensure state updates have propagated
     setTimeout(() => {
-      setIsPartnerModalOpen(true);
+      fetchPartnerOrderData(partner.id).then(() => {
+        // Once data is fetched, set the selected partner
+        setSelectedPartner(partner);
+        
+        // Then open the modal with a stable content size
+        setIsPartnerModalOpen(true);
+      }).finally(() => {
+        setPartnerOrdersLoading(false);
+      });
     }, 10);
-  }, [startDate, endDate]);
+  }, [startDate, endDate, dateFilter, fetchPartnerOrderData]);
 
   // Effect to cleanup when modal closes
   useEffect(() => {
@@ -679,65 +756,120 @@ const AnalyticsDashboard = () => {
   );
 
   // Handle partner date range selection
-  const handlePartnerDateRangeSelect = useCallback((range: DateRange | undefined) => {
+  const handlePartnerDateRangeSelect = useCallback(async (range: DateRange | undefined) => {
     if (range?.from && range?.to) {
-      // Set from date to beginning of day
-      const startDate = new Date(range.from);
-      startDate.setHours(0, 0, 0, 0);
+      // Set loading state immediately to show feedback
+      setPartnerOrdersLoading(true);
       
-      // Set to date to end of day
-      const endDate = new Date(range.to);
-      endDate.setHours(23, 59, 59, 999);
-      
-      setPartnerDateRange({
-        startDate: startDate,
-        endDate: endDate
-      });
-      
-      if (currentPartnerId.current) {
-        shouldFetchPartnerData.current = true;
-        fetchPartnerOrderData(currentPartnerId.current);
+      try {
+        console.log('Custom date range selected:', range);
+        
+        // Update the partner date filter state to custom first
+        setPartnerDateFilter('custom');
+        
+        // Set from date to beginning of day
+        const startDate = new Date(range.from);
+        startDate.setHours(0, 0, 0, 0);
+        
+        // Set to date to end of day
+        const endDate = new Date(range.to);
+        endDate.setHours(23, 59, 59, 999);
+        
+        // Force a completely new date range object to ensure React detects the change
+        const newDateRange = {
+          startDate: new Date(startDate.getTime()),
+          endDate: new Date(endDate.getTime())
+        };
+        
+        console.log("Setting custom date range:", {
+          startDate: newDateRange.startDate.toISOString(),
+          endDate: newDateRange.endDate.toISOString()
+        });
+        
+        // Update the date range state with the new object
+        setPartnerDateRange(newDateRange);
+        
+        // Always refetch data regardless of current filter
+        if (currentPartnerId.current) {
+          // Wait a small amount of time to ensure state updates have propagated
+          await new Promise(resolve => setTimeout(resolve, 10));
+          await fetchPartnerOrderData(currentPartnerId.current);
+        }
+      } catch (err) {
+        console.error('Error in handlePartnerDateRangeSelect:', err);
+      } finally {
+        setPartnerOrdersLoading(false);
       }
     }
     setPartnerDatePickerOpen(false);
   }, [fetchPartnerOrderData]);
 
   // Handle partner date range selection for specific preset ranges
-  const handlePartnerPresetRange = useCallback((range: 'today' | 'week' | 'month' | 'all') => {
-    const today = new Date();
-    let startDate;
-    const endDate = new Date();
-    // Set time to end of day
-    endDate.setHours(23, 59, 59, 999);
+  const handlePartnerPresetRange = useCallback(async (range: 'today' | 'week' | 'month' | 'all') => {
+    console.log(`Changing partner filter to: ${range} (previous: ${partnerDateFilter})`);
     
-    switch (range) {
-      case 'today':
-        startDate = new Date(today);
-        // Set time to beginning of day
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'week':
-        startDate = new Date();
-        startDate.setDate(today.getDate() - 7);
-        // Set time to beginning of day
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'month':
-        startDate = new Date();
-        startDate.setDate(today.getDate() - 30);
-        // Set time to beginning of day
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'all':
-        startDate = new Date(2020, 0, 1); // Far past date
-        break;
-    }
+    // Always set loading state immediately to show feedback
+    setPartnerOrdersLoading(true);
     
-    setPartnerDateRange({ startDate, endDate });
-    
-    if (currentPartnerId.current) {
-      shouldFetchPartnerData.current = true;
-      fetchPartnerOrderData(currentPartnerId.current);
+    try {
+      // Update the partner date filter state first
+      setPartnerDateFilter(range);
+      
+      const today = new Date();
+      let startDate;
+      const endDate = new Date();
+      // Set time to end of day
+      endDate.setHours(23, 59, 59, 999);
+      
+      switch (range) {
+        case 'today':
+          startDate = new Date(today);
+          // Set time to beginning of day
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'week':
+          startDate = new Date();
+          startDate.setDate(today.getDate() - 7);
+          // Set time to beginning of day
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'month':
+          startDate = new Date();
+          startDate.setDate(today.getDate() - 30);
+          // Set time to beginning of day
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'all':
+          startDate = new Date(2020, 0, 1); // Far past date
+          break;
+      }
+      
+      // Force a completely new date range object to ensure React detects the change
+      const newDateRange = {
+        startDate: new Date(startDate.getTime()),
+        endDate: new Date(endDate.getTime())
+      };
+      
+      console.log("Setting new date range:", {
+        filter: range,
+        startDate: newDateRange.startDate.toISOString(),
+        endDate: newDateRange.endDate.toISOString()
+      });
+      
+      // Update date range state with the new object
+      setPartnerDateRange(newDateRange);
+      
+      // Always refetch data regardless of current filter
+      if (currentPartnerId.current) {
+        // Force a direct refresh of partner data with the new range
+        // Wait a small amount of time to ensure state updates have propagated
+        await new Promise(resolve => setTimeout(resolve, 10));
+        await fetchPartnerOrderData(currentPartnerId.current);
+      }
+    } catch (err) {
+      console.error('Error in handlePartnerPresetRange:', err);
+    } finally {
+      setPartnerOrdersLoading(false);
     }
   }, [fetchPartnerOrderData]);
 
@@ -745,15 +877,23 @@ const AnalyticsDashboard = () => {
   const PartnerModal = React.memo(() => {
     if (!selectedPartner) return null;
 
-    // Calculate metrics for the selected partner
-    const totalScans = selectedPartner.qr_codes_aggregate?.aggregate?.sum?.no_of_scans || 0;
-    const totalOrders = selectedPartner.orders_aggregate?.aggregate?.count || 0;
-    const totalRevenue = selectedPartner.orders_aggregate?.aggregate?.sum?.total_price || 0;
+    // All metrics are calculated from the filtered order data
+    // This ensures all metrics respect the time filter
+    const totalOrders = partnerOrderData.length;
+    const totalRevenue = partnerOrderData.reduce((sum, order) => sum + order.total_price, 0);
     const avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders).toFixed(2) : '0.00';
 
     const completedOrders = partnerOrderData.filter(order => order.status === 'completed').length;
     const pendingOrders = partnerOrderData.filter(order => order.status === 'pending').length;
     const cancelledOrders = partnerOrderData.filter(order => order.status === 'cancelled').length;
+    
+    // Calculate the number of unique dates with orders to estimate number of scans
+    const uniqueDatesWithOrders = new Set(
+      partnerOrderData.map(order => new Date(order.created_at).toDateString())
+    ).size;
+    
+    // Use the unique dates as an estimate for scans (at least 1 scan per day with orders)
+    const totalScans = Math.max(uniqueDatesWithOrders, totalOrders > 0 ? 1 : 0);
     
     const completionRate = totalOrders > 0 ? (completedOrders / totalOrders * 100).toFixed(1) : '0';
 
@@ -766,13 +906,20 @@ const AnalyticsDashboard = () => {
       setIsPartnerModalOpen(open);
     }, []);
 
-    // Add CSS transition classes to smooth the dialog's opening
-    const dialogContentClass = "transition-transform duration-200 ease-in-out transform";
+    // Define responsive but stable dimensions with min/max constraints
+    const dialogContentClass = "w-[90vw] md:w-[80vw] lg:w-[900px] h-[80vh] min-h-[600px]";
+
+    // Create a unique key based on the current filter and date range to force re-renders
+    const dialogKey = `${partnerDateFilter}-${partnerDateRange.startDate.getTime()}-${partnerDateRange.endDate.getTime()}`;
 
     return (
-      <Dialog open={isPartnerModalOpen} onOpenChange={handleOpenChange}>
+      <Dialog 
+        open={isPartnerModalOpen} 
+        onOpenChange={handleOpenChange}
+        key={dialogKey}
+      >
         <WideDialogContent className={dialogContentClass}>
-          <div className="p-6">
+          <div className="p-6 h-full" key={`content-${dialogKey}`}>
             <div className="flex justify-between items-start mb-6">
               <div>
                 <DialogTitle className="text-2xl font-bold mb-1">{selectedPartner.name}</DialogTitle>
@@ -798,53 +945,105 @@ const AnalyticsDashboard = () => {
               <div className="text-sm text-gray-600 mb-2">Filter by:</div>
               <div className="flex flex-wrap gap-2">
                 <Button 
-                  variant={dateFilter === 'today' ? 'default' : 'outline'} 
+                  variant={partnerDateFilter === 'today' ? 'default' : 'outline'} 
                   size="default"
                   onClick={() => handlePartnerPresetRange('today')}
                   className="min-w-[100px]"
+                  disabled={partnerOrdersLoading}
                 >
-                  Today
+                  {partnerDateFilter === 'today' && partnerOrdersLoading ? (
+                    <div className="flex items-center">
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <span>Today</span>
+                    </div>
+                  ) : (
+                    'Today'
+                  )}
                 </Button>
                 <Button 
-                  variant={dateFilter === 'week' ? 'default' : 'outline'} 
+                  variant={partnerDateFilter === 'week' ? 'default' : 'outline'} 
                   size="default"
                   onClick={() => handlePartnerPresetRange('week')}
                   className="min-w-[100px]"
+                  disabled={partnerOrdersLoading}
                 >
-                  Last 7 Days
+                  {partnerDateFilter === 'week' && partnerOrdersLoading ? (
+                    <div className="flex items-center">
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <span>Last 7 Days</span>
+                    </div>
+                  ) : (
+                    'Last 7 Days'
+                  )}
                 </Button>
                 <Button 
-                  variant={dateFilter === 'month' ? 'default' : 'outline'} 
+                  variant={partnerDateFilter === 'month' ? 'default' : 'outline'} 
                   size="default"
                   onClick={() => handlePartnerPresetRange('month')}
                   className="min-w-[100px]"
+                  disabled={partnerOrdersLoading}
                 >
-                  Last 30 Days
+                  {partnerDateFilter === 'month' && partnerOrdersLoading ? (
+                    <div className="flex items-center">
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <span>Last 30 Days</span>
+                    </div>
+                  ) : (
+                    'Last 30 Days'
+                  )}
                 </Button>
                 <Button 
-                  variant={dateFilter === 'all' ? 'default' : 'outline'} 
+                  variant={partnerDateFilter === 'all' ? 'default' : 'outline'} 
                   size="default"
                   onClick={() => handlePartnerPresetRange('all')}
                   className="min-w-[100px]"
+                  disabled={partnerOrdersLoading}
                 >
-                  All Time
+                  {partnerDateFilter === 'all' && partnerOrdersLoading ? (
+                    <div className="flex items-center">
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <span>All Time</span>
+                    </div>
+                  ) : (
+                    'All Time'
+                  )}
                 </Button>
                 <Button 
-                  variant={dateFilter === 'custom' ? 'default' : 'outline'} 
+                  variant={partnerDateFilter === 'custom' ? 'default' : 'outline'} 
                   size="default"
                   onClick={() => setPartnerDatePickerOpen(true)}
                   className="flex items-center min-w-[140px]"
+                  disabled={partnerOrdersLoading}
                 >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {dateFilter === 'custom' 
-                    ? `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d')}`
-                    : 'Custom Range'}
+                  {partnerDateFilter === 'custom' && partnerOrdersLoading ? (
+                    <div className="flex items-center">
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <span>Loading...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {partnerDateFilter === 'custom' 
+                        ? `${format(partnerDateRange.startDate, 'MMM d')} - ${format(partnerDateRange.endDate, 'MMM d')}`
+                        : 'Custom Range'}
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
             
             {/* Key Metrics */}
-            <div className="grid grid-cols-6 gap-4 mb-6">
+            <div className="relative grid grid-cols-6 gap-4 mb-6">
+              {/* Loading overlay */}
+              {partnerOrdersLoading && (
+                <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-md z-10">
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="h-8 w-8 text-orange-500 animate-spin mb-2" />
+                    <span className="text-sm text-gray-600">Updating metrics...</span>
+                  </div>
+                </div>
+              )}
+              
               <div className="text-center">
                 <div className="text-sm text-gray-600 mb-1">Scans</div>
                 <div className="text-3xl font-semibold">{totalScans}</div>
@@ -926,17 +1125,6 @@ const AnalyticsDashboard = () => {
               )}
             </div>
           </div>
-          
-          <div className="flex justify-end border-t p-4">
-            <DialogClose asChild>
-              <Button 
-                type="button" 
-                variant="outline"
-              >
-                Close
-              </Button>
-            </DialogClose>
-          </div>
         </WideDialogContent>
       </Dialog>
     );
@@ -957,8 +1145,8 @@ const AnalyticsDashboard = () => {
       {/* Include the Analytics component */}
       <Analytics />
       
-      {/* Include the partner modal */}
-      <PartnerModal />
+      {/* Include the partner modal with key that changes when date filter changes */}
+      <PartnerModal key={`partner-modal-${partnerDateFilter}-${partnerDateRange.startDate.getTime()}-${partnerDateRange.endDate.getTime()}`} />
       
       {/* Additional Data Tables Section */}
       <div className="grid grid-cols-1 gap-6 mt-6">
