@@ -454,7 +454,11 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
           const batchSize = 2;
           const batches = [];
           for (let i = 0; i < menuItems.length; i += batchSize) {
-            batches.push(menuItems.slice(i, i + batchSize));
+            const itemsToAdd = menuItems.map((item: MenuItem) => ({
+              ...item,
+              name: item.name + " " + (item.category || "")
+            }));
+            batches.push(itemsToAdd.slice(i, i + batchSize));
           }
 
           const imageRecord: Record<string, string> = {};
