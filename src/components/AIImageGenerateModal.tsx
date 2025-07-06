@@ -25,12 +25,26 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
   isOpen,
   onOpenChange,
   itemName,
+  category,
   addNewImage,
 }) => {
-  const [prompt, setPrompt] = useState(itemName);
+  // Create a more descriptive initial prompt that includes both item name and category
+  const createInitialPrompt = () => {
+    if (category && itemName) {
+      return `${itemName} ${category}`;
+    }
+    return itemName;
+  };
+
+  const [prompt, setPrompt] = useState(createInitialPrompt());
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Update prompt when modal opens with new item/category
+  React.useEffect(() => {
+    setPrompt(createInitialPrompt());
+  }, [itemName, category]);
 
   const handleGenerateImage = async () => {
     setLoading(true);
@@ -41,7 +55,18 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
         return;
       }
 
-      const encodedPrompt = encodeURIComponent(prompt);
+      // Create a more detailed prompt for better AI generation
+      let enhancedPrompt = prompt;
+      
+      // Add category context if not already included
+      if (category && !prompt.toLowerCase().includes(category.toLowerCase())) {
+        enhancedPrompt = `${prompt} ${category}`;
+      }
+      
+      // Add food-specific context for better image generation
+      enhancedPrompt = `${enhancedPrompt} food dish, appetizing, high quality, professional food photography`;
+
+      const encodedPrompt = encodeURIComponent(enhancedPrompt);
       const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?nologo=true&width=512&height=512`;
 
       const response = await fetch(imageUrl);
@@ -84,13 +109,23 @@ const AIImageGenerateModal: React.FC<AIImageGenerateModalProps> = ({
             />
           </div>
         )}
-        <input
-          type="text"
-          placeholder="Enter your prompt..."
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          className="border rounded p-2 w-full mb-4 bg-white"
-        />
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Prompt 
+          </label>
+          <input
+            type="text"
+            placeholder="Enter your prompt..."
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            className="border rounded p-2 w-full bg-white"
+          />
+          {category && (
+            <p className="text-xs text-gray-500 mt-1">
+              Category: {category} 
+            </p>
+          )}
+        </div>
         <Button onClick={handleGenerateImage} disabled={loading}>
           {loading ? "Generating..." : "Generate Image"}
         </Button>
