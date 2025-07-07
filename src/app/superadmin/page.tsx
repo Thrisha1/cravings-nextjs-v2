@@ -3,6 +3,7 @@ import ExploreOfferManage from "@/components/superAdmin/ExploreOfferManage";
 import FeatureFlagManagement from "@/components/superAdmin/FeatureFlagManagement";
 import OfferUploadSuperAdmin from "@/components/superAdmin/OfferUploadSuperAdmin";
 import EditPartners from "@/components/superAdmin/EditPartners";
+// import Analytics from "@/components/superAdmin/Analytics";
 // import BulkUpload from "@/components/superAdmin/BulkUpload";
 // import OfferDetails from "@/components/superAdmin/OfferDetails";
 import PartnerVerification from "@/components/superAdmin/PartnerVerification";
@@ -17,6 +18,12 @@ type SearchParams = Promise<{ [key: string]: string | undefined }>;
 const page = async (props: { searchParams: SearchParams }) => {
   const page = (await props.searchParams).page;
   const pages = [
+    {
+      name: "Analytics",
+      component: null,
+      id: "analytics",
+      href: "/superadmin/analytics",
+    },
     {
       name: "Create Partner",
       component: null,
