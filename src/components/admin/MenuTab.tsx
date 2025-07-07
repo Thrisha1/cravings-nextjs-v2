@@ -244,7 +244,9 @@ export function MenuTab() {
     // Keep the category open during update
     setOpenCategories((prev) => ({
       ...prev,
-      [item.category]: true,
+      [typeof item.category === "object" && item.category !== null && (item.category as { name: string }).name !== undefined
+        ? (item.category as { name: string }).name
+        : item.category]: true,
     }));
 
     await updateItem(item.id, {
@@ -271,7 +273,7 @@ export function MenuTab() {
     price: number;
     image: string;
     description: string;
-    category: string;
+    category: string | { name: string };
     variants?: {
       name: string;
       price: number;
@@ -280,7 +282,7 @@ export function MenuTab() {
     // Ensure the category is open when editing an item
     setOpenCategories((prev) => ({
       ...prev,
-      [item.category]: true,
+      [typeof item.category === "object" && item.category !== null && "name" in item.category ? item.category.name : item.category]: true,
     }));
 
     setEditingItem({
@@ -289,7 +291,10 @@ export function MenuTab() {
       price: item.price.toString(),
       image: item.image,
       description: item.description || "",
-      category: formatDisplayName(item.category),
+      category:
+        typeof item.category === "object" && item.category !== null && "name" in item.category
+          ? item.category.name
+          : item.category,
       variants: item.variants || [],
     });
     setIsEditModalOpen(true);
