@@ -42,6 +42,39 @@ const typeToPartnerId: Record<string, string | Record<string, string>> = {
   hotel: "f69c10f9-3d5c-4078-b327-c76be78e8144",
 };
 
+// Add DemoPartnerCard component styled like PartnerCard
+function DemoPartnerCard({ partner }: { partner: DemoPartner }) {
+  return (
+    <a
+      href={`/demo/${partner.id}`}
+      style={{ width: "100%" }}
+      className="bg-white rounded-3xl flex-shrink-0 shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col border-2 overflow-hidden"
+    >
+      <div style={{ width: "100%", maxWidth: "100%" }} className="relative h-28">
+        <img
+          src={partner.banner || "/default-banner.jpg"}
+          alt={partner.name}
+          className="object-cover rounded-t-lg w-full h-full absolute top-0 left-0"
+          style={{ objectFit: "cover" }}
+        />
+      </div>
+      <div className="p-3 flex-1 flex flex-col">
+        <div className="flex justify-between items-start mb-1">
+          <h2 className="text-sm md:text-base font-semibold text-gray-800 line-clamp-1">
+            {partner.name}
+          </h2>
+        </div>
+        <p className="text-xs md:text-sm text-gray-600 mb-2 line-clamp-2">
+          {typeLabels[partner.type] || partner.type}
+          {partner.type === "restaurant" && partner.food_type && (
+            <span className="ml-2">| {partner.food_type}</span>
+          )}
+        </p>
+      </div>
+    </a>
+  );
+}
+
 export default function DemoPage() {
   const { demoPartners, fetchDemoPartners, addDemoPartner } = useDemoPartnerStore();
   const { userData } = useAuthStore();
@@ -162,34 +195,15 @@ export default function DemoPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center text-gray-500">No demo partners found.</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filtered.map((partner) => (
-            <div
-              key={partner.id}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-lg transition"
-              onClick={() => router.push(`/demo/${partner.id}`)}
-            >
-              <div className="flex items-center gap-4">
-                <img
-                  src={partner.banner}
-                  alt={partner.name}
-                  className="w-24 h-24 object-cover rounded-md border"
-                />
-                <div>
-                  <h2 className="text-xl font-semibold mb-1">{partner.name}</h2>
-                  <div className="text-sm text-gray-500 mb-1">
-                    {typeLabels[partner.type] || partner.type}
-                    {partner.type === "restaurant" && partner.food_type && (
-                      <span className="ml-2">| {partner.food_type}</span>
-                    )}
-                  </div>
-                  <div className="text-gray-700 text-sm line-clamp-2">
-                    {partner.description}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="container mx-auto px-4 py-8">
+          <h1 className="text-lg font-bold mb-4 text-gray-800">
+            Discover the Best Demo Partners
+          </h1>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-6">
+            {filtered.map((partner) => (
+              <DemoPartnerCard key={partner.id} partner={partner} />
+            ))}
+          </div>
         </div>
       )}
       {/* Modal placeholder for create demo account */}
