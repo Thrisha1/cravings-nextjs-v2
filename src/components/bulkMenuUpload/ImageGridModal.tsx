@@ -106,7 +106,7 @@ export function ImageGridModal({
     try {
       // Create a single item object with the current item data
       const item = {
-        name: itemName + " " + category,
+        name: itemName,
         category: category,
       };
       

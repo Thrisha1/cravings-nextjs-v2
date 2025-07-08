@@ -456,7 +456,7 @@ export const useSuperAdminPartnerStore = create<SuperAdminPartnerState>()(
           for (let i = 0; i < menuItems.length; i += batchSize) {
             const itemsToAdd = menuItems.map((item: MenuItem) => ({
               ...item,
-              name: item.name + " " + (item.category || "")
+              name: item.name
             }));
             batches.push(itemsToAdd.slice(i, i + batchSize));
           }
