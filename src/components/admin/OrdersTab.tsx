@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useOrderSubscriptionStore } from "@/store/orderSubscriptionStore";
+import AlertToggle from "./AlertToggle";
 
 const OrdersTab = () => {
   const router = useRouter();
@@ -82,10 +83,6 @@ const OrdersTab = () => {
       volume: 1,
       preload: true,
     });
-
-    return () => {
-      soundRef.current?.unload();
-    };
   }, []);
 
   // Subscribe to order count
@@ -126,6 +123,8 @@ const OrdersTab = () => {
         return;
       }
 
+      
+
       // Find truly new orders - ones we haven't seen before in any pagination
       const genuinelyNewOrders = paginatedOrders.filter(
         order => !allSeenOrderIds.current.has(order.id)
@@ -146,24 +145,31 @@ const OrdersTab = () => {
       );
 
       const newPOSOrders = genuinelyNewOrders.filter(
-        order => order.status === "pending" && order.type === "pos"
+        order =>  order.type !== "table_order" && order.type !== "delivery"
       );
+
+      
 
       const totalNewOrders =
         newTableOrders.length + newDeliveryOrders.length + newPOSOrders.length;
 
+      
+
       if (totalNewOrders > 0 && !orderAlertRef.current) {
-        // Play sound immediately
-        soundRef.current?.play();
         orderAlertRef.current = true;
 
         // Show alert dialog with highest priority
-        setNewOrderAlert({
-          show: true,
-          tableCount: newTableOrders.length,
-          deliveryCount: newDeliveryOrders.length,
-          posCount: newPOSOrders.length,
-        });
+        const isAlertActive = localStorage.getItem("alertActive") === "1";
+
+        if (isAlertActive) {
+          soundRef.current?.play();
+          setNewOrderAlert({
+            show: true,
+            tableCount: newTableOrders.length,
+            deliveryCount: newDeliveryOrders.length,
+            posCount: newPOSOrders.length,
+          });
+        }
 
         // Update new order indicators
         setNewOrders({
@@ -313,7 +319,10 @@ const OrdersTab = () => {
   }, [currentPage]);
 
   return (
-    <div className="py-6 px-4 sm:px-[8%] max-w-7xl mx-auto">
+    <div className="py-6 px-4 sm:px-[8%] max-w-7xl mx-auto relative">
+
+      <AlertToggle/>
+
       {/* High Priority New Order Alert Dialog */}
       <AlertDialog
         open={newOrderAlert.show}
