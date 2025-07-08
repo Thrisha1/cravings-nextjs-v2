@@ -354,7 +354,7 @@ export const useBulkUpload = () => {
         `${process.env.NEXT_PUBLIC_SERVER_URL}/api/image-gen/${endpoint}`,
         items.map((item) => ({
           ...item,
-          name : item.name + " " + item?.category?.name
+          name : item.name
         })),
         {
           headers: { "Content-Type": "application/json" },
