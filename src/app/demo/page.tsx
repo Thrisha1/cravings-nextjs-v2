@@ -38,7 +38,7 @@ const typeToPartnerId: Record<string, string | Record<string, string>> = {
     "non-veg": "373a15f9-9c58-4e34-ae07-b272e578928f"
   },
   cafe: "c62da624-f2b6-4ebc-8b8a-504c1e7d936e",
-  bakery: "real-partner-id-3",
+  bakery: "9c5d77c0-0beb-443b-8005-7bde58e9f37c",
   hotel: "f69c10f9-3d5c-4078-b327-c76be78e8144",
 };
 
@@ -93,6 +93,7 @@ export default function DemoPage() {
   const [error, setError] = useState("");
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreviewUrl, setBannerPreviewUrl] = useState("");
+  const [createdDemoId, setCreatedDemoId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -145,7 +146,7 @@ export default function DemoPage() {
       } else {
         demopartner_id = typeToPartnerId[form.type] as string;
       }
-      await addDemoPartner({
+      const newDemo = await addDemoPartner({
         id: uuidv4(),
         name: form.name,
         banner: imgUrl,
@@ -160,6 +161,9 @@ export default function DemoPage() {
       setBannerPreviewUrl("");
       fetchDemoPartners();
       toast.success("Demo partner created successfully!");
+      if (newDemo && newDemo.id) {
+        setCreatedDemoId(newDemo.id);
+      }
     } catch (err) {
       toast.dismiss();
       setError("Failed to create demo partner.");
@@ -280,6 +284,66 @@ export default function DemoPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {createdDemoId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full shadow-lg text-center">
+            <h2 className="text-xl font-bold mb-4">Demo Account Created!</h2>
+            <p className="mb-4">Your demo page is ready:</p>
+            <a
+              href={`/demo/${createdDemoId}`}
+              className="text-blue-600 underline break-all text-lg"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {`${typeof window !== "undefined" ? window.location.origin : ""}/demo/${createdDemoId}`}
+            </a>
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row justify-center">
+              <button
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(`${window.location.origin}/demo/${createdDemoId}`);
+                    toast.success("Link copied to clipboard!");
+                  } catch {
+                    toast.error("Failed to copy link");
+                  }
+                }}
+              >
+                Copy
+              </button>
+              <button
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                onClick={async () => {
+                  const url = `${window.location.origin}/demo/${createdDemoId}`;
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({ title: "Demo Page", url });
+                      toast.success("Link shared!");
+                    } catch {
+                      // User cancelled or error
+                    }
+                  } else {
+                    try {
+                      await navigator.clipboard.writeText(url);
+                      toast.success("Link copied to clipboard!");
+                    } catch {
+                      toast.error("Failed to copy link");
+                    }
+                  }
+                }}
+              >
+                Share
+              </button>
+              <button
+                className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+                onClick={() => setCreatedDemoId(null)}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
