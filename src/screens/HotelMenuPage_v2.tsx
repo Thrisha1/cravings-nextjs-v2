@@ -52,6 +52,7 @@ interface HotelMenuPageProps {
   socialLinks: SocialLinks;
   qrGroup?: QrGroup | null;
   qrId?: string | null;
+  selectedCategory?: string;
 }
 
 const HotelMenuPage = ({
@@ -63,6 +64,7 @@ const HotelMenuPage = ({
   socialLinks,
   qrGroup,
   qrId,
+  selectedCategory: selectedCategoryProp,
 }: HotelMenuPageProps) => {
   const router = useRouter();
   const styles: Styles = {
@@ -176,7 +178,7 @@ const HotelMenuPage = ({
 
   const topItems = getTopItems();
   const categories = getCategories();
-  const selectedCategory = "all";
+  const selectedCategory = selectedCategoryProp || "all";
   const items = getCategoryItems(selectedCategory);
 
   const defaultProps = {

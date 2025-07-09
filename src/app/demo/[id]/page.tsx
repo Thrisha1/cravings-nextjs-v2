@@ -3,13 +3,14 @@
 import React, { useEffect, useState } from "react";
 import { useDemoPartnerStore, DemoPartner } from "@/store/demoPartnerStore_hasura";
 import { useMenuStore } from "@/store/menuStore_hasura";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import HotelMenuPage from "@/screens/HotelMenuPage_v2";
 import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
 import { getSocialLinks } from "@/lib/getSocialLinks";
 
 export default function DemoPartnerDetailPage() {
   const { id } = useParams();
+  const searchParams = useSearchParams();
   const { fetchDemoPartners } = useDemoPartnerStore();
   const { items: menu, fetchMenu } = useMenuStore();
   const [partner, setPartner] = useState<DemoPartner | null>(null);
@@ -83,6 +84,7 @@ export default function DemoPartnerDetailPage() {
   }
 
   const socialLinks = getSocialLinks(hoteldata as any);
+  const selectedCategory = searchParams.get("cat") || "all";
 
   return (
     <HotelMenuPage
@@ -94,6 +96,7 @@ export default function DemoPartnerDetailPage() {
       tableNumber={0}
       qrId={null}
       qrGroup={null}
+      selectedCategory={selectedCategory}
     />
   );
 } 
