@@ -31,6 +31,12 @@ const page = async (props: { searchParams: SearchParams }) => {
       href: "/superadmin/create-partner",
     },
     {
+      name: "Create Demo Partner",
+      component: null,
+      id: "create-demo-partner",
+      href: "/demo",
+    },
+    {
       name: "Partner Verification",
       component: <PartnerVerification />,
       id: "partner-verification",

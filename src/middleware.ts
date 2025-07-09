@@ -16,7 +16,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // CAPTAIN GUARD: Trap captain on /captain before public route check
-  if (decrypted?.role === 'captain' && pathname !== '/captain') {
+  if (
+    decrypted?.role === 'captain' &&
+    !(pathname === '/captain' || pathname.startsWith('/kot/') || pathname.startsWith('/bill/'))
+  ) {
     return NextResponse.redirect(new URL('/captain', request.url));
   }
 
@@ -34,7 +37,8 @@ export async function middleware(request: NextRequest) {
     '/api/auth',
     '/captainlogin',
     '/partnerlogin',
-    '/newlogin'
+    '/newlogin',
+    '/demo'
   ];
 
   // Check if current route is public
