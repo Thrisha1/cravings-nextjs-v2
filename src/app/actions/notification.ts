@@ -2,6 +2,7 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import { Order } from "@/store/orderStore";
 import { getAuthCookie, getTempUserIdCookie } from "../auth/actions";
 import { OrderStatusHistoryTypes } from "@/lib/statusHistory";
+import { Offer } from "@/store/offerStore_hasura";
 
 const BASE_URL = "https://notification-server-khaki.vercel.app";
 
@@ -26,8 +27,7 @@ const getMessage = (
     },
     apns: {
       payload: {
-        aps: {
-        },
+        aps: {},
       },
     },
     data: data || {},
@@ -38,7 +38,10 @@ const findPlatform = () => {
   if (window.navigator.userAgent.includes("Android")) {
     return "android";
   }
-  if (window.navigator.userAgent.includes("iPhone") || window.navigator.userAgent.includes("iPad")) {
+  if (
+    window.navigator.userAgent.includes("iPhone") ||
+    window.navigator.userAgent.includes("iPad")
+  ) {
     return "ios";
   }
   return "unknown";
@@ -144,14 +147,21 @@ class PartnerNotification {
       return;
     }
 
-    const orderItemsDesc = order.items.map((item) => `${item.name} x ${item.quantity}`).join(", ");
+    const orderItemsDesc = order.items
+      .map((item) => `${item.name} x ${item.quantity}`)
+      .join(", ");
 
-    const message = getMessage("New Order Of", `You have a new order of ${orderItemsDesc}`, tokens , {
-      url : 'https://www.cravings.live/admin/orders',
-      channel_id : 'cravings_channel_1',
-      sound : 'custom_sound',
-      order_id : order.id
-    });
+    const message = getMessage(
+      "New Order Of",
+      `You have a new order of ${orderItemsDesc}`,
+      tokens,
+      {
+        url: "https://www.cravings.live/admin/orders",
+        channel_id: "cravings_channel_1",
+        sound: "custom_sound",
+        order_id: order.id,
+      }
+    );
 
     const response = await fetch(`${BASE_URL}/api/notifications/send`, {
       method: "POST",
@@ -167,10 +177,92 @@ class PartnerNotification {
       console.error("Failed to send order notification");
     }
   }
+
+  async sendOfferNotification(offer: Offer) {
+    try {
+      const cookies = await getAuthCookie();
+      const partnerId = cookies?.id;
+
+      if (!partnerId) {
+        console.error("No partner ID found");
+        return;
+      }
+
+      const { followers } = await fetchFromHasura(
+        `
+        query GetPartnerFollowers($partnerId: uuid!) {
+          followers(where: {partner_id: {_eq: $partnerId}}) {
+            user_id
+          }
+        }
+      `,
+        {
+          partnerId,
+        }
+      );
+
+      const userIds = followers.map(
+        (follower: { user_id: string }) => follower.user_id
+      );
+
+      const { device_tokens } = await fetchFromHasura(
+        `        query GetUserDeviceTokens($userIds: [String!]!) {
+          device_tokens(where: {user_id: {_in: $userIds}}) {
+            device_token
+          }
+        }
+      `,
+        {
+          userIds,
+        }
+      );
+
+      const tokens = device_tokens?.map(
+        (token: { device_token: string }) => token.device_token
+      );
+
+      if (tokens.length === 0) {
+        console.error("No device tokens found for followers");
+        return;
+      }
+
+      const message = getMessage(
+        `New Offer: ${offer.menu.name} at ${offer?.partner?.store_name}`,
+        `Check out the new offer: ${offer.menu.name} for just ₹${
+          offer.offer_price
+        }. Valid until ${new Date(offer?.end_time).toLocaleDateString()}`,
+        tokens,
+        {
+          url: `https://www.cravings.live/offer/${offer.id}`,
+          channel_id: "cravings_channel_2",
+          sound: "default_sound",
+          image: offer.menu.image_url,
+        }
+      );
+
+      const response = await fetch(`${BASE_URL}/api/notifications/send`, {
+        method: "POST",
+        body: JSON.stringify({
+          message: message,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send offer notification");
+      }
+
+    } catch (error) {
+      console.error("Failed to send offer notification", error);
+      return;
+    }
+  }
 }
 
 class UserNotification {
-  async sendOrderStatusNotification(order: Order , status: string) {
+  async sendOrderStatusNotification(order: Order, status: string) {
     const user = order.userId;
 
     const { device_tokens } = await fetchFromHasura(
@@ -193,17 +285,16 @@ class UserNotification {
     if (tokens.length === 0) {
       return;
     }
-    
 
     const message = getMessage(
       `Order ${status} `,
       `Your order has been ${status} by ${order.partner?.store_name}`,
       tokens,
       {
-        url : `https://www.cravings.live/order/${order.id}`,
-        channel_id : 'cravings_channel_2',
-        sound : 'default_sound'
-      },
+        url: `https://www.cravings.live/order/${order.id}`,
+        channel_id: "cravings_channel_2",
+        sound: "default_sound",
+      }
     );
 
     const response = await fetch(`${BASE_URL}/api/notifications/send`, {

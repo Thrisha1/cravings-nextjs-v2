@@ -13,6 +13,7 @@ import {
 import { revalidateTag } from "@/app/actions/revalidate";
 import { toast } from "sonner";
 import { sendOfferWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
+import { Notification } from "@/app/actions/notification";
 
 interface Category {
   name: string;
@@ -161,7 +162,8 @@ export const useOfferStore = create<OfferState>((set, get) => {
         toast.dismiss();
         toast.success("Offer added successfully");
 
-        await sendOfferWhatsAppMsg(addedOffer.id);
+        // await sendOfferWhatsAppMsg(addedOffer.id);
+        await Notification.partner.sendOfferNotification(addedOffer);
         
       } catch (error) {
         console.error(error);
