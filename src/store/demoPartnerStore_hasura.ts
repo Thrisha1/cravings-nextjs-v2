@@ -17,6 +17,7 @@ interface DemoPartnerState {
   fetchDemoPartners: () => Promise<DemoPartner[]>;
   addDemoPartner: (partner: DemoPartner) => Promise<DemoPartner | null>;
   updateDemoPartner: (id: string, updates: Partial<DemoPartner>) => Promise<DemoPartner | null>;
+  deleteDemoPartner: (id: string) => Promise<boolean>;
 }
 
 export const useDemoPartnerStore = create<DemoPartnerState>((set, get) => ({
@@ -86,5 +87,25 @@ export const useDemoPartnerStore = create<DemoPartnerState>((set, get) => ({
       }));
     }
     return updatedPartner;
+  },
+
+  deleteDemoPartner: async (id) => {
+    const mutation = `
+      mutation DeleteDemoPartner($id: uuid!) {
+        delete_demo_partners_by_pk(id: $id) {
+          id
+        }
+      }
+    `;
+    try {
+      await fetchFromHasura(mutation, { id });
+      set((state) => ({
+        demoPartners: state.demoPartners.filter((p) => p.id !== id),
+      }));
+      return true;
+    } catch (error) {
+      console.error("Failed to delete demo partner", error);
+      return false;
+    }
   },
 })); 
