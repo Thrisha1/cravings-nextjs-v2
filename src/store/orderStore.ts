@@ -1014,13 +1014,7 @@ const useOrderStore = create(
           }));
 
           toast.success("Order placed successfully!");
-          await Notification.partner.sendOrderNotification({
-            ...newOrder,
-            partner: {
-              store_name: hotelData.store_name,
-              currency: hotelData.currency,
-            }
-          });
+          await Notification.partner.sendOrderNotification(newOrder);
           return newOrder;
         } catch (error) {
           console.error("Order placement error:", error);

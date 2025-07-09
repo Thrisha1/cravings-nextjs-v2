@@ -14,6 +14,7 @@ import { revalidateTag } from "@/app/actions/revalidate";
 import { toast } from "sonner";
 import { sendOfferWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 import { Notification } from "@/app/actions/notification";
+import { HotelData } from "@/app/hotels/[...id]/page";
 
 interface Category {
   name: string;
@@ -162,8 +163,16 @@ export const useOfferStore = create<OfferState>((set, get) => {
         toast.dismiss();
         toast.success("Offer added successfully");
 
+        const {userData} = useAuthStore.getState();
+
         // await sendOfferWhatsAppMsg(addedOffer.id);
-        await Notification.partner.sendOfferNotification(addedOffer);
+        await Notification.partner.sendOfferNotification({
+          ...addedOffer,
+          partner: {
+            store_name: (userData as HotelData)?.store_name,
+            currency: (userData as HotelData)?.currency,
+          }
+        });
         
       } catch (error) {
         console.error(error);
