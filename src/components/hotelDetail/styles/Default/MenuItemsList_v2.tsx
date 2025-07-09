@@ -91,7 +91,7 @@ const MenuItemsList = ({
 
       {/* items  */}
       <div id="menu-items" className="px-[8%] grid h-fit gap-3 rounded-3xl ">
-        {hotelData?.fillteredMenus
+        {items
           ?.sort((a, b) => a.priority - b.priority)
           ?.map((item) => (
             <ItemCard
