@@ -140,9 +140,20 @@ const HotelMenuPage = ({
 
   const getCategoryItems = (selectedCategory: string) => {
     if (selectedCategory === "all") {
-      return hoteldata?.menus.filter(
-        (item) => item.category.is_active === undefined || item.category.is_active === true
-      ) || [];
+      return (
+        hoteldata?.menus
+          .filter(
+            (item) => item.category.is_active === undefined || item.category.is_active === true
+          )
+          .sort((a, b) => {
+            // First, sort by category priority
+            const catA = a.category.priority || 0;
+            const catB = b.category.priority || 0;
+            if (catA !== catB) return catA - catB;
+            // Then, sort by item priority
+            return (a.priority || 0) - (b.priority || 0);
+          }) || []
+      );
     }
     const filteredItems = hoteldata?.menus.filter(
       (item) =>
