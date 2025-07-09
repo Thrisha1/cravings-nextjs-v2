@@ -43,14 +43,14 @@ const PrintKOTPage = () => {
 
         const formattedOrder = {
           ...orders_by_pk,
-          items: orders_by_pk.order_items.map((item: any) => ({
+          items: (orders_by_pk.order_items ?? []).map((item: any) => ({
             id: item.id,
             quantity: item.quantity,
             name: item.item.name,
             notes: item.item.kot_notes,
           })),
           tableNumber: orders_by_pk.table_number,
-          extra_charges: orders_by_pk.extra_charges.map(
+          extra_charges: (orders_by_pk.extra_charges ?? []).map(
             (charge: any) => ({
               id: charge.id,
               name: charge.name,
