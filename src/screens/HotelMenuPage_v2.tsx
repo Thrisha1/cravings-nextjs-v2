@@ -139,6 +139,11 @@ const HotelMenuPage = ({
   };
 
   const getCategoryItems = (selectedCategory: string) => {
+    if (selectedCategory === "all") {
+      return hoteldata?.menus.filter(
+        (item) => item.category.is_active === undefined || item.category.is_active === true
+      ) || [];
+    }
     const filteredItems = hoteldata?.menus.filter(
       (item) =>
         item.category.name === selectedCategory &&
@@ -150,7 +155,6 @@ const HotelMenuPage = ({
       if (!a.image_url.length && b.image_url.length) return 1;
       return 0;
     });
-
     return sortedItems;
   };
 
