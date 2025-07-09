@@ -13,10 +13,12 @@ export const setAuthCookie = async (data: { id: string; role: string , feature_f
   (await cookies()).set('auth_token', encrypted, {
     httpOnly: true,
     secure: true,
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: 60 * 60 * 24 * 30,
     path: '/',
     sameSite: 'lax',
   });
+  
+  await removeTempUserIdCookie();
 };
 
 export const removeAuthCookie = async () => {
@@ -81,6 +83,24 @@ export const removeQrScanCookie = async (qrId: string) => {
   (await cookies()).delete(`block_scan_${qrId}`);
 };
 
+
+export const setTempUserIdCookie = async (tempUserId: string) => {
+  (await cookies()).set('temp_user_id', tempUserId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+  });
+};
+
+export const getTempUserIdCookie = async () => {
+  const cookie = (await cookies()).get('temp_user_id')?.value;
+  return cookie || null;
+};
+
+
+export const removeTempUserIdCookie = async () => {
+  (await cookies()).delete('temp_user_id');
+};
 
 export const clearAllCookies = async () => {
   const cookieStore = await cookies();

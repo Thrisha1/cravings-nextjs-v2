@@ -1,5 +1,5 @@
 export const getFollowersQuery = `
-query GetFollowers($userId: uuid!, $limit: Int, $offset: Int) {
+query GetFollowers($userId: String!, $limit: Int, $offset: Int) {
   followers(
     where: { user_id: { _eq: $userId } },
     order_by: { created_at: desc },

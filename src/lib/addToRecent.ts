@@ -1,10 +1,11 @@
-import { getAuthCookie } from "@/app/auth/actions";
+import { getAuthCookie, getTempUserIdCookie } from "@/app/auth/actions";
 import { fetchFromHasura } from "./hasuraClient";
 
 export async function addToRecent(partnerId: string) {
   try {
     const cookies = await getAuthCookie();
-    const id = cookies?.id || null;
+    const tempUserId = await getTempUserIdCookie();
+    const id = cookies?.id || tempUserId;
 
     if (!id) {
       console.error("User not logged in or user ID is missing.");
@@ -13,7 +14,7 @@ export async function addToRecent(partnerId: string) {
 
     await fetchFromHasura(
       `
-        mutation InsertRecent($userId: uuid!, $partnerId: uuid!) {
+        mutation InsertRecent($userId: String!, $partnerId: uuid!) {
           insert_followers_one(
             object: { 
               user_id: $userId, 

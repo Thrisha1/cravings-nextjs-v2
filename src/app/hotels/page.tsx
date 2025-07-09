@@ -1,7 +1,7 @@
 import { getAllPartnersQuery, getNearByPartnersQuery } from "@/api/partners";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import HotelsPage from "@/screens/HotelsPage";
-import { getAuthCookie, getLocationCookie } from "../auth/actions";
+import { getAuthCookie, getLocationCookie, getTempUserIdCookie } from "../auth/actions";
 import { getFollowersQuery } from "@/api/followers";
 
 export default async function page({
@@ -10,6 +10,8 @@ export default async function page({
   searchParams: Promise<{ location?: string | null; query?: string }>;
 }) {
   const cookies = await getAuthCookie();
+  const tempUserId = await getTempUserIdCookie();
+  const userId = cookies?.id ?? tempUserId;
   const location = (await searchParams)?.location?.toLowerCase() || null;
   const query = (await searchParams)?.query?.toLowerCase() || null;
   const userLocation = await getLocationCookie();
@@ -30,9 +32,9 @@ export default async function page({
   let followers = [];
   let followers_aggregate = { aggregate: { count: 0 } };
 
-  if (cookies) {
+  if (userId) {
     const data = await fetchFromHasura(getFollowersQuery, {
-      userId: cookies?.id || null,
+      userId: userId,
       limit: 5,
       offset: 0,
     });

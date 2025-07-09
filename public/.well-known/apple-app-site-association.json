@@ -1,12 +1,20 @@
 {
-    "applinks": {
-      "apps": [],
-      "details": [
-        {
-          "appID": "TEAM_ID.com.example.yourflutterapp",
-          "paths": ["*"]
-        }
-      ]
-    }
+  "applinks":{
+    "apps":[
+       
+    ],
+    "details":[
+      {
+        "appIDs":[
+          "TeamID.BundleID"
+        ],
+        "components":[
+          {
+            "/" : "*",
+            "comment" : "all paths"
+          }
+        ]
+      }
+    ]
   }
-  
+}

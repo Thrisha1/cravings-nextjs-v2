@@ -114,7 +114,7 @@ const HotelMenuPage = ({
 
   useEffect(() => {
     if (hoteldata?.id) {
-      addToRecent(hoteldata?.id);
+      addToRecent(hoteldata?.id );
     }
   }, [hoteldata?.id]);
 
