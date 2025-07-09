@@ -4,6 +4,7 @@
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { getAuthCookie, getTempUserIdCookie, setTempUserIdCookie } from "@/app/auth/actions";
+import { Notification } from "@/app/actions/notification";
 
 const AuthInitializer = () => {
   const { fetchUser } = useAuthStore();
@@ -19,6 +20,7 @@ const AuthInitializer = () => {
         if (!isAuth) {
           const uuid = crypto.randomUUID();
           await setTempUserIdCookie("temp_" + uuid);
+          await Notification.token.save();
         }
       } catch (error) {
         console.error("Failed to initialize auth:", error);

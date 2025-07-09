@@ -1,6 +1,6 @@
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { Order } from "@/store/orderStore";
-import { getAuthCookie } from "../auth/actions";
+import { getAuthCookie, getTempUserIdCookie } from "../auth/actions";
 import { OrderStatusHistoryTypes } from "@/lib/statusHistory";
 
 const BASE_URL = "https://notification-server-khaki.vercel.app";
@@ -51,10 +51,13 @@ class Token {
       return;
     }
 
+    debugger;
+
     const token = window.localStorage.getItem("fcmToken");
     const user = await getAuthCookie();
+    const tempUser = await getTempUserIdCookie();
 
-    if (!token || !user) {
+    if (!token || (!user && !tempUser)) {
       return;
     }
 
@@ -65,7 +68,7 @@ class Token {
               object: $object,
               on_conflict: {
                 constraint: device_tokens_user_id_device_token_key,
-                update_columns: [platform, updated_at] 
+                update_columns: [platform, updated_at, user_id] 
               }
             ) {
               id
@@ -75,7 +78,7 @@ class Token {
       {
         object: {
           device_token: token,
-          user_id: user.id,
+          user_id: user?.id || tempUser,
           platform: findPlatform(),
           updated_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
