@@ -16,14 +16,14 @@ const typeLabels: Record<string, string> = {
   restaurant: "Restaurant",
   cafe: "Cafe",
   bakery: "Bakery",
-  hotel: "Hotel",
+  resort: "Resort",
 };
 
 const typeOptions = [
   { value: "restaurant", label: "Restaurant" },
   { value: "cafe", label: "Cafe" },
   { value: "bakery", label: "Bakery" },
-  { value: "hotel", label: "Hotel" },
+  { value: "resort", label: "Resort" },
 ];
 
 const foodTypeOptions = [
@@ -35,11 +35,11 @@ const foodTypeOptions = [
 const typeToPartnerId: Record<string, string | Record<string, string>> = {
   restaurant: {
     veg: "272d9a75-b2f3-46b6-9530-773d3521db6d",
-    "non-veg": "373a15f9-9c58-4e34-ae07-b272e578928f"
+    "non-veg": "840a8d47-5dbc-4037-96b1-844ce9ac148e"
   },
-  cafe: "c62da624-f2b6-4ebc-8b8a-504c1e7d936e",
-  bakery: "9c5d77c0-0beb-443b-8005-7bde58e9f37c",
-  hotel: "f69c10f9-3d5c-4078-b327-c76be78e8144",
+  cafe: "082a004a-a3f7-428d-89e0-f56d30e47ba0",
+  bakery: "5d4ed469-654d-453e-9ffd-662c4d32adee",
+  resort: "c1d8c606-d214-4434-9cfd-d0cffd0c73fa", // TODO: Replace with real UUID if needed
 };
 
 // Add DemoPartnerCard component styled like PartnerCard
