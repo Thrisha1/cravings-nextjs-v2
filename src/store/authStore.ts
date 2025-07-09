@@ -22,6 +22,7 @@ import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
 import { DeliveryRules } from "./orderStore";
 import { Notification } from "@/app/actions/notification";
 import { addAccount, getAccounts, getAllAccounts } from "@/lib/addAccount";
+import { transferTempDataToUserAccount } from "@/lib/transferTempDataToUserAccount";
 
 interface BaseUser {
   id: string;
@@ -432,6 +433,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           await sendRegistrationWhatsAppMsg(user.id);
         }
       }
+
+      await transferTempDataToUserAccount(user.id);
 
       setAuthCookie({
         id: user.id,
