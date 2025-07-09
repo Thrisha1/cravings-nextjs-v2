@@ -3,6 +3,7 @@ import { Order } from "@/store/orderStore";
 import { getAuthCookie, getTempUserIdCookie } from "../auth/actions";
 import { OrderStatusHistoryTypes } from "@/lib/statusHistory";
 import { Offer } from "@/store/offerStore_hasura";
+import { HotelData } from "../hotels/[...id]/page";
 
 const BASE_URL = "https://notification-server-khaki.vercel.app";
 
@@ -228,12 +229,12 @@ class PartnerNotification {
 
       const message = getMessage(
         `New Offer: ${offer.menu.name} at ${offer?.partner?.store_name}`,
-        `Check out the new offer: ${offer.menu.name} for just ₹${
+        `Check out the new offer: ${offer.menu.name} for just ${(offer?.partner as HotelData)?.currency ?? "₹"}${
           offer.offer_price
         }. Valid until ${new Date(offer?.end_time).toLocaleDateString()}`,
         tokens,
         {
-          url: `https://www.cravings.live/offer/${offer.id}`,
+          url: `https://www.cravings.live/offers/`,
           channel_id: "cravings_channel_2",
           sound: "default_sound",
           image: offer.menu.image_url,
