@@ -52,13 +52,19 @@ export interface Offer {
 interface OfferState {
   offers: Offer[];
   fetchPartnerOffers: (partnerId?: string) => Promise<void>;
-  addOffer: (offer: {
-    menu_id: string;
-    offer_price: number;
-    items_available: number;
-    start_time: string;
-    end_time: string;
-  }) => Promise<void>;
+  addOffer: (
+    offer: {
+      menu_id: string;
+      offer_price: number;
+      items_available: number;
+      start_time: string;
+      end_time: string;
+    },
+    notificationMessage?: {
+      title?: string;
+      body?: string;
+    }
+  ) => Promise<void>;
   fetchOffer: () => Promise<Offer[]>;
   deleteOffer: (id: string) => Promise<void>;
   incrementOfferEnquiry: (offerId: string) => Promise<void>;
@@ -126,13 +132,19 @@ export const useOfferStore = create<OfferState>((set, get) => {
       }
     },
 
-    addOffer: async (offer: {
-      menu_id: string;
-      offer_price: number;
-      items_available: number;
-      start_time: string;
-      end_time: string;
-    }) => {
+    addOffer: async (
+      offer: {
+        menu_id: string;
+        offer_price: number;
+        items_available: number;
+        start_time: string;
+        end_time: string;
+      },
+      notificationMessage?: {
+        title?: string;
+        body?: string;
+      }
+    ) => {
       try {
         toast.loading("Adding offer...");
         const user = useAuthStore.getState().userData;
@@ -163,17 +175,22 @@ export const useOfferStore = create<OfferState>((set, get) => {
         toast.dismiss();
         toast.success("Offer added successfully");
 
-        const {userData} = useAuthStore.getState();
+        const { userData } = useAuthStore.getState();
 
         // await sendOfferWhatsAppMsg(addedOffer.id);
-        await Notification.partner.sendOfferNotification({
-          ...addedOffer,
-          partner: {
-            store_name: (userData as HotelData)?.store_name,
-            currency: (userData as HotelData)?.currency,
+        await Notification.partner.sendOfferNotification(
+          {
+            ...addedOffer,
+            partner: {
+              store_name: (userData as HotelData)?.store_name,
+              currency: (userData as HotelData)?.currency,
+            },
+          },
+          {
+            title: notificationMessage?.title || undefined,
+            body: notificationMessage?.body || undefined,
           }
-        });
-        
+        );
       } catch (error) {
         console.error(error);
         toast.dismiss();

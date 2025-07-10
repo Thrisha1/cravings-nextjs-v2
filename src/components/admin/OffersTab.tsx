@@ -5,14 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  FullModal,
-  FullModalContent,
-  FullModalHeader,
-  FullModalTitle,
-  FullModalBody,
-  FullModalFooter,
-} from "@/components/ui/full_modal";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -21,20 +13,32 @@ import {
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
-import { useMenuStore } from "@/store/menuStore_hasura";
+import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { useOfferStore } from "@/store/offerStore_hasura";
-import Image from "next/image";
 import { formatDate } from "@/lib/formatDate";
 import Img from "../Img";
+import { HotelData } from "@/app/hotels/[...id]/page";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../ui/accordion";
 
 interface CreateOfferFormProps {
-  onSubmit: (offer: {
-    menu_id: string;
-    offer_price: number;
-    items_available: number;
-    start_time: string;
-    end_time: string;
-  }) => Promise<void>;
+  onSubmit: (
+    offer: {
+      menu_id: string;
+      offer_price: number;
+      items_available: number;
+      start_time: string;
+      end_time: string;
+    },
+    notificationMessage?: {
+      title?: string;
+      body?: string;
+    }
+  ) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -50,6 +54,9 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const formContainerRef = useRef<HTMLDivElement>(null);
+  const [slectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+
+  const { userData } = useAuthStore();
 
   // Create refs for the form fields
   const priceInputRef = useRef<HTMLInputElement>(null);
@@ -57,13 +64,21 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
   const fromTimeInputRef = useRef<HTMLInputElement>(null);
   const toTimeInputRef = useRef<HTMLInputElement>(null);
 
+  const notificationTitleRef = useRef<HTMLInputElement>(null);
+  const notificationBodyRef = useRef<HTMLInputElement>(null);
+
+  const [notificationMessage, setNotificationMessage] = useState<{
+    title?: string;
+    body?: string;
+  } | null>(null);
+
   const scrollToView = (el: HTMLElement) => {
     if (formContainerRef.current && el) {
       setTimeout(() => {
         // Scroll the element into view with some offset from the top
         const yOffset = -100;
         const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
-        window.scrollTo({ top: y, behavior: 'smooth' });
+        window.scrollTo({ top: y, behavior: "smooth" });
       }, 300);
     }
   };
@@ -93,7 +108,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       if (window.visualViewport) {
         const currentHeight = window.visualViewport.height;
         const windowHeight = window.innerHeight;
-        
+
         // If visual viewport is significantly smaller than window height, keyboard is probably open
         if (windowHeight - currentHeight > 150) {
           setKeyboardOpen(true);
@@ -105,13 +120,13 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
 
     // Add the event listener
     if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleResize);
+      window.visualViewport.addEventListener("resize", handleResize);
     }
 
     // Clean up
     return () => {
       if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleResize);
+        window.visualViewport.removeEventListener("resize", handleResize);
       }
     };
   }, []);
@@ -183,18 +198,24 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     }
 
     try {
-      await onSubmit({
-        menu_id: newOffer.menuItemId,
-        offer_price: parseFloat(newOffer.newPrice),
-        items_available: parseInt(newOffer.itemsAvailable),
-        start_time: newOffer.fromTime,
-        end_time: newOffer.toTime,
-      });
+      await onSubmit(
+        {
+          menu_id: newOffer.menuItemId,
+          offer_price: parseFloat(newOffer.newPrice),
+          items_available: parseInt(newOffer.itemsAvailable),
+          start_time: newOffer.fromTime,
+          end_time: newOffer.toTime,
+        },
+        {
+          title: notificationMessage?.title || "",
+          body: notificationMessage?.body || "",
+        }
+      );
     } catch (error) {
       toast.error("Failed to create offer");
       console.error(error);
     }
-    
+
     setIsSubmitting(false);
   };
 
@@ -202,7 +223,11 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     <div className="max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 mb-8">
       <h2 className="text-2xl font-bold mb-4">Create New Offer</h2>
       <div ref={formContainerRef}>
-        <form id="create-offer-form" onSubmit={handleSubmit} className="space-y-4">
+        <form
+          id="create-offer-form"
+          onSubmit={handleSubmit}
+          className="space-y-4"
+        >
           <div className="space-y-2">
             <Label htmlFor="menuItem">Select Menu Item</Label>
             <Select
@@ -210,6 +235,8 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
               value={newOffer.menuItemId}
               onValueChange={(value) => {
                 setNewOffer({ ...newOffer, menuItemId: value });
+                const selectedItem = items.find((item) => item.id === value);
+                setSelectedItem(selectedItem || null);
                 // Force close keyboard if open
                 if (document.activeElement instanceof HTMLElement) {
                   document.activeElement.blur();
@@ -247,9 +274,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="itemsAvailable">
-              Number of Items Available
-            </Label>
+            <Label htmlFor="itemsAvailable">Number of Items Available</Label>
             <Input
               required
               ref={itemsInputRef}
@@ -296,13 +321,68 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
               onBlur={handleInputBlur}
             />
           </div>
-          
+
+          {(newOffer?.menuItemId && newOffer?.newPrice && newOffer?.toTime) && (
+            <div className="border-t-2 border-black/10 pt-4">
+              <Accordion type="single" collapsible>
+                <AccordionItem value="item-1">
+                  <AccordionTrigger>
+                    <h1 className="font-medium mb-4 text-base">
+                      Notification Settings
+                    </h1>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="notificationTitle">Title</Label>
+                      <Input
+                        ref={notificationTitleRef}
+                        id="notificationTitle"
+                        placeholder={`New Offer: ${slectedItem?.name} at ${
+                          (userData as HotelData)?.store_name
+                        }`}
+                        value={notificationMessage?.title || ""}
+                        onChange={(e) =>
+                          setNotificationMessage({
+                            ...notificationMessage,
+                            title: e.target.value,
+                          })
+                        }
+                        onFocus={handleInputFocus}
+                        onBlur={handleInputBlur}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="notificationBody">Description</Label>
+                      <Input
+                        ref={notificationBodyRef}
+                        id="notificationBody"
+                        placeholder={`Check out the new offer: ${
+                          slectedItem?.name
+                        } for just ${(userData as HotelData)?.currency ?? "₹"}${
+                          newOffer.newPrice
+                        }. Valid until ${new Date(
+                          newOffer?.toTime
+                        ).toLocaleDateString()}`}
+                        value={notificationMessage?.body || ""}
+                        onChange={(e) =>
+                          setNotificationMessage({
+                            ...notificationMessage,
+                            body: e.target.value,
+                          })
+                        }
+                        onFocus={handleInputFocus}
+                        onBlur={handleInputBlur}
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 mt-6">
-            <Button
-              variant="outline"
-              onClick={onCancel}
-              type="button"
-            >
+            <Button variant="outline" onClick={onCancel} type="button">
               Cancel
             </Button>
             <Button
@@ -358,14 +438,20 @@ export function OffersTab() {
     })();
   }, [userData]);
 
-  const handleCreateOffer = async (offer: {
-    menu_id: string;
-    offer_price: number;
-    items_available: number;
-    start_time: string;
-    end_time: string;
-  }) => {
-    await addOffer(offer);
+  const handleCreateOffer = async (
+    offer: {
+      menu_id: string;
+      offer_price: number;
+      items_available: number;
+      start_time: string;
+      end_time: string;
+    },
+    notificationMessage?: {
+      title?: string;
+      body?: string;
+    }
+  ) => {
+    await addOffer(offer , notificationMessage);
     setIsCreateOfferOpen(false);
   };
 
@@ -373,9 +459,9 @@ export function OffersTab() {
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Active Offers</h2>
-        <Button 
-          variant="outline" 
-          size="icon" 
+        <Button
+          variant="outline"
+          size="icon"
           onClick={() => setIsCreateOfferOpen(true)}
         >
           <Plus className="h-4 w-4" />
@@ -396,7 +482,9 @@ export function OffersTab() {
                 return (
                   <Card key={offer.id}>
                     <CardHeader>
-                      <CardTitle className="text-lg">{offer.menu.name}</CardTitle>
+                      <CardTitle className="text-lg">
+                        {offer.menu.name}
+                      </CardTitle>
                       <div className="relative w-32 h-32 rounded-md overflow-hidden">
                         <Img
                           src={offer.menu.image_url}
@@ -432,7 +520,9 @@ export function OffersTab() {
                               : handleOfferDelete(offer.id)
                           }
                         >
-                          {isDeleting[offer.id] ? "Deleting..." : "Delete Offer"}
+                          {isDeleting[offer.id]
+                            ? "Deleting..."
+                            : "Delete Offer"}
                         </Button>
                       </div>
                     </CardContent>
