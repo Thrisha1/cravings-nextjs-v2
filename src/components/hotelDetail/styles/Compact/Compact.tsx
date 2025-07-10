@@ -31,6 +31,7 @@ const Compact = ({
   qrId,
 }: DefaultHotelPageProps) => {
   const [activeCatIndex, setActiveCatIndex] = useState<number>(0);
+  const [isThemeDialogOpen, setIsThemeDialogOpen] = useState(false);
   const categoryHeadersRef = useRef<(HTMLHeadingElement | null)[]>([]);
   const categoriesContainerRef = useRef<HTMLDivElement>(null);
   const borderRef = useRef<HTMLDivElement>(null);
@@ -196,11 +197,11 @@ const Compact = ({
             <SocialLinks socialLinks={socialLinks} />
             {isOwner && (
               <div
-                onClick={() => themeButtonRef?.current?.click()}
+                onClick={() => setIsThemeDialogOpen(true)}
                 className="flex items-center gap-2 border-[1px] border-gray-300 p-2 rounded-md bg-gray-50 cursor-pointer"
               >
                 <ThemeChangeButton
-                  ref={themeButtonRef}
+                  isOpen={isThemeDialogOpen}
                   iconSize={15}
                   hotelData={hoteldata}
                   theme={

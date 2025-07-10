@@ -206,17 +206,7 @@ const HotelMenuPage = ({
   const renderPage = () => {
     switch (theme?.menuStyle) {
       case "compact":
-        return (
-          <Compact
-            {...{
-              ...defaultProps,
-              styles: {
-                ...styles,
-                backgroundColor: theme?.colors?.bg || "#ffffff",
-              },
-            }}
-          />
-        );
+        return <Compact {...defaultProps} />;
       default:
         return <Default {...defaultProps} />;
     }
