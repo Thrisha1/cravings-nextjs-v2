@@ -60,6 +60,9 @@ const Default = ({
   qrGroup,
   qrId,
 }: DefaultHotelPageProps) => {
+
+  const [isThemeDialogOpen, setIsThemeDialogOpen] = React.useState(false);
+
   return (
     <main
       style={{
@@ -113,9 +116,9 @@ const Default = ({
             </div>
 
             {/* right top button  */}
-            <div className="absolute right-[8%] top-[20px] flex flex-col items-center gap-3">
+            <div onClick={()=>setIsThemeDialogOpen(true)} className="absolute right-[8%] top-[20px] flex flex-col items-center gap-3">
               {hoteldata?.id === auth?.id && (
-                <ThemeChangeButton hotelData={hoteldata} theme={theme} />
+                <ThemeChangeButton isOpen={isThemeDialogOpen} hotelData={hoteldata} theme={theme} />
               )}
               <SocialLinkList
                 styles={styles}

@@ -11,6 +11,7 @@ import CategoryListBtn from "./CategoryListBtn";
 import SearchItems from "./SearchItems";
 import OffersList from "./OffersList";
 import { Offer } from "@/store/offerStore_hasura";
+import { ThemeConfig } from "tailwindcss/types/config";
 
 const Compact = ({
   styles,
@@ -30,6 +31,7 @@ const Compact = ({
   qrId,
 }: DefaultHotelPageProps) => {
   const [activeCatIndex, setActiveCatIndex] = useState<number>(0);
+  const [isThemeDialogOpen, setIsThemeDialogOpen] = useState(false);
   const categoryHeadersRef = useRef<(HTMLHeadingElement | null)[]>([]);
   const categoriesContainerRef = useRef<HTMLDivElement>(null);
   const borderRef = useRef<HTMLDivElement>(null);
@@ -150,8 +152,9 @@ const Compact = ({
       <main
         style={{
           color: styles?.color || "#000",
+          backgroundColor: styles?.backgroundColor || "#fff",
         }}
-        className="max-w-xl mx-auto relative mb-40"
+        className="max-w-xl mx-auto relative pb-40 "
       >
         {/* category list btn  */}
         <CategoryListBtn categories={allCategories} />
@@ -185,18 +188,31 @@ const Compact = ({
         {/* social links */}
         {/* REMOVED: `hasOffers` check and the OffersList button from here */}
         {(socialLinks || isOwner) && (
-          <div className="flex overflow-x-auto scrollbar-hide gap-2 p-4 border-b-[1px] bg-white z-20">
+          <div
+            style={{
+              borderColor: styles?.border?.borderColor || "#0000001D",
+            }}
+            className="flex overflow-x-auto scrollbar-hide gap-2 p-4 border-b-[1px] z-20"
+          >
             <SocialLinks socialLinks={socialLinks} />
             {isOwner && (
               <div
-                onClick={() => themeButtonRef?.current?.click()}
+                onClick={() => setIsThemeDialogOpen(true)}
                 className="flex items-center gap-2 border-[1px] border-gray-300 p-2 rounded-md bg-gray-50 cursor-pointer"
               >
                 <ThemeChangeButton
-                  ref={themeButtonRef}
+                  isOpen={isThemeDialogOpen}
                   iconSize={15}
                   hotelData={hoteldata}
-                  theme={theme}
+                  theme={
+                    {
+                      ...theme,
+                      colors: {
+                        ...theme?.colors,
+                        text: "#000",
+                      },
+                    } as typeof theme
+                  }
                 />
                 <span className="text-xs text-nowrap text-gray-500">
                   Change Theme
@@ -222,15 +238,16 @@ const Compact = ({
           style={{
             backgroundColor: styles?.backgroundColor || "#fff",
             color: styles?.color || "#000",
+            borderColor: styles?.border?.borderColor || "#0000001D",
           }}
           ref={categoriesContainerRef}
-          className="overflow-x-auto w-full flex gap-2 p-2 sticky top-0 z-10 shadow-md scrollbar-hide border-[1px]"
+          className="overflow-x-auto w-full flex gap-2 p-2 sticky top-0 z-10 shadow-md scrollbar-hide border-[1px] "
           onScroll={() => updateBorderPosition(activeCatIndex)}
         >
           {/* Animated border element */}
           <div
             ref={borderRef}
-            className="absolute bottom-0 left-0 h-0.5 transition-all duration-300 ease-in-out"
+            className="absolute bottom-0 left-0 h-0.5 transition-all duration-300 ease-in-out "
             style={{
               backgroundColor: styles?.accent || "#000",
               width: "0px", // Initial width set to 0, updated by useEffect
@@ -244,7 +261,9 @@ const Compact = ({
               }}
               style={{
                 color:
-                  activeCatIndex === index ? styles?.accent || "#000" : "gray",
+                  activeCatIndex === index
+                    ? styles?.accent || "#000"
+                    : styles?.color + "80" || "gray",
               }}
               onClick={() => handleCategoryClick(index, category)}
               key={category.id}
@@ -259,75 +278,78 @@ const Compact = ({
 
         {/* Categories Content */}
         <div className="grid gap-4 p-4">
-          {allCategories.sort((a,b)=> ((a.priority || 0) - (b.priority || 0))).map((category, index) => {
-            // Conditionally determine the list of items to render for other categories.
-            let itemsToDisplay = [];
+          {allCategories
+            .sort((a, b) => (a.priority || 0) - (b.priority || 0))
+            .map((category, index) => {
+              // Conditionally determine the list of items to render for other categories.
+              let itemsToDisplay = [];
 
-            switch (category.id) {
-              case "offers":
-                // Create a Set of menu IDs for faster lookups.
-                const offerMenuIdSet = new Set(
-                  offers.map((offer) => offer.menu.id)
-                );
-                // Filter 'hoteldata.menus' by checking for the item's ID in the Set.
-                itemsToDisplay = hoteldata?.menus.filter((item) =>
-                  offerMenuIdSet.has(item.id as string)
-                );
-                break;
-              case "must-try":
-                // If the category is "must_try", display the top items.
-                itemsToDisplay = topItems;
-                break;
-              default:
-                itemsToDisplay = hoteldata?.menus.filter(
-                  (item) => item.category.id === category.id
-                );
-            }
+              switch (category.id) {
+                case "offers":
+                  // Create a Set of menu IDs for faster lookups.
+                  const offerMenuIdSet = new Set(
+                    offers.map((offer) => offer.menu.id)
+                  );
+                  // Filter 'hoteldata.menus' by checking for the item's ID in the Set.
+                  itemsToDisplay = hoteldata?.menus.filter((item) =>
+                    offerMenuIdSet.has(item.id as string)
+                  );
+                  break;
+                case "must-try":
+                  // If the category is "must_try", display the top items.
+                  itemsToDisplay = topItems;
+                  break;
+                default:
+                  itemsToDisplay = hoteldata?.menus.filter(
+                    (item) => item.category.id === category.id
+                  );
+              }
 
-            // Do not render the category section if there are no items to display.
-            if (!itemsToDisplay || itemsToDisplay.length === 0) {
-              return null;
-            }
+              // Do not render the category section if there are no items to display.
+              if (!itemsToDisplay || itemsToDisplay.length === 0) {
+                return null;
+              }
 
-            itemsToDisplay.sort((a, b) => {
-              return (a.priority || 0) - (b.priority || 0);
-            });
+              itemsToDisplay.sort((a, b) => {
+                return (a.priority || 0) - (b.priority || 0);
+              });
 
-            return (
-              <section key={category.id} id={category.name} className="py-4">
-                <h2
-                  ref={(el) => {
-                    categoryHeadersRef.current[index] = el;
-                  }}
-                  style={{
-                    color: styles?.accent || "#000",
-                  }}
-                  className="text-xl font-bold sticky top-[64px] bg-white z-[9] py-4"
-                >
-                  {formatDisplayName(category.name)}
-                </h2>
-                <div className="grid grid-cols-1 gap-4 divide-y-2 divide-gray-200">
-                  {itemsToDisplay.map((item) => {
-                    const offerData = offers?.find(
-                      (offer) => offer.menu.id === item.id
-                    );
+              return (
+                <section key={category.id} id={category.name} className="py-4">
+                  <h2
+                    ref={(el) => {
+                      categoryHeadersRef.current[index] = el;
+                    }}
+                    style={{
+                      color: styles?.accent || "#000",
+                      backgroundColor: styles?.backgroundColor || "#fff",
+                    }}
+                    className="text-xl font-bold sticky top-[64px] z-[9] py-4"
+                  >
+                    {formatDisplayName(category.name)}
+                  </h2>
+                  <div className="grid grid-cols-1 gap-4 divide-y-2 divide-gray-200">
+                    {itemsToDisplay.map((item) => {
+                      const offerData = offers?.find(
+                        (offer) => offer.menu.id === item.id
+                      );
 
-                    return (
-                      <ItemCard
-                        tableNumber={tableNumber}
-                        feature_flags={hoteldata?.feature_flags}
-                        hoteldata={hoteldata}
-                        item={item}
-                        offerData={offerData}
-                        styles={styles}
-                        key={item.id}
-                      />
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
+                      return (
+                        <ItemCard
+                          tableNumber={tableNumber}
+                          feature_flags={hoteldata?.feature_flags}
+                          hoteldata={hoteldata}
+                          item={item}
+                          offerData={offerData}
+                          styles={styles}
+                          key={item.id}
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
         </div>
       </main>
     </>

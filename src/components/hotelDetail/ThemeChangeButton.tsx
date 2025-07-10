@@ -1,7 +1,7 @@
 "use client";
 
 import { Partner } from "@/store/authStore";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -34,13 +34,14 @@ const ThemeChangeButton = ({
   hotelData,
   theme,
   iconSize = 24,
-  ref
+  isOpen = false,
 }: {
   hotelData: Partner;
   theme: ThemeConfig | null;
   iconSize?: number;
-  ref?: React.Ref<HTMLButtonElement>;
+  isOpen: boolean;
 }) => {
+  const [themeDialogOpen, setThemeDialogOpen] = useState(false);
   const [colorModalOpen, setColorModalOpen] = useState(false);
   const [menuStyleModalOpen, setMenuStyleModalOpen] = useState(false);
   const [fontModalOpen, setFontModalOpen] = useState(false);
@@ -64,10 +65,14 @@ const ThemeChangeButton = ({
     }
   };
 
+  useEffect(() => {
+    setThemeDialogOpen(isOpen);
+  }, [isOpen]);
+
   return (
     <>
-      <Dialog>
-        <DialogTrigger ref={ref} asChild>
+      <Dialog open={themeDialogOpen} onOpenChange={setThemeDialogOpen}>
+        <DialogTrigger asChild>
           <button aria-label="Change theme">
             <Palette
               style={{
@@ -88,7 +93,10 @@ const ThemeChangeButton = ({
             <Button
               variant="outline"
               className="flex items-center justify-start gap-3 h-14"
-              onClick={() => setColorModalOpen(true)}
+              onClick={() => {
+                setThemeDialogOpen(false);
+                setColorModalOpen(true);
+              }}
             >
               <Paintbrush className="h-5 w-5" />
               <div className="text-left">
@@ -102,7 +110,10 @@ const ThemeChangeButton = ({
             <Button
               variant="outline"
               className="flex items-center justify-start gap-3 h-14"
-              onClick={() => setFontModalOpen(true)}
+              onClick={() => {
+                setThemeDialogOpen(false);
+                setFontModalOpen(true);
+              }}
             >
               <Type className="h-5 w-5" />
               <div className="text-left">
@@ -116,7 +127,10 @@ const ThemeChangeButton = ({
             <Button
               variant="outline"
               className="flex items-center justify-start gap-3 h-14"
-              onClick={() => setMenuStyleModalOpen(true)}
+              onClick={() => {
+                setThemeDialogOpen(false);
+                setMenuStyleModalOpen(true);
+              }}
             >
               <LayoutGrid className="h-5 w-5" />
               <div className="text-left">
@@ -130,40 +144,52 @@ const ThemeChangeButton = ({
         </DialogContent>
       </Dialog>
 
-      {/* Color Picker Modal */}
+      {/* Color Picker Modal - Independent Dialog */}
       <ColorPickerModal
         theme={theme}
         open={colorModalOpen}
-        onOpenChange={setColorModalOpen}
+        onOpenChange={(open) => {
+          setColorModalOpen(open);
+          if (!open) setThemeDialogOpen(true);
+        }}
         onSave={(colors) =>
           onSave({
             colors,
-            menuStyle: theme?.menuStyle || "default", // Default value
+            menuStyle: theme?.menuStyle || "default",
+            fontFamily: theme?.fontFamily,
           })
         }
       />
 
-      {/* Menu Style Modal */}
+      {/* Menu Style Modal - Independent Dialog */}
       <MenuStyleModal
         theme={theme}
         open={menuStyleModalOpen}
-        onOpenChange={setMenuStyleModalOpen}
+        onOpenChange={(open) => {
+          setMenuStyleModalOpen(open);
+          if (!open) setThemeDialogOpen(true);
+        }}
         onSave={(style) =>
           onSave({
-            colors: {
-              text: theme?.colors?.text || "#000000",
-              bg: theme?.colors?.bg || "#ffffff",
-              accent: theme?.colors?.accent || "#000000",
+            colors: theme?.colors || {
+              text: "#000000",
+              bg: style === "default" ? "#FEF6EB" : "#ffffff",
+              accent: "#E9701B",
             },
             menuStyle: style,
+            fontFamily: theme?.fontFamily,
           })
         }
       />
 
+      {/* Font Picker Modal - Independent Dialog */}
       <FontPickerModal
         theme={theme}
         open={fontModalOpen}
-        onOpenChange={setFontModalOpen}
+        onOpenChange={(open) => {
+          setFontModalOpen(open);
+          if (!open) setThemeDialogOpen(true);
+        }}
         onSave={(fontFamily) =>
           onSave({
             colors: theme?.colors || {
