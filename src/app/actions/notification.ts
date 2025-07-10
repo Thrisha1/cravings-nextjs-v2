@@ -179,7 +179,10 @@ class PartnerNotification {
     }
   }
 
-  async sendOfferNotification(offer: Offer) {
+  async sendOfferNotification(offer: Offer , notificationMessage?: {
+    title? : string,
+    body? : string,
+  }) {
     try {
       const cookies = await getAuthCookie();
       const partnerId = cookies?.id;
@@ -228,10 +231,10 @@ class PartnerNotification {
       }
 
       const message = getMessage(
-        `New Offer: ${offer.menu.name} at ${offer?.partner?.store_name}`,
-        `Check out the new offer: ${offer.menu.name} for just ${(offer?.partner as HotelData)?.currency ?? "₹"}${
+        (notificationMessage?.title || `New Offer: ${offer.menu.name} at ${offer?.partner?.store_name}`),
+        (notificationMessage?.body || `Check out the new offer: ${offer.menu.name} for just ${(offer?.partner as HotelData)?.currency ?? "₹"}${
           offer.offer_price
-        }. Valid until ${new Date(offer?.end_time).toLocaleDateString()}`,
+        }. Valid until ${new Date(offer?.end_time).toLocaleDateString()}`),
         tokens,
         {
           url: `https://www.cravings.live/offers/`,
