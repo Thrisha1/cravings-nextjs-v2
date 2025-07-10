@@ -81,7 +81,9 @@ import {
   
         {/* Full-Screen Search Modal */}
         {isModalOpen && (
-          <div className="fixed inset-0 bg-background z-[60] flex flex-col animate-in fade-in-0">
+          <div style={{
+            backgroundColor: styles?.backgroundColor || "#000",
+          }} className="fixed inset-0 z-[60] flex flex-col animate-in fade-in-0">
             {/* Modal Header with shadcn/ui Input */}
             <div className="flex items-center p-2 border-b">
               <div className="flex-grow flex items-center gap-2">

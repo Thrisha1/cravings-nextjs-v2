@@ -1,11 +1,8 @@
 "use client";
 
-
 import { Offer } from "@/store/offerStore_hasura";
 import { HotelData, SocialLinks } from "@/app/hotels/[...id]/page";
-import {
-  ThemeConfig,
-} from "@/components/hotelDetail/ThemeChangeButton";
+import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
 import { Category } from "@/store/categoryStore_hasura";
 import OrderDrawer from "@/components/hotelDetail/OrderDrawer";
 import useOrderStore from "@/store/orderStore";
@@ -19,7 +16,6 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import { INCREMENT_QR_CODE_SCAN_COUNT } from "@/api/qrcodes";
 import Default from "@/components/hotelDetail/styles/Default/Default";
 import Compact from "@/components/hotelDetail/styles/Compact/Compact";
-
 
 export type MenuItem = {
   description: string;
@@ -114,7 +110,7 @@ const HotelMenuPage = ({
 
   useEffect(() => {
     if (hoteldata?.id) {
-      addToRecent(hoteldata?.id );
+      addToRecent(hoteldata?.id);
     }
   }, [hoteldata?.id]);
 
@@ -140,9 +136,13 @@ const HotelMenuPage = ({
 
   const getCategoryItems = (selectedCategory: string) => {
     if (selectedCategory === "all") {
-      return hoteldata?.menus.filter(
-        (item) => item.category.is_active === undefined || item.category.is_active === true
-      ) || [];
+      return (
+        hoteldata?.menus.filter(
+          (item) =>
+            item.category.is_active === undefined ||
+            item.category.is_active === true
+        ) || []
+      );
     }
     const filteredItems = hoteldata?.menus.filter(
       (item) =>
@@ -206,7 +206,17 @@ const HotelMenuPage = ({
   const renderPage = () => {
     switch (theme?.menuStyle) {
       case "compact":
-        return <Compact {...defaultProps} />;
+        return (
+          <Compact
+            {...{
+              ...defaultProps,
+              styles: {
+                ...styles,
+                backgroundColor: theme?.colors?.bg || "#ffffff",
+              },
+            }}
+          />
+        );
       default:
         return <Default {...defaultProps} />;
     }
