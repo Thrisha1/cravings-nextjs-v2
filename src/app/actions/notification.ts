@@ -237,7 +237,7 @@ class PartnerNotification {
         }. Valid until ${new Date(offer?.end_time).toLocaleDateString()}`),
         tokens,
         {
-          url: `https://www.cravings.live/offers/`,
+          url: `https://www.cravings.live/offers/${offer?.id || ""}`,
           channel_id: "cravings_channel_2",
           sound: "default_sound",
           image: offer.menu.image_url,
