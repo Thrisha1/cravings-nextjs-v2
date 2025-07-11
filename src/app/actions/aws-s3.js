@@ -21,7 +21,7 @@ export async function uploadFileToS3(file, filename) {
   try {
     if (!file) throw new Error("File not provided");
 
-    if (file.includes("cravingsbucket")) {
+    if (typeof file === "string" && file.includes("cravingsbucket")) {
       return file;
     }
 

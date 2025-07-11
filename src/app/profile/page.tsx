@@ -65,6 +65,18 @@ import { DeliveryAndGeoLocationSettings } from "@/components/admin/profile/Deliv
 import useOrderStore from "@/store/orderStore";
 import { getCoordinatesFromLink } from "../../lib/getCoordinatesFromLink";
 import { Offer } from "@/store/offerStore_hasura";
+import ImageCropper from "@/components/ImageCropper";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { HotelData } from "../hotels/[...id]/page";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Captain {
   id: string;
@@ -97,14 +109,6 @@ interface CaptainOrder {
 
 
 import { countryCodes } from "@/utils/countryCodes";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { HotelData } from "../hotels/[...id]/page";
 
 const Currencies = [
   { label: "INR", value: "₹" },
@@ -193,6 +197,9 @@ export default function ProfilePage() {
   );
   const [isBannerUploading, setBannerUploading] = useState(false);
   const [isBannerChanged, setIsBannerChanged] = useState(false);
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string>("");
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
   const [userFeatures, setUserFeatures] = useState<FeatureFlags | null>(null);
   const [footNote, setFootNote] = useState<string>("");
@@ -621,12 +628,22 @@ export default function ProfilePage() {
       const file = files[0];
 
       const blobUrl = URL.createObjectURL(file);
-      setBannerImage(blobUrl);
-
-      setIsBannerChanged(true);
+      setSelectedImageFile(file);
+      setSelectedImageUrl(blobUrl);
+      setIsCropperOpen(true);
     } catch (error) {
       console.error("Error updating banner:", error);
     }
+  };
+
+  const handleCropComplete = async (croppedImageUrl: string, cropType: 'square' | 'circle') => {
+    setBannerImage(croppedImageUrl);
+    setIsBannerChanged(true);
+    setIsCropperOpen(false);
+    
+    // Clean up the selected image
+    setSelectedImageFile(null);
+    setSelectedImageUrl("");
   };
 
   const handleBannerUpload = async () => {
@@ -636,11 +653,11 @@ export default function ProfilePage() {
     try {
       toast.loading("Updating banner...");
 
-      const webpBase64WithPrefix = await processImage(
-        bannerImage as string,
-        "local"
-      );
-
+      // Convert base64 to blob for upload
+      const response = await fetch(bannerImage as string);
+      const blob = await response.blob();
+      
+      // Upload the cropped image without any additional processing
       const prevImgUrl =
         userData.role === "partner" ? userData?.store_banner : "";
 
@@ -670,8 +687,8 @@ export default function ProfilePage() {
       }
 
       const imgUrl = await uploadFileToS3(
-        webpBase64WithPrefix,
-        `hotel_banners/${userData.id + "_" + nextVersion}.webp`
+        blob,
+        `hotel_banners/${userData.id + "_" + nextVersion}.png`
       );
 
       setBannerImage(imgUrl);
@@ -1505,7 +1522,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-orange-50 p-2">
+    <main className="min-h-screen w-full bg-orange-50 p-2">
       <div className="max-w-4xl mx-auto space-y-6">
         <Card className="overflow-hidden hover:shadow-xl transition-shadow">
           <CardHeader>
@@ -1582,7 +1599,7 @@ export default function ProfilePage() {
 
                 <label
                   htmlFor="bannerInput"
-                  className="relative cursor-pointer w-full h-48 bg-gray-200 rounded-lg overflow-hidden"
+                  className="relative cursor-pointer w-full h-64 bg-gray-200 rounded-lg overflow-hidden"
                 >
                   {bannerImage ? (
                     <Img
@@ -1590,10 +1607,10 @@ export default function ProfilePage() {
                       alt="Hotel Banner"
                       width={500}
                       height={500}
-                      className="object-cover w-full h-48 rounded-2xl"
+                      className="object-contain w-full h-64 rounded-2xl"
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-48 bg-gray-100 rounded-2xl text-gray-500">
+                    <div className="flex items-center justify-center h-64 bg-gray-100 rounded-2xl text-gray-500">
                       No banner set
                     </div>
                   )}
@@ -2649,6 +2666,14 @@ export default function ProfilePage() {
           </Card>
         )}
       </div>
-    </div>
+
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        isOpen={isCropperOpen}
+        onClose={() => setIsCropperOpen(false)}
+        imageUrl={selectedImageUrl}
+        onCropComplete={handleCropComplete}
+      />
+    </main>
   );
 }
