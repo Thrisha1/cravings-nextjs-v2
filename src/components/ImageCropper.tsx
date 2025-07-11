@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { Button } from "@/components/ui/button";
@@ -12,63 +12,60 @@ interface ImageCropperProps {
   isOpen: boolean;
   onClose: () => void;
   imageUrl: string;
-  onCropComplete: (croppedImageUrl: string, cropType: 'square' | 'circle') => void;
+  onCropComplete: (croppedImageUrl: string, cropType: string) => void;
 }
 
-function centerAspectCrop(
+function centerFreeCrop(
   mediaWidth: number,
   mediaHeight: number,
-  aspect: number,
 ) {
-  return centerCrop(
-    makeAspectCrop(
-      {
-        unit: '%',
-        width: 90,
-      },
-      aspect,
-      mediaWidth,
-      mediaHeight,
-    ),
-    mediaWidth,
-    mediaHeight,
-  )
+  // Centered, large free crop
+  return {
+    unit: '%' as const,
+    x: 5,
+    y: 10,
+    width: 90,
+    height: 50,
+  };
 }
 
 export default function ImageCropper({ isOpen, onClose, imageUrl, onCropComplete }: ImageCropperProps) {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
-  const [cropType, setCropType] = useState<'square' | 'circle'>('square');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [cropMode, setCropMode] = useState<'free' | 'circle'>('free');
   const imgRef = useRef<HTMLImageElement>(null);
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    const aspect = cropType === 'square' ? 1 : 1; // Both square and circle use 1:1 aspect ratio
-    const crop = centerAspectCrop(width, height, aspect);
-    setCrop(crop);
-  }, [cropType]);
+    if (cropMode === 'circle') {
+      // Centered square crop for circle
+      const size = Math.min(width, height) * 0.8;
+      setCrop({
+        unit: 'px',
+        x: (width - size) / 2,
+        y: (height - size) / 2,
+        width: size,
+        height: size,
+      });
+    } else {
+      setCrop(centerFreeCrop(width, height));
+    }
+  }, [cropMode]);
 
   const getCroppedImg = useCallback(async (
     image: HTMLImageElement,
     crop: PixelCrop,
-    cropType: 'square' | 'circle'
+    mode: 'free' | 'circle',
   ): Promise<string> => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-
-    if (!ctx) {
-      throw new Error('No 2d context');
-    }
-
+    if (!ctx) throw new Error('No 2d context');
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
-
     canvas.width = crop.width;
     canvas.height = crop.height;
-
     ctx.imageSmoothingQuality = 'high';
-
     ctx.drawImage(
       image,
       crop.x * scaleX,
@@ -80,30 +77,19 @@ export default function ImageCropper({ isOpen, onClose, imageUrl, onCropComplete
       crop.width,
       crop.height,
     );
-
-    // If circle crop, create a circular mask
-    if (cropType === 'circle') {
+    if (mode === 'circle') {
+      // Apply circular mask
       const circleCanvas = document.createElement('canvas');
       const circleCtx = circleCanvas.getContext('2d');
-      
-      if (!circleCtx) {
-        throw new Error('No 2d context for circle');
-      }
-
+      if (!circleCtx) throw new Error('No 2d context for circle');
       circleCanvas.width = crop.width;
       circleCanvas.height = crop.height;
-
-      // Create circular clipping path
       circleCtx.beginPath();
       circleCtx.arc(crop.width / 2, crop.height / 2, crop.width / 2, 0, 2 * Math.PI);
       circleCtx.clip();
-
-      // Draw the cropped image
       circleCtx.drawImage(canvas, 0, 0);
-
       return circleCanvas.toDataURL('image/png');
     }
-
     return canvas.toDataURL('image/png');
   }, []);
 
@@ -112,8 +98,8 @@ export default function ImageCropper({ isOpen, onClose, imageUrl, onCropComplete
 
     setIsProcessing(true);
     try {
-      const croppedImageUrl = await getCroppedImg(imgRef.current, completedCrop, cropType);
-      onCropComplete(croppedImageUrl, cropType);
+      const croppedImageUrl = await getCroppedImg(imgRef.current, completedCrop, cropMode);
+      onCropComplete(croppedImageUrl, cropMode);
       onClose();
     } catch (error) {
       console.error('Error cropping image:', error);
@@ -122,70 +108,88 @@ export default function ImageCropper({ isOpen, onClose, imageUrl, onCropComplete
     }
   };
 
-  const handleCropTypeChange = (value: string) => {
-    setCropType(value as 'square' | 'circle');
-    // Reset crop when changing type
+  // When cropMode changes, reset crop
+  useEffect(() => {
     if (imgRef.current) {
       const { width, height } = imgRef.current;
-      const aspect = 1; // 1:1 aspect ratio
-      const newCrop = centerAspectCrop(width, height, aspect);
-      setCrop(newCrop);
+      if (cropMode === 'circle') {
+        const size = Math.min(width, height) * 0.8;
+        setCrop({
+          unit: 'px',
+          x: (width - size) / 2,
+          y: (height - size) / 2,
+          width: size,
+          height: size,
+        });
+      } else {
+        setCrop(centerFreeCrop(width, height));
+      }
     }
-  };
+  }, [cropMode, isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Crop Profile Banner</DialogTitle>
+      <DialogContent className="w-full max-w-[95vw] h-[90vh] max-h-[95vh] md:max-w-3xl md:h-auto md:max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0 pb-4">
+          <DialogTitle className="text-lg md:text-xl">Crop Profile Banner</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="crop-type">Crop Type:</Label>
-            <RadioGroup
-              id="crop-type"
-              value={cropType}
-              onValueChange={handleCropTypeChange}
-              className="flex space-x-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="square" id="square" />
-                <Label htmlFor="square">Square</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="circle" id="circle" />
-                <Label htmlFor="circle">Circle (Logo in center)</Label>
-              </div>
-            </RadioGroup>
-          </div>
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
+         <div className="flex flex-row gap-2 items-center mb-2">
+           <span className="text-sm font-medium">Crop Mode:</span>
+           <Button
+             variant={cropMode === 'free' ? 'default' : 'outline'}
+             onClick={() => setCropMode('free')}
+             size="sm"
+           >
+             Free
+           </Button>
+           <Button
+             variant={cropMode === 'circle' ? 'default' : 'outline'}
+             onClick={() => setCropMode('circle')}
+             size="sm"
+           >
+             Circle
+           </Button>
+         </div>
+          {/* Rectangle aspect ratio, no crop type selection */}
 
-          <div className="flex justify-center">
-            <ReactCrop
-              crop={crop}
-              onChange={(_, percentCrop) => setCrop(percentCrop)}
-              onComplete={(c) => setCompletedCrop(c)}
-              aspect={1}
-              minWidth={100}
-              minHeight={100}
-            >
-              <img
-                ref={imgRef}
-                alt="Crop me"
-                src={imageUrl}
-                onLoad={onImageLoad}
-                className="max-h-[400px] max-w-full object-contain"
-              />
-            </ReactCrop>
+          <div className="flex justify-center w-full">
+            <div className="w-full max-w-md">
+              <ReactCrop
+                crop={crop}
+                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={cropMode === 'circle' ? 1 : undefined}
+                minWidth={50}
+                minHeight={50}
+                className="w-full"
+              >
+                <img
+                  ref={imgRef}
+                  alt="Crop me"
+                  src={imageUrl}
+                  onLoad={onImageLoad}
+                  className="w-full h-auto max-h-[250px] object-contain"
+                  style={{ touchAction: 'none' }}
+                />
+              </ReactCrop>
+            </div>
           </div>
-
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose}>
+        </div>
+        <div className="shrink-0 pt-4 border-t mt-4 bg-white sticky bottom-0 z-10 px-4 pb-4">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-2">
+            <Button 
+              variant="outline" 
+              onClick={onClose}
+              className="w-full sm:w-auto order-2 sm:order-1"
+            >
               Cancel
             </Button>
             <Button 
               onClick={handleCropComplete}
               disabled={!completedCrop || isProcessing}
+              className="w-full sm:w-auto order-1 sm:order-2"
             >
               {isProcessing ? "Processing..." : "Crop & Upload"}
             </Button>
@@ -194,4 +198,4 @@ export default function ImageCropper({ isOpen, onClose, imageUrl, onCropComplete
       </DialogContent>
     </Dialog>
   );
-} 
+}
