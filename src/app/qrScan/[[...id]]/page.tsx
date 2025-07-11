@@ -364,6 +364,7 @@ const page = async ({
         theme={theme}
         qrGroup={qr_codes[0].qr_group}
         qrId={validQrId}
+        selectedCategory={ cat }
       />
     );
     // }
