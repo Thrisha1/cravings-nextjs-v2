@@ -320,6 +320,7 @@ const HotelPage = async ({
         tableNumber={0}
         qrId={null}
         qrGroup={table0QrGroup}
+        selectedCategory={ cat }
       />
     </>
   );

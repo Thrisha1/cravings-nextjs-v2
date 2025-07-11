@@ -185,6 +185,9 @@ const HotelMenuPage = ({
   const selectedCategory = selectedCategoryProp || "all";
   const items = getCategoryItems(selectedCategory);
 
+  console.log(selectedCategory, "selectedCategory");
+  
+
   const defaultProps = {
     offers,
     hoteldata,
