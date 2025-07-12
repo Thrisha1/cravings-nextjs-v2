@@ -36,15 +36,23 @@ interface MenuItem {
   price: number;
 }
 
+export interface OfferGroup {
+  name: string;
+  description?: string;
+  percentage: number;
+  menu_item_ids: string[];
+}
+
 export interface Offer {
-  created_at: string;
-  end_time: string;
-  enquiries: number;
   id: string;
-  items_available: number;
-  offer_price: number;
+  created_at: string;
+  enquiries: number;
   start_time: string;
+  end_time: string;
+  items_available?: number;
+  offer_price?: number;
   deletion_status?: number;
+  offer_group?: OfferGroup;
   menu: MenuItem;
   partner?: Partner;
 }
@@ -54,15 +62,16 @@ interface OfferState {
   fetchPartnerOffers: (partnerId?: string) => Promise<void>;
   addOffer: (
     offer: {
-      menu_id: string;
-      offer_price: number;
-      items_available: number;
+      menu_id?: string;
+      offer_price?: number;
+      items_available?: number;
       start_time: string;
       end_time: string;
+      offer_group?: OfferGroup;
     },
-    notificationMessage?: {
-      title?: string;
-      body?: string;
+    notificationMessage: {
+      title: string;
+      body: string;
     }
   ) => Promise<void>;
   fetchOffer: () => Promise<Offer[]>;
@@ -134,15 +143,16 @@ export const useOfferStore = create<OfferState>((set, get) => {
 
     addOffer: async (
       offer: {
-        menu_id: string;
-        offer_price: number;
-        items_available: number;
+        menu_id?: string;
+        offer_price?: number;
+        items_available?: number;
         start_time: string;
         end_time: string;
+        offer_group?: OfferGroup;
       },
-      notificationMessage?: {
-        title?: string;
-        body?: string;
+      notificationMessage: {
+        title: string;
+        body: string;
       }
     ) => {
       try {
@@ -150,15 +160,33 @@ export const useOfferStore = create<OfferState>((set, get) => {
         const user = useAuthStore.getState().userData;
         if (!user) throw "Partner not found";
 
-        const newOffer = {
+        let common = {
           created_at: new Date().toISOString(),
           end_time: new Date(offer.end_time).toISOString(),
-          items_available: offer.items_available,
-          menu_item_id: offer.menu_id,
-          offer_price: offer.offer_price,
-          partner_id: user.id,
           start_time: new Date(offer.start_time).toISOString(),
+          partner_id: user.id,
         };
+
+        let newOffer = {};
+
+        if (!offer.offer_group) {
+          newOffer = {
+            ...common,
+            items_available: offer.items_available,
+            menu_item_id: offer.menu_id,
+            offer_price: offer.offer_price,
+          };
+        } else {
+          newOffer = {
+            ...common,
+            offer_group: {
+              name: offer.offer_group.name,
+              description: offer.offer_group.description,
+              percentage: offer.offer_group.percentage,
+              menu_item_ids: offer.offer_group.menu_item_ids,
+            },
+          };
+        }
 
         let addedOffer = await fetchFromHasura(addOffer, {
           ...newOffer,
@@ -175,20 +203,13 @@ export const useOfferStore = create<OfferState>((set, get) => {
         toast.dismiss();
         toast.success("Offer added successfully");
 
-        const { userData } = useAuthStore.getState();
 
         // await sendOfferWhatsAppMsg(addedOffer.id);
         await Notification.partner.sendOfferNotification(
+          addedOffer,
           {
-            ...addedOffer,
-            partner: {
-              store_name: (userData as HotelData)?.store_name,
-              currency: (userData as HotelData)?.currency,
-            },
-          },
-          {
-            title: notificationMessage?.title || undefined,
-            body: notificationMessage?.body || undefined,
+            title: notificationMessage.title ,
+            body: notificationMessage.body ,
           }
         );
       } catch (error) {
