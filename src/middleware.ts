@@ -33,7 +33,7 @@ export async function middleware(request: NextRequest) {
           <title>Redirecting...</title>
           <script>
             setTimeout(function() {
-              window.location = "${appStoreUrl}?referrer=${encodeURIComponent(pathname)}";
+              window.location = "${appStoreUrl}&referrer=${encodeURIComponent(pathname)}";
             }, 1000);
             window.location = "${deepLinkUrl}";
           </script>
