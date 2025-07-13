@@ -6,7 +6,56 @@ import { decryptText } from './lib/encrtption';
 export async function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token')?.value;
   const pathname = request.nextUrl.pathname;
+  const userAgent = request.headers.get('user-agent') || '';
+  const isMobile = /Mobile|Android|iP(hone|od|ad)/.test(userAgent);
+  const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
 
+  // Handle QR scan deep links
+  if (pathname.startsWith('/qrScan/')) {
+    if (isMobile) {
+
+      console.log('Handling QR scan deep link:', pathname);
+
+      // For mobile devices - try to open app first
+      const appScheme = isIOS ? 'cravings://' : 'cravings://';
+      const appStoreUrl = isIOS 
+        ? 'https://apps.apple.com/us/app/cravings/idYOUR_APP_ID' 
+        : 'https://play.google.com/store/apps/details?id=com.notime.cravings';
+      
+      const deepLinkUrl = `${appScheme}${pathname}`;
+      
+      // Create HTML response that tries to open app, then redirects to app store
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Redirecting...</title>
+          <script>
+            setTimeout(function() {
+              window.location = "${appStoreUrl}?referrer=${encodeURIComponent(pathname)}";
+            }, 1000);
+            window.location = "${deepLinkUrl}";
+          </script>
+        </head>
+        <body>
+          <p>Redirecting to Cravings app...</p>
+        </body>
+        </html>
+      `;
+
+      return new Response(html, {
+        headers: {
+          'Content-Type': 'text/html',
+        },
+      });
+    } else {
+      // For desktop browsers - redirect to web version
+      return NextResponse.redirect(new URL(`https://www.cravings.live${pathname}`, request.url));
+    }
+  }
+
+  // Rest of your existing middleware logic
   // Try to decrypt token early for captain guard
   let decrypted: { id: string; role: string; status?: string } | undefined;
   if (authToken) {
