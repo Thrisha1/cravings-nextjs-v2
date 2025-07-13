@@ -65,7 +65,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const formContainerRef = useRef<HTMLDivElement>(null);
   const [slectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-  const [isOffeTypeGroup, setIsOfferGroup] = useState(false);
+  const [isOfferTypeGroup, setIsOfferGroup] = useState(false);
   const [groupType, setGroupType] = useState<
     "category" | "all" | "select" | undefined
   >(undefined);
@@ -158,6 +158,45 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     fetchAllCategories();
   }, []);
 
+  const validateFromToTime = () => {
+    if (
+      new Date(newOffer.fromTime) <
+      new Date(new Date().getTime() - 1000 * 60 * 15)
+    ) {
+      toast.error("From time cannot be in the past");
+      return false;
+    }
+
+    if (
+      new Date(newOffer.toTime) <
+      new Date(new Date().getTime() + 1000 * 60 * 15)
+    ) {
+      toast.error("To time cannot be in the past");
+      return false;
+    }
+
+    if (new Date(newOffer.fromTime) > new Date(newOffer.toTime)) {
+      toast.error("From time cannot be greater than to time");
+      return false;
+    }
+
+    if (new Date(newOffer.toTime) < new Date(newOffer.fromTime)) {
+      toast.error("To time cannot be less than from time");
+      return false;
+    }
+
+    if (
+      new Date(newOffer.toTime).getTime() -
+        new Date(newOffer.fromTime).getTime() <
+      1000 * 60 * 15
+    ) {
+      toast.error("Offer duration should be at least 15 minutes");
+      return false;
+    }
+
+    return true;
+  };
+
   const validateSingleItemOffer = () => {
     if (!newOffer.menuItemId) {
       toast.error("Please select a menu item");
@@ -179,6 +218,11 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       toast.error("Please select a to time");
       return false;
     }
+
+    if (!validateFromToTime()) {
+      return false;
+    }
+
     return true;
   };
 
@@ -202,11 +246,15 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       return false;
     }
 
+    if (!validateFromToTime()) {
+      return false;
+    }
+
     return true;
   };
 
   const getNotificationTitle = () => {
-    if (isOffeTypeGroup) {
+    if (isOfferTypeGroup) {
       return `🎉 ${newOfferGroup.name} - Exclusive Offer at ${
         (userData as HotelData)?.store_name || "Our Store"
       }!`;
@@ -223,7 +271,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
   };
 
   const getNotificationBody = () => {
-    if (isOffeTypeGroup) {
+    if (isOfferTypeGroup) {
       if (groupType === "all") {
         return `🎉 Exciting news! Get ${
           newOfferGroup.percentage
@@ -266,7 +314,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     e.preventDefault();
     setIsSubmitting(true);
 
-    if (!isOffeTypeGroup) {
+    if (!isOfferTypeGroup) {
       if (!validateSingleItemOffer()) {
         setIsSubmitting(false);
         return;
@@ -278,46 +326,6 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       }
     }
 
-    if (
-      new Date(newOffer.fromTime) <
-      new Date(new Date().getTime() - 1000 * 60 * 15)
-    ) {
-      toast.error("From time cannot be in the past");
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (
-      new Date(newOffer.toTime) <
-      new Date(new Date().getTime() + 1000 * 60 * 15)
-    ) {
-      toast.error("To time cannot be in the past");
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (new Date(newOffer.fromTime) > new Date(newOffer.toTime)) {
-      toast.error("From time cannot be greater than to time");
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (new Date(newOffer.toTime) < new Date(newOffer.fromTime)) {
-      toast.error("To time cannot be less than from time");
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (
-      new Date(newOffer.toTime).getTime() -
-        new Date(newOffer.fromTime).getTime() <
-      1000 * 60 * 15
-    ) {
-      toast.error("Offer duration should be at least 15 minutes");
-      setIsSubmitting(false);
-      return;
-    }
-
     const notificationMessage = {
       title:
         notificationTitleRef.current?.value || getNotificationTitle() || "",
@@ -325,7 +333,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     };
 
     try {
-      if (!isOffeTypeGroup) {
+      if (!isOfferTypeGroup) {
         await onSubmit(
           {
             menu_id: newOffer.menuItemId,
@@ -360,10 +368,10 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
   };
 
   useEffect(() => {
-    if (isOffeTypeGroup) {
+    if (isOfferTypeGroup) {
       console.log(newOfferGroup.menuItemIds);
     }
-  }, [groupType, isOffeTypeGroup, newOfferGroup.menuItemIds]);
+  }, [groupType, isOfferTypeGroup, newOfferGroup.menuItemIds]);
 
   return (
     <div className="max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 mb-8">
@@ -377,7 +385,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
           <div className="space-y-2">
             <Label htmlFor="offerType">Offer Type</Label>
             <Select
-              value={isOffeTypeGroup ? "group" : "single"}
+              value={isOfferTypeGroup ? "group" : "single"}
               onValueChange={(value) => {
                 setIsOfferGroup(value === "group");
                 if (value === "single") {
@@ -403,7 +411,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
             </Select>
           </div>
 
-          {isOffeTypeGroup && (
+          {isOfferTypeGroup && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="groupType">Group by</Label>
@@ -589,7 +597,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
             </>
           )}
 
-          {!isOffeTypeGroup && (
+          {!isOfferTypeGroup && (
             <div>
               <div className="space-y-2">
                 <Label htmlFor="menuItem">Select Menu Item</Label>
@@ -702,7 +710,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     <Input
                       ref={notificationTitleRef}
                       id="notificationTitle"
-                      placeholder={getNotificationTitle() }
+                      placeholder={getNotificationTitle()}
                       value={notificationMessage?.title || ""}
                       onChange={(e) =>
                         setNotificationMessage({
@@ -744,11 +752,9 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
             <Button
               disabled={
                 isSubmitting ||
-                !newOffer.menuItemId ||
-                !newOffer.newPrice ||
-                !newOffer.itemsAvailable ||
-                !newOffer.fromTime ||
-                !newOffer.toTime
+                (isOfferTypeGroup
+                  ? !validateGroupItemOffer()
+                  : !validateSingleItemOffer())
               }
               type="submit"
               form="create-offer-form"

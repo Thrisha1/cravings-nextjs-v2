@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { sendOfferWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 import { Notification } from "@/app/actions/notification";
 import { HotelData } from "@/app/hotels/[...id]/page";
+import { useMenuStore } from "./menuStore_hasura";
 
 interface Category {
   name: string;
@@ -41,6 +42,7 @@ export interface OfferGroup {
   description?: string;
   percentage: number;
   menu_item_ids: string[];
+  menu_items?: MenuItem[];
 }
 
 export interface Offer {
@@ -177,19 +179,26 @@ export const useOfferStore = create<OfferState>((set, get) => {
             offer_price: offer.offer_price,
           };
         } else {
+
+          const { items } = useMenuStore.getState();
+
+          const menuItems = items
+            .filter((item) => offer.offer_group?.menu_item_ids.includes(item.id as string))
+            .map(({ id, name, price, image_url }) => ({ id, name, price, image_url }));
+
           newOffer = {
             ...common,
             offer_group: {
               name: offer.offer_group.name,
               description: offer.offer_group.description,
               percentage: offer.offer_group.percentage,
-              menu_item_ids: offer.offer_group.menu_item_ids,
+              menu_items: menuItems,
             },
           };
         }
 
         let addedOffer = await fetchFromHasura(addOffer, {
-          ...newOffer,
+          offer: newOffer,
         });
 
         addedOffer = addedOffer.insert_offers.returning[0];

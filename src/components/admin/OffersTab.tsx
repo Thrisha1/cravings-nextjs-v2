@@ -8,6 +8,8 @@ import { OfferGroup, useOfferStore } from "@/store/offerStore_hasura";
 import { formatDate } from "@/lib/formatDate";
 import Img from "../Img";
 import { CreateOfferForm } from "./CreateOfferForrm";
+import { OfferCard } from "./OfferCard";
+
 
 
 
@@ -85,53 +87,12 @@ export function OffersTab() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {offers.map((offer) => {
                 return (
-                  <Card key={offer.id}>
-                    <CardHeader>
-                      <CardTitle className="text-lg">
-                        {offer.menu.name}
-                      </CardTitle>
-                      <div className="relative w-32 h-32 rounded-md overflow-hidden">
-                        <Img
-                          src={offer.menu.image_url}
-                          alt={offer.menu.name}
-                          className="object-cover w-full h-full "
-                        />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <p className="text-lg">
-                          Original Price: ₹{offer.menu.price.toFixed(2)}
-                        </p>
-                        <p className="text-2xl font-bold text-green-600">
-                          Offer Price: ₹{offer?.offer_price?.toFixed(2)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          From: {formatDate(offer.start_time)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          To: {formatDate(offer.end_time)}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Created At: {formatDate(offer.created_at)}
-                        </p>
-                        <Button
-                          disabled={isDeleting[offer.id]}
-                          variant="destructive"
-                          className="w-full mt-2"
-                          onClick={
-                            isDeleting[offer.id]
-                              ? undefined
-                              : handleOfferDelete(offer.id)
-                          }
-                        >
-                          {isDeleting[offer.id]
-                            ? "Deleting..."
-                            : "Delete Offer"}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <OfferCard
+                    key={offer.id}
+                    offer={offer}
+                    isDeleting={isDeleting}
+                    handleOfferDelete={handleOfferDelete}
+                  />
                 );
               })}
             </div>
