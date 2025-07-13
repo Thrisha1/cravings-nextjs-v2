@@ -636,7 +636,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleCropComplete = async (croppedImageUrl: string, cropType: 'square' | 'circle') => {
+  const handleCropComplete = async (croppedImageUrl: string, cropType: string) => {
     setBannerImage(croppedImageUrl);
     setIsBannerChanged(true);
     setIsCropperOpen(false);
