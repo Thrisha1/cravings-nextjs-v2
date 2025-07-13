@@ -436,7 +436,7 @@ const BulkUploadPage = () => {
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'bulk-upload' | 'add-images')} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
             <TabsTrigger value="bulk-upload">Bulk Upload</TabsTrigger>
-            <TabsTrigger value="add-images">Add Images to Existing Items</TabsTrigger>
+            <TabsTrigger value="add-images">Add Images</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bulk-upload" className="space-y-6">
