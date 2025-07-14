@@ -17,9 +17,9 @@ export async function middleware(request: NextRequest) {
       console.log('Handling QR scan deep link:', pathname);
 
       // For mobile devices - try to open app first
-      const appScheme = isIOS ? 'cravings://' : 'cravings://';
-      const appStoreUrl = isIOS 
-        ? 'https://apps.apple.com/us/app/cravings/idYOUR_APP_ID' 
+      const appScheme = 'https://cravings.live';
+      const appStoreUrl = isIOS
+        ? 'https://apps.apple.com/us/app/cravings/idYOUR_APP_ID'
         : 'https://play.google.com/store/apps/details?id=com.notime.cravings';
       
       const deepLinkUrl = `${appScheme}${pathname}`;
