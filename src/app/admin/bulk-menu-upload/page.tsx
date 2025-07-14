@@ -738,10 +738,10 @@ const BulkUploadPage = () => {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
                       <Checkbox
-                        checked={selectedExistingItems.length === existingMenuItems.length}
+                        checked={selectedExistingItems.length === existingMenuItems.filter(item => !item.image_url || item.image_url === '').length && selectedExistingItems.length > 0}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setSelectedExistingItems(existingMenuItems.map(item => item.id));
+                            setSelectedExistingItems(existingMenuItems.filter(item => !item.image_url || item.image_url === '').map(item => item.id));
                           } else {
                             setSelectedExistingItems([]);
                           }
@@ -750,7 +750,7 @@ const BulkUploadPage = () => {
                         className="h-5 w-5"
                       />
                       <label htmlFor="selectAllExisting" className="text-base font-medium">
-                        Select All ({selectedExistingItems.length} / {existingMenuItems.length})
+                        Select All ({selectedExistingItems.length} / {existingMenuItems.filter(item => !item.image_url || item.image_url === '').length} without images)
                       </label>
                     </div>
                   </div>
