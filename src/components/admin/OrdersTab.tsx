@@ -310,6 +310,24 @@ const OrdersTab = () => {
     }
   }, [currentPage]);
 
+
+  useEffect(() => {
+
+    const isTableEnabled = features?.ordering?.enabled;
+    const isDeliveryEnabled = features?.delivery?.enabled;
+    const isPosEnabled = features?.pos?.enabled;
+
+    if(isDeliveryEnabled){
+      setActiveTab("delivery");
+    } else if(isTableEnabled){
+      setActiveTab("table");
+    } else if(isPosEnabled){
+      setActiveTab("pos");
+    }
+
+
+  },[features]);
+
   // Scroll to top when page changes
   useEffect(() => {
     window.scrollTo({
