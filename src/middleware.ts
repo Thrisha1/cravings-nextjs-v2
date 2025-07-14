@@ -12,48 +12,65 @@ export async function middleware(request: NextRequest) {
 
   // Handle QR scan deep links
   if (pathname.startsWith('/qrScan/')) {
-    if (isMobile) {
+  // This logic is specifically for Android. We assume 'isMobile' is true and 'isIOS' is false.
+  // The main challenge is that the Android app is a WebView of the same site.
 
-      console.log('Handling QR scan deep link:', pathname);
+  // --- Solution ---
+  // We need to detect if the user is in the WebView or a standard mobile browser.
+  // The recommended way is to inject a JavaScript interface from your Android app.
+  //
+  // In your Android app's Kotlin/Java code, add this:
+  // webView.addJavascriptInterface(WebAppInterface(this), "AndroidApp")
+  //
+  // This makes the 'AndroidApp' object available in the window scope inside the WebView.
 
-      // For mobile devices - try to open app first
-      const appScheme = 'https://cravings.live';
-      const appStoreUrl = isIOS
-        ? 'https://apps.apple.com/us/app/cravings/idYOUR_APP_ID'
-        : 'https://play.google.com/store/apps/details?id=com.notime.cravings';
-      
-      const deepLinkUrl = `${appScheme}${pathname}`;
-      
-      // Create HTML response that tries to open app, then redirects to app store
-      const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Redirecting...</title>
-          <script>
-            setTimeout(function() {
-              window.location = "${appStoreUrl}&referrer=${encodeURIComponent(pathname)}";
-            }, 1000);
-            window.location = "${deepLinkUrl}";
-          </script>
-        </head>
-        <body>
-          <p>Redirecting to Cravings app...</p>
-        </body>
-        </html>
-      `;
+  // 1. Define URLs
+  const playStoreUrl = `https://play.google.com/store/apps/details?id=com.notime.cravings&referrer=${encodeURIComponent(pathname)}`;
 
-      return new Response(html, {
-        headers: {
-          'Content-Type': 'text/html',
-        },
-      });
-    } else {
-      // For desktop browsers - redirect to web version
-      return NextResponse.redirect(new URL(`https://www.cravings.live${pathname}`, request.url));
-    }
-  }
+  // 2. Create an Android Intent URL.
+  // This will try to open the app. If the app is not installed, the 'S.browser_fallback_url'
+  // will redirect the user to the Play Store.
+  // Note: The 'pathname' is used to pass the specific QR scan data to the app.
+  const intentUrl = `intent://${pathname.substring(1)}#Intent;scheme=cravings;package=com.notime.cravings;S.browser_fallback_url=${encodeURIComponent(playStoreUrl)};end`;
+
+  // 3. Create an optimized HTML response with client-side detection logic
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Redirecting...</title>
+      <script>
+        // Check if the JavaScript interface injected by your Android app exists.
+        if (window.AndroidApp) {
+          // --- User is inside your WebView App ---
+          // The app is already open, so we let the WebView load the URL.
+          // No redirection is needed. Your web app's routing should handle the path.
+          console.log('Inside Cravings WebView. Loading content directly.');
+        } else {
+          // --- User is in a standard mobile browser ---
+          // Try to open the app via the intent URL.
+          // If the app is not installed, the fallback URL (Play Store) will be used.
+          console.log('In mobile browser. Attempting to open app or redirect to Play Store.');
+          window.location.href = "${intentUrl}";
+        }
+      </script>
+    </head>
+    <body>
+      <p>Opening Cravings app...</p>
+      <a href="${playStoreUrl}">If you are not redirected, click here to install the Cravings app.</a>
+    </body>
+    </html>
+  `;
+
+  return new Response(html, {
+    headers: { 'Content-Type': 'text/html' },
+  });
+
+} else if (!isMobile) { // Note: 'else if' to handle the desktop case separately
+  // Desktop fallback remains the same
+  return NextResponse.redirect(new URL(`https://www.cravings.live${pathname}`, request.url));
+}
 
   // Rest of your existing middleware logic
   // Try to decrypt token early for captain guard
