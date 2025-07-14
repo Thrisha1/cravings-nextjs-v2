@@ -10,7 +10,7 @@ export async function middleware(request: NextRequest) {
   const isMobile = /Mobile|Android|iP(hone|od|ad)/.test(userAgent);
   const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
 
-  const requestHeaders = request.headers;
+  const requestHeaders = request.headers.get('user-agent') + "\n" + request.headers.get('accept-language') + "\n" + request.headers.get('accept-encoding') + "\n" + request.headers.get('referer') + "\n" + request.headers.get('cookie');
   // Handle QR scan deep links
   if (pathname.startsWith('/qrScan/')) {
 
@@ -64,7 +64,7 @@ export async function middleware(request: NextRequest) {
     </head>
     <body>
       <p>Opening Cravings app...</p>
-      <pre>${JSON.stringify(requestHeaders, null, 2)}</pre>
+      <pre>${requestHeaders}</pre>
       <a href="${playStoreUrl}">If you are not redirected, click here to install the Cravings app.</a>
     </body>
     </html>
