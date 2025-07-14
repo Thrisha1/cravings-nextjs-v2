@@ -62,6 +62,9 @@ export async function middleware(request: NextRequest) {
     <body>
       <p>Opening Cravings app...</p>
       <pre>${requestHeaders}</pre>
+      <p>Is mobile device: ${isMobile}</p>
+      <p>Is iOS device: ${isIOS}</p>
+      <p>If you are not redirected, please <a href="${intentUrl}">click
       <a href="${playStoreUrl}">If you are not redirected, click here to install the Cravings app.</a>
     </body>
     </html>
