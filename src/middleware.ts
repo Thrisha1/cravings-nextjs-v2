@@ -50,7 +50,7 @@ export async function middleware(request: NextRequest) {
           // The app is already open, so we let the WebView load the URL.
           // No redirection is needed. Your web app's routing should handle the path.
           console.log('Inside Cravings WebView. Loading content directly.');
-          window.location.href = "https://www.cravings.live${pathname}";
+          // window.location.href = "https://www.cravings.live${pathname}";
         } else {
           // --- User is in a standard mobile browser ---
           // Try to open the app via the intent URL.
