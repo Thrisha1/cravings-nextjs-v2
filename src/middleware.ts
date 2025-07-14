@@ -10,14 +10,13 @@ export async function middleware(request: NextRequest) {
   const isMobile = /Mobile|Android|iP(hone|od|ad)/.test(userAgent);
   const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
 
-  const isBrowser = userAgent.includes("Chrome");
-
   const requestHeaders = request.headers.get('user-agent') + "\n" ;
   const partsInParanthesis = requestHeaders.split('(')[1]?.split(')')[0] || '';
 
   const segments = partsInParanthesis.split(';').map(s => s.trim());
   const deviceName =  segments.length >= 3 ? segments[2] : null;
 
+  const isBrowser = deviceName === "K" ;
 
   // Handle QR scan deep links
   if (pathname.startsWith('/qrScan/')) {
@@ -53,12 +52,12 @@ export async function middleware(request: NextRequest) {
       <meta charset="utf-8">
       <title>Redirecting...</title>
       <script>
-        if (${isMobile}) {
+        if (${isMobile && !isBrowser}) {
           // --- User is inside your WebView App ---
           // The app is already open, so we let the WebView load the URL.
           // No redirection is needed. Your web app's routing should handle the path.
           console.log('Inside Cravings WebView. Loading content directly.');
-          // window.location.href = "https://www.cravings.live${pathname}";
+          window.location.href = "https://www.cravings.live${pathname}";
         } else {
           // --- User is in a standard mobile browser ---
           // Try to open the app via the intent URL.
