@@ -12,6 +12,9 @@ export async function middleware(request: NextRequest) {
 
   // Handle QR scan deep links
   if (pathname.startsWith('/qrScan/')) {
+
+    console.log('QR Scan detected:', pathname);
+
   // This logic is specifically for Android. We assume 'isMobile' is true and 'isIOS' is false.
   // The main challenge is that the Android app is a WebView of the same site.
 
@@ -42,7 +45,9 @@ export async function middleware(request: NextRequest) {
       <title>Redirecting...</title>
       <script>
         // Check if the JavaScript interface injected by your Android app exists.
-        if (window.AndroidApp) {
+        const isApp = window?.localStorage?.getItem('isApp') === 'true';
+        console.log('isApp:', isApp); 
+        if (isApp) {
           // --- User is inside your WebView App ---
           // The app is already open, so we let the WebView load the URL.
           // No redirection is needed. Your web app's routing should handle the path.
