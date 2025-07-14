@@ -45,10 +45,7 @@ export async function middleware(request: NextRequest) {
       <meta charset="utf-8">
       <title>Redirecting...</title>
       <script>
-        // Check if the JavaScript interface injected by your Android app exists.
-        const isApp = window?.localStorage?.getItem('isApp') === 'true';
-        console.log('isApp:', isApp); 
-        if (isApp) {
+        if (${isMobile}) {
           // --- User is inside your WebView App ---
           // The app is already open, so we let the WebView load the URL.
           // No redirection is needed. Your web app's routing should handle the path.
