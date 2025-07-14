@@ -10,7 +10,7 @@ export async function middleware(request: NextRequest) {
   const isMobile = /Mobile|Android|iP(hone|od|ad)/.test(userAgent);
   const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
 
-  const isBrowser = /Chrome|Safari|Firefox|Opera|Edge/i.test(userAgent);
+  const isBrowser = userAgent.includes("Chrome");
 
   const requestHeaders = request.headers.get('user-agent') + "\n" + request.headers.get('accept-language') + "\n" + request.headers.get('accept-encoding') + "\n" + request.headers.get('referer') + "\n" + request.headers.get('cookie');
   // Handle QR scan deep links
