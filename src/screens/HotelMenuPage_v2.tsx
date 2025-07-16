@@ -63,6 +63,8 @@ const HotelMenuPage = ({
   selectedCategory: selectedCategoryProp,
 }: HotelMenuPageProps) => {
   const router = useRouter();
+  const pathname = usePathname();
+  
   const styles: Styles = {
     backgroundColor: theme?.colors?.bg || "#F5F5F5",
     color: theme?.colors?.text || "#000",
@@ -74,9 +76,7 @@ const HotelMenuPage = ({
     },
   };
 
-  const { setHotelId, genOrderId, open_place_order_modal } = useOrderStore();
-
-  const pathname = usePathname();
+  const { setHotelId, genOrderId, open_place_order_modal, items: cartItems } = useOrderStore();
 
   useEffect(() => {
     const handleUpdateQrCount = async () => {
@@ -186,7 +186,6 @@ const HotelMenuPage = ({
   const items = getCategoryItems(selectedCategory);
 
   console.log(selectedCategory, "selectedCategory");
-  
 
   const defaultProps = {
     offers,
@@ -215,25 +214,87 @@ const HotelMenuPage = ({
     }
   };
 
+  // Check if cart has items
+  const hasCartItems = cartItems && cartItems.length > 0;
+
+  // Determine if the current page has bottom navigation
+  const hasBottomNav = () => {
+    // Option 1: Based on pathname patterns
+    const pagesWithBottomNav = [
+      '/hotels', 
+      '/menu', 
+      '/orders', 
+      '/profile', 
+      '/home',
+      '/search',
+      '/favorites'
+    ];
+    
+    // Check if current path matches any of the bottom nav pages
+    const hasBottomNavByPath = pagesWithBottomNav.some(page => 
+      pathname.includes(page) || pathname === '/'
+    );
+
+    // Option 2: Based on QR scan status (QR scan pages typically don't have bottom nav)
+    const isQrScanPage = pathname.includes("qrScan");
+
+    // Option 3: Based on user authentication (authenticated users might have bottom nav)
+    const isAuthenticated = !!auth;
+
+    // Option 4: Based on specific page exclusions
+    const pagesWithoutBottomNav = [
+      '/checkout', 
+      '/payment', 
+      '/admin', 
+      '/login', 
+      '/register',
+      '/onboarding',
+      '/thank-you'
+    ];
+    
+    const hasNoBottomNavByPath = pagesWithoutBottomNav.some(page => 
+      pathname.includes(page)
+    );
+
+    // Combine the logic based on your app's requirements
+    // Customize this logic based on your specific app structure
+    if (hasNoBottomNavByPath) {
+      return false; // Explicitly no bottom nav for certain pages
+    }
+
+    if (isQrScanPage) {
+      return false; // QR scan pages don't have bottom nav
+    }
+
+    if (hasBottomNavByPath) {
+      return true; // Explicitly has bottom nav for certain pages
+    }
+
+    // Default fallback - you can customize this
+    return isAuthenticated; // Show bottom nav for authenticated users
+  };
+
   return (
     <>
       {renderPage()}
 
-      {/* order drawer  */}
-      {((pathname.includes("qrScan") &&
-        getFeatures(hoteldata?.feature_flags || "")?.ordering.enabled) ||
-        (!pathname.includes("qrScan") &&
-          getFeatures(hoteldata?.feature_flags || "")?.delivery.enabled)) && (
-        <section>
-          <OrderDrawer
-            qrGroup={qrGroup}
-            styles={styles}
-            qrId={qrId || undefined}
-            hotelData={hoteldata}
-            tableNumber={tableNumber}
-          />
-        </section>
-      )}
+      {/* order drawer - only show when cart has items */}
+      {hasCartItems && 
+        ((pathname.includes("qrScan") &&
+          getFeatures(hoteldata?.feature_flags || "")?.ordering.enabled) ||
+          (!pathname.includes("qrScan") &&
+            getFeatures(hoteldata?.feature_flags || "")?.delivery.enabled)) && (
+          <section>
+            <OrderDrawer
+              qrGroup={qrGroup}
+              styles={styles}
+              qrId={qrId || undefined}
+              hotelData={hoteldata}
+              tableNumber={tableNumber}
+              hasBottomNav={hasBottomNav()} // Pass the bottom nav status
+            />
+          </section>
+        )}
     </>
   );
 };

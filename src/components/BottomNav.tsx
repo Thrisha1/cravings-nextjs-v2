@@ -157,8 +157,8 @@ const BottomNav = ({ userData }: { userData: any }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // Don't show on /captain* routes, otherwise show if items exist
-  const shouldShow = items.length > 0 && !pathname.startsWith("/captain") && !pathname.startsWith("/kot") && !pathname.startsWith("/bill");
+  // Don't show on /captain* routes, /kot*, /bill*, or /qrScan* routes, otherwise show if items exist
+  const shouldShow = items.length > 0 && !pathname.startsWith("/captain") && !pathname.startsWith("/kot") && !pathname.startsWith("/bill") && !pathname.startsWith("/qrScan");
 
 
   if (!shouldShow) return null;
