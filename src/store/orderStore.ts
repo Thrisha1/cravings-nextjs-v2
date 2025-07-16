@@ -43,7 +43,6 @@ export interface DeliveryRules {
   minimum_order_amount: number;
 }
 
-
 export interface Order {
   id: string;
   items: OrderItem[];
@@ -262,7 +261,7 @@ const useOrderStore = create(
             }
           );
 
-          await Notification.user.sendOrderStatusNotification(order , status);
+          await Notification.user.sendOrderStatusNotification(order, status);
 
           if (response.errors) {
             throw new Error(
@@ -337,10 +336,13 @@ const useOrderStore = create(
             }
           }
 
-          if(newStatus === "cancelled"){
+          if (newStatus === "cancelled") {
             const order = orders.find((o) => o.id === orderId);
-            if(order){
-              await Notification.user.sendOrderStatusNotification(order , newStatus);
+            if (order) {
+              await Notification.user.sendOrderStatusNotification(
+                order,
+                newStatus
+              );
             }
           }
 
@@ -400,7 +402,6 @@ const useOrderStore = create(
               })),
             }));
 
-
             if (allOrders) {
               set({ userOrders: allOrders });
               if (callback) callback(allOrders);
@@ -428,7 +429,9 @@ const useOrderStore = create(
 
         return subscribeToHasura({
           query: subscriptionQuery,
-          variables: { partner_id: partnerId },
+          variables: {
+            partner_id: partnerId,
+          },
           onNext: (data) => {
             if (data?.data?.orders) {
               const orders = data.data.orders.map(transformOrderFromHasura);
@@ -449,12 +452,26 @@ const useOrderStore = create(
           return () => {};
         }
 
+        const now = new Date();
+        const todayStart = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        );
+        const todayEnd = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate() + 1
+        );
+
         return subscribeToHasura({
           query: paginatedOrdersSubscription,
-          variables: { 
+          variables: {
             partner_id: userData.id,
             limit,
-            offset
+            offset,
+            today_start: todayStart.toISOString(),
+            today_end: todayEnd.toISOString(),
           },
           onNext: (data) => {
             if (data?.data?.orders) {
@@ -482,7 +499,7 @@ const useOrderStore = create(
           onNext: (data) => {
             if (data?.data?.orders_aggregate?.aggregate?.count !== undefined) {
               const count = data.data.orders_aggregate.aggregate.count;
-              
+
               if (callback) {
                 callback(count);
               }
@@ -570,7 +587,7 @@ const useOrderStore = create(
       addItem: (item) => {
         const state = get();
         if (!state.hotelId) return;
-      
+
         set((state) => {
           const hotelOrders = { ...state.hotelOrders };
           const hotelOrder = hotelOrders[state.hotelId!] || {
@@ -579,23 +596,22 @@ const useOrderStore = create(
             order: null,
             orderId: null,
           };
-      
+
           if (item.variantSelections && item.variantSelections.length > 0) {
-            
             const itemIdWithVariants = `${item.id}`;
-      
+
             const existingItem = hotelOrder.items.find(
-              i => i.id === itemIdWithVariants
+              (i) => i.id === itemIdWithVariants
             );
-      
+
             if (existingItem) {
               // If same variant combination exists, just increase quantity
-              const updatedItems = hotelOrder.items.map(i =>
+              const updatedItems = hotelOrder.items.map((i) =>
                 i.id === itemIdWithVariants
                   ? { ...i, quantity: i.quantity + 1 }
                   : i
               );
-              
+
               hotelOrders[state.hotelId!] = {
                 ...hotelOrder,
                 items: updatedItems,
@@ -611,7 +627,7 @@ const useOrderStore = create(
                 name: item.name, // This already includes variant info from the component
                 price: item.price, // This is the total price of all variants
               };
-              
+
               hotelOrders[state.hotelId!] = {
                 ...hotelOrder,
                 items: [...hotelOrder.items, newItem],
@@ -621,7 +637,7 @@ const useOrderStore = create(
           } else {
             // Original logic for items without variants
             const existingItem = hotelOrder.items.find((i) => i.id === item.id);
-      
+
             if (existingItem) {
               const updatedItems = hotelOrder.items.map((i) =>
                 i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
@@ -645,7 +661,7 @@ const useOrderStore = create(
               };
             }
           }
-      
+
           return {
             hotelOrders,
             items: hotelOrders[state.hotelId!].items,
@@ -654,30 +670,30 @@ const useOrderStore = create(
           };
         });
       },
-      
+
       removeItem: (itemId) => {
         const state = get();
         if (!state.hotelId) return;
-      
+
         set((state) => {
           const hotelOrders = { ...state.hotelOrders };
           const hotelOrder = hotelOrders[state.hotelId!];
           if (!hotelOrder) return state;
-      
+
           const itemToRemove = hotelOrder.items.find(
             (item) => item.id === itemId
           );
           if (!itemToRemove) return state;
-      
+
           // Calculate price to subtract (handles both regular items and variant items)
           const priceToSubtract = itemToRemove.price * itemToRemove.quantity;
-      
+
           hotelOrders[state.hotelId!] = {
             ...hotelOrder,
             items: hotelOrder.items.filter((item) => item.id !== itemId),
             totalPrice: hotelOrder.totalPrice - priceToSubtract,
           };
-      
+
           return {
             hotelOrders,
             items: hotelOrders[state.hotelId!].items,
@@ -686,33 +702,32 @@ const useOrderStore = create(
           };
         });
       },
-      
+
       decreaseQuantity: (itemId) => {
         const state = get();
         if (!state.hotelId) return;
-      
+
         set((state) => {
           const hotelOrders = { ...state.hotelOrders };
           const hotelOrder = hotelOrders[state.hotelId!];
           if (!hotelOrder) return state;
-      
+
           const itemToDecrease = hotelOrder.items.find(
             (item) => item.id === itemId
           );
-          
+
           console.log(itemToDecrease);
-          
 
           if (!itemToDecrease) return state;
-      
+
           if (itemToDecrease.quantity > 1) {
             // Decrease quantity
-            const updatedItems = hotelOrder.items.map(item =>
+            const updatedItems = hotelOrder.items.map((item) =>
               item.id === itemId
                 ? { ...item, quantity: item.quantity - 1 }
                 : item
             );
-            
+
             hotelOrders[state.hotelId!] = {
               ...hotelOrder,
               items: updatedItems,
@@ -722,11 +737,11 @@ const useOrderStore = create(
             // Remove item if quantity would go to 0
             hotelOrders[state.hotelId!] = {
               ...hotelOrder,
-              items: hotelOrder.items.filter(item => item.id !== itemId),
+              items: hotelOrder.items.filter((item) => item.id !== itemId),
               totalPrice: hotelOrder.totalPrice - itemToDecrease.price,
             };
           }
-      
+
           return {
             hotelOrders,
             items: hotelOrders[state.hotelId!].items,
@@ -820,7 +835,6 @@ const useOrderStore = create(
         });
       },
 
-     
       placeOrder: async (
         hotelData: HotelData,
         tableNumber?: number,
@@ -1097,11 +1111,13 @@ const useOrderStore = create(
 
           return ordersResponse.orders.map((order: any) => {
             // Ensure captain data is properly structured
-            const captainData = order.captainid ? {
-              id: order.captainid.id,
-              name: order.captainid.name,
-              email: order.captainid.email
-            } : null;
+            const captainData = order.captainid
+              ? {
+                  id: order.captainid.id,
+                  name: order.captainid.name,
+                  email: order.captainid.email,
+                }
+              : null;
 
             return {
               id: order.id,
@@ -1123,7 +1139,7 @@ const useOrderStore = create(
               user: order.user,
               orderedby: order.orderedby,
               captain_id: order.captain_id,
-              captain: captainData,  // Use the properly structured captain data
+              captain: captainData, // Use the properly structured captain data
               items: order.order_items.map((i: any) => ({
                 id: i.menu?.id,
                 quantity: i.quantity,
