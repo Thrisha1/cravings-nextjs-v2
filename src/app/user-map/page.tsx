@@ -3,6 +3,7 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import { unstable_cache } from "next/cache";
 import React from "react";
 
+
 const page = async () => {
   const getPartners = unstable_cache(
     async () => {
@@ -12,6 +13,9 @@ const page = async () => {
                 geo_location
                 store_name
                 store_banner
+                status
+                country
+                district
                 id
             }
             }
