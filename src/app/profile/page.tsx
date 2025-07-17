@@ -637,6 +637,7 @@ export default function ProfilePage() {
   };
 
   const handleCropComplete = async (croppedImageUrl: string, cropType: string) => {
+    
     setBannerImage(croppedImageUrl);
     setIsBannerChanged(true);
     setIsCropperOpen(false);
@@ -652,6 +653,9 @@ export default function ProfilePage() {
     setBannerUploading(true);
     try {
       toast.loading("Updating banner...");
+
+      const mimeType = bannerImage?.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] || 'image/png';
+      const extension = mimeType.split('/')[1] || 'png';
 
       // Convert base64 to blob for upload
       const response = await fetch(bannerImage as string);
@@ -685,10 +689,11 @@ export default function ProfilePage() {
           nextVersion = "v0";
         }
       }
+      
 
       const imgUrl = await uploadFileToS3(
         blob,
-        `hotel_banners/${userData.id + "_" + nextVersion}.png`
+        `hotel_banners/${userData.id + "_" + nextVersion}.${extension}`,
       );
 
       setBannerImage(imgUrl);
