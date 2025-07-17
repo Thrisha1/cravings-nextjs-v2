@@ -116,7 +116,7 @@ const UsersMap = ({ partners }: { partners: Partner[] }) => {
   }, [partners]);
 
   return (
-    <div className="fixed z-[62] top-0 left-0 w-full h-screen">
+    <div className="w-full h-screen">
       <div id="map" className="w-full h-full"></div>
       <style jsx global>{`
         .custom-popup .mapboxgl-popup-content {
