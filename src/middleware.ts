@@ -89,18 +89,34 @@ export async function middleware(request: NextRequest) {
           return NextResponse.redirect(new URL("/admin", request.url));
         }
 
+        // For users, redirect to their last visited hotel only on an initial page load.
+        // This is determined by checking the 'Referer' header.
         const referer = request.headers.get("referer");
         const requestHost = request.nextUrl.host;
-        const isInternalNavigation = referer ? new URL(referer).host === requestHost : false;
+        let isInternalNavigation = false;
+
+        // Safely check if the referer is from the same host.
+        // This prevents "Invalid URL" errors if the referer is missing or malformed.
+        if (referer) {
+          try {
+            const refererHost = new URL(referer).host;
+            isInternalNavigation = refererHost === requestHost;
+          } catch {
+            // If referer is not a valid URL, treat it as external.
+            isInternalNavigation = false;
+          }
+        }
+        
+        const lastHotel = cookieStore.get("last_hotel")?.value;
 
         if (
           decrypted?.role === "user" &&
-          cookieStore.get("last_hotel") &&
+          lastHotel &&
           !isInternalNavigation
         ) {
           return NextResponse.redirect(
             new URL(
-              `/hotels/${cookieStore.get("last_hotel")?.value}`,
+              `/hotels/${lastHotel}`,
               request.url
             )
           );
@@ -109,7 +125,7 @@ export async function middleware(request: NextRequest) {
         // Regular users stay on home page
         return NextResponse.next();
       } catch (error) {
-        console.error("Error decrypting token:", error);
+        console.error("Error in root path handler:", error);
         // Continue with normal flow if there's an error
       }
     }
