@@ -71,63 +71,63 @@ export async function middleware(request: NextRequest) {
 
   // Handle root path redirects based on role
   if (pathname === "/") {
-    if (authToken) {
-      try {
-        const decrypted = decryptText(authToken) as {
+    try {
+      let decrypted: { id: string; role: string; status?: string } | undefined;
+
+      if (authToken) {
+        decrypted = decryptText(authToken) as {
           id: string;
           role: string;
           status?: string;
         };
-
-        // Superadmin always redirects to /superadmin
-        if (decrypted?.role === "superadmin") {
-          return NextResponse.redirect(new URL("/superadmin", request.url));
-        }
-
-        // Partner redirects to /admin
-        if (decrypted?.role === "partner") {
-          return NextResponse.redirect(new URL("/admin", request.url));
-        }
-
-        // For users, redirect to their last visited hotel only on an initial page load.
-        // This is determined by checking the 'Referer' header.
-        const referer = request.headers.get("referer");
-        const requestHost = request.nextUrl.host;
-        let isInternalNavigation = false;
-
-        // Safely check if the referer is from the same host.
-        // This prevents "Invalid URL" errors if the referer is missing or malformed.
-        if (referer) {
-          try {
-            const refererHost = new URL(referer).host;
-            isInternalNavigation = refererHost === requestHost;
-          } catch {
-            // If referer is not a valid URL, treat it as external.
-            isInternalNavigation = false;
-          }
-        }
-        
-        const lastHotel = cookieStore.get("last_hotel")?.value;
-
-        if (
-          decrypted?.role === "user" &&
-          lastHotel &&
-          !isInternalNavigation
-        ) {
-          return NextResponse.redirect(
-            new URL(
-              `/hotels/${lastHotel}`,
-              request.url
-            )
-          );
-        }
-
-        // Regular users stay on home page
-        return NextResponse.next();
-      } catch (error) {
-        console.error("Error in root path handler:", error);
-        // Continue with normal flow if there's an error
       }
+
+      // Superadmin always redirects to /superadmin
+      if (decrypted?.role === "superadmin") {
+        return NextResponse.redirect(new URL("/superadmin", request.url));
+      }
+
+      // Partner redirects to /admin
+      if (decrypted?.role === "partner") {
+        return NextResponse.redirect(new URL("/admin", request.url));
+      }
+
+      // For users, redirect to their last visited hotel only on an initial page load.
+      // This is determined by checking the 'Referer' header.
+      const referer = request.headers.get("referer");
+      const requestHost = request.nextUrl.host;
+      let isInternalNavigation = false;
+
+      // Safely check if the referer is from the same host.
+      // This prevents "Invalid URL" errors if the referer is missing or malformed.
+      if (referer) {
+        try {
+          const refererHost = new URL(referer).host;
+          isInternalNavigation = refererHost === requestHost;
+        } catch {
+          // If referer is not a valid URL, treat it as external.
+          isInternalNavigation = false;
+        }
+      }
+
+      const lastHotel = cookieStore.get("last_hotel")?.value;
+
+      if (
+        decrypted?.role !== "partner" &&
+        decrypted?.role !== "superadmin" &&
+        lastHotel &&
+        !isInternalNavigation
+      ) {
+        return NextResponse.redirect(
+          new URL(`/hotels/${lastHotel}`, request.url)
+        );
+      }
+
+      // Regular users stay on home page
+      return NextResponse.next();
+    } catch (error) {
+      console.error("Error in root path handler:", error);
+      // Continue with normal flow if there's an error
     }
     return NextResponse.next();
   }
