@@ -28,6 +28,7 @@ const MenuItemsList = ({
 }) => {
   const serachParaams = useSearchParams();
   const selectedCat = serachParaams.get("cat") || "all";
+  const isOfferCategory = selectedCat === "Offer";
 
   return (
     <div className="flex flex-col gap-6">
@@ -93,17 +94,30 @@ const MenuItemsList = ({
       <div id="menu-items" className="px-[8%] grid h-fit gap-3 rounded-3xl ">
         {items
           ?.sort((a, b) => a.priority - b.priority)
-          ?.map((item) => (
-            <ItemCard
-              hotelData={hotelData}
-              feature_flags={hotelData?.feature_flags}
-              currency={currency}
-              key={item.id}
-              item={item}
-              styles={styles}
-              tableNumber={tableNumber}
-            />
-          ))}
+          ?.map((item) => {
+            let offerPrice = undefined;
+            let oldPrice = undefined;
+            if (isOfferCategory) {
+              // Find the offer for this item
+              const offer = hotelData.offers?.find((o) => o.menu && o.menu.id === item.id);
+              offerPrice = offer?.offer_price;
+              oldPrice = offer?.menu?.price;
+            }
+            return (
+              <ItemCard
+                hotelData={hotelData}
+                feature_flags={hotelData?.feature_flags}
+                currency={currency}
+                key={item.id}
+                item={item}
+                styles={styles}
+                tableNumber={tableNumber}
+                isOfferItem={isOfferCategory}
+                offerPrice={offerPrice}
+                oldPrice={oldPrice}
+              />
+            );
+          })}
       </div>
     </div>
   );

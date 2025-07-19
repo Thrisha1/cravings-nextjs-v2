@@ -202,12 +202,12 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       toast.error("Please select a menu item");
       return false;
     }
-    if (!newOffer.newPrice) {
-      toast.error("Please enter a new price");
+    if (!newOffer.newPrice || isNaN(parseFloat(newOffer.newPrice))) {
+      toast.error("Please enter a valid new price");
       return false;
     }
-    if (!newOffer.itemsAvailable) {
-      toast.error("Please enter the number of items available");
+    if (!newOffer.itemsAvailable || isNaN(parseInt(newOffer.itemsAvailable))) {
+      toast.error("Please enter a valid number of items available");
       return false;
     }
     if (!newOffer.fromTime) {
@@ -227,12 +227,18 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
   };
 
   const validateGroupItemOffer = () => {
-    if (!newOfferGroup.name) {
+    if (!newOfferGroup.name.trim()) {
       toast.error("Please enter a name for the offer group");
       return false;
     }
-    if (!newOfferGroup.percentage) {
-      toast.error("Please enter a discount percentage for the offer group");
+    if (!newOfferGroup.percentage || isNaN(parseFloat(newOfferGroup.percentage))) {
+      toast.error("Please enter a valid discount percentage for the offer group");
+      return false;
+    }
+
+    const percentage = parseFloat(newOfferGroup.percentage);
+    if (percentage <= 0 || percentage > 100) {
+      toast.error("Discount percentage must be between 1 and 100");
       return false;
     }
 
@@ -246,11 +252,30 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       return false;
     }
 
+    if (!newOffer.fromTime) {
+      toast.error("Please select a from time");
+      return false;
+    }
+    if (!newOffer.toTime) {
+      toast.error("Please select a to time");
+      return false;
+    }
+
     if (!validateFromToTime()) {
       return false;
     }
 
     return true;
+  };
+
+  // Helper function to get items with valid images
+  const getValidItems = () => {
+    return items?.filter((item) => item.image_url && item.image_url.trim() !== "") || [];
+  };
+
+  // Helper function to get items by category
+  const getItemsByCategory = (categoryId: string) => {
+    return getValidItems().filter((item) => item.category?.id === categoryId);
   };
 
   const getNotificationTitle = () => {
@@ -313,7 +338,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
+  
     if (!isOfferTypeGroup) {
       if (!validateSingleItemOffer()) {
         setIsSubmitting(false);
@@ -325,15 +350,22 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
         return;
       }
     }
-
+  
     const notificationMessage = {
-      title:
-        notificationTitleRef.current?.value || getNotificationTitle() || "",
+      title: notificationTitleRef.current?.value || getNotificationTitle() || "",
       body: notificationBodyRef.current?.value || getNotificationBody() || "",
     };
-
+  
     try {
       if (!isOfferTypeGroup) {
+        console.log("Creating single offer:", {
+          menu_id: newOffer.menuItemId,
+          offer_price: parseFloat(newOffer.newPrice),
+          items_available: parseInt(newOffer.itemsAvailable),
+          start_time: newOffer.fromTime,
+          end_time: newOffer.toTime,
+        });
+  
         await onSubmit(
           {
             menu_id: newOffer.menuItemId,
@@ -345,6 +377,13 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
           notificationMessage
         );
       } else {
+        console.log("Creating group offer with items:", newOfferGroup.menuItemIds);
+        console.log("Group type:", groupType);
+        console.log("Selected category:", newOfferGroup.categoryId);
+        console.log("Items for offer:", items.filter(item => 
+          newOfferGroup.menuItemIds.includes(item.id as string)
+        ));
+  
         await onSubmit(
           {
             start_time: newOffer.fromTime,
@@ -363,15 +402,17 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       toast.error("Failed to create offer");
       console.error(error);
     }
-
+  
     setIsSubmitting(false);
   };
 
   useEffect(() => {
     if (isOfferTypeGroup) {
-      console.log(newOfferGroup.menuItemIds);
+      console.log("Selected items for offer group:", newOfferGroup.menuItemIds);
+      console.log("Group type:", groupType);
+      console.log("Selected category:", newOfferGroup.categoryId);
     }
-  }, [groupType, isOfferTypeGroup, newOfferGroup.menuItemIds]);
+  }, [groupType, isOfferTypeGroup, newOfferGroup.menuItemIds, newOfferGroup.categoryId]);
 
   return (
     <div className="max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 mb-8">
@@ -398,6 +439,16 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     toTime: "",
                   });
                   setSelectedItem(null);
+                } else {
+                  // Reset group offer state
+                  setNewOfferGroup({
+                    name: "",
+                    categoryId: "",
+                    description: "",
+                    percentage: "",
+                    menuItemIds: [],
+                  });
+                  setGroupType(undefined);
                 }
               }}
             >
@@ -420,16 +471,24 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                   onValueChange={(value) => {
                     setGroupType(value as "category" | "all" | "select");
                     if (value === "all") {
+                      const validItems = getValidItems();
                       setNewOfferGroup({
                         ...newOfferGroup,
-                        menuItemIds: items
-                          .filter((item) => item.image_url != "")
+                        categoryId: "",
+                        menuItemIds: validItems
                           .map((item) => item.id)
                           .filter((id): id is string => id !== undefined),
+                      });
+                    } else if (value === "category") {
+                      setNewOfferGroup({
+                        ...newOfferGroup,
+                        categoryId: "",
+                        menuItemIds: [],
                       });
                     } else {
                       setNewOfferGroup({
                         ...newOfferGroup,
+                        categoryId: "",
                         menuItemIds: [],
                       });
                     }
@@ -452,15 +511,14 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                   <Select
                     value={newOfferGroup.categoryId}
                     onValueChange={(value) => {
+                      const categoryItems = getItemsByCategory(value);
+                      console.log("Category items found:", categoryItems);
                       setNewOfferGroup({
                         ...newOfferGroup,
                         categoryId: value,
-                        menuItemIds:
-                          items
-                            ?.filter((item) => item.category.id === value)
-                            ?.map((item) => item.id)
-                            .filter((id): id is string => id !== undefined) ||
-                          [],
+                        menuItemIds: categoryItems
+                          .map((item) => item.id)
+                          .filter((id): id is string => id !== undefined),
                       });
                     }}
                   >
@@ -470,41 +528,52 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     <SelectContent>
                       {categories.map((category) => (
                         <SelectItem key={category.id} value={category.id}>
-                          {category.name}
+                          {category.name} ({getItemsByCategory(category.id).length} items)
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  
+                  {newOfferGroup.categoryId && (
+                    <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                      <p className="text-sm text-gray-600 mb-2">
+                        Items in this category ({getItemsByCategory(newOfferGroup.categoryId).length}):
+                      </p>
+                      <div className="grid grid-cols-2 gap-1 text-xs">
+                        {getItemsByCategory(newOfferGroup.categoryId).map((item) => (
+                          <div key={item.id} className="truncate">
+                            {item.name}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {groupType === "all" && (
                 <div className="text-gray-500 text-sm">
                   All items in the menu will be included in this offer group.
-                  {`(${
-                    items?.filter((item) => item.image_url != "")?.length
-                  })`}{" "}
-                  items found.
-                  <ul className="grid grid-cols-2 gap-2 mt-2">
-                    {items
-                      .filter((item) => item.image_url != "")
-                      .map((item) => (
-                        <li key={item.id}>{item.name}</li>
+                  {`(${getValidItems().length})`} items found.
+                  <div className="mt-2 p-3 bg-gray-50 rounded-md max-h-40 overflow-y-auto">
+                    <ul className="grid grid-cols-2 gap-2 text-xs">
+                      {getValidItems().map((item) => (
+                        <li key={item.id} className="truncate">{item.name}</li>
                       ))}
-                  </ul>
+                    </ul>
+                  </div>
                 </div>
               )}
 
               {groupType === "select" && (
                 <div className="space-y-2">
                   <Label>Select Menu Items</Label>
-                  <div className="space-y-2 grid grid-cols-2">
-                    {items
-                      ?.filter((item) => item.image_url != "")
-                      ?.map((item) => (
+                  <div className="max-h-60 overflow-y-auto border rounded-md p-2">
+                    <div className="space-y-2 grid grid-cols-1 gap-2">
+                      {getValidItems().map((item) => (
                         <div
                           key={item.id}
-                          className="flex items-center space-x-2"
+                          className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded"
                         >
                           <Checkbox
                             id={`item-${item.id}`}
@@ -531,24 +600,31 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                             }}
                           />
                           <Label
-                            className="text-xs"
+                            className="text-sm cursor-pointer flex-1"
                             htmlFor={`item-${item.id}`}
                           >
-                            {item.name}
+                            {item.name} - ₹{item.price?.toFixed(2) || "0.00"}
                           </Label>
                         </div>
                       ))}
+                    </div>
                   </div>
+                  <p className="text-xs text-gray-500">
+                    {newOfferGroup.menuItemIds.length} items selected
+                  </p>
                 </div>
               )}
 
               <div className="space-y-2">
                 <Label htmlFor="offerGroupDiscount">
-                  Offer discount percentage
+                  Offer discount percentage (1-100)
                 </Label>
                 <Input
                   ref={offerGroupDiscountRef}
                   id="offerGroupDiscount"
+                  type="number"
+                  min="1"
+                  max="100"
                   placeholder="Enter offer discount percentage"
                   value={newOfferGroup.percentage}
                   onChange={(e) =>
@@ -619,13 +695,11 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     <SelectValue placeholder="Select a product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {items
-                      .filter((i) => i.image_url != "")
-                      .map((item) => (
-                        <SelectItem key={item.id} value={item.id as string}>
-                          {item.name} - ₹{item.price.toFixed(2)}
-                        </SelectItem>
-                      ))}
+                    {getValidItems().map((item) => (
+                      <SelectItem key={item.id} value={item.id as string}>
+                        {item.name} - ₹{item.price?.toFixed(2) || "0.00"}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -636,6 +710,8 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                   ref={priceInputRef}
                   id="newPrice"
                   type="number"
+                  step="0.01"
+                  min="0"
                   placeholder="Enter new price"
                   value={newOffer.newPrice}
                   onChange={(e) =>
@@ -654,6 +730,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                   ref={itemsInputRef}
                   id="itemsAvailable"
                   type="number"
+                  min="1"
                   placeholder="Enter quantity"
                   value={newOffer.itemsAvailable}
                   onChange={(e) =>
@@ -750,12 +827,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
               Cancel
             </Button>
             <Button
-              disabled={
-                isSubmitting ||
-                (isOfferTypeGroup
-                  ? !validateGroupItemOffer()
-                  : !validateSingleItemOffer())
-              }
+              disabled={isSubmitting}
               type="submit"
               form="create-offer-form"
               className="bg-orange-600"

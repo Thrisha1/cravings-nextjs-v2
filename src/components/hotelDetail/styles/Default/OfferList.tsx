@@ -35,8 +35,9 @@ const OfferList = ({
 
       <div className="grid grid-cols-2 gap-4 my-5">
         {offers.map((offer) => {
+          if (!offer.menu || offer.menu.price == null) return null;
           const discount =
-            ((offer.menu.price - offer.offer_price) / offer.menu.price) * 100;
+            ((offer.menu.price - (offer.offer_price ?? 0)) / offer.menu.price) * 100;
           const isUpcoming = new Date(offer.start_time) > new Date();
 
           const item = menus.find((item) => item.id === offer.menu.id);
