@@ -9,7 +9,7 @@ const page = async () => {
     async () => {
       try {
         return fetchFromHasura(`query MyQuery {
-            partners(where: {geo_location: {_is_null: false}}) {
+            partners(where: {geo_location: {_is_null: false} , status: {_eq: "active"}}) {
                 geo_location
                 store_name
                 store_banner
@@ -30,10 +30,32 @@ const page = async () => {
     }
   );
 
+  const getUsers = unstable_cache(
+    async () => {
+      try {
+        return fetchFromHasura(`query MyQuery {
+            users(where: {location: {_is_null: false}}) {
+                location
+                phone
+                id
+            }
+            }
+            `);
+      } catch (error) {
+        throw error;
+      }
+    },
+    ["users-location"],
+    {
+      tags: ["users-location"],
+    }
+  );
+
   const { partners } = await getPartners();
+  const { users } = await getUsers();
 
   return (
-    <UsersMap partners={partners} />
+    <UsersMap partners={partners} users={users} />
   );
 };
 

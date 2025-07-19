@@ -46,7 +46,10 @@ export interface User extends BaseUser {
   full_name: string;
   phone: string;
   crave_coins: number;
-  location: string | null;
+  location: {
+    type: "Point";
+    coordinates: [number, number];
+  } | null;
 }
 
 export interface Partner extends BaseUser {
