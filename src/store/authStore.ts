@@ -439,6 +439,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       await transferTempDataToUserAccount(user.id);
 
+
       setAuthCookie({
         id: user.id,
         role: "user",

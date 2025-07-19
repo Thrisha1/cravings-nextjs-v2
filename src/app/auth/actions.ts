@@ -76,12 +76,12 @@ export const setLocationCookie = async (lat: number, lng: number) => {
   const authCookie = await getAuthCookie();
   const isUser = authCookie?.role === "user";
 
-  if (isUser) {
-    const location = {
-      type: "Point",
-      coordinates: [lng, lat],
-    };
+  const location = {
+    type: "Point",
+    coordinates: [lng, lat],
+  };
 
+  if (isUser) {
     await fetchFromHasura(
       `
       mutation UpdateUserLocation($location: geography!) {
@@ -94,6 +94,57 @@ export const setLocationCookie = async (lat: number, lng: number) => {
         location: location,
       }
     );
+  } else if (authCookie === null) {
+    const tempUserId = await getTempUserIdCookie();
+
+    if (tempUserId) {
+      await saveTempUserLocation(tempUserId, location);
+    }
+  }
+};
+
+const saveTempUserLocation = async (id: string, location: any) => {
+  try {
+    await fetchFromHasura(
+      `
+    mutation createTempUserLocation($id: String!, $location: geography!) {
+      insert_temp_user_loc_one(
+        object: {id: $id, location: $location, created_at: "now()"},
+        on_conflict: {
+          constraint: temp_user_loc_pkey,
+          update_columns: [location, created_at] 
+        }
+      ) {
+        id
+      }
+    }
+  `,
+      {
+        id,
+        location,
+      }
+    );
+  } catch (error) {
+    console.error("Error saving temp user location:", error);
+  }
+};
+
+const removeTempUserLocation = async (id: string) => {
+  try {
+    await fetchFromHasura(
+      `
+    mutation deleteTempUserLocation($id: String!) {
+      delete_temp_user_loc_by_pk(id: $id) {
+        id
+      }
+    }
+  `,
+      {
+        id,
+      }
+    );
+  } catch (error) {
+    console.error("Error removing temp user location:", error);
   }
 };
 
@@ -137,6 +188,8 @@ export const getTempUserIdCookie = async () => {
 };
 
 export const removeTempUserIdCookie = async () => {
+  const tempUserId = await getTempUserIdCookie();
+  if (tempUserId) await removeTempUserLocation(tempUserId);
   (await cookies()).delete("temp_user_id");
 };
 

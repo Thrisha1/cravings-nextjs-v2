@@ -55,9 +55,11 @@ const createGeoJSONCircle = (center: [number, number], radiusInKm: number, point
 const UsersMap = ({
   partners,
   users,
+  temp_users,
 }: {
   partners: Partner[];
   users: User[];
+  temp_users: User[];
 }) => {
   const map = useRef<mapboxgl.Map | null>(null);
   const markers = useRef<mapboxgl.Marker[]>([]);
@@ -141,13 +143,14 @@ const UsersMap = ({
     }
 
     if (showUsers) {
-      users.forEach((user) => {
+      [...(Array.isArray(users) ? users : [users]), ...temp_users].forEach((user) => {
         if (!user?.location?.coordinates) return;
         const userEl = document.createElement("div");
         userEl.innerText = "👤";
         userEl.style.fontSize = "24px";
         userEl.style.cursor = "pointer"; // --- MODIFICATION: Make it look clickable ---
         userEl.title = "Click to show 10km radius"; // --- MODIFICATION: Add a tooltip ---
+        userEl.style.filter = user?.phone ? "none" : "grayscale(100%)"; // --- MODIFICATION: Grayscale if no name
 
         // --- MODIFICATION: Add click event listener to draw the circle ---
         userEl.addEventListener("click", () => {
@@ -163,6 +166,7 @@ const UsersMap = ({
             mapInstance.removeLayer(fillLayerId);
             mapInstance.removeLayer(outlineLayerId);
             mapInstance.removeSource(sourceId);
+            return;
           }
           
           // Create new circle GeoJSON
@@ -215,12 +219,12 @@ const UsersMap = ({
       {/* refersh button  */}
       <div>
         <button
-          onClick={() => {
-            revalidateTag("partners-geo-loc");
-            revalidateTag("users-location");
+          onClick={async() => {
+            await revalidateTag("partners-geo-loc");
+            await revalidateTag("users-location");
             window.location.reload();
           }}
-          className="absolute z-50 text-sm top-4 right-4 bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 transition-colors"
+          className="absolute z-50 text-sm top-4 right-10 bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 transition-colors"
         >
           Refresh
         </button>
