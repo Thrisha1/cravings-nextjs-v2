@@ -377,26 +377,34 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
           notificationMessage
         );
       } else {
-        console.log("Creating group offer with items:", newOfferGroup.menuItemIds);
-        console.log("Group type:", groupType);
-        console.log("Selected category:", newOfferGroup.categoryId);
-        console.log("Items for offer:", items.filter(item => 
-          newOfferGroup.menuItemIds.includes(item.id as string)
-        ));
-  
-        await onSubmit(
-          {
+        // For group/category offers, create an offer for each item in the category
+        const percentage = parseFloat(newOfferGroup.percentage);
+        const itemsToOffer = items.filter(item => newOfferGroup.menuItemIds.includes(item.id as string));
+        for (const item of itemsToOffer) {
+          // Use the menu item's available quantity if present, otherwise fallback to 1
+          const items_available = item.stocks && item.stocks[0] && typeof item.stocks[0].stock_quantity === 'number'
+            ? item.stocks[0].stock_quantity
+            : 1;
+          // Calculate offer price as a float with two decimals
+          const offer_price = Math.round((item.price * (1 - percentage / 100)) * 100) / 100;
+          console.log("Creating offer for item in category:", {
+            menu_id: item.id,
+            offer_price,
+            items_available,
             start_time: newOffer.fromTime,
             end_time: newOffer.toTime,
-            offerGroup: {
-              name: newOfferGroup.name,
-              description: newOfferGroup.description,
-              percentage: parseFloat(newOfferGroup.percentage),
-              menu_item_ids: newOfferGroup.menuItemIds,
+          });
+          await onSubmit(
+            {
+              menu_id: item.id,
+              offer_price,
+              items_available,
+              start_time: newOffer.fromTime,
+              end_time: newOffer.toTime,
             },
-          },
-          notificationMessage
-        );
+            notificationMessage
+          );
+        }
       }
     } catch (error) {
       toast.error("Failed to create offer");

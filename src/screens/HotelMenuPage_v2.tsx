@@ -121,12 +121,30 @@ const HotelMenuPage = ({
 
   // Helper function to get items that have active offers
   const getOfferedItems = () => {
-    return hoteldata?.menus.filter(
-      (item) =>
-        typeof item.id === 'string' && hasActiveOffer(item.id) &&
-        (item.category.is_active === undefined ||
-          item.category.is_active === true)
-    ) || [];
+    console.log("Debug - All offers:", offers);
+    console.log("Debug - All menu items:", hoteldata?.menus);
+    
+    if (!hoteldata?.menus) return [];
+    
+    const filteredItems = hoteldata.menus.filter((item) => {
+      // Convert ID to string for consistent comparison
+      const itemId = String(item.id);
+      const hasOffer = hasActiveOffer(itemId);
+      const isActiveCategory = item.category.is_active === undefined || item.category.is_active === true;
+      
+      console.log(`Debug - Item ${itemId}:`, {
+        name: item.name,
+        hasOffer,
+        isActiveCategory,
+        categoryName: item.category.name,
+        categoryActive: item.category.is_active
+      });
+      
+      return hasOffer && isActiveCategory;
+    });
+    
+    console.log("Debug - Filtered offered items:", filteredItems);
+    return filteredItems;
   };
 
   const getCategories = () => {
@@ -180,8 +198,8 @@ const HotelMenuPage = ({
       const offeredItems = getOfferedItems();
       // Sort offered items with images first
       const sortedItems = [...offeredItems].sort((a, b) => {
-        if (a.image_url.length && !b.image_url.length) return -1;
-        if (!a.image_url.length && b.image_url.length) return 1;
+        if (a.image_url && a.image_url.length && (!b.image_url || !b.image_url.length)) return -1;
+        if ((!a.image_url || !a.image_url.length) && b.image_url && b.image_url.length) return 1;
         return 0;
       });
       return sortedItems;
@@ -192,10 +210,11 @@ const HotelMenuPage = ({
         item.category.name === selectedCategory &&
         (item.category.is_active === undefined ||
           item.category.is_active === true)
-    );
+    ) || [];
+    
     const sortedItems = [...filteredItems].sort((a, b) => {
-      if (a.image_url.length && !b.image_url.length) return -1;
-      if (!a.image_url.length && b.image_url.length) return 1;
+      if (a.image_url && a.image_url.length && (!b.image_url || !b.image_url.length)) return -1;
+      if ((!a.image_url || !a.image_url.length) && b.image_url && b.image_url.length) return 1;
       return 0;
     });
     return sortedItems;
@@ -228,9 +247,9 @@ const HotelMenuPage = ({
   const selectedCategory = selectedCategoryProp || "all";
   const items = getCategoryItems(selectedCategory);
 
-  console.log(selectedCategory, "selectedCategory");
-  console.log(categories, "categories with offers");
-  
+  console.log("Final selectedCategory:", selectedCategory);
+  console.log("Final categories with offers:", categories);
+  console.log("Final items for selected category:", items);
 
   const defaultProps = {
     offers,

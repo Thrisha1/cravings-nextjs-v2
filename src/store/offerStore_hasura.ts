@@ -18,7 +18,10 @@ import { HotelData } from "@/app/hotels/[...id]/page";
 import { useMenuStore } from "./menuStore_hasura";
 
 interface Category {
+  id: string;
   name: string;
+  priority: number;
+  is_active: boolean;
 }
 
 interface Partner {

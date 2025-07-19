@@ -90,8 +90,8 @@ export function OffersTab() {
                   <OfferCard
                     key={offer.id}
                     offer={offer}
-                    isDeleting={isDeleting}
-                    handleOfferDelete={handleOfferDelete}
+                    isDeleting={!!isDeleting[offer.id]}
+                    onDelete={handleOfferDelete(offer.id)}
                   />
                 );
               })}

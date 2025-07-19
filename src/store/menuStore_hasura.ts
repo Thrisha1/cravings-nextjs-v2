@@ -34,9 +34,9 @@ export interface MenuItem {
   partner_id?: string;
   price: number;
   description: string;
-  is_top: boolean;
-  is_available: boolean;
-  priority: number;
+  is_top?: boolean;
+  is_available?: boolean;
+  priority?: number;
   stocks?: {
     stock_quantity: number;
     stock_type: string;
