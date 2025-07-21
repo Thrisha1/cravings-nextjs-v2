@@ -768,7 +768,7 @@ const BulkUploadPage = () => {
                           "Generate Full Images"
                         )}
                       </Button>
-                      <Button
+                      {/* <Button
                         onClick={() => handleBulkImageGenerationForExisting('partial')}
                         className="bg-yellow-600 hover:bg-yellow-700 text-white h-12 text-sm sm:text-base flex-1"
                         disabled={isUploadingImagesForExisting}
@@ -778,8 +778,8 @@ const BulkUploadPage = () => {
                         ) : (
                           "Generate Partial Images"
                         )}
-                      </Button>
-                      <Button
+                      </Button> */}
+                      {/* <Button
                         onClick={() => handleBulkImageGenerationForExisting('ai')}
                         className="bg-purple-600 hover:bg-purple-700 text-white h-12 text-sm sm:text-base flex-1"
                         disabled={isUploadingImagesForExisting}
@@ -789,7 +789,7 @@ const BulkUploadPage = () => {
                         ) : (
                           "Generate AI Images"
                         )}
-                      </Button>
+                      </Button> */}
                     </div>
                   )}
 
