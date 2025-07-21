@@ -8,6 +8,7 @@ import OfferCardsLoading from "@/components/OfferCardsLoading";
 import SearchBox from "@/components/SearchBox";
 import { CommonOffer } from "@/components/superAdmin/OfferUploadSuperAdmin";
 import { fetchFromHasura } from "@/lib/hasuraClient";
+import { saveUserLocation } from "@/lib/saveUserLocLocal";
 import { MapPin, Navigation, RefreshCw } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -38,30 +39,7 @@ const Explore = ({
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const sessionKey = "location_session";
-    const currentSession = sessionStorage.getItem(sessionKey);
-
-    if (navigator.geolocation && (!currentSession || !hasUserLocation)) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          try {
-            if (latitude && longitude) {
-              await setLocationCookie(latitude, longitude);
-              sessionStorage.setItem(sessionKey, "active");
-              if (!hasUserLocation) {
-                window.location.reload();
-              }
-            }
-          } catch (error) {
-            console.error("Error setting location:", error);
-          }
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
-        }
-      );
-    }
+    saveUserLocation();
   }, [initialDistrict, hasUserLocation]);
 
   const loadMore = async () => {
@@ -113,41 +91,16 @@ const Explore = ({
   }, [commonOffers]);
 
 
-  const handleRequestLocationAccess = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords;
-          try {
-            if (latitude && longitude) {
-              await setLocationCookie(latitude, longitude);
-              window.location.reload();
-            }
-          } catch (error) {
-            console.error("Error setting location:", error);
-            toast.error("Failed to set location");
-          }
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
-          toast.error("Failed to access your location");
-        }
-      );
-    } else {
-      toast.error("Geolocation is not supported by your browser");
-    }
-  };
-
   const refreshLocation = () => {
     setIsRefreshingLocation(true);
     toast.info("Updating your location...");
-
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
           try {
             if (latitude && longitude) {
+              debugger;
               await setLocationCookie(latitude, longitude);
               toast.success("Location updated successfully");
               window.location.reload();

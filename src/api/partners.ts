@@ -140,11 +140,11 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     gst_no
     gst_percentage
     geo_location
+    country
     country_code
     delivery_rate
     business_type
     delivery_rules
-    country_code
     menus(where: {deletion_status: {_eq: 0}, is_available : {_eq :true}  ,category: {is_active: {_eq: true}}}) {
       category {
         name
