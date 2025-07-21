@@ -14,6 +14,9 @@ import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
 import { X } from "lucide-react";
 import QrScanAssign from "./QrScanAssign";
+import { toast } from "sonner";
+import ExcelJS from "exceljs";
+import QRCode from "qrcode";
 
 type QrCode = {
   id: string;
@@ -379,14 +382,96 @@ const QrManagement_v2 = () => {
     }
   };
 
+  const handleCopyAllLinks = () => {
+    const links = (selectedQrs ? Array.from(selectedQrs) : [])
+      .map((qr) => {
+        const qrData = qrs.find((item) => item.id === qr);
+        return `https://app.cravings.live/qrScan/${qrData?.partner?.store_name.replace(
+          /\s+/g,
+          "-"
+        )}/${qrData?.id}`;
+      })
+      .join("\n");
+
+    navigator.clipboard
+      .writeText(links)
+      .then(() => {
+        toast.success("All QR links copied to clipboard");
+      })
+      .catch((error) => {
+        console.error("Failed to copy links:", error);
+        toast.error("Failed to copy links to clipboard");
+      });
+  };
+
+  const generateTableSheet = async () => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Table QR Codes");
+
+      // Add header
+      worksheet.columns = [
+        { header: "Table No", key: "table_no", width: 15 },
+        { header: "QR Code", key: "qr_code", width: 30 },
+      ];
+
+      const selectedQrsArray = Array.from(selectedQrs);
+
+      for (let i = 0; i < selectedQrsArray.length; i++) {
+        const qr = selectedQrsArray[i];
+        const qrdata = qrs.find((item) => item.id === qr);
+        const qrUrl = `https://app.cravings.live/qrScan/${qrdata?.partner?.store_name.replace(
+          /\s+/g,
+          "-"
+        )}/${qrdata?.id}`;
+
+        // Generate QR code as base64
+        const base64 = await QRCode.toDataURL(qrUrl);
+
+        // Add row
+        const row = worksheet.addRow([qrdata?.table_number, ""]);
+
+        // Add image to workbook
+        const imageId = workbook.addImage({
+          base64: base64,
+          extension: "png",
+        });
+
+        // Adjust image position in the worksheet (column B, starting at row index + 1)
+        worksheet.addImage(imageId, {
+          tl: { col: 1, row: i + 1 }, // top-left: column 2 (B), current row
+          ext: { width: 100, height: 100 },
+        });
+
+        // Set row height to fit the image
+        worksheet.getRow(i + 2).height = 80;
+      }
+
+      // Write to file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "1.xlsx";
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success("Table sheet with QR codes generated!");
+    } catch (error) {
+      console.error("Error generating Excel sheet:", error);
+      toast.error("Failed to generate table sheet");
+    }
+  };
+
   const totalPages = Math.ceil(totalQrs / LIMIT);
   const isAnythingSelected = selectedQrs.size > 0;
   const isActionRunning = isAssigning || isDeleting || isUpdating;
 
   return (
     <div className="p-4">
-
-      <QrScanAssign/>
+      <QrScanAssign />
 
       <div className="flex items-center justify-between mb-4 h-auto">
         {isAnythingSelected || selectionMode ? (
@@ -438,6 +523,25 @@ const QrManagement_v2 = () => {
             </div>
             <div className="flex items-center gap-2 w-full">
               <div className="flex" />
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyAllLinks}
+                disabled={!isAnythingSelected}
+              >
+                Copy Links
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={generateTableSheet}
+                disabled={!isAnythingSelected || isActionRunning}
+              >
+                Generate Table Sheet
+              </Button>
+
               {selectedQrs.size === 1 && (
                 <Button
                   variant="outline"
