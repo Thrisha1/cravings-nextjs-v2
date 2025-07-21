@@ -33,6 +33,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { processImage } from "@/lib/processImage";
+import { uploadFileToS3 } from "@/app/actions/aws-s3";
+import axios from "axios";
 
 const BulkUploadPage = () => {
   const router = useRouter();
@@ -85,15 +88,26 @@ const BulkUploadPage = () => {
     handleExtractMenuItemsFromImage,
   } = useBulkUpload();
 
-  // Load existing menu items without images
+  const processBatch = async (endpoint: string, items: any[]) => {
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_SERVER_URL}/api/image-gen/${endpoint}`,
+      items,
+      { headers: { "Content-Type": "application/json" } }
+    );
+    if (response.data && Array.isArray(response.data)) {
+      return response.data;
+    }
+    throw new Error(`Invalid response from ${endpoint} server`);
+  };
+
+  // Load all existing menu items (with and without images)
   const loadExistingMenuItems = async () => {
     if (!userData?.id) return;
-    
     setIsLoadingExistingItems(true);
     try {
       const response = await fetchFromHasura(
-        `query GetMenuItemsWithoutImages($partner_id: uuid!) {
-          menu(where: {partner_id: {_eq: $partner_id}, deletion_status: {_eq: 0}, _or: [{image_url: {_eq: ""}}, {image_url: {_is_null: true}}]}) {
+        `query GetAllMenuItems($partner_id: uuid!) {
+          menu(where: {partner_id: {_eq: $partner_id}, deletion_status: {_eq: 0}}) {
             id
             name
             price
@@ -110,7 +124,6 @@ const BulkUploadPage = () => {
         }`,
         { partner_id: userData.id }
       );
-      
       setExistingMenuItems(response?.menu || []);
     } catch (error) {
       console.error("Error loading existing menu items:", error);
@@ -129,61 +142,96 @@ const BulkUploadPage = () => {
     );
   };
 
-  // Handle bulk image generation for existing items
+  const BATCH_SIZE = 2;
+
   const handleBulkImageGenerationForExisting = async (mode: 'full' | 'partial' | 'ai') => {
-    if (selectedExistingItems.length === 0) {
-      toast.error("Please select items to generate images for");
+    const itemsToProcess = existingMenuItems.filter(item =>
+      selectedExistingItems.includes(item.id) && (!item.image_url || item.image_url === "")
+    );
+    if (itemsToProcess.length === 0) {
+      toast.error("Please select items without images to generate images for");
       return;
     }
 
     setIsUploadingImagesForExisting(true);
     try {
-      const selectedItems = existingMenuItems.filter(item => 
-        selectedExistingItems.includes(item.id)
-      );
-
-      const modeText = mode === 'full' ? 'Full' : mode === 'partial' ? 'Partial' : 'AI';
-      toast.loading(`Generating ${modeText.toLowerCase()} images for ${selectedItems.length} items...`);
-
-      // Process items in batches
-      const batchSize = 5;
-      let processedCount = 0;
-
-      for (let i = 0; i < selectedItems.length; i += batchSize) {
-        const batch = selectedItems.slice(i, i + batchSize);
-        
-        toast.info(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(selectedItems.length / batchSize)}...`);
-
-        // Process each item in the batch
-        await Promise.all(
-          batch.map(async (item) => {
-            try {
-              // Generate image based on the selected mode
-              const imageUrl = await generateImageForItem(item, mode);
-
-              if (imageUrl) {
-                // Update the menu item with the new image
-                await updateMenuItemImage(item.id, imageUrl);
-                processedCount++;
-              }
-            } catch (error) {
-              console.error(`Error processing item ${item.name}:`, error);
-            }
-          })
-        );
+      let endpoint = "";
+      let successMessage = "";
+      if (mode === "full") {
+        endpoint = "fullImages";
+        successMessage = "Full images generated successfully!";
+      }
+      if (mode === "partial") {
+        endpoint = "partialImages";
+        successMessage = "Partial images generated successfully!";
+      }
+      if (mode === "ai") {
+        endpoint = "generateAIImages";
+        successMessage = "AI images generated successfully!";
       }
 
-      toast.dismiss();
-      toast.success(`${modeText} images generated successfully for ${processedCount} items!`);
-      
-      // Refresh the existing items list
+      let processedCount = 0;
+      for (let i = 0; i < itemsToProcess.length; i += BATCH_SIZE) {
+        const batch = itemsToProcess.slice(i, i + BATCH_SIZE);
+
+        toast.info(
+          `Processing items ${i + 1}-${Math.min(i + BATCH_SIZE, itemsToProcess.length)} of ${itemsToProcess.length}...`
+        );
+
+        // Prepare items for the API
+        const itemsForApi = batch.map(item => ({
+          name: item.name,
+          category: item.category.name,
+          description: item.description,
+          price: item.price,
+          variants: item.variants,
+        }));
+
+        // 1. Generate images in batch
+        const batchResults = await processBatch(endpoint, itemsForApi);
+
+        // 2. For each result, upload to S3 and update the menu item
+        for (let j = 0; j < batch.length; j++) {
+          const item = batch[j];
+          const result = batchResults[j];
+          if (result && result.image) {
+            try {
+              const processedImage = await processImage(result.image, "generated");
+              const formattedName = item.name.replace(/[^a-zA-Z0-9]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_");
+              const formattedCategory = item.category.name.replace(/[^a-zA-Z0-9]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_");
+              const s3Url = await uploadFileToS3(
+                processedImage,
+                `${item.partner_id}/menu/${formattedName}_${formattedCategory}_${Date.now()}.webp`
+              );
+              // Update the menu item in the database
+              await fetchFromHasura(
+                `mutation UpdateMenuItemImage($id: uuid!, $image_url: String!) {
+                  update_menu_by_pk(
+                    pk_columns: { id: $id }
+                    _set: { image_url: $image_url }
+                  ) {
+                    id
+                    image_url
+                  }
+                }`,
+                { id: item.id, image_url: s3Url }
+              );
+              processedCount++;
+            } catch (err) {
+              console.error(`Failed to process image for ${item.name}:`, err);
+              toast.error(`Failed to generate image for ${item.name}`);
+              continue;
+            }
+          }
+        }
+      }
+
+      toast.success(`${successMessage} Processed ${processedCount} items.`);
       await loadExistingMenuItems();
       setSelectedExistingItems([]);
-      
     } catch (error) {
-      console.error("Error generating images for existing items:", error);
-      toast.dismiss();
       toast.error("Failed to generate images for some items");
+      console.error(error);
     } finally {
       setIsUploadingImagesForExisting(false);
     }
@@ -690,10 +738,10 @@ const BulkUploadPage = () => {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
                       <Checkbox
-                        checked={selectedExistingItems.length === existingMenuItems.length}
+                        checked={selectedExistingItems.length === existingMenuItems.filter(item => !item.image_url || item.image_url === '').length && selectedExistingItems.length > 0}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setSelectedExistingItems(existingMenuItems.map(item => item.id));
+                            setSelectedExistingItems(existingMenuItems.filter(item => !item.image_url || item.image_url === '').map(item => item.id));
                           } else {
                             setSelectedExistingItems([]);
                           }
@@ -702,7 +750,7 @@ const BulkUploadPage = () => {
                         className="h-5 w-5"
                       />
                       <label htmlFor="selectAllExisting" className="text-base font-medium">
-                        Select All ({selectedExistingItems.length} / {existingMenuItems.length})
+                        Select All ({selectedExistingItems.length} / {existingMenuItems.filter(item => !item.image_url || item.image_url === '').length} without images)
                       </label>
                     </div>
                   </div>
@@ -763,7 +811,14 @@ const BulkUploadPage = () => {
                             className="h-4 w-4 mt-1"
                           />
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
+                            <h3 className="font-medium text-gray-900 truncate flex items-center gap-2">
+                              {item.name}
+                              {item.image_url && item.image_url !== '' ? (
+                                <span className="ml-2 w-2 h-2 rounded-full bg-green-500 inline-block" title="Image Added"></span>
+                              ) : (
+                                <span className="ml-2 w-2 h-2 rounded-full bg-yellow-400 inline-block" title="No Image"></span>
+                              )}
+                            </h3>
                             <p className="text-sm text-gray-500">{item.category.name}</p>
                             <p className="text-sm font-medium text-gray-700">
                               {item.is_price_as_per_size ? (
@@ -773,6 +828,14 @@ const BulkUploadPage = () => {
                               )}
                             </p>
                           </div>
+                          {/* Thumbnail if image exists */}
+                          {item.image_url && item.image_url !== '' && (
+                            <img
+                              src={item.image_url}
+                              alt={item.name}
+                              className="w-12 h-12 object-cover rounded border border-gray-200 ml-2"
+                            />
+                          )}
                         </div>
 
                         {/* Content area with description and variants */}
