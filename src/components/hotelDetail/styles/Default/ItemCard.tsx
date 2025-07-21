@@ -141,7 +141,7 @@ const ItemCard = ({
     <div className="h-full relative overflow-hidden">
       {/* Discount badge for offer items */}
       {isOfferItem && offerPrice && oldPrice && oldPrice > offerPrice && (
-        <div className="absolute top-3 left-3 z-10 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+        <div className="absolute top-3 right-3 z-10 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
           -{Math.round(((oldPrice - offerPrice) / oldPrice) * 100)}%
         </div>
       )}

@@ -179,7 +179,7 @@ export const useOfferStore = create<OfferState>((set, get) => {
             ...common,
             items_available: offer.items_available,
             menu_item_id: offer.menu_id,
-            offer_price: offer.offer_price,
+            offer_price: offer.offer_price != null ? Math.round(offer.offer_price) : undefined,
           };
         } else {
 

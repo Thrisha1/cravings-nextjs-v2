@@ -93,15 +93,15 @@ const MenuItemsList = ({
       {/* items  */}
       <div id="menu-items" className="px-[8%] grid h-fit gap-3 rounded-3xl ">
         {items
-          ?.sort((a, b) => a.priority - b.priority)
+          ?.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
           ?.map((item) => {
-            let offerPrice = undefined;
-            let oldPrice = undefined;
+            let offerPrice = item.price;
+            let oldPrice = item.price;
             if (isOfferCategory) {
               // Find the offer for this item
               const offer = hotelData.offers?.find((o) => o.menu && o.menu.id === item.id);
-              offerPrice = offer?.offer_price;
-              oldPrice = offer?.menu?.price;
+              offerPrice = typeof offer?.offer_price === 'number' ? offer.offer_price : item.price;
+              oldPrice = typeof offer?.menu?.price === 'number' ? offer.menu.price : item.price;
             }
             return (
               <ItemCard
