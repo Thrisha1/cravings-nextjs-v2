@@ -485,7 +485,7 @@ const QrManagement_v2 = () => {
     <div className="p-4">
       <QrScanAssignBulk />
 
-      <div className="flex items-center justify-between mb-4 h-auto">
+      <div className="flex items-center justify-between mb-4 h-auto ">
         {isAnythingSelected || selectionMode ? (
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2 w-full">
@@ -533,8 +533,9 @@ const QrManagement_v2 = () => {
                 {isAssigning ? "Assigning..." : "Assign"}
               </Button>
             </div>
-            <div className="flex items-center gap-2 w-full">
-              <div className="flex" />
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
+              {/* <div className="flex" /> */}
 
               <Button
                 variant="outline"
@@ -573,6 +574,7 @@ const QrManagement_v2 = () => {
                 {isDeleting ? "Deleting..." : `Delete (${selectedQrs.size})`}
               </Button>
             </div>
+
           </div>
         ) : (
           <div className="flex items-center gap-4 w-full">

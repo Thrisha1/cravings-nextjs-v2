@@ -146,7 +146,7 @@ const UsersMap = ({
       [...(Array.isArray(users) ? users : [users]), ...temp_users].forEach((user) => {
         if (!user?.location?.coordinates) return;
         const userEl = document.createElement("div");
-        userEl.innerText = "👤";
+        userEl.innerText = "❤️";
         userEl.style.fontSize = "24px";
         userEl.style.cursor = "pointer"; // --- MODIFICATION: Make it look clickable ---
         userEl.title = "Click to show 10km radius"; // --- MODIFICATION: Add a tooltip ---
