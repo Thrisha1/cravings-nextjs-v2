@@ -51,7 +51,8 @@ export function QrManagementModal({
           qr_number: currentQr.qr_number,
           table_number: currentQr.table_number,
           partner_id: partnerId,
-          no_of_scans: 0
+          no_of_scans: 0,
+          created_at: new Date().toISOString() // Assuming you want to set created_at
         }
       });
 
