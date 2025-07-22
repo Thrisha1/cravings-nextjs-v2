@@ -3,20 +3,20 @@
 import React, { useState, useEffect } from "react";
 
 const whatsappGroups = [
-  {
-    location: "ernakulam",
-    link: "https://chat.whatsapp.com/link-for-ernakulam",
-  },
-  {
-    location: "kozhikode",
-    link: "https://chat.whatsapp.com/link-for-kozhikode",
-  },
-  {
-    location: "thiruvananthapuram",
-    link: "https://chat.whatsapp.com/link-for-thiruvananthapuram",
-  },
-  { location: "thrissur", link: "https://chat.whatsapp.com/link-for-thrissur" },
-  { location: "kannur", link: "https://chat.whatsapp.com/link-for-kannur" },
+    { location: "alappuzha", link: "https://chat.whatsapp.com/HXwsVkPIOypGE0zYGQiSIL?mode=r_t" },
+    { location: "ernakulam", link: "https://chat.whatsapp.com/BDP726oooKACS0Y93Al7kR?mode=r_t" },
+    { location: "idukki", link: "https://chat.whatsapp.com/Bi4GYPKKpNF7OhiDXZDEHW?mode=r_t" },
+    { location: "kannur", link: "https://chat.whatsapp.com/Fd899HvRtCY3wQWPZxI6CF?mode=r_t" },
+    { location: "kasaragod", link: "https://chat.whatsapp.com/FQilQdjD74M77TOJJkuCzG?mode=r_t" },
+    { location: "kollam", link: "https://chat.whatsapp.com/IbNSIQp4DovHTIYsfbyleU?mode=r_t" },
+    { location: "kottayam", link: "https://chat.whatsapp.com/HU6DHMirK6a1I4Sqe2XrYu?mode=r_t" },
+    { location: "kozhikode", link: "https://chat.whatsapp.com/CfNocjQpkUZHGDm64smhn5?mode=r_t" },
+    { location: "malappuram", link: "https://chat.whatsapp.com/JQxww64JdPg1VAEwyus62s?mode=r_t" },
+    { location: "palakkad", link: "https://chat.whatsapp.com/JROy7Wq12jJI7hbm8YdgF7?mode=r_t" },
+    { location: "pathanamthitta", link: "https://chat.whatsapp.com/Jyj0l25nlX1BNWcAPzZmWK?mode=r_t" },
+    { location: "thiruvananthapuram", link: "https://chat.whatsapp.com/DiP5Wd1Ck8yA8t8Ch0j1iO?mode=r_t" },
+    { location: "thrissur", link: "https://chat.whatsapp.com/GbCePgUcEItLcutzCOnvAp?mode=r_t" },
+    { location: "wayanad", link: "https://chat.whatsapp.com/BmI3Y8r0gam2rVg7mXLyoQ?mode=r_t" }
 ];
 
 const WhatsappGroupJoinAlertDialog = () => {
