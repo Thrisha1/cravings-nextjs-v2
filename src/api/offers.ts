@@ -33,7 +33,7 @@ export const getOfferById = `
 export const getOffers = `
   query GetOffers {
     offers(
-      where: { deletion_status: { _eq: 0 } , end_time: { _gt: "now()" } },
+      where: { deletion_status: { _eq: 0 } , end_time: { _gt: "now()" } , offer_price: { _is_null: false } , menu_item_id: { _is_null: false } },
       order_by: { created_at: desc }
     ) {
       created_at

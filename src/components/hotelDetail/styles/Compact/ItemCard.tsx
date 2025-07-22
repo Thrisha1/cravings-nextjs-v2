@@ -142,7 +142,7 @@ const ItemCard = ({
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <span className="text-red-500">
-                        {hoteldata?.currency || "₹"}
+                        {hoteldata?.currency || "₹"}{" "}
                         {offerData.offer_price}
                       </span>
                       <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded">
@@ -150,14 +150,14 @@ const ItemCard = ({
                       </span>
                     </div>
                     <span className="text-sm line-through opacity-70">
-                      {hoteldata?.currency || "₹"}
+                      {hoteldata?.currency || "₹"}{" "}
                       {offerData.menu.price}
                     </span>
                   </div>
                 ) : (
                   <div className="contents">
                     {hasVariants  ? (<span className="text-sm ">From{" "}</span>) : null}
-                    {hoteldata?.currency || "₹"}
+                    {hoteldata?.currency || "₹"}{" "}
                     {item.variants?.sort((a, b) => a?.price - b?.price)[0]?.price || item.price}
                   </div>
                 )}
@@ -282,7 +282,7 @@ const ItemCard = ({
                     }}
                     className="text-lg font-bold"
                   >
-                    {hoteldata?.currency || "₹"}
+                    {hoteldata?.currency || "₹"}{" "}
                     {variant.price}
                   </div>
                 )}
@@ -335,7 +335,7 @@ const ItemCard = ({
                 >
                   {item.is_price_as_per_size
                     ? "(Price as per size)"
-                    : `${hoteldata?.currency || "₹"}${variant.price}`}
+                    : `${hoteldata?.currency || "₹"}${" "}${variant.price}`}
                 </div>
               )}
             </div>

@@ -55,8 +55,6 @@ class Token {
       return;
     }
 
-    debugger;
-
     const token = window.localStorage.getItem("fcmToken");
     const user = await getAuthCookie();
     const tempUser = await getTempUserIdCookie();

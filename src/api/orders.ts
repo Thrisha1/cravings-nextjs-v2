@@ -167,14 +167,15 @@ export const getOrderByIdQuery = `
 // subscription
 
 export const subscriptionQuery = `
-subscription GetPartnerOrders($partner_id: uuid!) {
+subscription GetPartnerOrders($partner_id: uuid!, $today_start: timestamptz!, $today_end: timestamptz!) {
   orders(
     where: { 
       partner_id: { _eq: $partner_id },
       _or: [
         { orderedby: { _is_null: true } },
         { orderedby: { _eq: "captain" } }
-      ]
+      ],
+      created_at: { _gte: $today_start, _lte: $today_end }
     }
     order_by: { created_at: desc }
   ) {
@@ -235,14 +236,21 @@ subscription GetPartnerOrders($partner_id: uuid!) {
 `;
 
 export const paginatedOrdersSubscription = `
-subscription GetPaginatedPartnerOrders($partner_id: uuid!, $limit: Int!, $offset: Int!) {
+subscription GetPaginatedPartnerOrders(
+  $partner_id: uuid!
+  $limit: Int!
+  $offset: Int!
+  $today_start: timestamptz!
+  $today_end: timestamptz!
+) {
   orders(
     where: { 
       partner_id: { _eq: $partner_id },
       _or: [
         { orderedby: { _is_null: true } },
         { orderedby: { _eq: "captain" } }
-      ]
+      ],
+      created_at: { _gte: $today_start, _lte: $today_end }
     }
     order_by: { created_at: desc }
     limit: $limit

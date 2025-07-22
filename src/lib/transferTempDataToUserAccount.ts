@@ -11,6 +11,36 @@ export const transferTempDataToUserAccount = async (userId: string) => {
       return;
     }
 
+    //transfer temp user location to user account
+
+    const { temp_user_loc } = await fetchFromHasura(
+      `
+      query GetTempUserLocation($id: String!) {
+        temp_user_loc_by_pk(id: $id) {
+          id
+          location
+        }
+      }`,
+      { id: tempUserId }
+    );
+
+    if (temp_user_loc) {
+      await fetchFromHasura(
+        `
+        mutation UpdateUserLocation($id: uuid!, $location: geography!) {
+          update_users_by_pk(pk_columns: {id: $id}, _set: {location: $location}) {
+            id
+          }
+        }`,
+        {
+          id: userId,
+          location: temp_user_loc.location,
+        }
+      );
+    }
+
+    //transfer followers from temp user to user account
+
     // get conflict followers
     const { temp_followers, existing_followers } = await fetchFromHasura(
       `
@@ -130,6 +160,3 @@ export const transferTempDataToUserAccount = async (userId: string) => {
     console.error("Error transferring temporary data to user account:", error);
   }
 };
-
-
-

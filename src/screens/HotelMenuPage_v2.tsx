@@ -16,6 +16,7 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import { INCREMENT_QR_CODE_SCAN_COUNT } from "@/api/qrcodes";
 import Default from "@/components/hotelDetail/styles/Default/Default";
 import Compact from "@/components/hotelDetail/styles/Compact/Compact";
+import { saveUserLocation } from "@/lib/saveUserLocLocal";
 
 export type MenuItem = {
   description: string;
@@ -77,6 +78,11 @@ const HotelMenuPage = ({
   const { setHotelId, genOrderId, open_place_order_modal } = useOrderStore();
 
   const pathname = usePathname();
+
+
+  useEffect(() => {
+    saveUserLocation(false);
+  },[]);
 
   useEffect(() => {
     const handleUpdateQrCount = async () => {
