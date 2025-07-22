@@ -33,7 +33,7 @@ type Partner = {
   store_name: string;
 };
 
-const LIMIT = 10;
+const LIMIT = 30;
 
 const GET_QRS_QUERY = `
   query GetQrsWithPagination($limit: Int!, $offset: Int!, $where: qr_codes_bool_exp!) {
