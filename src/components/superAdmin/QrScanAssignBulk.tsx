@@ -194,7 +194,7 @@ const QrScanAssignBulk = () => {
     scannerInstance
       .start(
         { facingMode: "environment" },
-        { fps: 5, qrbox: { width: 250, height: 250 } },
+        { fps: 5, qrbox: { width: 250, height: 250 } , aspectRatio: 1.0 },
         (decodedText: string) => handleScanSuccess(decodedText),
         (errorMessage: string) => {
           if (!statusMessage?.includes("Point camera")) {
@@ -391,7 +391,7 @@ const QrScanAssignBulk = () => {
         <h2 className="text-2xl font-bold text-white mb-4">Scan QR Codes</h2>
         <div
           id="qr-reader-bulk"
-          className="w-full h-auto max-h-[300px] bg-gray-800 rounded-lg overflow-hidden border-2 border-gray-600"
+          className="w-full h-auto aspect-square max-h-[300px] bg-gray-800 rounded-lg overflow-hidden border-2 border-gray-600"
         ></div>
         <div className="mt-4 h-12 flex items-center justify-center">
           {isLoading && <Loader2 className="h-8 w-8 text-white animate-spin" />}
