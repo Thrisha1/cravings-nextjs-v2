@@ -19,6 +19,7 @@ const ItemCard = ({
   isOfferItem = false,
   offerPrice,
   oldPrice,
+  discountPercent,
 }: {
   item: HotelDataMenus;
   styles: Styles;
@@ -30,6 +31,7 @@ const ItemCard = ({
   isOfferItem?: boolean;
   offerPrice?: number;
   oldPrice?: number;
+  discountPercent?: number;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showVariants, setShowVariants] = useState(false);
@@ -140,9 +142,9 @@ const ItemCard = ({
   return (
     <div className="h-full relative overflow-hidden">
       {/* Discount badge for offer items */}
-      {isOfferItem && offerPrice && oldPrice && oldPrice > offerPrice && (
+      {discountPercent && discountPercent > 0 && (
         <div className="absolute top-3 right-3 z-10 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
-          -{Math.round(((oldPrice - offerPrice) / oldPrice) * 100)}%
+          -{discountPercent}%
         </div>
       )}
       <div
