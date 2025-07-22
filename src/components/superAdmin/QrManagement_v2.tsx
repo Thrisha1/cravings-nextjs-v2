@@ -220,7 +220,7 @@ const QrManagement_v2 = () => {
         .substring(2, 8)
         .toUpperCase();
       return {
-        qr_number: `QR-${Date.now()}-${uniquePart}${i}`,
+        qr_number: i + 1,
         created_at: new Date().toISOString(),
       };
     });
