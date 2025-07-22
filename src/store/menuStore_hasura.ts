@@ -211,7 +211,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
           image_url: mi.image_url || '',
           image_source: mi.image_source || '',
           partner_id: mi.partner_id || '',
-          price: (mi.offers?.[0]?.offer_price || mi.price) ?? 0,
+          price: mi.price ?? 0, // Always use menu price, not offer price
           description: mi.description || '',
           is_top: Boolean(mi.is_top),
           is_available: mi.is_available !== false, // Ensure boolean value

@@ -430,7 +430,7 @@ export function MenuTab() {
                   )
                   .map((item) => ({
                     id: item.id as string,
-                    priority: item.priority,
+                    priority: item.priority ?? 0, // Ensure number
                   }));
 
                 await updateItemsAsBatch(updates);
@@ -531,7 +531,7 @@ export function MenuTab() {
                                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
                               >
                                 {items
-                                  .sort((a, b) => a.priority - b.priority)
+                                  .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
                                   .map((item, itemIndex) => (
                                     <Draggable
                                       key={item.id}
