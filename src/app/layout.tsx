@@ -11,6 +11,7 @@ import AuthInitializer from "@/providers/AuthInitializer";
 import BottomNav from "@/components/BottomNav";
 import { Navbar } from "@/components/Navbar";
 import { getAuthCookie } from "./auth/actions";
+import WhatsappGroupJoinAlertDialog from "@/components/WhatsappGroupJoinAlertDialog";
 // import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
 // import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
 // import LocationAccess from "@/components/LocationAccess";
@@ -28,8 +29,6 @@ export const metadata: Metadata = {
     images: ["/ogImage_default.jpeg"],
   },
 };
-
-
 
 export default async function RootLayout({
   children,
@@ -60,6 +59,7 @@ export default async function RootLayout({
       </head>
       <body className={`antialiased`}>
         <AuthInitializer />
+        {(user?.role === "user" || !user) && <WhatsappGroupJoinAlertDialog />}
         <Toaster richColors closeButton />
         {/* <Snow /> */}
         <Navbar userData={user} />

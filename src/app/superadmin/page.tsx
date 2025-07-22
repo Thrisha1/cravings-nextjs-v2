@@ -53,9 +53,9 @@ const page = async (props: { searchParams: SearchParams }) => {
       id: "assign-qr",
     },
     {
-      name: "QR Management",
+      name: "Bulk QR Management",
       component: <QrManagement_v2 />,
-      id: "qr-management",
+      id: "bulk-qr-management",
     },
     // {
     //   name: "Bulk Upload",

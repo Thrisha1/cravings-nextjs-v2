@@ -17,6 +17,7 @@ import QrScanAssign from "./QrScanAssign";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
 import QRCode from "qrcode";
+import QrScanAssignBulk from "./QrScanAssignBulk";
 
 type QrCode = {
   id: string;
@@ -253,7 +254,18 @@ const QrManagement_v2 = () => {
         qrIds: Array.from(selectedQrs),
         partnerId: selectedPartner.id,
       });
-      await fetchQrs();
+      setQrs((prev) =>
+        prev.map((qr) => {
+          if (selectedQrs.has(qr.id)) {
+            return {
+              ...qr,
+              partner_id: selectedPartner.id,
+              partner: { store_name: selectedPartner.store_name },
+            };
+          }
+          return qr;
+        })
+      );
     } catch (error) {
       console.error("Error assigning QRs:", error);
       alert("Failed to assign QR codes.");
@@ -471,9 +483,9 @@ const QrManagement_v2 = () => {
 
   return (
     <div className="p-4">
-      <QrScanAssign />
+      <QrScanAssignBulk />
 
-      <div className="flex items-center justify-between mb-4 h-auto">
+      <div className="flex items-center justify-between mb-4 h-auto ">
         {isAnythingSelected || selectionMode ? (
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2 w-full">
@@ -521,8 +533,9 @@ const QrManagement_v2 = () => {
                 {isAssigning ? "Assigning..." : "Assign"}
               </Button>
             </div>
-            <div className="flex items-center gap-2 w-full">
-              <div className="flex" />
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
+              {/* <div className="flex" /> */}
 
               <Button
                 variant="outline"
@@ -561,6 +574,7 @@ const QrManagement_v2 = () => {
                 {isDeleting ? "Deleting..." : `Delete (${selectedQrs.size})`}
               </Button>
             </div>
+
           </div>
         ) : (
           <div className="flex items-center gap-4 w-full">
