@@ -41,7 +41,6 @@ const districtToShortForm: Record<DistrictKeys, string> = {
 const CommonOfferCard = ({ commonOffer }: { commonOffer: CommonOffer }) => {
   return (
     <Link
-      prefetch={true}
       href={`/explore/${commonOffer.id}`}
       className="relative overflow-hidden"
     >

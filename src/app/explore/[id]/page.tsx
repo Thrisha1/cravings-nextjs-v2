@@ -180,12 +180,12 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
           )}
         </div>
 
-        {commonOffer.insta_link && (
+        {/* {commonOffer.insta_link && (
           <InstaReelEmbeded
             url={commonOffer.insta_link as string}
             image={commonOffer.image_url}
           />
-        )}
+        )} */}
       </main>
     </section>
   );
