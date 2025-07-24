@@ -1920,7 +1920,7 @@ export default function ProfilePage() {
               <div className="space-y-2 pt-4">
                 <div className="flex justify-between items-center w-full">
                   <label htmlFor="phone" className="text-lg font-semibold">
-                    Contact Phone
+                    Contact Number
                   </label>
                   <Button
                     onClick={() => {
