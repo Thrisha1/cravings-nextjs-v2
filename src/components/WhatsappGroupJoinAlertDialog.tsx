@@ -1,60 +1,70 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { FaWhatsapp } from "react-icons/fa";
 
 const whatsappGroups = [
-    { location: "alappuzha", link: "https://chat.whatsapp.com/HXwsVkPIOypGE0zYGQiSIL?mode=r_t" },
-    { location: "ernakulam", link: "https://chat.whatsapp.com/BDP726oooKACS0Y93Al7kR?mode=r_t" },
-    { location: "idukki", link: "https://chat.whatsapp.com/Bi4GYPKKpNF7OhiDXZDEHW?mode=r_t" },
-    { location: "kannur", link: "https://chat.whatsapp.com/Fd899HvRtCY3wQWPZxI6CF?mode=r_t" },
-    { location: "kasaragod", link: "https://chat.whatsapp.com/FQilQdjD74M77TOJJkuCzG?mode=r_t" },
-    { location: "kollam", link: "https://chat.whatsapp.com/IbNSIQp4DovHTIYsfbyleU?mode=r_t" },
-    { location: "kottayam", link: "https://chat.whatsapp.com/HU6DHMirK6a1I4Sqe2XrYu?mode=r_t" },
-    { location: "kozhikode", link: "https://chat.whatsapp.com/CfNocjQpkUZHGDm64smhn5?mode=r_t" },
-    { location: "malappuram", link: "https://chat.whatsapp.com/JQxww64JdPg1VAEwyus62s?mode=r_t" },
-    { location: "palakkad", link: "https://chat.whatsapp.com/JROy7Wq12jJI7hbm8YdgF7?mode=r_t" },
-    { location: "pathanamthitta", link: "https://chat.whatsapp.com/Jyj0l25nlX1BNWcAPzZmWK?mode=r_t" },
-    { location: "thiruvananthapuram", link: "https://chat.whatsapp.com/DiP5Wd1Ck8yA8t8Ch0j1iO?mode=r_t" },
-    { location: "thrissur", link: "https://chat.whatsapp.com/GbCePgUcEItLcutzCOnvAp?mode=r_t" },
-    { location: "wayanad", link: "https://chat.whatsapp.com/BmI3Y8r0gam2rVg7mXLyoQ?mode=r_t" }
+  { location: "alappuzha", link: "https://chat.whatsapp.com/HXwsVkPIOypGE0zYGQiSIL?mode=r_t" },
+  { location: "ernakulam", link: "https://chat.whatsapp.com/BDP726oooKACS0Y93Al7kR?mode=r_t" },
+  { location: "idukki", link: "https://chat.whatsapp.com/Bi4GYPKKpNF7OhiDXZDEHW?mode=r_t" },
+  { location: "kannur", link: "https://chat.whatsapp.com/Fd899HvRtCY3wQWPZxI6CF?mode=r_t" },
+  { location: "kasaragod", link: "https://chat.whatsapp.com/FQilQdjD74M77TOJJkuCzG?mode=r_t" },
+  { location: "kollam", link: "https://chat.whatsapp.com/IbNSIQp4DovHTIYsfbyleU?mode=r_t" },
+  { location: "kottayam", link: "https://chat.whatsapp.com/HU6DHMirK6a1I4Sqe2XrYu?mode=r_t" },
+  { location: "kozhikode", link: "https://chat.whatsapp.com/CfNocjQpkUZHGDm64smhn5?mode=r_t" },
+  { location: "malappuram", link: "https://chat.whatsapp.com/JQxww64JdPg1VAEwyus62s?mode=r_t" },
+  { location: "palakkad", link: "https://chat.whatsapp.com/JROy7Wq12jJI7hbm8YdgF7?mode=r_t" },
+  { location: "pathanamthitta", link: "https://chat.whatsapp.com/Jyj0l25nlX1BNWcAPzZmWK?mode=r_t" },
+  { location: "thiruvananthapuram", link: "https://chat.whatsapp.com/DiP5Wd1Ck8yA8t8Ch0j1iO?mode=r_t" },
+  { location: "thrissur", link: "https://chat.whatsapp.com/GbCePgUcEItLcutzCOnvAp?mode=r_t" },
+  { location: "wayanad", link: "https://chat.whatsapp.com/BmI3Y8r0gam2rVg7mXLyoQ?mode=r_t" }
 ];
 
+
+
 const WhatsappGroupJoinAlertDialog = () => {
-  const [showDialog, setShowDialog] = useState(false);
+  // 'hidden', 'modal', or 'floating'
+  const [displayState, setDisplayState] = useState<"hidden" | "modal" | "floating">("hidden");
   const [groupLink, setGroupLink] = useState("");
   const [district, setDistrict] = useState("");
 
   useEffect(() => {
+    // 1. If user has ever clicked "Join Now", never show anything again.
     const hasJoined = localStorage.getItem("whatsappDialogJoined");
     if (hasJoined === "true") {
       return;
     }
 
-    const closedTimestamp = localStorage.getItem(
-      "whatsappDialogClosedTimestamp"
-    );
+    // 2. If user has previously closed the modal, show the floating icon immediately.
+    const closedTimestamp = localStorage.getItem("whatsappDialogClosedTimestamp");
     if (closedTimestamp) {
       const sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
       if (Date.now() - parseInt(closedTimestamp) < sevenDaysInMillis) {
+        // We still fetch the location to get the correct group link for the icon
+        fetchUserLocation(false); // `false` means don't show modal on success
         return;
       }
     }
 
+    // 3. For new users, wait 10 seconds and then try to show the modal.
     const timer = setTimeout(() => {
-      fetchUserLocation();
+      fetchUserLocation(true); // `true` means show modal on success
     }, 10000);
 
     return () => clearTimeout(timer);
   }, []);
 
-  const fetchUserLocation = () => {
+  const fetchUserLocation = (showModalOnSuccess = false) => {
     if (!navigator.geolocation) {
       return;
     }
-    navigator.geolocation.getCurrentPosition(handleSuccess, handleError);
+    navigator.geolocation.getCurrentPosition(
+      (position) => handleSuccess(position, showModalOnSuccess),
+      handleError
+    );
   };
 
-  const handleSuccess = async (position: GeolocationPosition) => {
+  const handleSuccess = async (position: GeolocationPosition, showModalOnSuccess: boolean) => {
     const { latitude, longitude } = position.coords;
     const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -69,29 +79,20 @@ const WhatsappGroupJoinAlertDialog = () => {
       const response = await fetch(apiUrl);
       const data = await response.json();
 
-      console.log("Location data:", data);
-
       if (data.features && data.features.length > 0) {
         const features = data.features;
-        const region = features.find((c: { id: string; text: string }) =>
-          c.id.startsWith("region")
-        );
-        const districtObj = features.find((c: { id: string; text: string }) =>
-          c.id.startsWith("district")
-        );
+        const region = features.find((c: { id: string; text: string }) => c.id.startsWith("region"));
+        const districtObj = features.find((c: { id: string; text: string }) => c.id.startsWith("district"));
 
         if (region && region.text.toLowerCase() === "kerala" && districtObj) {
-          const userDistrict = districtObj.text
-            .toLowerCase()
-            .replace(" district", "");
-          const foundGroup = whatsappGroups.find(
-            (group) => group.location.toLowerCase() === userDistrict
-          );
+          const userDistrict = districtObj.text.toLowerCase().replace(" district", "");
+          const foundGroup = whatsappGroups.find((group) => group.location.toLowerCase() === userDistrict);
 
           if (foundGroup) {
             setGroupLink(foundGroup.link);
             setDistrict(districtObj.text);
-            setShowDialog(true);
+            // Decide whether to show the modal or the floating button based on the flag
+            setDisplayState(showModalOnSuccess ? "modal" : "floating");
           }
         }
       }
@@ -106,18 +107,33 @@ const WhatsappGroupJoinAlertDialog = () => {
 
   const handleJoin = () => {
     localStorage.setItem("whatsappDialogJoined", "true");
+    setDisplayState("hidden"); // Hide component permanently
   };
 
   const handleClose = () => {
-    localStorage.setItem(
-      "whatsappDialogClosedTimestamp",
-      Date.now().toString()
-    );
-    setShowDialog(false);
+    localStorage.setItem("whatsappDialogClosedTimestamp", Date.now().toString());
+    setDisplayState("floating"); // Switch to floating button
   };
 
-  if (!showDialog) {
+  const handleIconClick = () => {
+    setDisplayState("modal"); // Show the modal again
+  };
+
+  // Render logic based on the displayState
+  if (displayState === "hidden") {
     return null;
+  }
+
+  if (displayState === "floating") {
+    return (
+      <button
+        onClick={handleIconClick}
+        className="fixed bottom-20 right-0 z-[4999] flex h-12 w-12 items-center justify-center rounded-full bg-green-500 shadow-lg transition-transform hover:scale-110"
+        aria-label="Open WhatsApp group invitation"
+      >
+        <FaWhatsapp size={20} className="text-white" />
+      </button>
+    );
   }
 
   return (
@@ -127,7 +143,7 @@ const WhatsappGroupJoinAlertDialog = () => {
       aria-modal="true"
     >
       <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-xl">
-        <h2 className="mb-3 font-semibold text-lg">
+        <h2 className="mb-3 text-lg font-semibold">
           Join our WhatsApp Group! 👋
         </h2>
         <p className="mb-6 text-sm text-gray-600">
