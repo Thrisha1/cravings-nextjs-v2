@@ -47,7 +47,7 @@ const ItemCard = ({
   // Calculate discount percentage if offer exists
   const discountPercentage = offerData
     ? Math.round(
-        ((offerData.menu.price - offerData.offer_price) /
+        ((offerData.menu.price - (offerData.offer_price ?? 0)) /
           offerData.menu.price) *
           100
       )
