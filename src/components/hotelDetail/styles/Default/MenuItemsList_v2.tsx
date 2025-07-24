@@ -98,13 +98,16 @@ const MenuItemsList = ({
           ?.map((item) => {
             let offerPrice = item.price;
             let oldPrice = item.price;
-            let discountPercentage = 0;
+            let discountPercent = 0;
             if (isOfferCategory) {
               // Find the offer for this item
               const offer = hotelData.offers?.find((o) => o.menu && o.menu.id === item.id);
               offerPrice = typeof offer?.offer_price === 'number' ? offer.offer_price : item.price;
               oldPrice = typeof offer?.menu?.price === 'number' ? offer.menu.price : item.price;
-              discountPercentage = Math.round(((oldPrice - offerPrice) / oldPrice) * 100);
+              // Calculate discount for both group and single offers
+              if (typeof offer?.offer_price === 'number' && typeof offer?.menu?.price === 'number' && offer.menu.price > offer.offer_price) {
+                discountPercent = Math.round(((offer.menu.price - offer.offer_price) / offer.menu.price) * 100);
+              }
             }
             return (
               <ItemCard
@@ -118,7 +121,7 @@ const MenuItemsList = ({
                 isOfferItem={isOfferCategory}
                 offerPrice={offerPrice}
                 oldPrice={oldPrice}
-                discountPercent={discountPercentage} 
+                discountPercent={discountPercent}
               />
             );
           })}
