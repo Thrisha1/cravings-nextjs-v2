@@ -76,7 +76,12 @@ import {
 import { HotelData } from "../hotels/[...id]/page";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Captain {
   id: string;
@@ -106,7 +111,6 @@ interface CaptainOrder {
     };
   }>;
 }
-
 
 import { countryCodes } from "@/utils/countryCodes";
 
@@ -147,6 +151,7 @@ export default function ProfilePage() {
     placeId: false,
     description: false,
     currency: false,
+    phone: false,
     whatsappNumber: false,
     footNote: false,
     geoLocation: false,
@@ -156,11 +161,13 @@ export default function ProfilePage() {
     gst: false,
     deliverySettings: false,
     countryCode: false,
+    locationDetails: false,
   });
   const [isEditing, setIsEditing] = useState({
     upiId: false,
     placeId: false,
     description: false,
+    phone: false,
     whatsappNumber: false,
     currency: false,
     footNote: false,
@@ -170,6 +177,7 @@ export default function ProfilePage() {
     instaLink: false,
     gst: false,
     deliverySettings: false,
+    locationDetails: false,
   });
   const [placeId, setPlaceId] = useState("");
   const [gst, setGst] = useState({
@@ -223,6 +231,8 @@ export default function ProfilePage() {
   );
   const [countryCodeSearch, setCountryCodeSearch] = useState("");
   const [showPricing, setShowPricing] = useState(true);
+  const [phone, setPhone] = useState("");
+  const [locationDetails, setLocationDetails] = useState<string | null>(null);
 
   const isLoading = authLoading;
 
@@ -246,6 +256,7 @@ export default function ProfilePage() {
       setWhatsappNumber(
         userData.whatsapp_numbers[0]?.number || userData.phone || ""
       );
+      setPhone(userData.phone || userData.whatsapp_numbers[0]?.number || "");
       setWhatsappNumbers(
         userData.whatsapp_numbers?.length > 0
           ? userData.whatsapp_numbers
@@ -267,13 +278,15 @@ export default function ProfilePage() {
           rate: userData.delivery_rules?.first_km_range?.rate || 0,
         },
         is_fixed_rate: userData.delivery_rules?.is_fixed_rate || false,
-        minimum_order_amount: userData.delivery_rules?.minimum_order_amount || 0,
+        minimum_order_amount:
+          userData.delivery_rules?.minimum_order_amount || 0,
       });
       setGeoLocation({
         latitude: userData?.geo_location?.coordinates?.[1] || 0,
         longitude: userData?.geo_location?.coordinates?.[0] || 0,
       });
       setLocation(userData?.location || "");
+      setLocationDetails(userData?.location_details || null);
     }
   }, [userData]);
 
@@ -636,12 +649,14 @@ export default function ProfilePage() {
     }
   };
 
-  const handleCropComplete = async (croppedImageUrl: string, cropType: string) => {
-    
+  const handleCropComplete = async (
+    croppedImageUrl: string,
+    cropType: string
+  ) => {
     setBannerImage(croppedImageUrl);
     setIsBannerChanged(true);
     setIsCropperOpen(false);
-    
+
     // Clean up the selected image
     setSelectedImageFile(null);
     setSelectedImageUrl("");
@@ -654,13 +669,15 @@ export default function ProfilePage() {
     try {
       toast.loading("Updating banner...");
 
-      const mimeType = bannerImage?.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] || 'image/png';
-      const extension = mimeType.split('/')[1] || 'png';
+      const mimeType =
+        bannerImage?.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] ||
+        "image/png";
+      const extension = mimeType.split("/")[1] || "png";
 
       // Convert base64 to blob for upload
       const response = await fetch(bannerImage as string);
       const blob = await response.blob();
-      
+
       // Upload the cropped image without any additional processing
       const prevImgUrl =
         userData.role === "partner" ? userData?.store_banner : "";
@@ -689,11 +706,10 @@ export default function ProfilePage() {
           nextVersion = "v0";
         }
       }
-      
 
       const imgUrl = await uploadFileToS3(
         blob,
-        `hotel_banners/${userData.id + "_" + nextVersion}.${extension}`,
+        `hotel_banners/${userData.id + "_" + nextVersion}.${extension}`
       );
 
       setBannerImage(imgUrl);
@@ -1488,6 +1504,58 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSavePhone = async () => {
+    try {
+      setIsSaving((prev) => ({ ...prev, phone: true }));
+      toast.loading("Updating phone number...");
+
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          phone: phone,
+        },
+      });
+
+      revalidateTag(userData?.id as string);
+      setState({ phone: phone });
+      toast.dismiss();
+      toast.success("Phone number updated successfully!");
+      setIsEditing((prev) => ({ ...prev, phone: false }));
+      setIsSaving((prev) => ({ ...prev, phone: false }));
+    } catch (error) {
+      toast.error("Failed to update phone number");
+      console.error("Error updating phone number:", error);
+      setIsSaving((prev) => ({ ...prev, phone: false }));
+      setIsEditing((prev) => ({ ...prev, phone: false }));
+    }
+  };
+
+  const handleSaveLocationDetails = async () => {
+    try {
+      setIsSaving((prev) => ({ ...prev, locationDetails: true }));
+      toast.loading("Updating location details...");
+
+      await fetchFromHasura(updatePartnerMutation, {
+        id: userData?.id,
+        updates: {
+          location_details: locationDetails,
+        },
+      });
+
+      revalidateTag(userData?.id as string);
+      setState({ location_details: locationDetails });
+      toast.dismiss();
+      toast.success("Location details updated successfully!");
+      setIsEditing((prev) => ({ ...prev, locationDetails: false }));
+      setIsSaving((prev) => ({ ...prev, locationDetails: false }));
+    } catch (error) {
+      toast.error("Failed to update location details");
+      console.error("Error updating location details:", error);
+      setIsSaving((prev) => ({ ...prev, locationDetails: false }));
+      setIsEditing((prev) => ({ ...prev, locationDetails: false }));
+    }
+  };
+
   const handleShare = async () => {
     const partner = userData as Partner;
     const businessUrl = `${window.location.origin}${
@@ -1703,6 +1771,53 @@ export default function ProfilePage() {
                   This Bio will be used for your restaurant profile
                 </p>
               </div>
+
+              <div className="space-y-2 pt-4">
+                <div className="flex justify-between items-center w-full">
+                  <label
+                    htmlFor="locationDetails"
+                    className="text-lg font-semibold"
+                  >
+                    Location Details
+                  </label>
+                  <Button
+                    onClick={() => {
+                      setIsEditing((prev) => ({
+                        ...prev,
+                        locationDetails: !prev.locationDetails,
+                      }));
+                    }}
+                    variant="ghost"
+                    className="hover:bg-orange-100"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="flex gap-2 items-center">
+                  <Input
+                    id="locationDetails"
+                    value={locationDetails as string}
+                    placeholder="eg: Near XYZ Park, Main Road, City or Opposite to ABC Mall"
+                    onChange={(e) => setLocationDetails(e.target.value)}
+                    disabled={!isEditing.locationDetails}
+                  />
+                  {isEditing.locationDetails && (
+                    <Button
+                      onClick={handleSaveLocationDetails}
+                      variant="ghost"
+                      className="hover:bg-orange-800 bg-orange-600 text-white hover:text-white"
+                    >
+                      Submit
+                    </Button>
+                  )}
+                </div>
+
+                <p className="text-sm text-gray-500">
+                  This Location Details will be used for your restaurant profile
+                </p>
+              </div>
+
               <div className="space-y-2 pt-4">
                 <label htmlFor="placeId" className="text-lg font-semibold">
                   Place ID
@@ -1801,6 +1916,45 @@ export default function ProfilePage() {
                 deliverySaving={isSaving.deliverySettings}
                 handleSaveDeliverySettings={handleSaveDeliverySettings}
               />
+
+              <div className="space-y-2 pt-4">
+                <div className="flex justify-between items-center w-full">
+                  <label htmlFor="phone" className="text-lg font-semibold">
+                    Contact Number
+                  </label>
+                  <Button
+                    onClick={() => {
+                      setIsEditing((prev) => ({ ...prev, phone: !prev.phone }));
+                    }}
+                    variant="ghost"
+                    className="hover:bg-orange-100"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="flex gap-2 items-center">
+                  <Input
+                    id="phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    disabled={!isEditing.phone}
+                  />
+                  {isEditing.phone && (
+                    <Button
+                      onClick={handleSavePhone}
+                      variant="ghost"
+                      className="hover:bg-orange-800 bg-orange-600 text-white hover:text-white"
+                    >
+                      Submit
+                    </Button>
+                  )}
+                </div>
+
+                <p className="text-sm text-gray-500">
+                  This Phone number will be used as contact number.
+                </p>
+              </div>
 
               <div className="space-y-2 pt-4">
                 <label htmlFor="whatsNum" className="text-lg font-semibold">

@@ -1,5 +1,5 @@
 import type { SocialLinks } from "@/app/hotels/[...id]/page";
-import { MapPin } from "lucide-react";
+import { MapPin, Phone } from "lucide-react";
 import React from "react";
 import { FaInstagram, FaWhatsapp } from "react-icons/fa";
 
@@ -31,13 +31,27 @@ const LinkItem = ({
 const SocialLinks = ({ socialLinks }: { socialLinks: SocialLinks }) => {
   return (
     <>
+      {socialLinks.phone ? (
+        <div>
+          <LinkItem
+            styles={{
+              borderColor: "#fce8e6",
+              color: "#ff4d4f",
+              backgroundColor: "#fff5f5",
+            }}
+            href={`tel:${socialLinks.phone}`}
+            icon={<Phone size={15} />}
+            text={socialLinks.phone}
+          />
+        </div>
+      ) : null}
       {socialLinks.whatsapp ? (
         <div>
           <LinkItem
             styles={{
-                borderColor: "#d8f8e4",
-                color: "#25D366",
-                backgroundColor: "#f9fefb"
+              borderColor: "#d8f8e4",
+              color: "#25D366",
+              backgroundColor: "#f9fefb",
             }}
             href={socialLinks.whatsapp}
             icon={<FaWhatsapp size={15} />}
@@ -50,9 +64,9 @@ const SocialLinks = ({ socialLinks }: { socialLinks: SocialLinks }) => {
         <div>
           <LinkItem
             styles={{
-                borderColor: "#eacfff",
-                color: "#ad46ff",
-                backgroundColor: "#fbf7ff",
+              borderColor: "#eacfff",
+              color: "#ad46ff",
+              backgroundColor: "#fbf7ff",
             }}
             href={socialLinks.instagram}
             icon={<FaInstagram size={15} />}
@@ -65,9 +79,9 @@ const SocialLinks = ({ socialLinks }: { socialLinks: SocialLinks }) => {
         <div>
           <LinkItem
             styles={{
-                borderColor: "#c8deff",
-                color: "#2b7fff",
-                backgroundColor: "#eff5ff"
+              borderColor: "#c8deff",
+              color: "#2b7fff",
+              backgroundColor: "#eff5ff",
             }}
             href={socialLinks.location}
             icon={<MapPin size={15} />}

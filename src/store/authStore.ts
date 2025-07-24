@@ -72,6 +72,7 @@ export interface Partner extends BaseUser {
   geo_location: GeoLocation;
   delivery_rate: number;
   delivery_rules: DeliveryRules;
+  location_details?: string | null;
   place_id?: string;
   theme?: string;
   currency: string;
@@ -193,6 +194,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               password: "",
               currency: partner.currency,
               whatsapp_numbers: partner.whatsapp_numbers,
+              location_details: partner.location_details,
               geo_location: {
                 type: partner.geo_location?.type,
                 coordinates: partner.geo_location?.coordinates,

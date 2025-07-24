@@ -178,10 +178,10 @@ const Compact = ({
             <h1 className="text-xl font-semibold w-[200px]">
               {hoteldata?.store_name}
             </h1>
-            {(hoteldata?.district || hoteldata?.country) && (
+            {(hoteldata?.district || hoteldata?.country || hoteldata?.location_details) && (
               <div className="inline-flex gap-2 text-sm">
                 <MapPin size={15} />
-                <span>{hoteldata.district || hoteldata.country}</span>
+                <span>{hoteldata.location_details || hoteldata.district || hoteldata.country}</span>
               </div>
             )}
           </div>

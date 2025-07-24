@@ -8,8 +8,7 @@ import { revalidateTag } from "@/app/actions/revalidate";
 mapboxgl.accessToken =
   "pk.eyJ1IjoiYWJoaW4yazMiLCJhIjoiY20wbWh5ZHFwMDJwcjJqcHVjM3kyZjZlNyJ9.cagUWYMuMzLdJQhMbYB50A";
 
-// --- NEW HELPER FUNCTION ---
-// This function creates a GeoJSON Polygon feature that approximates a circle.
+// --- HELPER FUNCTION ---
 const createGeoJSONCircle = (center: [number, number], radiusInKm: number, points: number = 64) => {
   const coords = [];
   const distance = radiusInKm;
@@ -66,6 +65,14 @@ const UsersMap = ({
   const [showPartners, setShowPartners] = useState(true);
   const [showUsers, setShowUsers] = useState(true);
 
+  // --- MODIFICATION: Calculate counts ---
+  const partnerCount = Array.isArray(partners) ? partners.length : 0;
+  const allUsers = [
+    ...(Array.isArray(users) ? users : users ? [users] : []),
+    ...(Array.isArray(temp_users) ? temp_users : []),
+  ].filter(Boolean); // Filter out any null/undefined entries
+  const userCount = allUsers.length;
+
   useEffect(() => {
     if (map.current) return; // initialize map only once
     map.current = new mapboxgl.Map({
@@ -90,7 +97,7 @@ const UsersMap = ({
     markers.current = [];
 
     // Add new markers for each filtered partner
-    if (showPartners) {
+    if (showPartners && Array.isArray(partners)) {
       partners.forEach((partner) => {
         if (!partner?.geo_location?.coordinates) return;
 
@@ -143,25 +150,23 @@ const UsersMap = ({
     }
 
     if (showUsers) {
-      [...(Array.isArray(users) ? users : [users]), ...temp_users].forEach((user) => {
+      allUsers.forEach((user) => {
         if (!user?.location?.coordinates) return;
         const userEl = document.createElement("div");
         userEl.innerText = "❤️";
         userEl.style.fontSize = "24px";
-        userEl.style.cursor = "pointer"; // --- MODIFICATION: Make it look clickable ---
-        userEl.title = "Click to show 10km radius"; // --- MODIFICATION: Add a tooltip ---
-        userEl.style.filter = user?.phone ? "none" : "grayscale(100%)"; // --- MODIFICATION: Grayscale if no name
+        userEl.style.cursor = "pointer";
+        userEl.title = "Click to show 10km radius";
+        userEl.style.filter = user?.phone ? "none" : "grayscale(100%)";
 
-        // --- MODIFICATION: Add click event listener to draw the circle ---
         userEl.addEventListener("click", () => {
           const mapInstance = map.current;
           if (!mapInstance) return;
 
-          const sourceId = "circle-source";
-          const fillLayerId = "circle-fill-layer";
-          const outlineLayerId = "circle-outline-layer";
+          const sourceId = `circle-source-${user.id || Math.random()}`;
+          const fillLayerId = `circle-fill-layer-${user.id || Math.random()}`;
+          const outlineLayerId = `circle-outline-layer-${user.id || Math.random()}`;
           
-          // Remove previous circle if it exists
           if (mapInstance.getSource(sourceId)) {
             mapInstance.removeLayer(fillLayerId);
             mapInstance.removeLayer(outlineLayerId);
@@ -169,13 +174,11 @@ const UsersMap = ({
             return;
           }
           
-          // Create new circle GeoJSON
           const circleGeoJSON = createGeoJSONCircle(
             [user?.location?.coordinates?.[0] || 0, user?.location?.coordinates?.[1] || 0],
-            10 // Radius in KM
+            10
           );
 
-          // Add source and layers for the new circle
           mapInstance.addSource(sourceId, {
             type: "geojson",
             data: circleGeoJSON,
@@ -186,7 +189,7 @@ const UsersMap = ({
             type: "fill",
             source: sourceId,
             paint: {
-              "fill-color": "#4A90E2", // A nice blue color
+              "fill-color": "#4A90E2",
               "fill-opacity": 0.2,
             },
           });
@@ -212,7 +215,7 @@ const UsersMap = ({
         markers.current.push(userMarker);
       });
     }
-  }, [partners, users, showPartners, showUsers]);
+  }, [partners, users, temp_users, showPartners, showUsers, allUsers]);
 
   return (
     <div className="relative w-full h-screen">
@@ -230,25 +233,25 @@ const UsersMap = ({
         </button>
       </div>
 
-      {/* user  partner toggle  */}
-      <div className="absolute z-50 top-4 left-4 bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md hover:bg-gray-100 transition-colors">
-        <label className="flex items-center">
+      {/* --- MODIFICATION: Added counts to labels --- */}
+      <div className="absolute z-50 top-4 left-4 bg-white text-gray-800 px-4 py-2 rounded-lg shadow-md">
+        <label className="flex items-center cursor-pointer mb-1">
           <input
             type="checkbox"
-            className="mr-2"
+            className="mr-2 h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
             checked={showUsers}
             onChange={() => setShowUsers(!showUsers)}
           />
-          Show User Locations
+          Show Users ({userCount})
         </label>
-        <label className="flex items-center">
+        <label className="flex items-center cursor-pointer">
           <input
             type="checkbox"
-            className="mr-2"
+            className="mr-2 h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
             checked={showPartners}
             onChange={() => setShowPartners(!showPartners)}
           />
-          Show Partner Locations
+          Show Partners ({partnerCount})
         </label>
       </div>
 
