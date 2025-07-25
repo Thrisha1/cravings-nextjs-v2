@@ -12,6 +12,13 @@ import {
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { X } from "lucide-react";
 import QrScanAssign from "./QrScanAssign";
 import { toast } from "sonner";
@@ -33,8 +40,6 @@ type Partner = {
   id: string;
   store_name: string;
 };
-
-const LIMIT = 30;
 
 const GET_QRS_QUERY = `
   query GetQrsWithPagination($limit: Int!, $offset: Int!, $where: qr_codes_bool_exp!) {
@@ -99,9 +104,21 @@ const UPDATE_QR_TABLE_NUMBER_MUTATION = `
 const QrManagement_v2 = () => {
   const [qrs, setQrs] = useState<QrCode[]>([]);
   const [page, setPage] = useState(1);
-  const [totalQrs, setTotalQrs] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const [limit, setLimit] = useState(() => {
+    if (typeof window === "undefined") return 10;
+    const savedLimit = localStorage.getItem("qrManagementLimit");
+    return savedLimit ? parseInt(savedLimit, 10) : 10;
+  });
+
+  const [selectedDomain, setSelectedDomain] = useState(() => {
+    if (typeof window === "undefined") return "cravings.live";
+    const savedDomain = localStorage.getItem("qrManagementDomain");
+    return savedDomain || "cravings.live";
+  });
+
+  const [limitInput, setLimitInput] = useState(limit.toString());
   const [mainSearch, setMainSearch] = useState("");
   const [debouncedMainSearch, setDebouncedMainSearch] = useState("");
   const mainSearchDebounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -122,12 +139,22 @@ const QrManagement_v2 = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [totalQrs, setTotalQrs] = useState(0);
+
+  useEffect(() => {
+    localStorage.setItem("qrManagementLimit", limit.toString());
+    setLimitInput(limit.toString());
+  }, [limit]);
+
+  useEffect(() => {
+    localStorage.setItem("qrManagementDomain", selectedDomain);
+  }, [selectedDomain]);
 
   const fetchQrs = async () => {
     setLoading(true);
     exitSelectionMode();
     try {
-      const offset = (page - 1) * LIMIT;
+      const offset = (page - 1) * limit;
       let whereClause = {};
       if (debouncedMainSearch.trim()) {
         const searchPattern = `%${debouncedMainSearch.trim()}%`;
@@ -138,7 +165,7 @@ const QrManagement_v2 = () => {
 
       const { qr_codes, qr_codes_aggregate } = await fetchFromHasura(
         GET_QRS_QUERY,
-        { limit: LIMIT, offset, where: whereClause }
+        { limit, offset, where: whereClause }
       );
 
       setQrs(qr_codes);
@@ -152,7 +179,7 @@ const QrManagement_v2 = () => {
 
   useEffect(() => {
     fetchQrs();
-  }, [page, debouncedMainSearch]);
+  }, [page, debouncedMainSearch, limit]);
 
   useEffect(() => {
     if (mainSearchDebounceTimer.current) {
@@ -215,16 +242,10 @@ const QrManagement_v2 = () => {
       return;
     }
 
-    const newQrObjects = Array.from({ length: numToCreate }, (_, i) => {
-      const uniquePart = Math.random()
-        .toString(36)
-        .substring(2, 8)
-        .toUpperCase();
-      return {
-        qr_number: i + 1,
-        created_at: new Date().toISOString(),
-      };
-    });
+    const newQrObjects = Array.from({ length: numToCreate }, (_, i) => ({
+      qr_number: i + 1,
+      created_at: new Date().toISOString(),
+    }));
 
     setIsCreating(true);
     try {
@@ -255,16 +276,15 @@ const QrManagement_v2 = () => {
         partnerId: selectedPartner.id,
       });
       setQrs((prev) =>
-        prev.map((qr) => {
-          if (selectedQrs.has(qr.id)) {
-            return {
-              ...qr,
-              partner_id: selectedPartner.id,
-              partner: { store_name: selectedPartner.store_name },
-            };
-          }
-          return qr;
-        })
+        prev.map((qr) =>
+          selectedQrs.has(qr.id)
+            ? {
+                ...qr,
+                partner_id: selectedPartner.id,
+                partner: { store_name: selectedPartner.store_name },
+              }
+            : qr
+        )
       );
     } catch (error) {
       console.error("Error assigning QRs:", error);
@@ -280,7 +300,6 @@ const QrManagement_v2 = () => {
     const confirmation = window.confirm(
       `Are you sure you want to delete ${selectedQrs.size} QR code(s)? This action cannot be undone.`
     );
-
     if (!confirmation) return;
 
     setIsDeleting(true);
@@ -290,8 +309,7 @@ const QrManagement_v2 = () => {
       });
       alert(`${selectedQrs.size} QR code(s) deleted successfully!`);
       setQrs((prev) => prev.filter((qr) => !selectedQrs.has(qr.id)));
-      setSelectedQrs(new Set());
-      setLastSelectedId(null);
+      exitSelectionMode();
     } catch (error) {
       console.error("Error deleting QR codes:", error);
       alert("Failed to delete QR codes.");
@@ -302,17 +320,14 @@ const QrManagement_v2 = () => {
 
   const handleChangeTableNumber = async () => {
     if (selectedQrs.size !== 1) return;
-
     const qrId = Array.from(selectedQrs)[0];
     const currentQr = qrs.find((qr) => qr.id === qrId);
-
     const newTableNumStr = prompt(
       `Enter new table number for QR: ${currentQr?.id}`,
       currentQr?.table_number?.toString() || ""
     );
 
     if (newTableNumStr === null || newTableNumStr.trim() === "") return;
-
     const newTableNumber = parseInt(newTableNumStr, 10);
     if (isNaN(newTableNumber)) {
       alert("Please enter a valid number.");
@@ -330,26 +345,13 @@ const QrManagement_v2 = () => {
           qr.id === qrId ? { ...qr, table_number: newTableNumber } : qr
         )
       );
-      setSelectedQrs(new Set());
-      setLastSelectedId(null);
+      exitSelectionMode();
     } catch (error) {
       console.error("Error updating table number:", error);
       alert("Failed to update table number.");
     } finally {
       setIsUpdating(false);
     }
-  };
-
-  const handleTouchStart = (qrId: string) => {
-    isTouchEvent.current = true;
-    longPressTimer.current = setTimeout(() => {
-      setSelectionMode(true);
-      setSelectedQrs(new Set([qrId]));
-    }, 500);
-  };
-
-  const handleTouchEnd = () => {
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
   };
 
   const handleRowInteraction = (
@@ -367,7 +369,6 @@ const QrManagement_v2 = () => {
       }
       return;
     }
-
     const isCtrlOrCmdClick = event.ctrlKey || event.metaKey;
     const newSelection = new Set(selectedQrs);
     if (event.shiftKey && lastSelectedId) {
@@ -395,21 +396,20 @@ const QrManagement_v2 = () => {
   };
 
   const handleCopyAllLinks = () => {
-    const links = (selectedQrs ? Array.from(selectedQrs) : [])
-      .map((qr) => {
-        const qrData = qrs.find((item) => item.id === qr);
-        return `https://app.cravings.live/qrScan/${qrData?.partner?.store_name.replace(
+    const links = Array.from(selectedQrs)
+      .map((qrId) => {
+        const qrData = qrs.find((item) => item.id === qrId);
+        if (!qrData) return "";
+        return `https://${selectedDomain}/qrScan/${qrData.partner?.store_name.replace(
           /\s+/g,
           "-"
-        )}/${qrData?.id}`;
+        )}/${qrData.id}`;
       })
+      .filter(Boolean)
       .join("\n");
-
     navigator.clipboard
       .writeText(links)
-      .then(() => {
-        toast.success("All QR links copied to clipboard");
-      })
+      .then(() => toast.success("All QR links copied to clipboard"))
       .catch((error) => {
         console.error("Failed to copy links:", error);
         toast.error("Failed to copy links to clipboard");
@@ -420,46 +420,28 @@ const QrManagement_v2 = () => {
     try {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Table QR Codes");
-
-      // Add header
       worksheet.columns = [
         { header: "Table No", key: "table_no", width: 15 },
         { header: "QR Code", key: "qr_code", width: 30 },
       ];
-
       const selectedQrsArray = Array.from(selectedQrs);
-
       for (let i = 0; i < selectedQrsArray.length; i++) {
-        const qr = selectedQrsArray[i];
-        const qrdata = qrs.find((item) => item.id === qr);
-        const qrUrl = `https://app.cravings.live/qrScan/${qrdata?.partner?.store_name.replace(
+        const qrId = selectedQrsArray[i];
+        const qrdata = qrs.find((item) => item.id === qrId);
+        if (!qrdata) continue;
+        const qrUrl = `https://${selectedDomain}/qrScan/${qrdata.partner?.store_name.replace(
           /\s+/g,
           "-"
-        )}/${qrdata?.id}`;
-
-        // Generate QR code as base64
+        )}/${qrdata.id}`;
         const base64 = await QRCode.toDataURL(qrUrl);
-
-        // Add row
-        const row = worksheet.addRow([qrdata?.table_number, ""]);
-
-        // Add image to workbook
-        const imageId = workbook.addImage({
-          base64: base64,
-          extension: "png",
-        });
-
-        // Adjust image position in the worksheet (column B, starting at row index + 1)
+        worksheet.addRow([qrdata.table_number, ""]);
+        const imageId = workbook.addImage({ base64, extension: "png" });
         worksheet.addImage(imageId, {
-          tl: { col: 1, row: i + 1 }, // top-left: column 2 (B), current row
+          tl: { col: 1, row: i + 1 },
           ext: { width: 100, height: 100 },
         });
-
-        // Set row height to fit the image
         worksheet.getRow(i + 2).height = 80;
       }
-
-      // Write to file
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -467,7 +449,7 @@ const QrManagement_v2 = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "1.xlsx";
+      a.download = "TableQRs.xlsx";
       a.click();
       window.URL.revokeObjectURL(url);
       toast.success("Table sheet with QR codes generated!");
@@ -477,7 +459,19 @@ const QrManagement_v2 = () => {
     }
   };
 
-  const totalPages = Math.ceil(totalQrs / LIMIT);
+  const handleLimitChange = () => {
+    const newLimit = parseInt(limitInput, 10);
+    if (!isNaN(newLimit) && newLimit > 0) {
+      if (newLimit !== limit) {
+        setLimit(newLimit);
+        setPage(1);
+      }
+    } else {
+      setLimitInput(limit.toString());
+    }
+  };
+
+  const totalPages = Math.ceil(totalQrs / limit);
   const isAnythingSelected = selectedQrs.size > 0;
   const isActionRunning = isAssigning || isDeleting || isUpdating;
 
@@ -485,17 +479,17 @@ const QrManagement_v2 = () => {
     <div className="p-4">
       <QrScanAssignBulk />
 
-      <div className="flex items-center justify-between mb-4 h-auto ">
+      <div className="flex items-center justify-between mb-4 h-auto">
         {isAnythingSelected || selectionMode ? (
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 w-full">
+          <div className="flex flex-col gap-4 w-full">
+            <div className="flex flex-wrap items-center gap-2 w-full">
               <Button variant="ghost" size="icon" onClick={exitSelectionMode}>
                 <X className="h-5 w-5" />
               </Button>
               <span className="font-medium text-sm whitespace-nowrap">
                 {selectedQrs.size} selected
               </span>
-              <div className="relative w-full max-w-xs">
+              <div className="relative flex-grow min-w-[200px]">
                 <Input
                   placeholder="Search for a partner to assign..."
                   value={searchTerm}
@@ -533,10 +527,7 @@ const QrManagement_v2 = () => {
                 {isAssigning ? "Assigning..." : "Assign"}
               </Button>
             </div>
-
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
-              {/* <div className="flex" /> */}
-
               <Button
                 variant="outline"
                 size="sm"
@@ -545,7 +536,6 @@ const QrManagement_v2 = () => {
               >
                 Copy Links
               </Button>
-
               <Button
                 variant="outline"
                 size="sm"
@@ -554,7 +544,6 @@ const QrManagement_v2 = () => {
               >
                 Generate Table Sheet
               </Button>
-
               {selectedQrs.size === 1 && (
                 <Button
                   variant="outline"
@@ -574,23 +563,32 @@ const QrManagement_v2 = () => {
                 {isDeleting ? "Deleting..." : `Delete (${selectedQrs.size})`}
               </Button>
             </div>
-
           </div>
         ) : (
-          <div className="flex items-center gap-4 w-full">
-            <div className="relative flex-1">
+          <div className="flex flex-wrap items-center gap-4 w-full">
+            <div className="relative flex-1 min-w-[250px]">
               <Input
-                placeholder="Search by QR Number or Partner Name..."
+                placeholder="Search by Partner Name..."
                 value={mainSearch}
                 onChange={(e) => setMainSearch(e.target.value)}
                 className="text-sm"
               />
             </div>
-            <Button
-              size="sm"
-              onClick={handleCreateQrs}
-              disabled={isCreating || loading}
-            >
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                Link Domain:
+              </span>
+              <Select value={selectedDomain} onValueChange={setSelectedDomain}>
+                <SelectTrigger className="w-auto sm:w-[180px] text-sm">
+                  <SelectValue placeholder="Select Domain" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cravings.live">cravings.live</SelectItem>
+                  <SelectItem value="app.cravings.live">app.cravings.live</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button size="sm" onClick={handleCreateQrs} disabled={isCreating || loading}>
               {isCreating ? "Creating..." : "Create New QR"}
             </Button>
           </div>
@@ -610,17 +608,15 @@ const QrManagement_v2 = () => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center">
-                  Loading...
-                </TableCell>
+                <TableCell colSpan={4} className="text-center">Loading...</TableCell>
               </TableRow>
             ) : qrs.length > 0 ? (
               qrs.map((qr) => (
                 <TableRow
                   key={qr.id}
                   onClick={(e) => handleRowInteraction(qr.id, e)}
-                  onTouchStart={() => handleTouchStart(qr.id)}
-                  onTouchEnd={handleTouchEnd}
+                  onTouchStart={() => { isTouchEvent.current = true; longPressTimer.current = setTimeout(() => { setSelectionMode(true); setSelectedQrs(new Set([qr.id])); }, 500); }}
+                  onTouchEnd={() => { if (longPressTimer.current) clearTimeout(longPressTimer.current); }}
                   onContextMenu={(e) => e.preventDefault()}
                   data-state={selectedQrs.has(qr.id) ? "selected" : ""}
                   className="cursor-pointer data-[state=selected]:bg-green-100 select-none"
@@ -629,38 +625,37 @@ const QrManagement_v2 = () => {
                     <Checkbox
                       checked={selectedQrs.has(qr.id)}
                       aria-label={`Select QR code ${qr.id}`}
-                      className={
-                        isAnythingSelected || selectionMode
-                          ? "opacity-100 transition-opacity"
-                          : "opacity-0 transition-opacity"
-                      }
+                      className={isAnythingSelected || selectionMode ? "opacity-100 transition-opacity" : "opacity-0 transition-opacity"}
                     />
                   </TableCell>
-                  <TableCell className="font-medium text-xs sm:text-base">
-                    {qr.id}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {qr.table_number}
-                  </TableCell>
-                  <TableCell>
-                    {qr.partner?.store_name ?? (
-                      <span className="text-muted-foreground">Unassigned</span>
-                    )}
-                  </TableCell>
+                  <TableCell className="font-medium text-xs sm:text-base">{qr.id}</TableCell>
+                  <TableCell className="font-medium">{qr.table_number}</TableCell>
+                  <TableCell>{qr.partner?.store_name ?? (<span className="text-muted-foreground">Unassigned</span>)}</TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center">
-                  No QR codes found.
-                </TableCell>
+                <TableCell colSpan={4} className="text-center">No QR codes found.</TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
 
-      <div className="flex items-center justify-end space-x-4 py-4">
+      <div className="flex flex-col sm:flex-row items-center justify-end gap-4 py-4">
+        <div className="flex items-center space-x-2">
+          <p className="text-sm font-medium">Rows per page</p>
+          <Input
+            type="number"
+            disabled={loading}
+            value={loading ? 0 : limitInput}
+            onChange={(e) => setLimitInput(e.target.value)}
+            onBlur={handleLimitChange}
+            onKeyDown={(e) => e.key === "Enter" && handleLimitChange()}
+            className="h-8 w-[70px]"
+            min="1"
+          />
+        </div>
         <span className="text-sm text-muted-foreground">
           Page {page} of {totalPages}
         </span>
