@@ -118,7 +118,7 @@ export default function OfferUploadSuperAdmin() {
         const thumbnailUrl = getInstagramThumbnailUrl(reelId);
         
         // Create a proxy request to avoid CORS issues
-        const proxyUrl = `/api/instagram-proxy?url=${encodeURIComponent(thumbnailUrl)}`;
+        const proxyUrl = `${process.env.NEXT_PUBLIC_SERVER_URL}/api/insta-proxy?url=${encodeURIComponent(thumbnailUrl)}`;
         const response = await fetch(proxyUrl);
         
         if (response.ok) {
