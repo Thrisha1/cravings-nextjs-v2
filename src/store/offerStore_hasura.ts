@@ -177,7 +177,10 @@ export const useOfferStore = create<OfferState>((set, get) => {
 
         const { userData } = useAuthStore.getState();
 
-        // await sendOfferWhatsAppMsg(addedOffer.id);
+        if (newOffer?.menu_item_id) {
+          await sendOfferWhatsAppMsg(addedOffer.id);
+        }
+
         await Notification.partner.sendOfferNotification(
           {
             ...addedOffer,
