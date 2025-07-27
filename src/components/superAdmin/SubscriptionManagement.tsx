@@ -44,7 +44,7 @@ export interface PartnerSubscription {
   id: string;
   partner_id: string;
   created_at: string;
-  plan: "300" | "500" | "700" | "1000"; 
+  plan: "300" | "500" | "700" | "1000";
   type: "monthly" | "yearly";
   expiry_date: string;
 }
@@ -60,6 +60,7 @@ export interface PartnerPayment {
 const SubscriptionManagement = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [paymentDate, setPaymentDate] = useState<Date | undefined>(new Date());
+  const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
   const {
     partners,
     subscriptions,
@@ -109,6 +110,14 @@ const SubscriptionManagement = () => {
     partnersOffset,
     setCurrentView,
   } = usePartnerManagement();
+
+  useEffect(() => {
+    setExpiryDate(
+      subscriptionPayment.expiry_date
+        ? new Date(subscriptionPayment.expiry_date)
+        : undefined
+    );
+  }, [subscriptionPayment.expiry_date]);
 
   // Add Subscription Form Component
   if (currentView === "addSubscription" && selectedPartner) {
@@ -231,12 +240,58 @@ const SubscriptionManagement = () => {
                             selected={paymentDate}
                             onSelect={(selectedDate) => {
                               setPaymentDate(selectedDate);
+                              console.log(
+                                "Selected payment date:",
+                                selectedDate
+                              );
                               if (selectedDate) {
+                                console.log(
+                                  "Setting payment date:",
+                                  selectedDate.toISOString().split("T")[0]
+                                );
                                 setSubscriptionPayment({
                                   ...subscriptionPayment,
                                   date: selectedDate
                                     .toISOString()
                                     .split("T")[0],
+                                });
+                              }
+                            }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <Label>Expiry Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !subscriptionPayment.expiry_date &&
+                                "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {subscriptionPayment.expiry_date ? (
+                              format(subscriptionPayment.expiry_date, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={expiryDate}
+                            onSelect={(selectedDate) => {
+                              if (selectedDate) {
+                                setSubscriptionPayment({
+                                  ...subscriptionPayment,
+                                  expiry_date: selectedDate.toISOString(),
                                 });
                               }
                             }}

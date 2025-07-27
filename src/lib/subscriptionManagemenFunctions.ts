@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { format, isAfter, addMonths, addYears } from "date-fns";
+import { format, isAfter, addMonths, addYears, sub } from "date-fns";
 import { fetchFromHasura } from "./hasuraClient";
 import { revalidateTag } from "@/app/actions/revalidate";
 
@@ -87,7 +87,32 @@ export const usePartnerManagement = () => {
   const [subscriptionPayment, setSubscriptionPayment] = useState({
     amount: 0,
     date: new Date().toISOString().split("T")[0],
+    expiry_date: new Date().toISOString().split("T")[0],
   });
+
+  useEffect(() => {
+
+    if (subscriptionPayment.date) {
+      let expiryDate;
+
+      if (newSubscription.type === "monthly") {
+        expiryDate = addMonths(
+          new Date(subscriptionPayment.date),
+          1
+        ).toISOString();
+      } else {
+        expiryDate = addYears(
+          new Date(subscriptionPayment.date),
+          1
+        ).toISOString();
+      }
+
+      setSubscriptionPayment((prev) => ({
+        ...prev,
+        expiry_date: expiryDate.split("T")[0],
+      }));
+    }
+  }, [subscriptionPayment.date]);
 
   // Fetch partners data with pagination and search
   const fetchPartners = useCallback(
@@ -361,19 +386,6 @@ export const usePartnerManagement = () => {
     setError(null);
     try {
       const joinedAt = new Date().toISOString();
-      let expiryDate;
-
-      if (newSubscription.type === "monthly") {
-        expiryDate = addMonths(
-          new Date(subscriptionPayment.date),
-          1
-        ).toISOString();
-      } else {
-        expiryDate = addYears(
-          new Date(subscriptionPayment.date),
-          1
-        ).toISOString();
-      }
 
       // Add subscription
       const subscriptionData = await fetchFromHasura(
@@ -393,7 +405,7 @@ export const usePartnerManagement = () => {
           object: {
             ...newSubscription,
             created_at: joinedAt,
-            expiry_date: expiryDate,
+            expiry_date: subscriptionPayment.expiry_date,
           },
         }
       );
@@ -455,6 +467,7 @@ export const usePartnerManagement = () => {
       setSubscriptionPayment({
         amount: 0,
         date: new Date().toISOString().split("T")[0],
+        expiry_date: addMonths(new Date(), 1).toISOString().split("T")[0],
       });
     } catch (err) {
       setError("Failed to add subscription");
@@ -663,17 +676,19 @@ export const usePartnerManagement = () => {
       const aExpiry = getLastSubscription(a.id);
       const bExpiry = getLastSubscription(b.id);
       const now = new Date().getTime();
-      
-      const aIsExpired = aExpiry && new Date(aExpiry.expiry_date).getTime() < now;
-      const bIsExpired = bExpiry && new Date(bExpiry.expiry_date).getTime() < now;
-      
+
+      const aIsExpired =
+        aExpiry && new Date(aExpiry.expiry_date).getTime() < now;
+      const bIsExpired =
+        bExpiry && new Date(bExpiry.expiry_date).getTime() < now;
+
       // Sort expired first
       if (aIsExpired && !bIsExpired) return -1;
       if (!aIsExpired && bIsExpired) return 1;
-      
+
       // Then sort by status (inactive before active)
       if (a.status !== b.status) {
-        return a.status === 'inactive' ? -1 : 1;
+        return a.status === "inactive" ? -1 : 1;
       }
 
       // Finally sort by expiry date
