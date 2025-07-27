@@ -252,6 +252,9 @@ const page = async ({
       }
     );
 
+    console.log("Last Subscription Data:", getLastSubscription);
+    
+
     const lastSubscription = getLastSubscription?.partner_subscriptions?.[0];
 
     if (hoteldata?.status === "inactive") {
