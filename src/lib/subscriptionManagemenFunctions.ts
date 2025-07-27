@@ -13,7 +13,7 @@ interface Partner {
 interface PartnerSubscription {
   id: string;
   partner_id: string;
-  plan: string;
+  plan: "300" | "500" | "700" | "1000";
   type: "monthly" | "yearly";
   created_at: string;
   expiry_date: string;

@@ -44,7 +44,7 @@ export interface PartnerSubscription {
   id: string;
   partner_id: string;
   created_at: string;
-  plan: "300" | "500";
+  plan: "300" | "500" | "700" | "1000"; 
   type: "monthly" | "yearly";
   expiry_date: string;
 }
@@ -148,6 +148,8 @@ const SubscriptionManagement = () => {
                     <SelectContent>
                       <SelectItem value="300">300</SelectItem>
                       <SelectItem value="500">500</SelectItem>
+                      <SelectItem value="700">700</SelectItem>
+                      <SelectItem value="1000">1000</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
