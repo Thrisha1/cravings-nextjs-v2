@@ -25,7 +25,6 @@ import React from "react";
 const isUUID = (str: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-
 export async function generateMetadata({
   params,
 }: {
@@ -38,7 +37,6 @@ export async function generateMetadata({
   const getHotelData = unstable_cache(
     async (id: string) => {
       try {
-
         const { qr_codes } = await fetchFromHasura(GET_QR_TABLE, {
           id: qrId,
         });
@@ -69,9 +67,13 @@ export async function generateMetadata({
     throw new Error("Hotel not found");
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cravings.menu';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://cravings.menu";
   const defaultBanner = `${baseUrl}/hotelDetailsBanner.jpeg`;
-  const storeBanner = hotel.store_banner ? (hotel.store_banner.startsWith('http') ? hotel.store_banner : `${baseUrl}${hotel.store_banner}`) : defaultBanner;
+  const storeBanner = hotel.store_banner
+    ? hotel.store_banner.startsWith("http")
+      ? hotel.store_banner
+      : `${baseUrl}${hotel.store_banner}`
+    : defaultBanner;
 
   return {
     title: hotel.store_name,
@@ -91,17 +93,13 @@ export async function generateMetadata({
   };
 }
 
-
 const page = async ({
   params,
   searchParams,
 }: {
   params: Promise<{ [key: string]: string | undefined }>;
-  searchParams: Promise<{ query: string; qrScan: string, cat: string }>;
+  searchParams: Promise<{ query: string; qrScan: string; cat: string }>;
 }) => {
-
-
-
   const { id: qrId } = await params;
 
   // Validate and find the correct UUID from the path segments
@@ -176,7 +174,7 @@ const page = async ({
   // console.log("Table Number:", tableNumber);
 
   // if (tableNumber !== 0) {
-  const { query: search  , cat} = await searchParams;
+  const { query: search, cat } = await searchParams;
   const auth = await getAuthCookie();
   const hotelId = qr_codes?.[0].partner_id;
 
@@ -252,35 +250,86 @@ const page = async ({
       }
     );
 
-    console.log("Last Subscription Data:", getLastSubscription);
-    
 
     const lastSubscription = getLastSubscription?.partner_subscriptions?.[0];
+    const isSubscriptionActive =
+      new Date(lastSubscription?.expiry_date) >= new Date();
 
-    if (hoteldata?.status === "inactive") {
+    const cookies = await getAuthCookie();
+
+    // This component now handles both inactive status and expired subscriptions.
+    if (hoteldata?.status === "inactive" || !isSubscriptionActive) {
+      // --- Prepare variables based on the specific reason ---
+      let title;
+      let publicMessage;
+      let ownerSection; // This will hold the JSX for the owner's call-to-action
+      const isOwner = cookies?.id === hoteldata?.id;
+
+      if (!isSubscriptionActive) {
+        // --- SCENARIO 1: SUBSCRIPTION EXPIRED ---
+        title = "Our Digital Menu is Temporarily Offline";
+        publicMessage =
+          "We're currently making some improvements to enhance your experience. Please check back shortly. We appreciate your patience.";
+
+        ownerSection = (
+          <div className="">
+            <p className="text-sm text-red-600 font-semibold my-2">
+              Your Menu Subscription Has Expired.
+            </p>
+            <p className="text-xs text-gray-500 mb-3">
+              Your menu is hidden from customers. To reactivate it immediately,
+              please renew your plan.
+            </p>
+            <a
+              href="/renew-subscription" // Link to your payment/renewal page
+              className="inline-block bg-green-600 text-white font-bold text-sm px-6 py-2 rounded-lg hover:bg-green-700 shadow-md"
+            >
+              Renew Subscription Now
+            </a>
+          </div>
+        );
+      } else {
+        // --- SCENARIO 2: HOTEL STATUS IS 'INACTIVE' ---
+        title = "This Hotel is Currently Unavailable";
+        publicMessage =
+          "This hotel's page is not available at the moment. For more information or to place an order, we recommend contacting the hotel directly.";
+
+        ownerSection = (
+          <div className="">
+            <p className="text-sm text-orange-600 font-semibold my-2">
+              Your Hotel Profile is Inactive.
+            </p>
+            <p className="text-xs text-gray-500 mb-3">
+              Your page is not visible to the public. Please contact our support
+              team to understand the reason and reactivate your profile.
+            </p>
+            <a
+              href="tel:+916238969297" // Link to your support phone number
+              className="inline-block bg-blue-600 text-white font-bold text-sm px-6 py-2 rounded-lg hover:bg-blue-700 shadow-md"
+            >
+              Contact Support
+            </a>
+          </div>
+        );
+      }
+
+      // --- Render the final component using the prepared variables ---
       return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4 py-8">
           <div className="text-center p-4 sm:p-8 bg-white rounded-3xl shadow-lg w-full max-w-[90%] sm:max-w-md mx-auto">
-            <h1 className="text-xl sm:text-3xl font-bold mb-4 text-orange-600">
-              {new Date(lastSubscription?.expiry_date) < new Date()
-                ? "Hotel Subscription Expired"
-                : "Hotel is Currently Inactive"}
-            </h1>
-            <p className="mb-6 text-sm sm:text-base text-gray-600">
-              This hotel is temporarily unavailable. For assistance, please
-              contact our support team.
-            </p>
-            <div className="text-gray-700 bg-gray-100 p-4 rounded-md">
-              <p className="font-medium text-sm sm:text-base">
-                Contact Support:
-              </p>
-              <a
-                href="tel:+916238969297"
-                className="text-blue-600 hover:text-blue-800 block mt-2 text-sm sm:text-base"
-              >
-                +91 6238969297
-              </a>
-            </div>
+            {!isOwner ? (
+              <>
+                <h1 className="text-xl sm:text-3xl font-bold mb-4 text-gray-800">
+                  {title}
+                </h1>
+                <p className="mb-8 text-sm sm:text-base text-gray-600">
+                  {publicMessage}
+                </p>
+              </>
+            ) : null}
+
+            {/* The dynamic owner section is rendered here */}
+            {isOwner ? ownerSection : null}
           </div>
         </div>
       );
@@ -292,69 +341,66 @@ const page = async ({
         price: item.offers?.[0]?.offer_price || item.price,
       };
     });
-  
+
     let hotelDataWithOfferPrice = {
       ...hoteldata,
       menus: menuItemWithOfferPrice,
     };
 
+    let filteredMenus: HotelDataMenus[] = [];
+    const hotelMenus = hotelDataWithOfferPrice?.menus || [];
 
-      let filteredMenus: HotelDataMenus[] = [];
-      const hotelMenus = hotelDataWithOfferPrice?.menus || [];
-    
-      if (hotelMenus && hotelMenus.length > 0) {
-        if (cat === "all" || !cat) {
-          const sortedItems = [...(hotelMenus ?? [])].sort((a, b) => {
-            if (a.image_url.length && !b.image_url.length) return -1;
-            if (!a.image_url.length && b.image_url.length) return 1;
-            filteredMenus.push({
-              ...a,
-              price: a.offers?.[0]?.offer_price || a.price,
-            });
-            return 0;
+    if (hotelMenus && hotelMenus.length > 0) {
+      if (cat === "all" || !cat) {
+        const sortedItems = [...(hotelMenus ?? [])].sort((a, b) => {
+          if (a.image_url.length && !b.image_url.length) return -1;
+          if (!a.image_url.length && b.image_url.length) return 1;
+          filteredMenus.push({
+            ...a,
+            price: a.offers?.[0]?.offer_price || a.price,
           });
-          const sortByCategoryPriority: any = (
-            a: HotelDataMenus,
-            b: HotelDataMenus
-          ) => {
-            const categoryA = a.category.priority || 0;
-            const categoryB = b.category.priority || 0;
-            return categoryA - categoryB;
-          };
-          sortedItems.sort(sortByCategoryPriority);
-          filteredMenus = sortedItems.map((item) => ({
-            ...item,
-            price: item.offers?.[0]?.offer_price || item.price,
-          }));
-        } else {
-          const filteredItems = (hotelMenus ?? []).filter(
-            (item) => item.category.name === cat
-          );
-          const sortedItems = [...filteredItems].sort((a, b) => {
-            if (a.image_url.length && !b.image_url.length) return -1;
-            if (!a.image_url.length && b.image_url.length) return 1;
-            filteredMenus.push({
-              ...a,
-              price: a.offers?.[0]?.offer_price || a.price,
-            });
-            return 0;
+          return 0;
+        });
+        const sortByCategoryPriority: any = (
+          a: HotelDataMenus,
+          b: HotelDataMenus
+        ) => {
+          const categoryA = a.category.priority || 0;
+          const categoryB = b.category.priority || 0;
+          return categoryA - categoryB;
+        };
+        sortedItems.sort(sortByCategoryPriority);
+        filteredMenus = sortedItems.map((item) => ({
+          ...item,
+          price: item.offers?.[0]?.offer_price || item.price,
+        }));
+      } else {
+        const filteredItems = (hotelMenus ?? []).filter(
+          (item) => item.category.name === cat
+        );
+        const sortedItems = [...filteredItems].sort((a, b) => {
+          if (a.image_url.length && !b.image_url.length) return -1;
+          if (!a.image_url.length && b.image_url.length) return 1;
+          filteredMenus.push({
+            ...a,
+            price: a.offers?.[0]?.offer_price || a.price,
           });
-    
-          filteredMenus = sortedItems.map((item) => ({
-            ...item,
-            price: item.offers?.[0]?.offer_price || item.price,
-          }));
-    
-        }
-      }
-    
-      if (hotelDataWithOfferPrice) {
-        hotelDataWithOfferPrice = {
-          ...hotelDataWithOfferPrice,
-          fillteredMenus: filteredMenus,
-        }
-      }
+          return 0;
+        });
 
+        filteredMenus = sortedItems.map((item) => ({
+          ...item,
+          price: item.offers?.[0]?.offer_price || item.price,
+        }));
+      }
+    }
+
+    if (hotelDataWithOfferPrice) {
+      hotelDataWithOfferPrice = {
+        ...hotelDataWithOfferPrice,
+        fillteredMenus: filteredMenus,
+      };
+    }
 
     // if (isOrderingEnabled || isDeliveryEnabled) {
     return (
@@ -367,7 +413,7 @@ const page = async ({
         theme={theme}
         qrGroup={qr_codes[0].qr_group}
         qrId={validQrId}
-        selectedCategory={ cat }
+        selectedCategory={cat}
       />
     );
     // }
