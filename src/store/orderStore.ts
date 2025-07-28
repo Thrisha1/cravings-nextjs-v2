@@ -135,6 +135,9 @@ interface OrderState {
   setOpenPlaceOrderModal: (open: boolean) => void;
   orderType: 'takeaway' | 'delivery' | null;
   setOrderType: (type: 'takeaway' | 'delivery') => void;
+  setOpenDrawerBottom: (open: boolean) => void;
+  setOpenOrderDrawer: (open: boolean) => void;
+  setDeliveryInfo: (info: DeliveryInfo | null) => void;
 
   setHotelId: (id: string) => void;
   addItem: (item: HotelDataMenus) => void;
