@@ -20,5 +20,6 @@ export const getSocialLinks = (hoteldata: HotelData): SocialLinks => {
     }` : undefined,
     googleReview: undefined,
     location: hoteldata?.location || undefined,
+    phone: (hoteldata?.phone || hoteldata?.whatsapp_numbers?.[0]?.number) ? `${hoteldata?.country_code || "+91"}${hoteldata?.phone || hoteldata?.whatsapp_numbers?.[0]?.number}` : undefined,
   };
 };

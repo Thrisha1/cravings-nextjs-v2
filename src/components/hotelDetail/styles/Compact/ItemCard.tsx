@@ -1,3 +1,4 @@
+"use client";
 import { HotelData, HotelDataMenus } from "@/app/hotels/[...id]/page";
 import React, { useEffect, useState } from "react";
 import { DefaultHotelPageProps } from "../Default/Default";
@@ -44,14 +45,18 @@ const ItemCard = ({
     Record<string, number>
   >({});
 
+  // --- NEW: A flag to determine if any price should be shown ---
+  const shouldShowPrice = hoteldata?.currency !== "🚫";
+
   // Calculate discount percentage if offer exists
-  const discountPercentage = offerData
-    ? Math.round(
-        ((offerData.menu.price - (offerData.offer_price ?? 0)) /
-          offerData.menu.price) *
-          100
-      )
-    : 0;
+  const discountPercentage =
+    offerData && shouldShowPrice
+      ? Math.round(
+          ((offerData.menu.price - (offerData.offer_price ?? 0)) /
+            offerData.menu.price) *
+            100
+        )
+      : 0;
 
   useEffect(() => {
     if (item.variants?.length) {
@@ -130,47 +135,55 @@ const ItemCard = ({
         <div>
           <h3 className="capitalize text-lg font-semibold">{item.name}</h3>
           <p className="text-sm opacity-50">{item.description}</p>
-          <div
-            style={{
-              color: styles?.accent || "#000",
-            }}
-            className="text-lg font-bold"
-          >
-            {item.is_price_as_per_size !== true ? (
-              <>
-                {offerData ? (
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2">
-                      <span className="text-red-500">
+          {/* --- MODIFIED: Wrapped entire price section in condition --- */}
+          {shouldShowPrice && (
+            <div
+              style={{
+                color: styles?.accent || "#000",
+              }}
+              className="text-lg font-bold mt-1"
+            >
+              {item.is_price_as_per_size !== true ? (
+                <>
+                  {offerData ? (
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <span className="text-red-500">
+                          {hoteldata?.currency || "₹"}{" "}
+                          {offerData.offer_price}
+                        </span>
+                        <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded">
+                          {discountPercentage}% OFF
+                        </span>
+                      </div>
+                      <span className="text-sm line-through opacity-70">
                         {hoteldata?.currency || "₹"}{" "}
-                        {offerData.offer_price}
-                      </span>
-                      <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded">
-                        {discountPercentage}% OFF
+                        {offerData.menu.price}
                       </span>
                     </div>
-                    <span className="text-sm line-through opacity-70">
+                  ) : (
+                    <div className="contents">
+                      {hasVariants ? (
+                        <span className="text-sm ">From </span>
+                      ) : null}
                       {hoteldata?.currency || "₹"}{" "}
-                      {offerData.menu.price}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="contents">
-                    {hasVariants  ? (<span className="text-sm ">From{" "}</span>) : null}
-                    {hoteldata?.currency || "₹"}{" "}
-                    {item.variants?.sort((a, b) => a?.price - b?.price)[0]?.price || item.price}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-base font-normal">{`(Price as per size)`}</div>
-            )}
-          </div>
+                      {item.variants?.sort((a, b) => a?.price - b?.price)[0]
+                        ?.price || item.price}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-base font-normal">{`(Price as per size)`}</div>
+              )}
+            </div>
+          )}
 
           {showStock && (
             <div className="text-xs mt-1">
               {isOutOfStock ? (
-                <span className="text-red-500 font-semibold">Out of Stock</span>
+                <span className="text-red-500 font-semibold">
+                  Out of Stock
+                </span>
               ) : (
                 <span className="text-green-600">
                   In Stock: {stockQuantity}
@@ -197,7 +210,6 @@ const ItemCard = ({
               </div>
             )}
 
-            {/* Add button positioned at bottom center of image */}
             {isOrderable && (
               <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
                 {hasVariants ? (
@@ -209,7 +221,7 @@ const ItemCard = ({
                     }}
                     className="rounded-full px-4 py-1 font-medium text-sm whitespace-nowrap h-fit cursor-pointer"
                   >
-                    {showVariants ? "Hide Options" : "Show Options"}
+                    {itemQuantity > 0 ? `Added (${itemQuantity})` : (showVariants ? "Hide Options" : "Show Options")}
                   </div>
                 ) : showAddButton && itemQuantity > 0 ? (
                   <div
@@ -275,17 +287,19 @@ const ItemCard = ({
             >
               <div className="grid">
                 <span className="font-semibold">{variant.name}</span>
-                {!item.is_price_as_per_size && showAddButton && (
-                  <div
-                    style={{
-                      color: styles?.accent || "#000",
-                    }}
-                    className="text-lg font-bold"
-                  >
-                    {hoteldata?.currency || "₹"}{" "}
-                    {variant.price}
-                  </div>
-                )}
+                 {/* --- MODIFIED: Wrapped variant price in condition --- */}
+                {shouldShowPrice &&
+                  !item.is_price_as_per_size &&
+                  showAddButton && (
+                    <div
+                      style={{
+                        color: styles?.accent || "#000",
+                      }}
+                      className="text-lg font-bold"
+                    >
+                      {hoteldata?.currency || "₹"} {variant.price}
+                    </div>
+                  )}
               </div>
               {showAddButton ? (
                 <div className="flex gap-2 items-center justify-end">
@@ -325,18 +339,21 @@ const ItemCard = ({
                   )}
                 </div>
               ) : (
-                <div
-                  style={{
-                    color: styles?.accent || "#000",
-                  }}
-                  className={`${
-                    item.is_price_as_per_size ? "text-sm" : "text-lg"
-                  } font-bold `}
-                >
-                  {item.is_price_as_per_size
-                    ? "(Price as per size)"
-                    : `${hoteldata?.currency || "₹"}${" "}${variant.price}`}
-                </div>
+                /* --- MODIFIED: Wrapped this variant price in condition as well --- */
+                shouldShowPrice && (
+                  <div
+                    style={{
+                      color: styles?.accent || "#000",
+                    }}
+                    className={`${
+                      item.is_price_as_per_size ? "text-sm" : "text-lg"
+                    } font-bold `}
+                  >
+                    {item.is_price_as_per_size
+                      ? "(Price as per size)"
+                      : `${hoteldata?.currency || "₹"}${" "}${variant.price}`}
+                  </div>
+                )
               )}
             </div>
           ))}

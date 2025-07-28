@@ -50,6 +50,7 @@ export const partnerIdQuery = `
       delivery_rate
       delivery_rules
       country_code
+      location_details
     }
   }
 `;

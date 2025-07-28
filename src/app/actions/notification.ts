@@ -4,6 +4,7 @@ import { getAuthCookie, getTempUserIdCookie } from "../auth/actions";
 import { OrderStatusHistoryTypes } from "@/lib/statusHistory";
 import { Offer } from "@/store/offerStore_hasura";
 import { HotelData } from "../hotels/[...id]/page";
+import TEST_PARTNERS from "@/utils/testPartnerAccounts";
 
 const BASE_URL = "https://notification-server-khaki.vercel.app";
 
@@ -177,13 +178,21 @@ class PartnerNotification {
     }
   }
 
-  async sendOfferNotification( offer : Offer ,notificationMessage: {
-    title : string,
-    body: string,
-  }) {
+  async sendOfferNotification(
+    offer: Offer,
+    notificationMessage?: {
+      title?: string;
+      body?: string;
+    }
+  ) {
     try {
       const cookies = await getAuthCookie();
       const partnerId = cookies?.id;
+
+      if (partnerId && TEST_PARTNERS.includes(partnerId)) {
+        console.log("Skipping notification for test partner:", partnerId);
+        return;
+      }
 
       if (!partnerId) {
         console.error("No partner ID found");
@@ -229,8 +238,14 @@ class PartnerNotification {
       }
 
       const message = getMessage(
-        notificationMessage.title,
-        notificationMessage.body,
+        notificationMessage?.title ||
+          `New Offer: ${offer.menu.name} at ${offer?.partner?.store_name}`,
+        notificationMessage?.body ||
+          `Check out the new offer: ${offer.menu.name} for just ${
+            (offer?.partner as HotelData)?.currency ?? "₹"
+          }${offer.offer_price}. Valid until ${new Date(
+            offer?.end_time
+          ).toLocaleDateString()}`,
         tokens,
         {
           url: `https://www.cravings.live/offers/${offer?.id || ""}`,
@@ -252,7 +267,6 @@ class PartnerNotification {
       if (!response.ok) {
         throw new Error("Failed to send offer notification");
       }
-
     } catch (error) {
       console.error("Failed to send offer notification", error);
       return;

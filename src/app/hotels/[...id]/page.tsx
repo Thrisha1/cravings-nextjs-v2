@@ -98,6 +98,7 @@ export interface SocialLinks {
   whatsapp?: string;
   googleReview?: string;
   location?: string;
+  phone?: string;
 }
 
 const HotelPage = async ({

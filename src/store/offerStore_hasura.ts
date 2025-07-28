@@ -172,7 +172,7 @@ export const useOfferStore = create<OfferState>((set, get) => {
           partner_id: user.id,
         };
 
-        let newOffer = {};
+        let newOffer: any = {};
 
         if (!offer.offer_group) {
           newOffer = {
@@ -216,7 +216,10 @@ export const useOfferStore = create<OfferState>((set, get) => {
         toast.success("Offer added successfully");
 
 
-        // await sendOfferWhatsAppMsg(addedOffer.id);
+        if ('menu_item_id' in newOffer && newOffer.menu_item_id) {
+          await sendOfferWhatsAppMsg(addedOffer.id);
+        }
+
         await Notification.partner.sendOfferNotification(
           addedOffer,
           {

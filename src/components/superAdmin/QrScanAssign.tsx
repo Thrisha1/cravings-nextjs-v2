@@ -435,7 +435,7 @@ const QrScanAssign = () => {
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-between">
+        <div className="mt-10 flex items-center justify-between">
           <button
             onClick={resetScanner}
             className="text-sm font-medium text-gray-600 hover:text-gray-900"

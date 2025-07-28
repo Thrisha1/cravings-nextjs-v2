@@ -127,6 +127,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     delivery_rate
     feature_flags
     phone
+    location_details
     whatsapp_numbers
     store_banner
     social_links
