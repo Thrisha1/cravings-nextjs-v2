@@ -39,10 +39,13 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const user = await getAuthCookie();
-  const cookieStore = await cookies();
-  const pathname = cookieStore.get("pathname")?.value || "/";
+  const headerList = await headers();
 
-  const isPetraz = pathname.includes(bottomNavFilter) || pathname === "/";
+  const pathname = headerList.get("set-cookie")?.includes("pathname=")
+    ? headerList.get("set-cookie")?.split("pathname=")[1].split(";")[0]
+    : "/";
+
+  const isPetraz = pathname?.includes(bottomNavFilter) || pathname === "/";
 
   console.log("Is Petraz:", isPetraz);
 
