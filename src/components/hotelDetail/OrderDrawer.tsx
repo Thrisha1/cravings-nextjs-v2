@@ -123,6 +123,7 @@ const OrderDrawer = ({
     setOpenOrderDrawer,
     deliveryInfo,
     orderNote,
+    orderType,
   } = useOrderStore();
 
   const pathname = usePathname();
@@ -164,11 +165,29 @@ const OrderDrawer = ({
     return grandTotal.toFixed(2);
   };
 
-  const getWhatsappLink = () => {
+  const getWhatsappLink = (orderId?: string) => {
+    console.log('getWhatsappLink called with orderId:', orderId);
+
     const savedAddress = userAddress || "N/A";
     const selectedWhatsAppNumber = localStorage?.getItem(
       `hotel-${hotelData.id}-whatsapp-area`
     );
+    const selectedArea = localStorage?.getItem(
+      `hotel-${hotelData.id}-selected-area`
+    );
+
+    // Also check if there's a more recent selection in the current session
+    const currentSelectedArea = selectedArea || "";
+
+    // Debug logging with more details
+    console.log('WhatsApp Debug:', {
+      selectedArea: currentSelectedArea,
+      selectedWhatsAppNumber,
+      hotelId: hotelData.id,
+      hasMultiWhatsapp: getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled,
+      orderId: orderId || 'no-order-id',
+      whatsappNumbers: hotelData?.whatsapp_numbers?.length || 0
+    });
 
     let locationLink = "";
     const userLocationData = localStorage.getItem("user-location-store");
@@ -196,17 +215,30 @@ const OrderDrawer = ({
       )
       : 0;
     const deliveryCharge =
-      !isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
+      !isQrScan && orderType === 'delivery' && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
         ? deliveryInfo.cost
         : 0;
     const grandTotal = baseTotal + gstAmount + qrCharge + deliveryCharge;
+
+    // Check if multi-whatsapp is enabled and we have a selected area
+    const hasMultiWhatsapp = getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled;
+    const hasMultipleWhatsappNumbers = hotelData?.whatsapp_numbers?.length > 1;
+    const shouldShowHotelLocation = (hasMultiWhatsapp || hasMultipleWhatsappNumbers) && currentSelectedArea && currentSelectedArea.trim() !== '';
+
+    console.log('Location display decision:', {
+      hasMultiWhatsapp,
+      hasMultipleWhatsappNumbers,
+      currentSelectedArea,
+      shouldShowHotelLocation
+    });
 
     const whatsappMsg = `
     *🍽️ Order Details 🍽️*
     
     *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
-    ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : "*Order Type:* Delivery"}
-    ${(tableNumber ?? 0) > 0 ? "" : `*Delivery Address:* ${savedAddress}${locationLink}`}
+    ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : `*Order Type:* ${orderType || "Delivery"}`}
+    ${shouldShowHotelLocation ? `\n*Hotel Location:* ${currentSelectedArea.toUpperCase()}` : ""}
+    ${(tableNumber ?? 0) > 0 ? "" : (orderType === 'delivery' ? `*Delivery Address:* ${savedAddress}${locationLink}` : "")}
     *Time:* ${new Date().toLocaleTimeString()}
     
     *📋 Order Items:*
@@ -224,7 +256,7 @@ const OrderDrawer = ({
         ? `*GST (${hotelData.gst_percentage}%):* ${hotelData.currency}${gstAmount.toFixed(2)}`
         : ""}
     
-    ${!isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
+    ${!isQrScan && orderType === 'delivery' && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
         ? `*Delivery Charge:* ${hotelData.currency}${deliveryInfo.cost.toFixed(2)}`
         : ""}
     
@@ -310,7 +342,7 @@ const OrderDrawer = ({
           <div className="flex gap-2 items-center text-sm text-black/70">
             <div>Items :</div>
             <div>{items?.length}</div>
-            {!isQrScan &&
+            {!isQrScan && orderType === 'delivery' &&
               deliveryInfo &&
               items?.length &&
               !deliveryInfo.isOutOfRange && (

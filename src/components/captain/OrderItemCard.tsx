@@ -151,14 +151,24 @@ const OrderItemCard = ({
           {/* Left section - Order details */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between sm:justify-start gap-2">
-              <div className="font-medium text-base sm:text-lg truncate">
-                {order.orderedby === "captain" 
-                  ? `Order #${order.id.split('-')[0].toUpperCase()}`
-                  : order.type === "delivery" 
-                    ? "Delivery Order" 
-                    : order.type === "table_order" 
-                      ? "Table Order" 
-                      : "POS Order"}
+              <div className="flex items-center gap-2">
+                <div className="font-medium text-base sm:text-lg truncate">
+                  {order.orderedby === "captain" 
+                    ? `Order #${order.id.split('-')[0].toUpperCase()}`
+                    : order.type === "delivery" 
+                      ? "Delivery Order" 
+                      : order.type === "table_order" 
+                        ? "Table Order" 
+                        : "POS Order"}
+                </div>
+                {/* Show TAKEAWAY label for orders with no delivery address or location */}
+                {order.type === "delivery" && 
+                 (!order.deliveryAddress || 
+                  order.deliveryAddress === "Unknown" || 
+                  order.deliveryAddress === "N/A" ||
+                  !order.delivery_location) && (
+                  <span className="text-red-600 font-bold text-sm ">TAKEAWAY</span>
+                )}
               </div>
               <div
                 className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs whitespace-nowrap ${getStatusColor(

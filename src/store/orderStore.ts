@@ -132,6 +132,11 @@ interface OrderState {
   deliveryCost: number | null;
   open_place_order_modal: boolean;
   setOpenPlaceOrderModal: (open: boolean) => void;
+  orderType: 'takeaway' | 'delivery' | null;
+  setOrderType: (type: 'takeaway' | 'delivery') => void;
+  setOpenDrawerBottom: (open: boolean) => void;
+  setOpenOrderDrawer: (open: boolean) => void;
+  setDeliveryInfo: (info: DeliveryInfo | null) => void;
 
   setHotelId: (id: string) => void;
   addItem: (item: HotelDataMenus) => void;
@@ -172,10 +177,6 @@ interface OrderState {
   userOrders: Order[];
   subscribeUserOrders: (callback?: (orders: Order[]) => void) => () => void;
   deleteOrder: (orderId: string) => Promise<boolean>;
-  setOpenOrderDrawer: (open: boolean) => void;
-  setDeliveryInfo: (info: DeliveryInfo | null) => void;
-  setDeliveryCost: (cost: number | null) => void;
-  setOpenDrawerBottom: (open: boolean) => void;
   updateOrderStatus: (
     orders: Order[],
     orderId: string,
@@ -209,6 +210,16 @@ const useOrderStore = create(
       coordinates: null,
       open_drawer_bottom: false,
       open_place_order_modal: false,
+      orderType: null,
+
+      setOrderType: (type: 'takeaway' | 'delivery') => {
+        set({ orderType: type });
+      },
+
+      setOpenOrderDrawer: (open: boolean) => set({ open_order_drawer: open }),
+      setDeliveryInfo: (info: DeliveryInfo | null) => set({ deliveryInfo: info }),
+      setDeliveryCost: (cost: number | null) => set({ deliveryCost: cost }),
+      setOpenDrawerBottom: (open: boolean) => set({ open_drawer_bottom: open }),
 
       updateOrderStatusHistory: async (
         orderId: string,
@@ -359,8 +370,6 @@ const useOrderStore = create(
       },
 
       setOpenPlaceOrderModal: (open) => set({ open_place_order_modal: open }),
-
-      setOpenDrawerBottom: (open) => set({ open_drawer_bottom: open }),
 
       setUserCoordinates: (coords) => {
         set({ coordinates: coords });
@@ -1158,41 +1167,26 @@ const useOrderStore = create(
       },
 
       clearOrder: () => {
-        const state = get();
-        if (!state.hotelId) return;
-
-        const newOrderId = uuidv4();
-
         set((state) => {
           const hotelOrders = { ...state.hotelOrders };
           if (state.hotelId) {
             hotelOrders[state.hotelId] = {
-              ...hotelOrders[state.hotelId],
               items: [],
               totalPrice: 0,
               order: null,
-              orderId: newOrderId,
+              orderId: null,
+              coordinates: null,
             };
           }
-
           return {
-            ...state,
             hotelOrders,
             items: [],
-            orderId: newOrderId,
+            orderId: null,
             totalPrice: 0,
-            order: null,
-            orderNote: null,
+            orderType: null,
           };
         });
       },
-
-      setOpenOrderDrawer: (open: boolean) => set({ open_order_drawer: open }),
-
-      setDeliveryInfo: (info: DeliveryInfo | null) =>
-        set({ deliveryInfo: info }),
-
-      setDeliveryCost: (cost: number | null) => set({ deliveryCost: cost }),
     }),
     {
       name: "order-storage",

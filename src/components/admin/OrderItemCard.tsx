@@ -227,7 +227,17 @@ const OrderItemCard = ({
 
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
         <div>
-          <h3 className="font-medium">Order #{localOrder.id.slice(0, 8)}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium">Order #{localOrder.id.slice(0, 8)}</h3>
+            {/* Show TAKEAWAY label for orders with no delivery address or location */}
+            {localOrder.type === "delivery" && 
+             (!localOrder.deliveryAddress || 
+              localOrder.deliveryAddress === "Unknown" || 
+              localOrder.deliveryAddress === "N/A" ||
+              !localOrder.delivery_location) && (
+              <span className="text-red-600 font-bold text-sm">TAKEAWAY</span>
+            )}
+          </div>
           <p className="text-sm text-gray-500">
             {formatDate(localOrder.createdAt)}
           </p>
