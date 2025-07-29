@@ -165,11 +165,25 @@ const OrderDrawer = ({
     return grandTotal.toFixed(2);
   };
 
-  const getWhatsappLink = () => {
+  const getWhatsappLink = (orderId?: string) => {
+    console.log('getWhatsappLink called with orderId:', orderId);
+
     const savedAddress = userAddress || "N/A";
     const selectedWhatsAppNumber = localStorage?.getItem(
       `hotel-${hotelData.id}-whatsapp-area`
     );
+    const selectedArea = localStorage?.getItem(
+      `hotel-${hotelData.id}-selected-area`
+    );
+
+    // Debug logging
+    console.log('WhatsApp Debug:', {
+      selectedArea,
+      selectedWhatsAppNumber,
+      hotelId: hotelData.id,
+      hasMultiWhatsapp: getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled,
+      orderId: orderId || 'no-order-id'
+    });
 
     let locationLink = "";
     const userLocationData = localStorage.getItem("user-location-store");
@@ -202,11 +216,17 @@ const OrderDrawer = ({
         : 0;
     const grandTotal = baseTotal + gstAmount + qrCharge + deliveryCharge;
 
+    // Check if multi-whatsapp is enabled and we have a selected area
+    const hasMultiWhatsapp = getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled;
+    const hasMultipleWhatsappNumbers = hotelData?.whatsapp_numbers?.length > 1;
+    const shouldShowHotelLocation = (hasMultiWhatsapp || hasMultipleWhatsappNumbers) && selectedArea && selectedArea.trim() !== '';
+
     const whatsappMsg = `
     *🍽️ Order Details 🍽️*
     
     *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
     ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : `*Order Type:* ${orderType || "Delivery"}`}
+    ${shouldShowHotelLocation ? `\n*Hotel Location:* ${selectedArea.toUpperCase()}` : ""}
     ${(tableNumber ?? 0) > 0 ? "" : (orderType === 'delivery' ? `*Delivery Address:* ${savedAddress}${locationLink}` : "")}
     *Time:* ${new Date().toLocaleTimeString()}
     
