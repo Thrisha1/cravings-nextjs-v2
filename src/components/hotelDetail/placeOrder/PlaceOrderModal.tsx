@@ -61,6 +61,41 @@ const OrderTypeCard = ({
   );
 };
 
+// Multi WhatsApp Card Component
+const MultiWhatsappCard = ({
+  hotelData,
+  selectedLocation,
+  setSelectedLocation,
+}: {
+  hotelData: HotelData;
+  selectedLocation: string;
+  setSelectedLocation: (location: string) => void;
+}) => {
+  const hasMultiWhatsapp =
+    getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled &&
+    hotelData?.whatsapp_numbers?.length > 0;
+
+  if (!hasMultiWhatsapp) return null;
+
+  return (
+    <div className="border rounded-lg p-4 bg-white">
+      <h3 className="font-medium mb-3">Select Hotel Location</h3>
+      <select
+        value={selectedLocation}
+        onChange={(e) => setSelectedLocation(String(e.target.value))}
+        className="w-full p-3 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black"
+      >
+        <option value="">Select Area</option>
+        {hotelData.whatsapp_numbers.map((item) => (
+          <option key={item.area} value={item.area}>
+            {item.area.toUpperCase()}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+
 const ItemsCard = ({
   items,
   increaseQuantity,
@@ -152,9 +187,6 @@ interface AddressCardProps {
   geoError: string | null;
   deliveryInfo: DeliveryInfo | null;
   hasLocation: boolean;
-  hotelData: HotelData;
-  selectedLocation: string;
-  setSelectedLocation: (location: string) => void;
 }
 
 const AddressCard = ({
@@ -166,16 +198,9 @@ const AddressCard = ({
   geoError,
   deliveryInfo,
   hasLocation,
-  hotelData,
-  selectedLocation,
-  setSelectedLocation,
 }: AddressCardProps) => {
   mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
-
-  const hasMultiWhatsapp =
-    getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled &&
-    hotelData?.whatsapp_numbers?.length > 0;
 
   const handleGetLocation = () => {
     setShowPermissionDialog(true);
@@ -191,26 +216,6 @@ const AddressCard = ({
       <div className="flex justify-between items-center mb-3">
         <h3 className="font-bold text-lg">Delivery Address</h3>
       </div>
-
-      {hasMultiWhatsapp && (
-        <div className="mb-4">
-          <Label className="flex items-center gap-2 mb-2">
-            Select Hotel Location
-          </Label>
-          <select
-            value={selectedLocation}
-            onChange={(e) => setSelectedLocation(String(e.target.value))}
-            className="w-full p-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-black/20"
-          >
-            <option value="">Select Area</option>
-            {hotelData.whatsapp_numbers.map((item) => (
-              <option key={item.area} value={item.area}>
-                {item.area.toUpperCase()}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
 
       <Textarea
         disabled
@@ -1037,6 +1042,13 @@ const PlaceOrderModal = ({
                 />
               )}
 
+              {/* Multi WhatsApp Card - Show when multi-whatsapp is enabled */}
+              <MultiWhatsappCard
+                hotelData={hotelData}
+                selectedLocation={selectedLocation}
+                setSelectedLocation={handleSelectHotelLocation}
+              />
+
               {/* Show table number for QR scan or address for delivery */}
               {isQrScan ? (
                 <TableNumberCard tableNumber={tableNumber} />
@@ -1050,9 +1062,6 @@ const PlaceOrderModal = ({
                   geoError={geoError}
                   deliveryInfo={deliveryInfo}
                   hasLocation={hasLocation}
-                  hotelData={hotelData}
-                  selectedLocation={selectedLocation || ""}
-                  setSelectedLocation={handleSelectHotelLocation}
                 />
               ) : null}
 
