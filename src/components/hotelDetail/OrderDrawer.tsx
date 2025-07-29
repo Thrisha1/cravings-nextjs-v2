@@ -123,6 +123,7 @@ const OrderDrawer = ({
     setOpenOrderDrawer,
     deliveryInfo,
     orderNote,
+    orderType,
   } = useOrderStore();
 
   const pathname = usePathname();
@@ -196,7 +197,7 @@ const OrderDrawer = ({
       )
       : 0;
     const deliveryCharge =
-      !isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
+      !isQrScan && orderType === 'delivery' && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
         ? deliveryInfo.cost
         : 0;
     const grandTotal = baseTotal + gstAmount + qrCharge + deliveryCharge;
@@ -205,8 +206,8 @@ const OrderDrawer = ({
     *🍽️ Order Details 🍽️*
     
     *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
-    ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : "*Order Type:* Delivery"}
-    ${(tableNumber ?? 0) > 0 ? "" : `*Delivery Address:* ${savedAddress}${locationLink}`}
+    ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : `*Order Type:* ${orderType || "Delivery"}`}
+    ${(tableNumber ?? 0) > 0 ? "" : (orderType === 'delivery' ? `*Delivery Address:* ${savedAddress}${locationLink}` : "")}
     *Time:* ${new Date().toLocaleTimeString()}
     
     *📋 Order Items:*
@@ -224,7 +225,7 @@ const OrderDrawer = ({
         ? `*GST (${hotelData.gst_percentage}%):* ${hotelData.currency}${gstAmount.toFixed(2)}`
         : ""}
     
-    ${!isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
+    ${!isQrScan && orderType === 'delivery' && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
         ? `*Delivery Charge:* ${hotelData.currency}${deliveryInfo.cost.toFixed(2)}`
         : ""}
     
@@ -310,7 +311,7 @@ const OrderDrawer = ({
           <div className="flex gap-2 items-center text-sm text-black/70">
             <div>Items :</div>
             <div>{items?.length}</div>
-            {!isQrScan &&
+            {!isQrScan && orderType === 'delivery' &&
               deliveryInfo &&
               items?.length &&
               !deliveryInfo.isOutOfRange && (

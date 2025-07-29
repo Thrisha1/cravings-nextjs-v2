@@ -36,7 +36,8 @@ export const createOrderMutation = `
     $orderedby: String,
     $delivery_location: geography,
     $captain_id: uuid,
-    $notes: String
+    $notes: String,
+    $tag: String
   ) {
     insert_orders_one(object: {
       id: $id
@@ -56,6 +57,7 @@ export const createOrderMutation = `
       delivery_location: $delivery_location
       captain_id: $captain_id
       notes: $notes
+      tag: $tag
     }) {
       id
       total_price

@@ -37,6 +37,65 @@ type MapboxGeocoder = IControl & {
   ) => void;
 };
 
+// Order Type Card Component
+const OrderTypeCard = ({
+  orderType,
+  setOrderType,
+}: {
+  orderType: 'takeaway' | 'delivery' | null;
+  setOrderType: (type: 'takeaway' | 'delivery') => void;
+}) => {
+  return (
+    <div className="border rounded-lg p-4 bg-white">
+      <h3 className="font-medium mb-3">Order Type</h3>
+      <select
+        value={orderType || ''}
+        onChange={(e) => setOrderType(e.target.value as 'takeaway' | 'delivery')}
+        className="w-full p-3 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black"
+      >
+        <option value="">Select order type</option>
+        <option value="takeaway">Takeaway</option>
+        <option value="delivery">Delivery</option>
+      </select>
+    </div>
+  );
+};
+
+// Multi WhatsApp Card Component
+const MultiWhatsappCard = ({
+  hotelData,
+  selectedLocation,
+  setSelectedLocation,
+}: {
+  hotelData: HotelData;
+  selectedLocation: string;
+  setSelectedLocation: (location: string) => void;
+}) => {
+  const hasMultiWhatsapp =
+    getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled &&
+    hotelData?.whatsapp_numbers?.length > 0;
+
+  if (!hasMultiWhatsapp) return null;
+
+  return (
+    <div className="border rounded-lg p-4 bg-white">
+      <h3 className="font-medium mb-3">Select Hotel Location</h3>
+      <select
+        value={selectedLocation}
+        onChange={(e) => setSelectedLocation(String(e.target.value))}
+        className="w-full p-3 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black"
+      >
+        <option value="">Select Area</option>
+        {hotelData.whatsapp_numbers.map((item) => (
+          <option key={item.area} value={item.area}>
+            {item.area.toUpperCase()}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+
 const ItemsCard = ({
   items,
   increaseQuantity,
@@ -128,9 +187,6 @@ interface AddressCardProps {
   geoError: string | null;
   deliveryInfo: DeliveryInfo | null;
   hasLocation: boolean;
-  hotelData: HotelData;
-  selectedLocation: string;
-  setSelectedLocation: (location: string) => void;
 }
 
 const AddressCard = ({
@@ -142,16 +198,9 @@ const AddressCard = ({
   geoError,
   deliveryInfo,
   hasLocation,
-  hotelData,
-  selectedLocation,
-  setSelectedLocation,
 }: AddressCardProps) => {
   mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
-
-  const hasMultiWhatsapp =
-    getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled &&
-    hotelData?.whatsapp_numbers?.length > 0;
 
   const handleGetLocation = () => {
     setShowPermissionDialog(true);
@@ -167,26 +216,6 @@ const AddressCard = ({
       <div className="flex justify-between items-center mb-3">
         <h3 className="font-bold text-lg">Delivery Address</h3>
       </div>
-
-      {hasMultiWhatsapp && (
-        <div className="mb-4">
-          <Label className="flex items-center gap-2 mb-2">
-            Select Hotel Location
-          </Label>
-          <select
-            value={selectedLocation}
-            onChange={(e) => setSelectedLocation(String(e.target.value))}
-            className="w-full p-2 border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-black/20"
-          >
-            <option value="">Select Area</option>
-            {hotelData.whatsapp_numbers.map((item) => (
-              <option key={item.area} value={item.area}>
-                {item.area.toUpperCase()}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
 
       <Textarea
         disabled
@@ -728,6 +757,8 @@ const PlaceOrderModal = ({
     deliveryInfo,
     orderNote,
     setOrderNote,
+    orderType,
+    setOrderType,
   } = useOrderStore();
 
   const { userData: user } = useAuthStore();
@@ -743,7 +774,7 @@ const PlaceOrderModal = ({
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [keyboardOpen, setKeyboardOpen] = useState(false);
 
-  const isDelivery = !tableNumber;
+  const isDelivery = tableNumber === 0 ? orderType === 'delivery' : !tableNumber;
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
   const isQrScan = qrId !== null && tableNumber !== 0;
   const hasLocation = !!selectedCoords || !!address;
@@ -840,12 +871,17 @@ const PlaceOrderModal = ({
   }, []);
 
   useEffect(() => {
-    if (isDelivery && hasDelivery && selectedCoords !== null && !isQrScan) {
+    if (isDelivery && hasDelivery && selectedCoords !== null && !isQrScan && orderType === 'delivery') {
       calculateDeliveryDistanceAndCost(hotelData as HotelData);
     }
-  }, [selectedCoords, isDelivery, hasDelivery, isQrScan]);
+  }, [selectedCoords, isDelivery, hasDelivery, isQrScan, orderType]);
 
   const handlePlaceOrder = async () => {
+    if (tableNumber === 0 && !orderType) {
+      toast.error("Please select an order type");
+      return;
+    }
+
     if (isDelivery && !address && !isQrScan) {
       toast.error("Please enter your delivery address");
       return;
@@ -899,7 +935,7 @@ const PlaceOrderModal = ({
       }
 
       // Add table 0 extra charges for delivery orders (when tableNumber is 0 and qrGroup exists)
-      if (!isQrScan && tableNumber === 0 && qrGroup && qrGroup.name) {
+      if (!isQrScan && tableNumber === 0 && qrGroup && qrGroup.name && orderType === 'delivery') {
         const table0ChargeAmount = getExtraCharge(
           items || [],
           qrGroup.extra_charge,
@@ -915,7 +951,7 @@ const PlaceOrderModal = ({
         }
       }
 
-      if (!isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange) {
+      if (!isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange && orderType === 'delivery') {
         extraCharges.push({
           name: "Delivery Charge",
           amount: deliveryInfo.cost,
@@ -958,6 +994,7 @@ const PlaceOrderModal = ({
 
   const isPlaceOrderDisabled =
     isPlacingOrder ||
+    (tableNumber === 0 && !orderType) ||
     (isDelivery && hasDelivery && !selectedCoords && !isQrScan) ||
     (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan) ||
     (hasMultiWhatsapp && !selectedLocation);
@@ -997,10 +1034,25 @@ const PlaceOrderModal = ({
                 currency={hotelData?.currency || "₹"}
               />
 
+              {/* Order Type Card - Show only when tableNumber is 0 */}
+              {tableNumber === 0 && (
+                <OrderTypeCard
+                  orderType={orderType}
+                  setOrderType={setOrderType}
+                />
+              )}
+
+              {/* Multi WhatsApp Card - Show when multi-whatsapp is enabled */}
+              <MultiWhatsappCard
+                hotelData={hotelData}
+                selectedLocation={selectedLocation}
+                setSelectedLocation={handleSelectHotelLocation}
+              />
+
               {/* Show table number for QR scan or address for delivery */}
               {isQrScan ? (
                 <TableNumberCard tableNumber={tableNumber} />
-              ) : isDelivery ? (
+              ) : isDelivery && orderType === 'delivery' ? (
                 <AddressCard
                   address={address}
                   setAddress={setAddress}
@@ -1010,9 +1062,6 @@ const PlaceOrderModal = ({
                   geoError={geoError}
                   deliveryInfo={deliveryInfo}
                   hasLocation={hasLocation}
-                  hotelData={hotelData}
-                  selectedLocation={selectedLocation || ""}
-                  setSelectedLocation={handleSelectHotelLocation}
                 />
               ) : null}
 
@@ -1022,7 +1071,7 @@ const PlaceOrderModal = ({
                 currency={hotelData?.currency || "₹"}
                 gstPercentage={hotelData?.gst_percentage}
                 deliveryInfo={deliveryInfo}
-                isDelivery={isDelivery && !isQrScan}
+                isDelivery={isDelivery && !isQrScan && orderType === 'delivery'}
                 qrGroup={qrGroup}
               />
 
@@ -1045,7 +1094,7 @@ const PlaceOrderModal = ({
               {/* Login Card (if not logged in) */}
               {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}
 
-              {isDelivery && !isQrScan && deliveryInfo?.isOutOfRange && (
+              {isDelivery && !isQrScan && orderType === 'delivery' && deliveryInfo?.isOutOfRange && (
                 <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
                   Delivery is not available to your selected location
                 </div>
@@ -1053,7 +1102,7 @@ const PlaceOrderModal = ({
 
               {/* minimum amount msg  */}
               {
-                items?.length === 0 || (isDelivery && (totalPrice ?? 0) < minimumOrderAmount) && (
+                items?.length === 0 || (isDelivery && orderType === 'delivery' && (totalPrice ?? 0) < minimumOrderAmount) && (
                   <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
                     Minimum order amount for delivery is{" "}
                     {hotelData?.currency || "₹"}
@@ -1078,7 +1127,7 @@ const PlaceOrderModal = ({
                   >
                     <Button
                       onClick={handlePlaceOrder}
-                      disabled={isPlaceOrderDisabled || !user || items?.length === 0 || (isDelivery && (totalPrice ?? 0) < minimumOrderAmount)}
+                      disabled={isPlaceOrderDisabled || !user || items?.length === 0 || (isDelivery && orderType === 'delivery' && (totalPrice ?? 0) < minimumOrderAmount)}
                       className="w-full"
                     >
                       {isPlacingOrder ? (
