@@ -91,7 +91,6 @@ export interface Order {
         id?: string;
       }[]
     | null;
-  tag?: string | null;
 }
 
 export interface DeliveryInfo {
@@ -897,12 +896,6 @@ const useOrderStore = create(
           const type = (tableNumber ?? 0) > 0 ? "table_order" : "delivery";
           const createdAt = new Date().toISOString();
 
-          // Determine if this should be tagged as takeaway
-          const shouldTagAsTakeaway = 
-            (tableNumber === 0 && state.orderType === 'takeaway') || 
-            (type === "delivery" && (!state.coordinates || !state.userAddress));
-          const orderTag = shouldTagAsTakeaway ? "takeaway" : null;
-
           // Prepare extra charges
           const exCharges: {
             name: string;
@@ -971,7 +964,6 @@ const useOrderStore = create(
                   }
                 : null,
             notes: notes || null,
-            tag: orderTag,
           });
 
           if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
@@ -1023,7 +1015,6 @@ const useOrderStore = create(
             },
             gstIncluded,
             extraCharges: exCharges,
-            tag: orderTag,
           };
 
           // Update state
@@ -1083,7 +1074,6 @@ const useOrderStore = create(
                 user_id
                 orderedby
                 captain_id
-                tag
                 captainid {
                   id
                   name
@@ -1159,7 +1149,6 @@ const useOrderStore = create(
               orderedby: order.orderedby,
               captain_id: order.captain_id,
               captain: captainData, // Use the properly structured captain data
-              tag: order.tag || null,
               items: order.order_items.map((i: any) => ({
                 id: i.menu?.id,
                 quantity: i.quantity,
@@ -1242,7 +1231,6 @@ function transformOrderFromHasura(order: any): Order {
     captain_id: order.captain_id,
     captain: order.captainid,
     extraCharges: order.extra_charges,
-    tag: order.tag || null,
   };
 }
 
