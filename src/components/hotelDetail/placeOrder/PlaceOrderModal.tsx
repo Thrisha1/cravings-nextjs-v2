@@ -823,14 +823,6 @@ const PlaceOrderModal = ({
   qrId: string | null;
   qrGroup: QrGroup | null;
 }) => {
-  // Debug: Log props received
-  console.log('PlaceOrderModal props:', {
-    hotelData: hotelData?.id,
-    tableNumber,
-    getWhatsappLinkType: typeof getWhatsappLink,
-    qrId,
-    qrGroup: qrGroup?.name
-  });
 
   const {
     open_place_order_modal,

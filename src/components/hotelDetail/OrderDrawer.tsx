@@ -9,6 +9,7 @@ import { FeatureFlags, getFeatures } from "@/lib/getFeatures";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import PlaceOrderModal from "./placeOrder/PlaceOrderModal";
 import { getExtraCharge } from "@/lib/getExtraCharge";
+import path from "path/win32";
 
 export const getGstAmount = (price: number, gstPercentage: number) => {
   return (price * gstPercentage) / 100;
@@ -99,6 +100,7 @@ export const calculateDeliveryDistanceAndCost = async (
   }
 };
 
+
 const OrderDrawer = ({
   styles,
   hotelData,
@@ -131,6 +133,8 @@ const OrderDrawer = ({
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
   const [isMoveUp, setMoveUp] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+
+  const isPetraz = pathname.includes("PETRAZ-RESTAURANT") || pathname === "/";
 
   useEffect(() => {
     setIsQrScan(pathname.includes("qrScan") && !!qrId && !(tableNumber === 0));
@@ -166,7 +170,6 @@ const OrderDrawer = ({
   };
 
   const getWhatsappLink = (orderId?: string) => {
-    console.log('getWhatsappLink called with orderId:', orderId);
 
     const savedAddress = userAddress || "N/A";
     const selectedWhatsAppNumber = localStorage?.getItem(
@@ -179,15 +182,7 @@ const OrderDrawer = ({
     // Also check if there's a more recent selection in the current session
     const currentSelectedArea = selectedArea || "";
 
-    // Debug logging with more details
-    console.log('WhatsApp Debug:', {
-      selectedArea: currentSelectedArea,
-      selectedWhatsAppNumber,
-      hotelId: hotelData.id,
-      hasMultiWhatsapp: getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled,
-      orderId: orderId || 'no-order-id',
-      whatsappNumbers: hotelData?.whatsapp_numbers?.length || 0
-    });
+    
 
     let locationLink = "";
     const userLocationData = localStorage.getItem("user-location-store");
@@ -225,12 +220,7 @@ const OrderDrawer = ({
     const hasMultipleWhatsappNumbers = hotelData?.whatsapp_numbers?.length > 1;
     const shouldShowHotelLocation = (hasMultiWhatsapp || hasMultipleWhatsappNumbers) && currentSelectedArea && currentSelectedArea.trim() !== '';
 
-    console.log('Location display decision:', {
-      hasMultiWhatsapp,
-      hasMultipleWhatsappNumbers,
-      currentSelectedArea,
-      shouldShowHotelLocation
-    });
+    
 
     const whatsappMsg = `
     *🍽️ Order Details 🍽️*
@@ -325,8 +315,8 @@ const OrderDrawer = ({
 
       <div
         style={{ ...styles.border }}
-        className={`fixed ${isMoveUp ? 'bottom-16 sm:bottom-0' : 'bottom-0'} z-[200] left-1/2 -translate-x-1/2 transition-all duration-300 ${
-          !open_drawer_bottom ? "translate-y-full" : "translate-y-0"
+        className={`fixed ${isMoveUp ? isPetraz ? 'bottom-24 sm:bottom-0' : 'bottom-16 sm:bottom-0' : 'bottom-0'} z-[200] left-1/2 -translate-x-1/2 transition-all duration-300 ${
+          !open_drawer_bottom ? "translate-y-full" : isPetraz ? "translate-y-full" : "translate-y-0"
         } lg:max-w-[50%] bg-white text-black w-full px-[8%] py-6 rounded-t-[35px] bottom-bar-shadow flex items-center justify-between`}
       >
         <div>
