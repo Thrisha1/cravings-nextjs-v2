@@ -187,8 +187,8 @@ const OrderItemCard = ({
                 {order.tableNumber && (
                   <span className="ml-2">• Table {order.tableNumber}</span>
                 )}
-                {order.phone && order.phone.trim() !== "" && (
-                  <span className="ml-2">• Customer: {order.phone}</span>
+                {(order.user?.phone || order.phone) && (order.user?.phone || order.phone || "").trim() !== "" && (
+                  <span className="ml-2">• Customer: {order.user?.phone || order.phone}</span>
                 )}
               </div>
             )}
