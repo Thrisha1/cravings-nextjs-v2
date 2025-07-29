@@ -45,18 +45,63 @@ const OrderTypeCard = ({
   orderType: 'takeaway' | 'delivery' | null;
   setOrderType: (type: 'takeaway' | 'delivery') => void;
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const options = [
+    { value: 'takeaway', label: 'Takeaway' },
+    { value: 'delivery', label: 'Delivery' }
+  ];
+
   return (
-    <div className="border rounded-lg p-4 bg-white">
+    <div className="border rounded-lg p-4 bg-white relative" ref={dropdownRef}>
       <h3 className="font-medium mb-3">Order Type</h3>
-      <select
-        value={orderType || ''}
-        onChange={(e) => setOrderType(e.target.value as 'takeaway' | 'delivery')}
-        className="w-full p-3 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black"
-      >
-        <option value="">Select order type</option>
-        <option value="takeaway">Takeaway</option>
-        <option value="delivery">Delivery</option>
-      </select>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full p-3 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black text-left flex justify-between items-center"
+        >
+          <span>{orderType ? options.find(opt => opt.value === orderType)?.label : 'Select order type'}</span>
+          <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        
+        {isOpen && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
+            <div
+              className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+              onClick={() => {
+                setOrderType('takeaway');
+                setIsOpen(false);
+              }}
+            >
+              Takeaway
+            </div>
+            <div
+              className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+              onClick={() => {
+                setOrderType('delivery');
+                setIsOpen(false);
+              }}
+            >
+              Delivery
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -77,21 +122,61 @@ const MultiWhatsappCard = ({
 
   if (!hasMultiWhatsapp) return null;
 
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <div className="border rounded-lg p-4 bg-white">
+    <div className="border rounded-lg p-4 bg-white relative" ref={dropdownRef}>
       <h3 className="font-medium mb-3">Select Hotel Location</h3>
-      <select
-        value={selectedLocation}
-        onChange={(e) => setSelectedLocation(String(e.target.value))}
-        className="w-full p-3 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black"
-      >
-        <option value="">Select Area</option>
-        {hotelData.whatsapp_numbers.map((item) => (
-          <option key={item.area} value={item.area}>
-            {item.area.toUpperCase()}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full p-3 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black text-left flex justify-between items-center"
+        >
+          <span>{selectedLocation ? selectedLocation.toUpperCase() : 'Select Area'}</span>
+          <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        
+        {isOpen && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
+            <div
+              className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+              onClick={() => {
+                setSelectedLocation('');
+                setIsOpen(false);
+              }}
+            >
+              Select Area
+            </div>
+            {hotelData.whatsapp_numbers.map((item) => (
+              <div
+                key={item.area}
+                className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                onClick={() => {
+                  setSelectedLocation(item.area);
+                  setIsOpen(false);
+                }}
+              >
+                {item.area.toUpperCase()}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -773,6 +858,7 @@ const PlaceOrderModal = ({
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const locationLoadedRef = useRef(false);
 
   const isDelivery = tableNumber === 0 ? orderType === 'delivery' : !tableNumber;
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
@@ -822,30 +908,80 @@ const PlaceOrderModal = ({
     hotelData?.whatsapp_numbers?.length > 0;
 
   useEffect(() => {
+    // Only load location once per hotel
+    if (locationLoadedRef.current) {
+      return;
+    }
+
+    // Don't reset if we already have a valid selected location
+    if (selectedLocation && hotelData.whatsapp_numbers?.some(item => item.area === selectedLocation)) {
+      locationLoadedRef.current = true;
+      return;
+    }
+
+    // Get the selected location from localStorage
     const selectedPhone = localStorage.getItem(
       `hotel-${hotelData.id}-whatsapp-area`
     );
 
-    const selectedLocation = hotelData.whatsapp_numbers?.find(
-      (item) => item.area === selectedPhone
-    );
+    if (selectedPhone) {
+      // Find the area name by phone number
+      const selectedLocation = hotelData.whatsapp_numbers?.find(
+        (item) => item.number === selectedPhone
+      );
 
-    if (selectedLocation) {
-      setSelectedLocation(selectedLocation.area);
+      if (selectedLocation) {
+        setSelectedLocation(selectedLocation.area);
+        locationLoadedRef.current = true;
+      }
     } else {
-      setSelectedLocation("");
+      // If no saved location, try to find by area name (for backward compatibility)
+      const savedArea = localStorage.getItem(
+        `hotel-${hotelData.id}-selected-area`
+      );
+      
+      if (savedArea) {
+        const selectedLocation = hotelData.whatsapp_numbers?.find(
+          (item) => item.area === savedArea
+        );
+
+        if (selectedLocation) {
+          setSelectedLocation(selectedLocation.area);
+          locationLoadedRef.current = true;
+        }
+      } else {
+        setSelectedLocation("");
+        locationLoadedRef.current = true;
+      }
     }
-  }, [hotelData]);
+  }, [hotelData.id, hotelData.whatsapp_numbers]);
+
+  // Reset the ref when hotel changes
+  useEffect(() => {
+    locationLoadedRef.current = false;
+  }, [hotelData.id]);
 
   const handleSelectHotelLocation = (location: string | null) => {
     setSelectedLocation(location || "");
-    const phoneNumber = hotelData.whatsapp_numbers?.find(
-      (item) => item.area === location
-    )?.number;
-    localStorage.setItem(
-      `hotel-${hotelData.id}-whatsapp-area`,
-      phoneNumber || ""
-    );
+    
+    // Save both the area name and phone number for persistence
+    if (location) {
+      const phoneNumber = hotelData.whatsapp_numbers?.find(
+        (item) => item.area === location
+      )?.number;
+      
+      localStorage.setItem(
+        `hotel-${hotelData.id}-whatsapp-area`,
+        phoneNumber || ""
+      );
+      localStorage.setItem(
+        `hotel-${hotelData.id}-selected-area`,
+        location
+      );
+    } else {
+      localStorage.removeItem(`hotel-${hotelData.id}-whatsapp-area`);
+      localStorage.removeItem(`hotel-${hotelData.id}-selected-area`);
+    }
   };
 
   useEffect(() => {
@@ -1042,6 +1178,11 @@ const PlaceOrderModal = ({
                 />
               )}
 
+              {/* Add spacing between dropdowns */}
+              {tableNumber === 0 && hasMultiWhatsapp && (
+                <div className="h-2"></div>
+              )}
+
               {/* Multi WhatsApp Card - Show when multi-whatsapp is enabled */}
               <MultiWhatsappCard
                 hotelData={hotelData}
@@ -1101,15 +1242,13 @@ const PlaceOrderModal = ({
               )}
 
               {/* minimum amount msg  */}
-              {
-                items?.length === 0 || (isDelivery && orderType === 'delivery' && (totalPrice ?? 0) < minimumOrderAmount) && (
-                  <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
-                    Minimum order amount for delivery is{" "}
-                    {hotelData?.currency || "₹"}
-                    {deliveryInfo?.minimumOrderAmount.toFixed(2)}
-                  </div>
-                )
-              }
+              {(items?.length === 0 || (isDelivery && orderType === 'delivery' && (totalPrice ?? 0) < minimumOrderAmount)) && (
+                <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
+                  Minimum order amount for delivery is{" "}
+                  {hotelData?.currency || "₹"}
+                  {deliveryInfo?.minimumOrderAmount.toFixed(2)}
+                </div>
+              )}
 
               
 
