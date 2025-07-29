@@ -284,12 +284,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const fcmToken = localStorage.getItem("fcmToken");
     const isApp = localStorage.getItem("isApp");
     const accounts = await getAllAccounts();
+    
+    // Preserve hotel-specific localStorage items
+    const hotelLocationItems: { [key: string]: string | null } = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('hotel-') || key.startsWith('user-location-store'))) {
+        hotelLocationItems[key] = localStorage.getItem(key);
+      }
+    }
+    
     await Notification.token.remove();
     await removeAuthCookie();
     await removeLocationCookie();
     localStorage.clear();
     if (fcmToken) localStorage.setItem("fcmToken", fcmToken);
     if (isApp) localStorage.setItem("isApp", isApp);
+    
+    // Restore hotel-specific items
+    Object.entries(hotelLocationItems).forEach(([key, value]) => {
+      if (value !== null) {
+        localStorage.setItem(key, value);
+      }
+    });
+    
     if (accounts && accounts.length > 0) {
       accounts.forEach((account : any) => {
         addAccount({...account});

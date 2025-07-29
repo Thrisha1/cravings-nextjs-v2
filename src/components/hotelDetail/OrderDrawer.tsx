@@ -176,13 +176,17 @@ const OrderDrawer = ({
       `hotel-${hotelData.id}-selected-area`
     );
 
-    // Debug logging
+    // Also check if there's a more recent selection in the current session
+    const currentSelectedArea = selectedArea || "";
+
+    // Debug logging with more details
     console.log('WhatsApp Debug:', {
-      selectedArea,
+      selectedArea: currentSelectedArea,
       selectedWhatsAppNumber,
       hotelId: hotelData.id,
       hasMultiWhatsapp: getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled,
-      orderId: orderId || 'no-order-id'
+      orderId: orderId || 'no-order-id',
+      whatsappNumbers: hotelData?.whatsapp_numbers?.length || 0
     });
 
     let locationLink = "";
@@ -219,14 +223,21 @@ const OrderDrawer = ({
     // Check if multi-whatsapp is enabled and we have a selected area
     const hasMultiWhatsapp = getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled;
     const hasMultipleWhatsappNumbers = hotelData?.whatsapp_numbers?.length > 1;
-    const shouldShowHotelLocation = (hasMultiWhatsapp || hasMultipleWhatsappNumbers) && selectedArea && selectedArea.trim() !== '';
+    const shouldShowHotelLocation = (hasMultiWhatsapp || hasMultipleWhatsappNumbers) && currentSelectedArea && currentSelectedArea.trim() !== '';
+
+    console.log('Location display decision:', {
+      hasMultiWhatsapp,
+      hasMultipleWhatsappNumbers,
+      currentSelectedArea,
+      shouldShowHotelLocation
+    });
 
     const whatsappMsg = `
     *🍽️ Order Details 🍽️*
     
     *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
     ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : `*Order Type:* ${orderType || "Delivery"}`}
-    ${shouldShowHotelLocation ? `\n*Hotel Location:* ${selectedArea.toUpperCase()}` : ""}
+    ${shouldShowHotelLocation ? `\n*Hotel Location:* ${currentSelectedArea.toUpperCase()}` : ""}
     ${(tableNumber ?? 0) > 0 ? "" : (orderType === 'delivery' ? `*Delivery Address:* ${savedAddress}${locationLink}` : "")}
     *Time:* ${new Date().toLocaleTimeString()}
     

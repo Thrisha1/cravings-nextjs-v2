@@ -823,6 +823,15 @@ const PlaceOrderModal = ({
   qrId: string | null;
   qrGroup: QrGroup | null;
 }) => {
+  // Debug: Log props received
+  console.log('PlaceOrderModal props:', {
+    hotelData: hotelData?.id,
+    tableNumber,
+    getWhatsappLinkType: typeof getWhatsappLink,
+    qrId,
+    qrGroup: qrGroup?.name
+  });
+
   const {
     open_place_order_modal,
     setOpenDrawerBottom,
@@ -858,7 +867,15 @@ const PlaceOrderModal = ({
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [keyboardOpen, setKeyboardOpen] = useState(false);
-  const locationLoadedRef = useRef(false);
+
+  // Debug: Log orderId and other key values
+  console.log('PlaceOrderModal state:', {
+    orderId,
+    itemsLength: items?.length,
+    user: !!user,
+    selectedLocation,
+    hasMultiWhatsapp: getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled
+  });
 
   const isDelivery = tableNumber === 0 ? orderType === 'delivery' : !tableNumber;
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
@@ -908,14 +925,25 @@ const PlaceOrderModal = ({
     hotelData?.whatsapp_numbers?.length > 0;
 
   useEffect(() => {
-    // Only load location once per hotel
-    if (locationLoadedRef.current) {
+    console.log('Location useEffect triggered:', {
+      selectedLocation,
+      hotelId: hotelData.id,
+      whatsappNumbers: hotelData.whatsapp_numbers?.length
+    });
+
+    // If we already have a valid selected location, don't change it
+    if (selectedLocation && hotelData.whatsapp_numbers?.some(item => item.area === selectedLocation)) {
+      console.log('Valid selected location already set:', selectedLocation);
       return;
     }
 
-    // Don't reset if we already have a valid selected location
-    if (selectedLocation && hotelData.whatsapp_numbers?.some(item => item.area === selectedLocation)) {
-      locationLoadedRef.current = true;
+    // Try to restore location from localStorage
+    const savedArea = localStorage.getItem(`hotel-${hotelData.id}-selected-area`);
+    console.log('Checking saved area from localStorage:', savedArea);
+
+    if (savedArea && hotelData.whatsapp_numbers?.some(item => item.area === savedArea)) {
+      console.log('Restoring location from localStorage:', savedArea);
+      setSelectedLocation(savedArea);
       return;
     }
 
@@ -924,6 +952,8 @@ const PlaceOrderModal = ({
       `hotel-${hotelData.id}-whatsapp-area`
     );
 
+    console.log('Checking selected phone from localStorage:', selectedPhone);
+
     if (selectedPhone) {
       // Find the area name by phone number
       const selectedLocation = hotelData.whatsapp_numbers?.find(
@@ -931,35 +961,35 @@ const PlaceOrderModal = ({
       );
 
       if (selectedLocation) {
+        console.log('Found location by phone number:', selectedLocation.area);
         setSelectedLocation(selectedLocation.area);
-        locationLoadedRef.current = true;
       }
     } else {
       // If no saved location, try to find by area name (for backward compatibility)
-      const savedArea = localStorage.getItem(
-        `hotel-${hotelData.id}-selected-area`
-      );
-      
-      if (savedArea) {
-        const selectedLocation = hotelData.whatsapp_numbers?.find(
-          (item) => item.area === savedArea
-        );
+      console.log('No saved location found, setting empty');
+      setSelectedLocation("");
+    }
+  }, [hotelData.id, hotelData.whatsapp_numbers, selectedLocation]);
 
-        if (selectedLocation) {
-          setSelectedLocation(selectedLocation.area);
-          locationLoadedRef.current = true;
-        }
-      } else {
-        setSelectedLocation("");
-        locationLoadedRef.current = true;
+  // Watch for user login state changes and restore location
+  useEffect(() => {
+    console.log('User state changed:', {
+      user: !!user,
+      selectedLocation,
+      // hasLoggedIn // This line is removed
+    });
+
+    // If user just logged in and we have a saved location, restore it
+    if (user && !selectedLocation) {
+      const savedArea = localStorage.getItem(`hotel-${hotelData.id}-selected-area`);
+      console.log('User logged in, checking for saved location:', savedArea);
+      
+      if (savedArea && hotelData.whatsapp_numbers?.some(item => item.area === savedArea)) {
+        console.log('Restoring location after user login:', savedArea);
+        setSelectedLocation(savedArea);
       }
     }
-  }, [hotelData.id, hotelData.whatsapp_numbers]);
-
-  // Reset the ref when hotel changes
-  useEffect(() => {
-    locationLoadedRef.current = false;
-  }, [hotelData.id]);
+  }, [user, selectedLocation, hotelData.id, hotelData.whatsapp_numbers]);
 
   const handleSelectHotelLocation = (location: string | null) => {
     setSelectedLocation(location || "");
@@ -978,6 +1008,15 @@ const PlaceOrderModal = ({
         `hotel-${hotelData.id}-selected-area`,
         location
       );
+      
+      // Force a small delay to ensure localStorage is updated
+      setTimeout(() => {
+        console.log('Location saved to localStorage:', {
+          location,
+          phoneNumber,
+          savedArea: localStorage.getItem(`hotel-${hotelData.id}-selected-area`)
+        });
+      }, 100);
     } else {
       localStorage.removeItem(`hotel-${hotelData.id}-whatsapp-area`);
       localStorage.removeItem(`hotel-${hotelData.id}-selected-area`);
@@ -1121,6 +1160,16 @@ const PlaceOrderModal = ({
   };
 
   const handleLoginSuccess = () => {
+    console.log('Login success - checking location preservation');
+    const savedArea = localStorage.getItem(`hotel-${hotelData.id}-selected-area`);
+    console.log('Saved area after login:', savedArea);
+    
+    // Ensure location is preserved after login
+    if (savedArea && !selectedLocation) {
+      console.log('Restoring location after login:', savedArea);
+      setSelectedLocation(savedArea);
+    }
+
     setShowLoginDrawer(false);
   };
 
@@ -1254,11 +1303,33 @@ const PlaceOrderModal = ({
 
               {/* Place Order and Back Buttons */}
               <div className="flex flex-col gap-3 mt-6">
+                {/* Debug: Test getWhatsappLink call */}
+                {(() => {
+                  console.log('Testing getWhatsappLink call...');
+                  try {
+                    // Add a small delay to ensure state updates are processed
+                    setTimeout(() => {
+                      const testLink = getWhatsappLink(orderId as string);
+                      console.log('getWhatsappLink result:', testLink);
+                    }, 50);
+                  } catch (error) {
+                    console.error('Error calling getWhatsappLink:', error);
+                  }
+                  return null;
+                })()}
+
                 {user ? (
+                  (() => {
+                    // Debug: Check current location before generating link
+                    const currentSelectedArea = localStorage.getItem(`hotel-${hotelData.id}-selected-area`);
+                    console.log('Current selected area before Link:', currentSelectedArea);
+                    return (
                   <Link
                     href={getWhatsappLink(orderId as string)}
                     target="_blank"
                     onClick={(e) => {
+                      console.log('Link clicked, orderId:', orderId);
+                      console.log('getWhatsappLink function:', typeof getWhatsappLink);
                       if (isPlaceOrderDisabled) {
                         e.preventDefault();
                       }
@@ -1279,6 +1350,8 @@ const PlaceOrderModal = ({
                       )}
                     </Button>
                   </Link>
+                    );
+                  })()
                 ) : null}
                 <Button
                   variant="outline"
