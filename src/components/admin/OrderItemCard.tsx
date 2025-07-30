@@ -1,5 +1,5 @@
 import { HotelData } from "@/app/hotels/[...id]/page";
-import { formatDate } from "@/lib/formatDate";
+import { formatDate, getDateOnly } from "@/lib/formatDate";
 import { Partner, useAuthStore } from "@/store/authStore";
 import useOrderStore, { Order, OrderItem } from "@/store/orderStore";
 import React, { useEffect, useState } from "react";
@@ -147,9 +147,9 @@ const OrderItemCard = ({
     try {
       await updateOrderStatus("cancelled");
       // Update local order status immediately for optimistic UI update
-      setLocalOrder(prev => ({
+      setLocalOrder((prev) => ({
         ...prev,
-        status: "cancelled"
+        status: "cancelled",
       }));
       setIsCancelDialogOpen(false);
       toast.success("Order cancelled successfully");
@@ -209,11 +209,14 @@ const OrderItemCard = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Order?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel this order? This action will mark the order as cancelled and cannot be undone.
+              Are you sure you want to cancel this order? This action will mark
+              the order as cancelled and cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCancelling}>No, keep it</AlertDialogCancel>
+            <AlertDialogCancel disabled={isCancelling}>
+              No, keep it
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancel}
               disabled={isCancelling}
@@ -228,16 +231,27 @@ const OrderItemCard = ({
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-medium">Order #{localOrder.id.slice(0, 8)}</h3>
+            <h3 className="font-medium">
+              Order{" "}
+              {(Number(localOrder.display_id) ?? 0) > 0
+                ? `${localOrder.display_id}-${getDateOnly(
+                    localOrder.createdAt
+                  )}`
+                : localOrder.id.slice(0, 8)}
+            </h3>
+
             {/* Show TAKEAWAY label for orders with no delivery address or location */}
-            {localOrder.type === "delivery" && 
-             (!localOrder.deliveryAddress || 
-              localOrder.deliveryAddress === "Unknown" || 
-              localOrder.deliveryAddress === "N/A" ||
-              !localOrder.delivery_location) && (
-              <span className="text-red-600 font-bold text-sm">TAKEAWAY</span>
-            )}
+            {localOrder.type === "delivery" &&
+              (!localOrder.deliveryAddress ||
+                localOrder.deliveryAddress === "Unknown" ||
+                localOrder.deliveryAddress === "N/A" ||
+                !localOrder.delivery_location) && (
+                <span className="text-red-600 font-bold text-sm">TAKEAWAY</span>
+              )}
           </div>
+          {!localOrder.display_id && (
+            <h2 className="text-xs text-gray-500">Id: {localOrder.id}</h2>
+          )}
           <p className="text-sm text-gray-500">
             {formatDate(localOrder.createdAt)}
           </p>
@@ -261,20 +275,27 @@ const OrderItemCard = ({
       <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           {localOrder.type === "table_order" && (
-            <p className="text-sm">Table: {localOrder.tableNumber || "N/A"} { isParsel ? `( Parcel )` : ''}</p>
+            <p className="text-sm">
+              Table: {localOrder.tableNumber || "N/A"}{" "}
+              {isParsel ? `( Parcel )` : ""}
+            </p>
           )}
           {localOrder.orderedby === "captain" && localOrder.captain && (
             <p className="text-sm">Captain: {localOrder.captain.name}</p>
           )}
-          {localOrder.orderedby === "captain"
-            ? (localOrder.phone && localOrder.phone.trim() !== "" && (
-                <p className="text-sm">Customer: {localOrder.phone}</p>
-              ))
-            : (
-              <p className="text-sm">
-                Customer: {localOrder.user?.phone || localOrder.phone ? `+91${localOrder.user?.phone || localOrder.phone}` : "Unknown"}
-              </p>
-            )}
+          {localOrder.orderedby === "captain" ? (
+            localOrder.phone &&
+            localOrder.phone.trim() !== "" && (
+              <p className="text-sm">Customer: {localOrder.phone}</p>
+            )
+          ) : (
+            <p className="text-sm">
+              Customer:{" "}
+              {localOrder.user?.phone || localOrder.phone
+                ? `+91${localOrder.user?.phone || localOrder.phone}`
+                : "Unknown"}
+            </p>
+          )}
           {localOrder.type === "delivery" && (
             <div className="flex flex-col gap-3 mt-2">
               <p className="text-sm">
@@ -304,7 +325,9 @@ const OrderItemCard = ({
         {localOrder?.type !== "pos" && (
           <div className="mt-2 md:mt-0">
             <StatusHistoryTimeline
-              status_history={localOrder?.status_history || defaultStatusHistory}
+              status_history={
+                localOrder?.status_history || defaultStatusHistory
+              }
             />
           </div>
         )}
@@ -379,13 +402,23 @@ const OrderItemCard = ({
         <div className="mt-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
           {/* Left side buttons */}
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-            <Link href={`/kot/${localOrder.id}`} target="_blank" passHref className="flex-1 sm:flex-none">
+            <Link
+              href={`/kot/${localOrder.id}`}
+              target="_blank"
+              passHref
+              className="flex-1 sm:flex-none"
+            >
               <Button size="sm" variant="outline" className="w-full sm:w-auto">
                 <Printer className="h-4 w-4 mr-2" />
                 Print KOT
               </Button>
             </Link>
-            <Link target="_blank" href={`/bill/${localOrder.id}`} passHref className="flex-1 sm:flex-none">
+            <Link
+              target="_blank"
+              href={`/bill/${localOrder.id}`}
+              passHref
+              className="flex-1 sm:flex-none"
+            >
               <Button size="sm" variant="outline" className="w-full sm:w-auto">
                 <Printer className="h-4 w-4 mr-2" />
                 Print Bill

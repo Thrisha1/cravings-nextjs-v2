@@ -53,6 +53,7 @@ export interface Order {
   qrId?: string | null;
   status: "pending" | "completed" | "cancelled";
   partnerId: string;
+  display_id?: string;  
   status_history?: OrderStatusStorage;
   partner?: {
     gst_percentage?: number;
@@ -132,8 +133,8 @@ interface OrderState {
   deliveryCost: number | null;
   open_place_order_modal: boolean;
   setOpenPlaceOrderModal: (open: boolean) => void;
-  orderType: 'takeaway' | 'delivery' | null;
-  setOrderType: (type: 'takeaway' | 'delivery') => void;
+  orderType: "takeaway" | "delivery" | null;
+  setOrderType: (type: "takeaway" | "delivery") => void;
   setOpenDrawerBottom: (open: boolean) => void;
   setOpenOrderDrawer: (open: boolean) => void;
   setDeliveryInfo: (info: DeliveryInfo | null) => void;
@@ -212,12 +213,13 @@ const useOrderStore = create(
       open_place_order_modal: false,
       orderType: null,
 
-      setOrderType: (type: 'takeaway' | 'delivery') => {
+      setOrderType: (type: "takeaway" | "delivery") => {
         set({ orderType: type });
       },
 
       setOpenOrderDrawer: (open: boolean) => set({ open_order_drawer: open }),
-      setDeliveryInfo: (info: DeliveryInfo | null) => set({ deliveryInfo: info }),
+      setDeliveryInfo: (info: DeliveryInfo | null) =>
+        set({ deliveryInfo: info }),
       setDeliveryCost: (cost: number | null) => set({ deliveryCost: cost }),
       setOpenDrawerBottom: (open: boolean) => set({ open_drawer_bottom: open }),
 
@@ -443,6 +445,8 @@ const useOrderStore = create(
           },
           onNext: (data) => {
             if (data?.data?.orders) {
+              console.log(data.data.orders);
+              
               const orders = data.data.orders.map(transformOrderFromHasura);
               set({ partnerOrders: orders });
 
@@ -939,6 +943,8 @@ const useOrderStore = create(
 
           const grandTotal = subtotal + (gstIncluded || 0) + totalExtraCharges;
 
+          const getNextDisplayOrderNumber = await getNextOrderNumber(hotelData.id);
+
           // Create order in database
           const orderResponse = await fetchFromHasura(createOrderMutation, {
             id: uuidv4(),
@@ -964,6 +970,7 @@ const useOrderStore = create(
                   }
                 : null,
             notes: notes || null,
+            display_id: getNextDisplayOrderNumber.toString(),
           });
 
           if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
@@ -1069,6 +1076,7 @@ const useOrderStore = create(
                 status_history
                 partner_id
                 gst_included
+                display_id
                 extra_charges
                 phone
                 user_id
@@ -1145,6 +1153,7 @@ const useOrderStore = create(
               delivery_charge: order.delivery_charge,
               status_history: order.status_history,
               userId: order.user_id,
+              display_id: order.display_id,
               user: order.user,
               orderedby: order.orderedby,
               captain_id: order.captain_id,
@@ -1196,6 +1205,7 @@ const useOrderStore = create(
 );
 
 function transformOrderFromHasura(order: any): Order {
+  console.log("Transforming order from Hasura:", order);
   return {
     id: order.id,
     items: order.order_items.map((item: any) => ({
@@ -1221,6 +1231,7 @@ function transformOrderFromHasura(order: any): Order {
     phone: order.phone,
     userId: order.user_id,
     user: order.user,
+    display_id: order.display_id,
     type: order.type,
     deliveryAddress: order.delivery_address,
     gstIncluded: order.gst_included || 0,
@@ -1233,5 +1244,56 @@ function transformOrderFromHasura(order: any): Order {
     extraCharges: order.extra_charges,
   };
 }
+
+export const getNextOrderNumber = async (partnerId: string) => {
+  // today's date
+  const today = new Date();
+  const todayStart = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+    0,
+    0,
+    0,
+    0
+  );
+  const todayEnd = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+    23,
+    59,
+    59,
+    999
+  );
+
+  //get last of today
+  const { orders } = await fetchFromHasura(
+    `
+    query GetLastOrderOfToday($partnerId: uuid!) {
+      orders(
+        where: {
+          partner_id: { _eq: $partnerId },
+          created_at: { _gte: "${todayStart.toISOString()}", _lte: "${todayEnd.toISOString()}" }
+        },
+        order_by: { created_at: desc },
+        limit: 1
+      ) {
+        id
+        display_id
+      }
+    }
+  `, {
+    partnerId: partnerId,
+  });
+
+  if(orders.length === 0) {
+    return 1; 
+  }else{
+    const lastOrder = orders[0];
+    const lastOrderNumber = parseInt(lastOrder.display_id, 10);
+    return lastOrderNumber + 1;
+  }
+};
 
 export default useOrderStore;
