@@ -31,7 +31,10 @@ export const metadata: Metadata = {
   },
 };
 
-const bottomNavFilter = "PETRAZ-RESTAURANT";
+const bottomNavFilter = [
+  "PETRAZ-RESTAURANT",
+  "PETRAZ%20RESTAURANT"
+];
 
 export default async function RootLayout({
   children,
@@ -45,7 +48,7 @@ export default async function RootLayout({
     ? headerList.get("set-cookie")?.split("pathname=")[1].split(";")[0]
     : "/";
 
-  const isPetraz = pathname?.includes(bottomNavFilter) || pathname === "/";
+  const isPetraz = bottomNavFilter.some(filter => pathname?.includes(filter)) || pathname === "/";
 
   console.log("Is Petraz:", isPetraz);
 
