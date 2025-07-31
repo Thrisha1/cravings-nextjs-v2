@@ -573,6 +573,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         orderedby: isCaptainOrder ? "captain" : undefined,
         captain_id: isCaptainOrder ? userId : undefined,
         notes: orderNote || undefined,
+        display_id : getNextDisplayOrderNumber.toString(),
       };
 
       set({ order: newOrder, postCheckoutModalOpen: true });
