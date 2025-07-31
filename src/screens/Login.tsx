@@ -45,6 +45,7 @@ export default function Login() {
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
+      console.error("Sign in error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -59,6 +60,7 @@ export default function Login() {
       navigate.push("/admin");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
+      console.error("Sign in error:", error);
     } finally {
       setIsLoading(false);
     }
