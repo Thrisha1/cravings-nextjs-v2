@@ -24,7 +24,7 @@ export function fetchFromHasura(
 ): Promise<any> {
   return client.request(query, variables)
     .then((result) => {
-      // console.log("Hasura response: ", result); 
+      console.log("Hasura response: ", result); 
       return result;
     })
     .catch((error: any) => {

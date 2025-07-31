@@ -10,7 +10,7 @@ import {
   getOrdersOfPartnerQuery,
 } from "@/api/orders";
 import { deleteBillMutation } from "@/api/pos";
-import { Order } from "./orderStore";
+import { getNextOrderNumber, Order } from "./orderStore";
 import { v4 as uuidv4 } from "uuid";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import { getQrGroupForTable } from "@/lib/getQrGroupForTable";
@@ -465,6 +465,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
         orderNote: orderNote
       });
 
+      const getNextDisplayOrderNumber = await getNextOrderNumber(partnerId);
+
       // Create order in database
       const orderResponse = await fetchFromHasura(createOrderMutation, {
         id: orderId,
@@ -484,6 +486,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         captain_id: isCaptainOrder ? userId : null,
         notes: orderNote || null,
         phone: get().userPhone || null,
+        display_id: getNextDisplayOrderNumber.toString(), 
       });
 
       if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
@@ -570,6 +573,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         orderedby: isCaptainOrder ? "captain" : undefined,
         captain_id: isCaptainOrder ? userId : undefined,
         notes: orderNote || undefined,
+        display_id : getNextDisplayOrderNumber.toString(),
       };
 
       set({ order: newOrder, postCheckoutModalOpen: true });

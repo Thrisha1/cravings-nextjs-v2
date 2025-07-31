@@ -17,6 +17,7 @@ import KOTTemplate from "./KOTTemplate";
 import BillTemplate from "./BillTemplate";
 import { useRouter } from "next/navigation";
 import { getExtraCharge } from "@/lib/getExtraCharge";
+import { getDateOnly } from "@/lib/formatDate";
 
 export const PostCheckoutModal = () => {
   const {
@@ -61,7 +62,7 @@ export const PostCheckoutModal = () => {
     (sum, charge) => sum + charge.amount,
     0
   );
-  
+
   const subtotal = foodSubtotal + extraChargesTotal;
   const gstAmount = calculateGst(foodSubtotal);
   const grandTotal = subtotal + gstAmount;
@@ -74,14 +75,14 @@ export const PostCheckoutModal = () => {
         console.error("Invalid date:", order.createdAt);
         return "Invalid date";
       }
-      return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: 'numeric',
+      return date.toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
         hour12: true,
-        timeZone: 'Asia/Kolkata'
+        timeZone: "Asia/Kolkata",
       });
     } catch (error) {
       console.error("Error formatting date:", error);
@@ -99,7 +100,19 @@ export const PostCheckoutModal = () => {
           <DialogHeader className="p-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] border-b sticky top-0 bg-white z-10">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between pt-1">
-                <DialogTitle className="text-xl sm:text-2xl">Order #{order.id.slice(0, 8)}</DialogTitle>
+                <DialogTitle>
+                  <div className="text-xl sm:text-2xl">
+                    Order{" "}
+                    {(Number(order.display_id) ?? 0) > 0
+                      ? `${order.display_id}-${getDateOnly(order.createdAt)}`
+                      : order.id.slice(0, 8)}
+                  </div>
+                  {(Number(order.display_id) ?? 0) > 0 && (
+                    <h2 className="text-sm text-gray-800 ">
+                      ID: {order.id.slice(0, 8)}
+                    </h2>
+                  )}
+                </DialogTitle>
                 <Button
                   variant="outline"
                   onClick={handleClose}
@@ -110,7 +123,9 @@ export const PostCheckoutModal = () => {
               </div>
               <DialogDescription className="text-base pb-1">
                 {order.tableNumber && (
-                  <span className="text-green-600 font-medium">Table {order.tableNumber}</span>
+                  <span className="text-green-600 font-medium">
+                    Table {order.tableNumber}
+                  </span>
                 )}
               </DialogDescription>
             </div>
@@ -134,9 +149,7 @@ export const PostCheckoutModal = () => {
                   <div className="flex justify-end">
                     <div className="space-y-1 text-right">
                       <div className="text-sm text-gray-500">Order Time</div>
-                      <div className="font-medium">
-                        {orderTime}
-                      </div>
+                      <div className="font-medium">{orderTime}</div>
                     </div>
                   </div>
                 </div>
@@ -146,13 +159,17 @@ export const PostCheckoutModal = () => {
                   <h3 className="font-semibold text-lg mb-3">Order Items</h3>
                   <div className="space-y-3">
                     {order.items.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center">
+                      <div
+                        key={index}
+                        className="flex justify-between items-center"
+                      >
                         <div className="flex items-center gap-3">
                           <span className="font-medium">{item.quantity}x</span>
                           <span>{item.name}</span>
                         </div>
                         <span className="font-medium">
-                          {currency}{(item.price * item.quantity).toFixed(2)}
+                          {currency}
+                          {(item.price * item.quantity).toFixed(2)}
                         </span>
                       </div>
                     ))}
@@ -162,12 +179,20 @@ export const PostCheckoutModal = () => {
                 {/* Extra Charges */}
                 {extraCharges.length > 0 && (
                   <div className="p-4">
-                    <h3 className="font-semibold text-lg mb-3">Extra Charges</h3>
+                    <h3 className="font-semibold text-lg mb-3">
+                      Extra Charges
+                    </h3>
                     <div className="space-y-2">
                       {extraCharges.map((charge, index) => (
-                        <div key={index} className="flex justify-between items-center">
+                        <div
+                          key={index}
+                          className="flex justify-between items-center"
+                        >
                           <span>{charge.name}</span>
-                          <span className="font-medium">{currency}{charge.amount.toFixed(2)}</span>
+                          <span className="font-medium">
+                            {currency}
+                            {charge.amount.toFixed(2)}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -178,17 +203,26 @@ export const PostCheckoutModal = () => {
                 <div className="p-4 space-y-2">
                   <div className="flex justify-between items-center text-sm">
                     <span>Subtotal:</span>
-                    <span>{currency}{foodSubtotal.toFixed(2)}</span>
+                    <span>
+                      {currency}
+                      {foodSubtotal.toFixed(2)}
+                    </span>
                   </div>
                   {gstPercentage > 0 && (
                     <div className="flex justify-between items-center text-sm">
                       <span>{`GST (${gstPercentage}%):`}</span>
-                      <span>{currency}{gstAmount.toFixed(2)}</span>
+                      <span>
+                        {currency}
+                        {gstAmount.toFixed(2)}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between items-center pt-2 border-t font-semibold text-lg">
                     <span>Grand Total:</span>
-                    <span>{currency}{grandTotal.toFixed(2)}</span>
+                    <span>
+                      {currency}
+                      {grandTotal.toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -235,10 +269,10 @@ export const PostCheckoutModal = () => {
         <KOTTemplate ref={kotRef} order={order} key={`kot-${order.id}`} />
 
         {/* Bill Template */}
-        <BillTemplate 
-          ref={billRef} 
-          order={order} 
-          userData={userData as Partner} 
+        <BillTemplate
+          ref={billRef}
+          order={order}
+          userData={userData as Partner}
           extraCharges={extraCharges}
         />
       </div>

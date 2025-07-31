@@ -36,7 +36,8 @@ export const createOrderMutation = `
     $orderedby: String,
     $delivery_location: geography,
     $captain_id: uuid,
-    $notes: String
+    $notes: String,
+    $display_id: String
   ) {
     insert_orders_one(object: {
       id: $id
@@ -56,6 +57,7 @@ export const createOrderMutation = `
       delivery_location: $delivery_location
       captain_id: $captain_id
       notes: $notes
+      display_id: $display_id
     }) {
       id
       total_price
@@ -196,6 +198,7 @@ subscription GetPartnerOrders($partner_id: uuid!, $today_start: timestamptz!, $t
     phone
     user_id
     orderedby
+    display_id
     captain_id
     captainid {
       id
@@ -271,6 +274,7 @@ subscription GetPaginatedPartnerOrders(
     gst_included
     extra_charges
     phone
+    display_id
     user_id
     orderedby
     captain_id
