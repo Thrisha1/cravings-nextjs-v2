@@ -53,7 +53,7 @@ export interface Order {
   qrId?: string | null;
   status: "pending" | "completed" | "cancelled";
   partnerId: string;
-  display_id?: string;  
+  display_id?: string;
   status_history?: OrderStatusStorage;
   partner?: {
     gst_percentage?: number;
@@ -446,7 +446,7 @@ const useOrderStore = create(
           onNext: (data) => {
             if (data?.data?.orders) {
               console.log(data.data.orders);
-              
+
               const orders = data.data.orders.map(transformOrderFromHasura);
               set({ partnerOrders: orders });
 
@@ -943,7 +943,9 @@ const useOrderStore = create(
 
           const grandTotal = subtotal + (gstIncluded || 0) + totalExtraCharges;
 
-          const getNextDisplayOrderNumber = await getNextOrderNumber(hotelData.id);
+          const getNextDisplayOrderNumber = await getNextOrderNumber(
+            hotelData.id
+          );
 
           // Create order in database
           const orderResponse = await fetchFromHasura(createOrderMutation, {
@@ -1283,16 +1285,22 @@ export const getNextOrderNumber = async (partnerId: string) => {
         display_id
       }
     }
-  `, {
-    partnerId: partnerId,
-  });
+  `,
+    {
+      partnerId: partnerId,
+    }
+  );
 
-  if(orders.length === 0) {
-    return 1; 
-  }else{
+  if (orders.length === 0) {
+    return 1;
+  } else {
     const lastOrder = orders[0];
-    const lastOrderNumber = parseInt(lastOrder.display_id, 10);
-    return lastOrderNumber + 1;
+    if (lastOrder.display_id !== null && lastOrder.display_id !== undefined) {
+      const lastDisplayId = parseInt(lastOrder.display_id, 10);
+      return lastDisplayId + 1;
+    } else {
+      return 1;
+    }
   }
 };
 
