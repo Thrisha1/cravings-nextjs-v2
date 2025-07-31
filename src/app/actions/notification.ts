@@ -250,8 +250,7 @@ class PartnerNotification {
         {
           url: `https://www.cravings.live/offers/${offer?.id || ""}`,
           channel_id: "cravings_channel_2",
-          sound: "default_sound",
-          image: offer.menu.image_url,
+          sound: "default_sound"
         }
       );
 
