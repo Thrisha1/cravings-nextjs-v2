@@ -253,9 +253,7 @@ const HotelMenuPage = ({
   const selectedCategory = selectedCategoryProp || "all";
   const items = getCategoryItems(selectedCategory);
 
-  console.log("Final selectedCategory:", selectedCategory);
-  console.log("Final categories with offers:", categories);
-  console.log("Final items for selected category:", items);
+  
 
   const defaultProps = {
     offers,

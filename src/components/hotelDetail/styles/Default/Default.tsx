@@ -225,7 +225,6 @@ const Default = ({
               hotelData={hoteldata}
               categories={categories}
               setSelectedCategory={setSelectedCategory}
-              menu={hoteldata?.fillteredMenus}
               tableNumber={tableNumber}
             />
           </section>

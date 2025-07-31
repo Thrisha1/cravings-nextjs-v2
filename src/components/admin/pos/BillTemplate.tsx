@@ -113,6 +113,15 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
               <div className="font-bold text-sm uppercase mb-1">
                 Order Details:
               </div>
+              {/* Takeaway Phone */}
+              {(order.user?.phone || order.phone) && (
+                <>
+                  <div className="text-sm flex gap-2 mb-1">
+                    <div className="font-medium">Customer Phone:</div>
+                    <div className="text-xs">{order.user?.phone || order.phone}</div>
+                  </div>
+                </>
+              )}
               {order.deliveryAddress !== "" && (
                 <div className="mb-1 flex gap-2">
                   <div className="font-medium">Address:</div>
@@ -136,16 +145,6 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
                   </div>
                 </>
               )}
-            </div>
-          </>
-        )}
-
-        {/* Takeaway Phone */}
-        {order.phone && (
-          <>
-            <div className="text-sm flex gap-2">
-              <div className="font-medium">Customer Phone:</div>
-              <div className="text-xs">{order.phone}</div>
             </div>
           </>
         )}

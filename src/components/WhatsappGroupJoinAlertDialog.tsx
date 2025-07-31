@@ -3,28 +3,76 @@
 import React, { useState, useEffect } from "react";
 import { FaWhatsapp } from "react-icons/fa";
 
+const petrazGroup = {
+  location: "ernakulam",
+  link: "https://whatsapp.com/channel/0029VbBAoNf7YScxhH8IhV3E",
+  message: "Join our Petraz WhatsApp group for exclusive offers and updates!",
+};
+
 const whatsappGroups = [
-  { location: "alappuzha", link: "https://chat.whatsapp.com/HXwsVkPIOypGE0zYGQiSIL?mode=r_t" },
-  { location: "ernakulam", link: "https://chat.whatsapp.com/BDP726oooKACS0Y93Al7kR?mode=r_t" },
-  { location: "idukki", link: "https://chat.whatsapp.com/Bi4GYPKKpNF7OhiDXZDEHW?mode=r_t" },
-  { location: "kannur", link: "https://chat.whatsapp.com/Fd899HvRtCY3wQWPZxI6CF?mode=r_t" },
-  { location: "kasaragod", link: "https://chat.whatsapp.com/FQilQdjD74M77TOJJkuCzG?mode=r_t" },
-  { location: "kollam", link: "https://chat.whatsapp.com/IbNSIQp4DovHTIYsfbyleU?mode=r_t" },
-  { location: "kottayam", link: "https://chat.whatsapp.com/HU6DHMirK6a1I4Sqe2XrYu?mode=r_t" },
-  { location: "kozhikode", link: "https://chat.whatsapp.com/CfNocjQpkUZHGDm64smhn5?mode=r_t" },
-  { location: "malappuram", link: "https://chat.whatsapp.com/JQxww64JdPg1VAEwyus62s?mode=r_t" },
-  { location: "palakkad", link: "https://chat.whatsapp.com/JROy7Wq12jJI7hbm8YdgF7?mode=r_t" },
-  { location: "pathanamthitta", link: "https://chat.whatsapp.com/Jyj0l25nlX1BNWcAPzZmWK?mode=r_t" },
-  { location: "thiruvananthapuram", link: "https://chat.whatsapp.com/DiP5Wd1Ck8yA8t8Ch0j1iO?mode=r_t" },
-  { location: "thrissur", link: "https://chat.whatsapp.com/GbCePgUcEItLcutzCOnvAp?mode=r_t" },
-  { location: "wayanad", link: "https://chat.whatsapp.com/BmI3Y8r0gam2rVg7mXLyoQ?mode=r_t" }
+  {
+    location: "alappuzha",
+    link: "https://chat.whatsapp.com/HXwsVkPIOypGE0zYGQiSIL?mode=r_t",
+  },
+  {
+    location: "ernakulam",
+    link: "https://chat.whatsapp.com/BDP726oooKACS0Y93Al7kR?mode=r_t",
+  },
+  {
+    location: "idukki",
+    link: "https://chat.whatsapp.com/Bi4GYPKKpNF7OhiDXZDEHW?mode=r_t",
+  },
+  {
+    location: "kannur",
+    link: "https://chat.whatsapp.com/Fd899HvRtCY3wQWPZxI6CF?mode=r_t",
+  },
+  {
+    location: "kasaragod",
+    link: "https://chat.whatsapp.com/FQilQdjD74M77TOJJkuCzG?mode=r_t",
+  },
+  {
+    location: "kollam",
+    link: "https://chat.whatsapp.com/IbNSIQp4DovHTIYsfbyleU?mode=r_t",
+  },
+  {
+    location: "kottayam",
+    link: "https://chat.whatsapp.com/HU6DHMirK6a1I4Sqe2XrYu?mode=r_t",
+  },
+  {
+    location: "kozhikode",
+    link: "https://chat.whatsapp.com/CfNocjQpkUZHGDm64smhn5?mode=r_t",
+  },
+  {
+    location: "malappuram",
+    link: "https://chat.whatsapp.com/JQxww64JdPg1VAEwyus62s?mode=r_t",
+  },
+  {
+    location: "palakkad",
+    link: "https://chat.whatsapp.com/JROy7Wq12jJI7hbm8YdgF7?mode=r_t",
+  },
+  {
+    location: "pathanamthitta",
+    link: "https://chat.whatsapp.com/Jyj0l25nlX1BNWcAPzZmWK?mode=r_t",
+  },
+  {
+    location: "thiruvananthapuram",
+    link: "https://chat.whatsapp.com/DiP5Wd1Ck8yA8t8Ch0j1iO?mode=r_t",
+  },
+  {
+    location: "thrissur",
+    link: "https://chat.whatsapp.com/GbCePgUcEItLcutzCOnvAp?mode=r_t",
+  },
+  {
+    location: "wayanad",
+    link: "https://chat.whatsapp.com/BmI3Y8r0gam2rVg7mXLyoQ?mode=r_t",
+  },
 ];
 
-
-
-const WhatsappGroupJoinAlertDialog = () => {
+const WhatsappGroupJoinAlertDialog = ({ isPetraz }: { isPetraz: boolean }) => {
   // 'hidden', 'modal', or 'floating'
-  const [displayState, setDisplayState] = useState<"hidden" | "modal" | "floating">("hidden");
+  const [displayState, setDisplayState] = useState<
+    "hidden" | "modal" | "floating"
+  >("hidden");
   const [groupLink, setGroupLink] = useState("");
   const [district, setDistrict] = useState("");
 
@@ -36,7 +84,9 @@ const WhatsappGroupJoinAlertDialog = () => {
     }
 
     // 2. If user has previously closed the modal, show the floating icon immediately.
-    const closedTimestamp = localStorage.getItem("whatsappDialogClosedTimestamp");
+    const closedTimestamp = localStorage.getItem(
+      "whatsappDialogClosedTimestamp"
+    );
     if (closedTimestamp) {
       const sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
       if (Date.now() - parseInt(closedTimestamp) < sevenDaysInMillis) {
@@ -64,7 +114,10 @@ const WhatsappGroupJoinAlertDialog = () => {
     );
   };
 
-  const handleSuccess = async (position: GeolocationPosition, showModalOnSuccess: boolean) => {
+  const handleSuccess = async (
+    position: GeolocationPosition,
+    showModalOnSuccess: boolean
+  ) => {
     const { latitude, longitude } = position.coords;
     const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -81,12 +134,26 @@ const WhatsappGroupJoinAlertDialog = () => {
 
       if (data.features && data.features.length > 0) {
         const features = data.features;
-        const region = features.find((c: { id: string; text: string }) => c.id.startsWith("region"));
-        const districtObj = features.find((c: { id: string; text: string }) => c.id.startsWith("district"));
+        const region = features.find((c: { id: string; text: string }) =>
+          c.id.startsWith("region")
+        );
+        const districtObj = features.find((c: { id: string; text: string }) =>
+          c.id.startsWith("district")
+        );
 
         if (region && region.text.toLowerCase() === "kerala" && districtObj) {
-          const userDistrict = districtObj.text.toLowerCase().replace(" district", "");
-          const foundGroup = whatsappGroups.find((group) => group.location.toLowerCase() === userDistrict);
+          const userDistrict = districtObj.text
+            .toLowerCase()
+            .replace(" district", "");
+          let foundGroup = null;
+
+          if (!isPetraz) {
+            foundGroup = whatsappGroups.find(
+              (group) => group.location.toLowerCase() === userDistrict
+            );
+          } else {
+            foundGroup = petrazGroup;
+          }
 
           if (foundGroup) {
             setGroupLink(foundGroup.link);
@@ -111,7 +178,10 @@ const WhatsappGroupJoinAlertDialog = () => {
   };
 
   const handleClose = () => {
-    localStorage.setItem("whatsappDialogClosedTimestamp", Date.now().toString());
+    localStorage.setItem(
+      "whatsappDialogClosedTimestamp",
+      Date.now().toString()
+    );
     setDisplayState("floating"); // Switch to floating button
   };
 
@@ -147,8 +217,9 @@ const WhatsappGroupJoinAlertDialog = () => {
           Join our WhatsApp Group! 👋
         </h2>
         <p className="mb-6 text-sm text-gray-600">
-          It looks like you're in {district}. Join our local group for exclusive
-          offers!
+          {isPetraz
+            ? petrazGroup.message
+            : `Join our WhatsApp group for ${district} to get the latest updates and offers!`}
         </p>
         <div className="flex justify-center">
           <button

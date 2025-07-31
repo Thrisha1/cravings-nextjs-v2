@@ -12,6 +12,7 @@ import BottomNav from "@/components/BottomNav";
 import { Navbar } from "@/components/Navbar";
 import { getAuthCookie } from "./auth/actions";
 import WhatsappGroupJoinAlertDialog from "@/components/WhatsappGroupJoinAlertDialog";
+import { cookies, headers } from "next/headers";
 // import CravingsCashInfoModal from "@/components/CravingsCashInfoModal";
 // import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
 // import LocationAccess from "@/components/LocationAccess";
@@ -30,12 +31,30 @@ export const metadata: Metadata = {
   },
 };
 
+const bottomNavFilter = "PETRAZ";
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const user = await getAuthCookie();
+  const headerList = await headers();
+
+  const pathname = headerList.get("set-cookie")?.includes("pathname=")
+    ? headerList.get("set-cookie")?.split("pathname=")[1].split(";")[0]
+    : undefined;
+
+  let isPetraz = false;
+
+  if (pathname) {
+    console.log("Current Pathname:", decodeURIComponent(pathname || ""));
+
+    isPetraz = pathname.includes(bottomNavFilter); 
+
+    console.log("Is Petraz:", isPetraz);
+  }
+
   return (
     <html lang="en">
       <head>
@@ -59,7 +78,9 @@ export default async function RootLayout({
       </head>
       <body className={`antialiased`}>
         <AuthInitializer />
-        {(user?.role === "user" || !user) && <WhatsappGroupJoinAlertDialog />}
+        {(user?.role === "user" || !user) && (
+          <WhatsappGroupJoinAlertDialog isPetraz={isPetraz} />
+        )}
         <Toaster richColors closeButton />
         {/* <Snow /> */}
         <Navbar userData={user} />
@@ -69,7 +90,7 @@ export default async function RootLayout({
         {/* <PwaInstallPrompt /> */}
 
         {children}
-        <BottomNav userData={user} />
+        {!isPetraz ? <BottomNav userData={user} /> : null}
       </body>
     </html>
   );

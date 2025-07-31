@@ -7,6 +7,16 @@ import { cookies } from "next/headers";
 export async function middleware(request: NextRequest) {
   const authToken = request.cookies.get("auth_token")?.value;
   const pathname = request.nextUrl.pathname;
+  const cookieStore = await cookies();
+  const requestHeaders = new Headers(request.headers);
+
+  if (
+    pathname.includes("/hotels") ||
+    pathname.includes("/business") ||
+    pathname.includes("/qrScan")
+  ) {
+    await cookieStore.set("pathname", pathname);
+  }
 
   // Try to decrypt token early for captain guard
   let decrypted: { id: string; role: string; status?: string } | undefined;
@@ -49,8 +59,6 @@ export async function middleware(request: NextRequest) {
     "/newlogin",
     "/demo",
   ];
-
-  const cookieStore = await cookies();
 
   if (
     pathname.startsWith("/qrScan/") ||
@@ -240,7 +248,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Add user info to headers
-    const requestHeaders = new Headers(request.headers);
+
     requestHeaders.set("x-user-id", decrypted.id);
     requestHeaders.set("x-user-role", decrypted.role);
     if (decrypted.status) {

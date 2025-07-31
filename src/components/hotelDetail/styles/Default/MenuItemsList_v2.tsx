@@ -8,7 +8,6 @@ import ItemCard from "./ItemCard";
 import { useSearchParams } from "next/navigation";
 
 const MenuItemsList = ({
-  menu,
   styles,
   items,
   categories,
@@ -17,7 +16,6 @@ const MenuItemsList = ({
   currency,
   tableNumber,
 }: {
-  menu: HotelDataMenus[];
   styles: Styles;
   items: HotelDataMenus[];
   categories: Category[];
