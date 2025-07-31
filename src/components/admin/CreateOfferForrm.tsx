@@ -268,14 +268,14 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     return true;
   };
 
-  // Helper function to get items with valid images
-  const getValidItems = () => {
-    return items?.filter((item) => item.image_url && item.image_url.trim() !== "") || [];
+  // Helper function to get all items (including those without images)
+  const getAllItems = () => {
+    return items || [];
   };
 
   // Helper function to get items by category
   const getItemsByCategory = (categoryId: string) => {
-    return getValidItems().filter((item) => item.category?.id === categoryId);
+    return getAllItems().filter((item) => item.category?.id === categoryId);
   };
 
   const getNotificationTitle = () => {
@@ -479,11 +479,11 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                   onValueChange={(value) => {
                     setGroupType(value as "category" | "all" | "select");
                     if (value === "all") {
-                      const validItems = getValidItems();
+                      const allItems = getAllItems();
                       setNewOfferGroup({
                         ...newOfferGroup,
                         categoryId: "",
-                        menuItemIds: validItems
+                        menuItemIds: allItems
                           .map((item) => item.id)
                           .filter((id): id is string => id !== undefined),
                       });
@@ -562,10 +562,10 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
               {groupType === "all" && (
                 <div className="text-gray-500 text-sm">
                   All items in the menu will be included in this offer group.
-                  {`(${getValidItems().length})`} items found.
+                  {`(${getAllItems().length})`} items found.
                   <div className="mt-2 p-3 bg-gray-50 rounded-md max-h-40 overflow-y-auto">
                     <ul className="grid grid-cols-2 gap-2 text-xs">
-                      {getValidItems().map((item) => (
+                      {getAllItems().map((item) => (
                         <li key={item.id} className="truncate">{item.name}</li>
                       ))}
                     </ul>
@@ -578,7 +578,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                   <Label>Select Menu Items</Label>
                   <div className="max-h-60 overflow-y-auto border rounded-md p-2">
                     <div className="space-y-2 grid grid-cols-1 gap-2">
-                      {getValidItems().map((item) => (
+                      {getAllItems().map((item) => (
                         <div
                           key={item.id}
                           className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded"
@@ -703,7 +703,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     <SelectValue placeholder="Select a product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {getValidItems().map((item) => (
+                    {getAllItems().map((item) => (
                       <SelectItem key={item.id} value={item.id as string}>
                         {item.name} - ₹{item.price?.toFixed(2) || "0.00"}
                       </SelectItem>
