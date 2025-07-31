@@ -249,8 +249,8 @@ const OrderItemCard = ({
                 <span className="text-red-600 font-bold text-sm">TAKEAWAY</span>
               )}
           </div>
-          {!localOrder.display_id && (
-            <h2 className="text-xs text-gray-500">Id: {localOrder.id}</h2>
+          {(Number(localOrder.display_id) ?? 0) > 0 && (
+            <h2 className="text-sm text-gray-800 mt-2">ID: {localOrder.id.slice(0, 8)}</h2>
           )}
           <p className="text-sm text-gray-500">
             {formatDate(localOrder.createdAt)}
