@@ -881,6 +881,13 @@ const PlaceOrderModal = ({
     }
   }, [open_place_order_modal, items]);
 
+  // Set default order type to delivery when modal opens
+  useEffect(() => {
+    if (open_place_order_modal && tableNumber === 0 && !orderType) {
+      setOrderType('delivery');
+    }
+  }, [open_place_order_modal, tableNumber, orderType, setOrderType]);
+
   // Keyboard detection
   useEffect(() => {
     const handleResize = () => {
