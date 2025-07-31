@@ -353,9 +353,6 @@ const page = async ({
       }
 
 
-    console.log("hotelDataWithOfferPrice", hotelDataWithOfferPrice);
-
-
     // if (isOrderingEnabled || isDeliveryEnabled) {
     return (
       <HotelMenuPage
