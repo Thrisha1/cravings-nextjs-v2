@@ -190,6 +190,8 @@ const OrdersTab = () => {
 
   useEffect(() => {
     if (partnerOrders) {
+      console.log("Partner orders updated:", partnerOrders);
+      
       setOrders(partnerOrders);
     }
   }, [partnerOrders, setOrders]);

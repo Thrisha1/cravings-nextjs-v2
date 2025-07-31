@@ -135,14 +135,14 @@ const Compact = ({
   };
 
   // Memoize the category list to prevent re-creation on every render
-  // UPDATED: "Offers" is now a category if available.
+  // UPDATED: Remove "Offer" category from compact design
   const allCategories = React.useMemo(
     () => [
       ...(hasOffers ? [{ id: "offers", name: "Offers" }] : []),
       ...(topItems && topItems.length > 0
         ? [{ id: "must-try", name: "must_try" }]
         : []),
-      ...categories,
+      ...categories.filter(category => category.name !== "Offer"),
     ],
     [categories, topItems, hasOffers]
   );

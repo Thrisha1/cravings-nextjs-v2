@@ -52,7 +52,7 @@ const ItemCard = ({
   const discountPercentage =
     offerData && shouldShowPrice
       ? Math.round(
-          ((offerData.menu.price - offerData.offer_price) /
+          ((offerData.menu.price - (offerData.offer_price ?? 0)) /
             offerData.menu.price) *
             100
         )

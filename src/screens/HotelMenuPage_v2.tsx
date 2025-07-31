@@ -120,6 +120,39 @@ const HotelMenuPage = ({
     }
   }, [hoteldata?.id]);
 
+  // Helper function to check if a menu item has an active offer
+  const hasActiveOffer = (menuItemId: string) => {
+    return offers.some((offer) => offer.menu && offer.menu.id === menuItemId);
+  };
+
+  // Helper function to get items that have active offers
+  const getOfferedItems = () => {
+    console.log("Debug - All offers:", offers);
+    console.log("Debug - All menu items:", hoteldata?.menus);
+    
+    if (!hoteldata?.menus) return [];
+    
+    const filteredItems = hoteldata.menus.filter((item) => {
+      // Convert ID to string for consistent comparison
+      const itemId = String(item.id);
+      const hasOffer = hasActiveOffer(itemId);
+      const isActiveCategory = item.category.is_active === undefined || item.category.is_active === true;
+      
+      console.log(`Debug - Item ${itemId}:`, {
+        name: item.name,
+        hasOffer,
+        isActiveCategory,
+        categoryName: item.category.name,
+        categoryActive: item.category.is_active
+      });
+      
+      return hasOffer && isActiveCategory;
+    });
+    
+    console.log("Debug - Filtered offered items:", filteredItems);
+    return filteredItems;
+  };
+
   const getCategories = () => {
     const uniqueCategoriesMap = new Map<string, Category>();
 
@@ -134,9 +167,24 @@ const HotelMenuPage = ({
       }
     });
 
-    const uniqueCategories = Array.from(uniqueCategoriesMap.values()).sort(
+    let uniqueCategories = Array.from(uniqueCategoriesMap.values()).sort(
       (a, b) => (a.priority || 0) - (b.priority || 0)
     );
+
+    // Add "Offer" category if there are items with active offers
+    const offeredItems = getOfferedItems();
+    if (offeredItems.length > 0) {
+      // Create a virtual "Offer" category
+      const offerCategory: Category = {
+        id: "offer-category",
+        name: "Offer",
+        priority: -999, // Very low priority to ensure it comes first
+        is_active: true
+      };
+      // Insert the offer category at the beginning and sort again
+      uniqueCategories = [offerCategory, ...uniqueCategories];
+    }
+
     return uniqueCategories;
   };
 
@@ -150,15 +198,29 @@ const HotelMenuPage = ({
         ) || []
       );
     }
+    
+    // Handle the special "Offer" category
+    if (selectedCategory === "Offer") {
+      const offeredItems = getOfferedItems();
+      // Sort offered items with images first
+      const sortedItems = [...offeredItems].sort((a, b) => {
+        if (a.image_url && a.image_url.length && (!b.image_url || !b.image_url.length)) return -1;
+        if ((!a.image_url || !a.image_url.length) && b.image_url && b.image_url.length) return 1;
+        return 0;
+      });
+      return sortedItems;
+    }
+
     const filteredItems = hoteldata?.menus.filter(
       (item) =>
         item.category.name === selectedCategory &&
         (item.category.is_active === undefined ||
           item.category.is_active === true)
-    );
+    ) || [];
+    
     const sortedItems = [...filteredItems].sort((a, b) => {
-      if (a.image_url.length && !b.image_url.length) return -1;
-      if (!a.image_url.length && b.image_url.length) return 1;
+      if (a.image_url && a.image_url.length && (!b.image_url || !b.image_url.length)) return -1;
+      if ((!a.image_url || !a.image_url.length) && b.image_url && b.image_url.length) return 1;
       return 0;
     });
     return sortedItems;
