@@ -79,7 +79,7 @@ export async function generateMetadata({
 
 const page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
-  const authToken = (await cookies()).get("auth_token")?.value;
+  const authToken = (await cookies()).get("new_auth_token")?.value;
 
   let decrypted = authToken
     ? (decryptText(authToken) as { id: string; role: string })
