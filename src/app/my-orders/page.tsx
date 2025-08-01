@@ -165,7 +165,7 @@ const Page = () => {
                   {order.tableNumber && (
                     <p className="text-sm">
                       <span className="font-medium">Table:</span>{" "}
-                      {order.tableNumber}
+                      {order.tableName || order.tableNumber}
                     </p>
                   )}
                   {order.phone && (

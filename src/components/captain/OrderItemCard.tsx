@@ -205,7 +205,7 @@ const OrderItemCard = ({
               <div className="text-sm text-gray-600 mt-1 truncate">
                 Captain: {order.captain?.name || "Unknown Captain"}
                 {order.tableNumber && (
-                  <span className="ml-2">• Table {order.tableNumber}</span>
+                  <span className="ml-2">• Table {order.tableName || order.tableNumber}</span>
                 )}
                 {(order.user?.phone || order.phone) &&
                   (order.user?.phone || order.phone || "").trim() !== "" && (

@@ -16,7 +16,11 @@ query GetOrder($id: uuid!) {
     display_id
     type
     notes
+    table_name
     extra_charges
+    qr_code{
+      table_name
+    }
     order_items {
       id
       quantity
@@ -52,6 +56,7 @@ const PrintKOTPage = () => {
             notes: item.item.kot_notes,
           })),
           tableNumber: orders_by_pk.table_number,
+          tableName: orders_by_pk.qr_code?.table_name || orders_by_pk.table_name || null,
           extra_charges: (orders_by_pk.extra_charges ?? []).map(
             (charge: any) => ({
               id: charge.id,
@@ -115,8 +120,8 @@ const PrintKOTPage = () => {
     if (!order.tableNumber) return "Takeaway";
     return ` ${
       isParcel
-        ? `Parcel (Table ${order.tableNumber})`
-        : `Table ${order.tableNumber}"`
+        ? `Parcel (Table ${order.tableName || order.tableNumber})`
+        : `Table ${order.tableName || order.tableNumber}`
     }`;
   };
 

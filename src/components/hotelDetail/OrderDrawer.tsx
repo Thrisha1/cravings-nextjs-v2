@@ -10,6 +10,7 @@ import { QrGroup } from "@/app/admin/qr-management/page";
 import PlaceOrderModal from "./placeOrder/PlaceOrderModal";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import path from "path/win32";
+import { useQrDataStore } from "@/store/qrDataStore";
 
 export const getGstAmount = (price: number, gstPercentage: number) => {
   return (price * gstPercentage) / 100;
@@ -127,6 +128,7 @@ const OrderDrawer = ({
     orderNote,
     orderType,
   } = useOrderStore();
+  const { qrData } = useQrDataStore();
 
   const pathname = usePathname();
   const [isQrScan, setIsQrScan] = useState(false);
@@ -226,7 +228,7 @@ const OrderDrawer = ({
     *🍽️ Order Details 🍽️*
     
     *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
-    ${(tableNumber ?? 0) > 0 ? `*Table:* ${tableNumber}` : `*Order Type:* ${orderType || "Delivery"}`}
+    ${(tableNumber ?? 0) > 0 ? `*Table:* ${qrData?.table_name || tableNumber}` : `*Order Type:* ${orderType || "Delivery"}`}
     ${shouldShowHotelLocation ? `\n*Hotel Location:* ${currentSelectedArea.toUpperCase()}` : ""}
     ${(tableNumber ?? 0) > 0 ? "" : (orderType === 'delivery' ? `*Delivery Address:* ${savedAddress}${locationLink}` : "")}
     *Time:* ${new Date().toLocaleTimeString()}

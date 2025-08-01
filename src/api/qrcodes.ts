@@ -43,6 +43,7 @@ export const GET_QR_CODES_BY_PARTNER = `
       id
       qr_number
       table_number
+      table_name
       no_of_scans
     }
   }
