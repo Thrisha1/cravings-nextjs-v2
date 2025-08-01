@@ -16,6 +16,10 @@ const ItemCard = ({
   currency,
   hotelData,
   tableNumber,
+  isOfferItem = false,
+  offerPrice,
+  oldPrice,
+  discountPercent,
 }: {
   item: HotelDataMenus;
   styles: Styles;
@@ -24,6 +28,10 @@ const ItemCard = ({
   feature_flags?: string;
   hotelData?: HotelData;
   tableNumber: number;
+  isOfferItem?: boolean;
+  offerPrice?: number;
+  oldPrice?: number;
+  discountPercent?: number;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showVariants, setShowVariants] = useState(false);
@@ -133,6 +141,12 @@ const ItemCard = ({
 
   return (
     <div className="h-full relative overflow-hidden">
+      {/* Discount badge for offer items */}
+      {typeof discountPercent === 'number' && discountPercent > 0 && (
+        <div className="absolute top-3 right-3 z-10 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+          -{discountPercent}%
+        </div>
+      )}
       <div
         style={styles.border}
         key={item.id}
@@ -171,8 +185,7 @@ const ItemCard = ({
                         <span className="">
                           <span className="text-sm font-bold">From </span>
                           <span>
-                            {currency}{" "}
-                            {hotelData?.id ===
+                            {currency} {hotelData?.id ===
                             "767da2a8-746d-42b6-9539-528b6b96ae09"
                               ? item.variants
                                   ?.sort((a, b) => a?.price - b?.price)[0]
@@ -182,10 +195,18 @@ const ItemCard = ({
                                 )[0]?.price || item.price}
                           </span>
                         </span>
+                      ) : isOfferItem && offerPrice ? (
+                        <span>
+                          <span className="line-through text-gray-400 mr-2">
+                            {currency} {parseInt(String(oldPrice ?? item.price))}
+                          </span>
+                          <span className="text-accent font-bold text-2xl" style={{ color: styles.accent }}>
+                            {currency} {parseInt(String(offerPrice))}
+                          </span>
+                        </span>
                       ) : (
                         <span>
-                          {currency}{" "}
-                          {hotelData?.id ===
+                          {currency} {hotelData?.id ===
                           "767da2a8-746d-42b6-9539-528b6b96ae09"
                             ? item.price.toFixed(3)
                             : item.price}

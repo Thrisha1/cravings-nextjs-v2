@@ -75,7 +75,7 @@ const OfferAddButton = ({
       priority: menuItem.priority,
       category_id: menuItem.category.id,
       category: menuItem.category,
-      price: offer.offer_price,
+      price: offer.offer_price ?? 0,
       name: `${menuItem.name} (Offer)`,
       quantity: 1,
       variantSelections: [],
@@ -214,7 +214,7 @@ const OffersList = ({
                   }
 
                   const discount = Math.round(
-                    ((offer.menu.price - offer.offer_price) /
+                    ((offer.menu.price -(offer.offer_price ?? 0)) /
                       offer.menu.price) *
                       100
                   );

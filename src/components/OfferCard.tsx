@@ -46,7 +46,7 @@ const OfferCard = ({
                 ₹{offer.menu.price.toFixed(0)}
               </span>
               <span className="text-2xl font-bold text-white">
-                ₹{offer.offer_price.toFixed(0)}
+                ₹{(offer.offer_price ?? 0).toFixed(0)}
               </span>
             </div>
 

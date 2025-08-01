@@ -88,7 +88,7 @@ export function ItemOrderingForm({
 
   // Sort items within each category by priority
   Object.keys(itemsByCategory).forEach(categoryId => {
-    itemsByCategory[categoryId].sort((a, b) => a.priority - b.priority);
+    itemsByCategory[categoryId].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
   });
 
   // Filter items and categories based on search term
@@ -193,7 +193,7 @@ export function ItemOrderingForm({
             .filter(hasValidId)
             .map((item, index) => ({
               ...item,
-              priority: index + 1
+              priority: index + 1,
             }));
         });
 
@@ -506,7 +506,7 @@ export function ItemOrderingModal({
     const validItems = updatedItems.filter(hasValidId);
     const updates = validItems.map(item => ({
       id: item.id,
-      priority: item.priority
+      priority: item.priority ?? 0
     }));
     
     try {
