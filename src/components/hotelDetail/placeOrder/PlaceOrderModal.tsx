@@ -298,13 +298,16 @@ const TableNumberCard = ({
   return (
     <div className="bg-white rounded-lg shadow p-4 mb-4">
       <h3 className="font-bold text-lg mb-3">Table Information</h3>
-      <div className="flex items-center text-sm gap-2">
-        <span className="font-medium">Table Number:</span>
-        <span className="text-lg font-semibold">{tableNumber}</span>
-      </div>
+
+      {!tableName && (
+        <div className="flex items-center text-sm gap-2">
+          <span className="font-medium">Table Number:</span>
+          <span className="text-lg font-semibold">{tableNumber}</span>
+        </div>
+      )}
 
       {tableName && (
-        <div className="mt-2 text-sm">
+        <div className="flex items-center text-sm gap-2">
           <span className="font-medium">Table Name:</span>
           <span className="text-lg font-semibold"> {tableName}</span>
         </div>
