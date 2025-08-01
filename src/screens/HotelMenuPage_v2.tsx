@@ -17,6 +17,7 @@ import { INCREMENT_QR_CODE_SCAN_COUNT } from "@/api/qrcodes";
 import Default from "@/components/hotelDetail/styles/Default/Default";
 import Compact from "@/components/hotelDetail/styles/Compact/Compact";
 import { saveUserLocation } from "@/lib/saveUserLocLocal";
+import { QrCode, useQrDataStore } from "@/store/qrDataStore";
 
 export type MenuItem = {
   description: string;
@@ -50,6 +51,7 @@ interface HotelMenuPageProps {
   qrGroup?: QrGroup | null;
   qrId?: string | null;
   selectedCategory?: string;
+  qrData?: QrCode | null;
 }
 
 const HotelMenuPage = ({
@@ -59,6 +61,7 @@ const HotelMenuPage = ({
   theme,
   tableNumber,
   socialLinks,
+  qrData,
   qrGroup,
   qrId,
   selectedCategory: selectedCategoryProp,
@@ -79,10 +82,20 @@ const HotelMenuPage = ({
 
   const pathname = usePathname();
 
+  const { setQrData } = useQrDataStore();
+
 
   useEffect(() => {
     saveUserLocation(false);
   },[]);
+
+  useEffect(() => {
+    if (qrData) {
+      setQrData(qrData);
+    } else {
+      setQrData(null);
+    }
+  },[qrData]);
 
   useEffect(() => {
     const handleUpdateQrCount = async () => {

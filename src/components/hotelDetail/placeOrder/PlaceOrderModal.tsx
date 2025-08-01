@@ -18,6 +18,7 @@ import { QrGroup } from "@/app/admin/qr-management/page";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import { getFeatures } from "@/lib/getFeatures";
 import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
+import { useQrDataStore } from "@/store/qrDataStore";
 
 // Add type for deliveryInfo
 interface DeliveryInfo {
@@ -42,26 +43,29 @@ const OrderTypeCard = ({
   orderType,
   setOrderType,
 }: {
-  orderType: 'takeaway' | 'delivery' | null;
-  setOrderType: (type: 'takeaway' | 'delivery') => void;
+  orderType: "takeaway" | "delivery" | null;
+  setOrderType: (type: "takeaway" | "delivery") => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const options = [
-    { value: 'takeaway', label: 'Takeaway' },
-    { value: 'delivery', label: 'Delivery' }
+    { value: "takeaway", label: "Takeaway" },
+    { value: "delivery", label: "Delivery" },
   ];
 
   return (
@@ -73,18 +77,34 @@ const OrderTypeCard = ({
           onClick={() => setIsOpen(!isOpen)}
           className="w-full p-3 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black text-left flex justify-between items-center"
         >
-          <span>{orderType ? options.find(opt => opt.value === orderType)?.label : 'Select order type'}</span>
-          <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <span>
+            {orderType
+              ? options.find((opt) => opt.value === orderType)?.label
+              : "Select order type"}
+          </span>
+          <svg
+            className={`w-4 h-4 transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
         </button>
-        
+
         {isOpen && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
             <div
               className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
               onClick={() => {
-                setOrderType('takeaway');
+                setOrderType("takeaway");
                 setIsOpen(false);
               }}
             >
@@ -93,7 +113,7 @@ const OrderTypeCard = ({
             <div
               className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
               onClick={() => {
-                setOrderType('delivery');
+                setOrderType("delivery");
                 setIsOpen(false);
               }}
             >
@@ -127,13 +147,16 @@ const MultiWhatsappCard = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
@@ -145,18 +168,32 @@ const MultiWhatsappCard = ({
           onClick={() => setIsOpen(!isOpen)}
           className="w-full p-3 border border-gray-300 rounded-md bg-white text-black focus:outline-none focus:ring-2 focus:ring-black/20 focus:border-black text-left flex justify-between items-center"
         >
-          <span>{selectedLocation ? selectedLocation.toUpperCase() : 'Select Area'}</span>
-          <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <span>
+            {selectedLocation ? selectedLocation.toUpperCase() : "Select Area"}
+          </span>
+          <svg
+            className={`w-4 h-4 transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
         </button>
-        
+
         {isOpen && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
             <div
               className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
               onClick={() => {
-                setSelectedLocation('');
+                setSelectedLocation("");
                 setIsOpen(false);
               }}
             >
@@ -251,13 +288,38 @@ const ItemsCard = ({
   );
 };
 
-const TableNumberCard = ({ tableNumber }: { tableNumber: number }) => {
+const TableNumberCard = ({
+  tableNumber,
+  tableName,
+}: {
+  tableNumber: number;
+  tableName?: string;
+}) => {
+  return (
+    <div className="bg-white rounded-lg shadow p-4 mb-4">
+      <h3 className="font-bold text-lg mb-3">Table Information</h3>
+      <div className="flex items-center text-sm gap-2">
+        <span className="font-medium">Table Number:</span>
+        <span className="text-lg font-semibold">{tableNumber}</span>
+      </div>
+
+      {tableName && (
+        <div className="mt-2 text-sm">
+          <span className="font-medium">Table Name:</span>
+          <span className="text-lg font-semibold"> {tableName}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const TableNameCard = ({ tableName }: { tableName: string }) => {
   return (
     <div className="bg-white rounded-lg shadow p-4 mb-4">
       <h3 className="font-bold text-lg mb-3">Table Information</h3>
       <div className="flex items-center gap-2">
-        <span className="font-medium">Table Number:</span>
-        <span className="text-lg font-bold">{tableNumber}</span>
+        <span className="font-medium">Table Name:</span>
+        <span className="text-lg font-bold">{tableName}</span>
       </div>
     </div>
   );
@@ -771,10 +833,10 @@ const MapModal = ({
     }
   };
 
-
   return (
     <div
-      className={`fixed top-0 left-0 z-[5000] h-screen w-screen ${showMapModal ? "overflow-hidden" : "hidden"
+      className={`fixed top-0 left-0 z-[5000] h-screen w-screen ${
+        showMapModal ? "overflow-hidden" : "hidden"
       }`}
     >
       <div className="flex items-center justify-center min-h-screen w-screen">
@@ -823,7 +885,6 @@ const PlaceOrderModal = ({
   qrId: string | null;
   qrGroup: QrGroup | null;
 }) => {
-
   const {
     open_place_order_modal,
     setOpenDrawerBottom,
@@ -861,15 +922,17 @@ const PlaceOrderModal = ({
   const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   // Debug: Log orderId and other key values
-  console.log('PlaceOrderModal state:', {
+  console.log("PlaceOrderModal state:", {
     orderId,
     itemsLength: items?.length,
     user: !!user,
     selectedLocation,
-    hasMultiWhatsapp: getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled
+    hasMultiWhatsapp: getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp
+      ?.enabled,
   });
 
-  const isDelivery = tableNumber === 0 ? orderType === 'delivery' : !tableNumber;
+  const isDelivery =
+    tableNumber === 0 ? orderType === "delivery" : !tableNumber;
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
   const isQrScan = qrId !== null && tableNumber !== 0;
   const hasLocation = !!selectedCoords || !!address;
@@ -880,6 +943,13 @@ const PlaceOrderModal = ({
       setOpenDrawerBottom(true);
     }
   }, [open_place_order_modal, items]);
+
+  // Set default order type to delivery when modal opens
+  useEffect(() => {
+    if (open_place_order_modal && tableNumber === 0 && !orderType) {
+      setOrderType("delivery");
+    }
+  }, [open_place_order_modal, tableNumber, orderType, setOrderType]);
 
   // Keyboard detection
   useEffect(() => {
@@ -917,24 +987,32 @@ const PlaceOrderModal = ({
     hotelData?.whatsapp_numbers?.length > 0;
 
   useEffect(() => {
-    console.log('Location useEffect triggered:', {
+    console.log("Location useEffect triggered:", {
       selectedLocation,
       hotelId: hotelData.id,
-      whatsappNumbers: hotelData.whatsapp_numbers?.length
+      whatsappNumbers: hotelData.whatsapp_numbers?.length,
     });
 
     // If we already have a valid selected location, don't change it
-    if (selectedLocation && hotelData.whatsapp_numbers?.some(item => item.area === selectedLocation)) {
-      console.log('Valid selected location already set:', selectedLocation);
+    if (
+      selectedLocation &&
+      hotelData.whatsapp_numbers?.some((item) => item.area === selectedLocation)
+    ) {
+      console.log("Valid selected location already set:", selectedLocation);
       return;
     }
 
     // Try to restore location from localStorage
-    const savedArea = localStorage.getItem(`hotel-${hotelData.id}-selected-area`);
-    console.log('Checking saved area from localStorage:', savedArea);
+    const savedArea = localStorage.getItem(
+      `hotel-${hotelData.id}-selected-area`
+    );
+    console.log("Checking saved area from localStorage:", savedArea);
 
-    if (savedArea && hotelData.whatsapp_numbers?.some(item => item.area === savedArea)) {
-      console.log('Restoring location from localStorage:', savedArea);
+    if (
+      savedArea &&
+      hotelData.whatsapp_numbers?.some((item) => item.area === savedArea)
+    ) {
+      console.log("Restoring location from localStorage:", savedArea);
       setSelectedLocation(savedArea);
       return;
     }
@@ -944,7 +1022,7 @@ const PlaceOrderModal = ({
       `hotel-${hotelData.id}-whatsapp-area`
     );
 
-    console.log('Checking selected phone from localStorage:', selectedPhone);
+    console.log("Checking selected phone from localStorage:", selectedPhone);
 
     if (selectedPhone) {
       // Find the area name by phone number
@@ -953,19 +1031,19 @@ const PlaceOrderModal = ({
       );
 
       if (selectedLocation) {
-        console.log('Found location by phone number:', selectedLocation.area);
+        console.log("Found location by phone number:", selectedLocation.area);
         setSelectedLocation(selectedLocation.area);
       }
     } else {
       // If no saved location, try to find by area name (for backward compatibility)
-      console.log('No saved location found, setting empty');
+      console.log("No saved location found, setting empty");
       setSelectedLocation("");
     }
   }, [hotelData.id, hotelData.whatsapp_numbers, selectedLocation]);
 
   // Watch for user login state changes and restore location
   useEffect(() => {
-    console.log('User state changed:', {
+    console.log("User state changed:", {
       user: !!user,
       selectedLocation,
       // hasLoggedIn // This line is removed
@@ -973,11 +1051,16 @@ const PlaceOrderModal = ({
 
     // If user just logged in and we have a saved location, restore it
     if (user && !selectedLocation) {
-      const savedArea = localStorage.getItem(`hotel-${hotelData.id}-selected-area`);
-      console.log('User logged in, checking for saved location:', savedArea);
-      
-      if (savedArea && hotelData.whatsapp_numbers?.some(item => item.area === savedArea)) {
-        console.log('Restoring location after user login:', savedArea);
+      const savedArea = localStorage.getItem(
+        `hotel-${hotelData.id}-selected-area`
+      );
+      console.log("User logged in, checking for saved location:", savedArea);
+
+      if (
+        savedArea &&
+        hotelData.whatsapp_numbers?.some((item) => item.area === savedArea)
+      ) {
+        console.log("Restoring location after user login:", savedArea);
         setSelectedLocation(savedArea);
       }
     }
@@ -985,28 +1068,27 @@ const PlaceOrderModal = ({
 
   const handleSelectHotelLocation = (location: string | null) => {
     setSelectedLocation(location || "");
-    
+
     // Save both the area name and phone number for persistence
     if (location) {
       const phoneNumber = hotelData.whatsapp_numbers?.find(
         (item) => item.area === location
       )?.number;
-      
+
       localStorage.setItem(
         `hotel-${hotelData.id}-whatsapp-area`,
         phoneNumber || ""
       );
-      localStorage.setItem(
-        `hotel-${hotelData.id}-selected-area`,
-        location
-      );
-      
+      localStorage.setItem(`hotel-${hotelData.id}-selected-area`, location);
+
       // Force a small delay to ensure localStorage is updated
       setTimeout(() => {
-        console.log('Location saved to localStorage:', {
+        console.log("Location saved to localStorage:", {
           location,
           phoneNumber,
-          savedArea: localStorage.getItem(`hotel-${hotelData.id}-selected-area`)
+          savedArea: localStorage.getItem(
+            `hotel-${hotelData.id}-selected-area`
+          ),
         });
       }, 100);
     } else {
@@ -1038,7 +1120,13 @@ const PlaceOrderModal = ({
   }, []);
 
   useEffect(() => {
-    if (isDelivery && hasDelivery && selectedCoords !== null && !isQrScan && orderType === 'delivery') {
+    if (
+      isDelivery &&
+      hasDelivery &&
+      selectedCoords !== null &&
+      !isQrScan &&
+      orderType === "delivery"
+    ) {
       calculateDeliveryDistanceAndCost(hotelData as HotelData);
     }
   }, [selectedCoords, isDelivery, hasDelivery, isQrScan, orderType]);
@@ -1102,7 +1190,13 @@ const PlaceOrderModal = ({
       }
 
       // Add table 0 extra charges for delivery orders (when tableNumber is 0 and qrGroup exists)
-      if (!isQrScan && tableNumber === 0 && qrGroup && qrGroup.name && orderType === 'delivery') {
+      if (
+        !isQrScan &&
+        tableNumber === 0 &&
+        qrGroup &&
+        qrGroup.name &&
+        orderType === "delivery"
+      ) {
         const table0ChargeAmount = getExtraCharge(
           items || [],
           qrGroup.extra_charge,
@@ -1118,7 +1212,12 @@ const PlaceOrderModal = ({
         }
       }
 
-      if (!isQrScan && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange && orderType === 'delivery') {
+      if (
+        !isQrScan &&
+        deliveryInfo?.cost &&
+        !deliveryInfo?.isOutOfRange &&
+        orderType === "delivery"
+      ) {
         extraCharges.push({
           name: "Delivery Charge",
           amount: deliveryInfo.cost,
@@ -1152,13 +1251,15 @@ const PlaceOrderModal = ({
   };
 
   const handleLoginSuccess = () => {
-    console.log('Login success - checking location preservation');
-    const savedArea = localStorage.getItem(`hotel-${hotelData.id}-selected-area`);
-    console.log('Saved area after login:', savedArea);
-    
+    console.log("Login success - checking location preservation");
+    const savedArea = localStorage.getItem(
+      `hotel-${hotelData.id}-selected-area`
+    );
+    console.log("Saved area after login:", savedArea);
+
     // Ensure location is preserved after login
     if (savedArea && !selectedLocation) {
-      console.log('Restoring location after login:', savedArea);
+      console.log("Restoring location after login:", savedArea);
       setSelectedLocation(savedArea);
     }
 
@@ -1167,7 +1268,7 @@ const PlaceOrderModal = ({
 
   // Determine if place order button should be disabled
 
-  const minimumOrderAmount =deliveryInfo?.minimumOrderAmount || 0;
+  const minimumOrderAmount = deliveryInfo?.minimumOrderAmount || 0;
 
   const isPlaceOrderDisabled =
     isPlacingOrder ||
@@ -1176,10 +1277,13 @@ const PlaceOrderModal = ({
     (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan) ||
     (hasMultiWhatsapp && !selectedLocation);
 
+  const { qrData } = useQrDataStore();
+
   return (
     <>
       <div
-        className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto text-black ${open_place_order_modal ? "block" : "hidden"
+        className={`fixed inset-0 z-[600] bg-gray-50 overflow-y-auto text-black ${
+          open_place_order_modal ? "block" : "hidden"
         }`}
       >
         {/* Header */}
@@ -1233,8 +1337,13 @@ const PlaceOrderModal = ({
 
               {/* Show table number for QR scan or address for delivery */}
               {isQrScan ? (
-                <TableNumberCard tableNumber={tableNumber} />
-              ) : isDelivery && orderType === 'delivery' ? (
+                <>
+                  <TableNumberCard
+                    tableNumber={tableNumber}
+                    tableName={qrData?.table_name || undefined}
+                  />
+                </>
+              ) : isDelivery && orderType === "delivery" ? (
                 <AddressCard
                   address={address}
                   setAddress={setAddress}
@@ -1253,7 +1362,7 @@ const PlaceOrderModal = ({
                 currency={hotelData?.currency || "₹"}
                 gstPercentage={hotelData?.gst_percentage}
                 deliveryInfo={deliveryInfo}
-                isDelivery={isDelivery && !isQrScan && orderType === 'delivery'}
+                isDelivery={isDelivery && !isQrScan && orderType === "delivery"}
                 qrGroup={qrGroup}
               />
 
@@ -1276,14 +1385,20 @@ const PlaceOrderModal = ({
               {/* Login Card (if not logged in) */}
               {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}
 
-              {isDelivery && !isQrScan && orderType === 'delivery' && deliveryInfo?.isOutOfRange && (
-                <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
-                  Delivery is not available to your selected location
-                </div>
-              )}
+              {isDelivery &&
+                !isQrScan &&
+                orderType === "delivery" &&
+                deliveryInfo?.isOutOfRange && (
+                  <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
+                    Delivery is not available to your selected location
+                  </div>
+                )}
 
               {/* minimum amount msg  */}
-              {(items?.length === 0 || (isDelivery && orderType === 'delivery' && (totalPrice ?? 0) < minimumOrderAmount)) && (
+              {(items?.length === 0 ||
+                (isDelivery &&
+                  orderType === "delivery" &&
+                  (totalPrice ?? 0) < minimumOrderAmount)) && (
                 <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
                   Minimum order amount for delivery is{" "}
                   {hotelData?.currency || "₹"}
@@ -1291,60 +1406,73 @@ const PlaceOrderModal = ({
                 </div>
               )}
 
-              
-
               {/* Place Order and Back Buttons */}
               <div className="flex flex-col gap-3 mt-6">
                 {/* Debug: Test getWhatsappLink call */}
                 {(() => {
-                  console.log('Testing getWhatsappLink call...');
+                  console.log("Testing getWhatsappLink call...");
                   try {
                     // Add a small delay to ensure state updates are processed
                     setTimeout(() => {
                       const testLink = getWhatsappLink(orderId as string);
-                      console.log('getWhatsappLink result:', testLink);
+                      console.log("getWhatsappLink result:", testLink);
                     }, 50);
                   } catch (error) {
-                    console.error('Error calling getWhatsappLink:', error);
+                    console.error("Error calling getWhatsappLink:", error);
                   }
                   return null;
                 })()}
 
-                {user ? (
-                  (() => {
-                    // Debug: Check current location before generating link
-                    const currentSelectedArea = localStorage.getItem(`hotel-${hotelData.id}-selected-area`);
-                    console.log('Current selected area before Link:', currentSelectedArea);
-                    return (
-                  <Link
-                    href={getWhatsappLink(orderId as string)}
-                    target="_blank"
-                    onClick={(e) => {
-                      console.log('Link clicked, orderId:', orderId);
-                      console.log('getWhatsappLink function:', typeof getWhatsappLink);
-                      if (isPlaceOrderDisabled) {
-                        e.preventDefault();
-                      }
-                    }}
-                  >
-                    <Button
-                      onClick={handlePlaceOrder}
-                      disabled={isPlaceOrderDisabled || !user || items?.length === 0 || (isDelivery && orderType === 'delivery' && (totalPrice ?? 0) < minimumOrderAmount)}
-                      className="w-full"
-                    >
-                      {isPlacingOrder ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Placing Order...
-                        </>
-                      ) : (
-                        "Place Order"
-                      )}
-                    </Button>
-                  </Link>
-                    );
-                  })()
-                ) : null}
+                {user
+                  ? (() => {
+                      // Debug: Check current location before generating link
+                      const currentSelectedArea = localStorage.getItem(
+                        `hotel-${hotelData.id}-selected-area`
+                      );
+                      console.log(
+                        "Current selected area before Link:",
+                        currentSelectedArea
+                      );
+                      return (
+                        <Link
+                          href={getWhatsappLink(orderId as string)}
+                          target="_blank"
+                          onClick={(e) => {
+                            console.log("Link clicked, orderId:", orderId);
+                            console.log(
+                              "getWhatsappLink function:",
+                              typeof getWhatsappLink
+                            );
+                            if (isPlaceOrderDisabled) {
+                              e.preventDefault();
+                            }
+                          }}
+                        >
+                          <Button
+                            onClick={handlePlaceOrder}
+                            disabled={
+                              isPlaceOrderDisabled ||
+                              !user ||
+                              items?.length === 0 ||
+                              (isDelivery &&
+                                orderType === "delivery" &&
+                                (totalPrice ?? 0) < minimumOrderAmount)
+                            }
+                            className="w-full"
+                          >
+                            {isPlacingOrder ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Placing Order...
+                              </>
+                            ) : (
+                              "Place Order"
+                            )}
+                          </Button>
+                        </Link>
+                      );
+                    })()
+                  : null}
                 <Button
                   variant="outline"
                   onClick={() => {

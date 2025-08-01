@@ -25,16 +25,9 @@ import { toast } from "sonner";
 import ExcelJS from "exceljs";
 import QRCode from "qrcode";
 import QrScanAssignBulk from "./QrScanAssignBulk";
+import { QrCode } from "@/store/qrDataStore";
 
-type QrCode = {
-  id: string;
-  qr_number: string;
-  table_number: number;
-  partner_id?: string;
-  partner?: {
-    store_name: string;
-  };
-};
+
 
 type Partner = {
   id: string;
@@ -47,6 +40,7 @@ const GET_QRS_QUERY = `
       id
       qr_number
       table_number
+      table_name
       partner_id
       partner {
         store_name
@@ -96,6 +90,14 @@ const DELETE_QRS_MUTATION = `
 const UPDATE_QR_TABLE_NUMBER_MUTATION = `
   mutation UpdateQrTableNumber($qrId: uuid!, $tableNumber: Int) {
     update_qr_codes_by_pk(pk_columns: {id: $qrId}, _set: {table_number: $tableNumber}) {
+      id
+    }
+  }
+`;
+
+const UPDATE_QR_TABLE_NAME_MUTATION = `
+  mutation UpdateQrTableName($qrId: uuid!, $tableName: String) {
+    update_qr_codes_by_pk(pk_columns: {id: $qrId}, _set: {table_name: $tableName}) {
       id
     }
   }
@@ -354,6 +356,40 @@ const QrManagement_v2 = () => {
     }
   };
 
+  const handleChangeTableName = async () => {
+    if (selectedQrs.size !== 1) return;
+    const qrId = Array.from(selectedQrs)[0];
+    const currentQr = qrs.find((qr) => qr.id === qrId);
+    let newTableName = prompt(
+      `Enter new table name for QR: ${currentQr?.id}`,
+      currentQr?.table_name || ""
+    );
+
+    setIsUpdating(true);
+
+    if (newTableName === null || newTableName.trim() === "") {
+      newTableName = null;
+    }
+
+    try {
+      await fetchFromHasura(UPDATE_QR_TABLE_NAME_MUTATION, {
+        qrId,
+        tableName: newTableName,
+      });
+      setQrs((prev) =>
+        prev.map((qr) =>
+          qr.id === qrId ? { ...qr, table_name: newTableName } : qr
+        )
+      );
+      exitSelectionMode();
+    } catch (error) {
+      console.error("Error updating table name:", error);
+      alert("Failed to update table name.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleRowInteraction = (
     clickedId: string,
     event: React.MouseEvent<HTMLTableRowElement>
@@ -545,14 +581,24 @@ const QrManagement_v2 = () => {
                 Generate Table Sheet
               </Button>
               {selectedQrs.size === 1 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleChangeTableNumber}
-                  disabled={isActionRunning}
-                >
-                  {isUpdating ? "Saving..." : "Change Table"}
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleChangeTableNumber}
+                    disabled={isActionRunning}
+                  >
+                    {isUpdating ? "Saving..." : "Change Table Number"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleChangeTableName}
+                    disabled={isActionRunning}
+                  >
+                    {isUpdating ? "Saving..." : "Change Table Name"}
+                  </Button>
+                </>
               )}
               <Button
                 variant="destructive"
@@ -584,11 +630,17 @@ const QrManagement_v2 = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cravings.live">cravings.live</SelectItem>
-                  <SelectItem value="app.cravings.live">app.cravings.live</SelectItem>
+                  <SelectItem value="app.cravings.live">
+                    app.cravings.live
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <Button size="sm" onClick={handleCreateQrs} disabled={isCreating || loading}>
+            <Button
+              size="sm"
+              onClick={handleCreateQrs}
+              disabled={isCreating || loading}
+            >
               {isCreating ? "Creating..." : "Create New QR"}
             </Button>
           </div>
@@ -602,21 +654,33 @@ const QrManagement_v2 = () => {
               <TableHead className="w-12"></TableHead>
               <TableHead>QR Id</TableHead>
               <TableHead>Table Number</TableHead>
+              <TableHead>Table Name</TableHead>
               <TableHead>Partner</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center">Loading...</TableCell>
+                <TableCell colSpan={4} className="text-center">
+                  Loading...
+                </TableCell>
               </TableRow>
             ) : qrs.length > 0 ? (
               qrs.map((qr) => (
                 <TableRow
                   key={qr.id}
                   onClick={(e) => handleRowInteraction(qr.id, e)}
-                  onTouchStart={() => { isTouchEvent.current = true; longPressTimer.current = setTimeout(() => { setSelectionMode(true); setSelectedQrs(new Set([qr.id])); }, 500); }}
-                  onTouchEnd={() => { if (longPressTimer.current) clearTimeout(longPressTimer.current); }}
+                  onTouchStart={() => {
+                    isTouchEvent.current = true;
+                    longPressTimer.current = setTimeout(() => {
+                      setSelectionMode(true);
+                      setSelectedQrs(new Set([qr.id]));
+                    }, 500);
+                  }}
+                  onTouchEnd={() => {
+                    if (longPressTimer.current)
+                      clearTimeout(longPressTimer.current);
+                  }}
                   onContextMenu={(e) => e.preventDefault()}
                   data-state={selectedQrs.has(qr.id) ? "selected" : ""}
                   className="cursor-pointer data-[state=selected]:bg-green-100 select-none"
@@ -625,17 +689,34 @@ const QrManagement_v2 = () => {
                     <Checkbox
                       checked={selectedQrs.has(qr.id)}
                       aria-label={`Select QR code ${qr.id}`}
-                      className={isAnythingSelected || selectionMode ? "opacity-100 transition-opacity" : "opacity-0 transition-opacity"}
+                      className={
+                        isAnythingSelected || selectionMode
+                          ? "opacity-100 transition-opacity"
+                          : "opacity-0 transition-opacity"
+                      }
                     />
                   </TableCell>
-                  <TableCell className="font-medium text-xs sm:text-base">{qr.id}</TableCell>
-                  <TableCell className="font-medium">{qr.table_number}</TableCell>
-                  <TableCell>{qr.partner?.store_name ?? (<span className="text-muted-foreground">Unassigned</span>)}</TableCell>
+                  <TableCell className="font-medium text-xs sm:text-base">
+                    {qr.id}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {qr.table_number}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {qr.table_name ?? "N/A"}
+                  </TableCell>
+                  <TableCell>
+                    {qr.partner?.store_name ?? (
+                      <span className="text-muted-foreground">Unassigned</span>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center">No QR codes found.</TableCell>
+                <TableCell colSpan={4} className="text-center">
+                  No QR codes found.
+                </TableCell>
               </TableRow>
             )}
           </TableBody>

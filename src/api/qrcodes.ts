@@ -2,6 +2,7 @@ export const GET_QR_TABLE = `
 query GetQrTable($id: uuid!) {
   qr_codes(where: {id: {_eq: $id}}) {
     table_number,
+    table_name,
     partner_id
     qr_group {
       extra_charge
