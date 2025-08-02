@@ -45,7 +45,7 @@ const HotelsList = ({
 
     setIsLoading(true);
     try {
-      // Get user location from localStorage
+      // Get user location from localStorage?
       const locCookie = await getLocationCookie();
       let userLat = 0;
       let userLng = 0;

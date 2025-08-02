@@ -1005,27 +1005,27 @@ const PlaceOrderModal = ({
       return;
     }
 
-    // Try to restore location from localStorage
-    const savedArea = localStorage.getItem(
+    // Try to restore location from localStorage?
+    const savedArea = localStorage?.getItem(
       `hotel-${hotelData.id}-selected-area`
     );
-    console.log("Checking saved area from localStorage:", savedArea);
+    console.log("Checking saved area from localStorage?:", savedArea);
 
     if (
       savedArea &&
       hotelData.whatsapp_numbers?.some((item) => item.area === savedArea)
     ) {
-      console.log("Restoring location from localStorage:", savedArea);
+      console.log("Restoring location from localStorage?:", savedArea);
       setSelectedLocation(savedArea);
       return;
     }
 
-    // Get the selected location from localStorage
-    const selectedPhone = localStorage.getItem(
+    // Get the selected location from localStorage?
+    const selectedPhone = localStorage?.getItem(
       `hotel-${hotelData.id}-whatsapp-area`
     );
 
-    console.log("Checking selected phone from localStorage:", selectedPhone);
+    console.log("Checking selected phone from localStorage?:", selectedPhone);
 
     if (selectedPhone) {
       // Find the area name by phone number
@@ -1054,7 +1054,7 @@ const PlaceOrderModal = ({
 
     // If user just logged in and we have a saved location, restore it
     if (user && !selectedLocation) {
-      const savedArea = localStorage.getItem(
+      const savedArea = localStorage?.getItem(
         `hotel-${hotelData.id}-selected-area`
       );
       console.log("User logged in, checking for saved location:", savedArea);
@@ -1078,25 +1078,25 @@ const PlaceOrderModal = ({
         (item) => item.area === location
       )?.number;
 
-      localStorage.setItem(
+      localStorage?.setItem(
         `hotel-${hotelData.id}-whatsapp-area`,
         phoneNumber || ""
       );
-      localStorage.setItem(`hotel-${hotelData.id}-selected-area`, location);
+      localStorage?.setItem(`hotel-${hotelData.id}-selected-area`, location);
 
-      // Force a small delay to ensure localStorage is updated
+      // Force a small delay to ensure localStorage? is updated
       setTimeout(() => {
-        console.log("Location saved to localStorage:", {
+        console.log("Location saved to localStorage?:", {
           location,
           phoneNumber,
-          savedArea: localStorage.getItem(
+          savedArea: localStorage?.getItem(
             `hotel-${hotelData.id}-selected-area`
           ),
         });
       }, 100);
     } else {
-      localStorage.removeItem(`hotel-${hotelData.id}-whatsapp-area`);
-      localStorage.removeItem(`hotel-${hotelData.id}-selected-area`);
+      localStorage?.removeItem(`hotel-${hotelData.id}-whatsapp-area`);
+      localStorage?.removeItem(`hotel-${hotelData.id}-selected-area`);
     }
   };
 
@@ -1255,7 +1255,7 @@ const PlaceOrderModal = ({
 
   const handleLoginSuccess = () => {
     console.log("Login success - checking location preservation");
-    const savedArea = localStorage.getItem(
+    const savedArea = localStorage?.getItem(
       `hotel-${hotelData.id}-selected-area`
     );
     console.log("Saved area after login:", savedArea);
@@ -1429,7 +1429,7 @@ const PlaceOrderModal = ({
                 {user
                   ? (() => {
                       // Debug: Check current location before generating link
-                      const currentSelectedArea = localStorage.getItem(
+                      const currentSelectedArea = localStorage?.getItem(
                         `hotel-${hotelData.id}-selected-area`
                       );
                       console.log(

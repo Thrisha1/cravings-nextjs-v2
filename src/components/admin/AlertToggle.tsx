@@ -21,10 +21,10 @@ const AlertToggle = () => {
         
         if(isActive) {
             soundRef.current?.play();
-            localStorage.setItem('alertActive', '1');
+            localStorage?.setItem('alertActive', '1');
             toast.success('Order alert is now active');
         } else {
-            localStorage.setItem('alertActive', '0');
+            localStorage?.setItem('alertActive', '0');
             soundRef.current?.stop();
             toast.error('Order alert is now inactive');
         }

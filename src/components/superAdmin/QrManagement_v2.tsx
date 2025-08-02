@@ -110,13 +110,13 @@ const QrManagement_v2 = () => {
 
   const [limit, setLimit] = useState(() => {
     if (typeof window === "undefined") return 10;
-    const savedLimit = localStorage.getItem("qrManagementLimit");
+    const savedLimit = localStorage?.getItem("qrManagementLimit");
     return savedLimit ? parseInt(savedLimit, 10) : 10;
   });
 
   const [selectedDomain, setSelectedDomain] = useState(() => {
     if (typeof window === "undefined") return "cravings.live";
-    const savedDomain = localStorage.getItem("qrManagementDomain");
+    const savedDomain = localStorage?.getItem("qrManagementDomain");
     return savedDomain || "cravings.live";
   });
 
@@ -144,12 +144,12 @@ const QrManagement_v2 = () => {
   const [totalQrs, setTotalQrs] = useState(0);
 
   useEffect(() => {
-    localStorage.setItem("qrManagementLimit", limit.toString());
+    localStorage?.setItem("qrManagementLimit", limit.toString());
     setLimitInput(limit.toString());
   }, [limit]);
 
   useEffect(() => {
-    localStorage.setItem("qrManagementDomain", selectedDomain);
+    localStorage?.setItem("qrManagementDomain", selectedDomain);
   }, [selectedDomain]);
 
   const fetchQrs = async () => {

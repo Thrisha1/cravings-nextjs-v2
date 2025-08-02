@@ -322,8 +322,8 @@ export default function ProfilePage() {
 
   useEffect(() => {
     console.log(
-      window.localStorage.getItem("fcmToken"),
-      "FCM Token from localStorage"
+      window?.localStorage.getItem("fcmToken"),
+      "FCM Token from localStorage?"
     );
     if (userData?.role === "partner" && features?.captainordering.enabled) {
       const fetchCaptainOrders = async () => {

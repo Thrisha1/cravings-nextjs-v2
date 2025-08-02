@@ -24,7 +24,7 @@ const RateUs: React.FC<{ hoteldata: HotelData; socialLinks: SocialLinks }> = ({
 
   useEffect(() => {
     if (!ratingKey) return;
-    const savedRating = localStorage.getItem(ratingKey);
+    const savedRating = localStorage?.getItem(ratingKey);
     if (savedRating) {
       setRating(parseInt(savedRating, 10));
       setHasRated(true);
@@ -44,7 +44,7 @@ const RateUs: React.FC<{ hoteldata: HotelData; socialLinks: SocialLinks }> = ({
 
     const newRating = index + 1;
     setRating(newRating);
-    localStorage.setItem(ratingKey, newRating.toString());
+    localStorage?.setItem(ratingKey, newRating.toString());
     setHasRated(true);
 
     if (newRating === 5) {

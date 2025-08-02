@@ -31,7 +31,7 @@ const RateThis = ({ type, hotel, styles }: RateThisProps) => {
   const isSpecialHotel = hotelsWhoWant5Star.some(h => h.id === hotel.id);
 
   useEffect(() => {
-    const savedRating = localStorage.getItem(`${type}_${itemId}_rating`);
+    const savedRating = localStorage?.getItem(`${type}_${itemId}_rating`);
     if (savedRating) {
       setRating(parseInt(savedRating));
       setHasRated(true);
@@ -42,7 +42,7 @@ const RateThis = ({ type, hotel, styles }: RateThisProps) => {
     if (hasRated) return;
 
     setRating(star);
-    localStorage.setItem(`${type}_${itemId}_rating`, star.toString());
+    localStorage?.setItem(`${type}_${itemId}_rating`, star.toString());
     setHasRated(true);
 
     // Determine if we should redirect based on hotel type

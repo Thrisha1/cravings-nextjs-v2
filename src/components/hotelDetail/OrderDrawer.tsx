@@ -22,7 +22,7 @@ export const calculateDeliveryDistanceAndCost = async (
   const { setDeliveryInfo } = useOrderStore.getState();
 
   try {
-    const userCoordsStr = localStorage.getItem("user-location-store");
+    const userCoordsStr = localStorage?.getItem("user-location-store");
     if (!userCoordsStr) return;
 
     const userLocationData = JSON.parse(userCoordsStr);
@@ -187,7 +187,7 @@ const OrderDrawer = ({
     
 
     let locationLink = "";
-    const userLocationData = localStorage.getItem("user-location-store");
+    const userLocationData = localStorage?.getItem("user-location-store");
     if (userLocationData) {
       try {
         const location = JSON.parse(userLocationData);

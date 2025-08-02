@@ -9,11 +9,11 @@ const RateUsModal = () => {
 
   const handleClose = () => {
     setIsOpen(false);
-    localStorage.setItem("rateUsModal", "closed");
+    localStorage?.setItem("rateUsModal", "closed");
   };
 
   useEffect(() => {
-    const isRateUsModalClosed = localStorage.getItem("rateUsModal");
+    const isRateUsModalClosed = localStorage?.getItem("rateUsModal");
     if (!isRateUsModalClosed) {
       setIsOpen(true);
     }

@@ -13,7 +13,7 @@ export function addAccount(user: any) {
 
   // Get existing accounts (decrypt if they exist)
   let existingAccounts = [];
-  const accounts = localStorage.getItem("my_accounts");
+  const accounts = localStorage?.getItem("my_accounts");
 
   if (accounts) {
     existingAccounts = JSON.parse(accounts);
@@ -30,11 +30,11 @@ export function addAccount(user: any) {
 
   // Add new account and encrypt before storing
   existingAccounts.push(newUser);
-  localStorage.setItem("my_accounts", JSON.stringify(existingAccounts));
+  localStorage?.setItem("my_accounts", JSON.stringify(existingAccounts));
 }
 
 export async function getAllAccounts() {
-  const existingAccounts = localStorage.getItem("my_accounts");
+  const existingAccounts = localStorage?.getItem("my_accounts");
   if (!existingAccounts) {
     return [];
   }
@@ -44,7 +44,7 @@ export async function getAllAccounts() {
 
 export async function getAccounts() {
   const currentUser = await getAuthCookie();
-  const encryptedAccounts = localStorage.getItem("my_accounts");
+  const encryptedAccounts = localStorage?.getItem("my_accounts");
 
   if (!encryptedAccounts) {
     return [];
@@ -62,7 +62,7 @@ export async function getAccounts() {
 }
 
 export function removeAccount(id: string) {
-  const encryptedAccounts = localStorage.getItem("my_accounts");
+  const encryptedAccounts = localStorage?.getItem("my_accounts");
 
   if (!encryptedAccounts) {
     toast.error("No accounts found");
@@ -75,6 +75,6 @@ export function removeAccount(id: string) {
     (account: any) => account.id !== id
   );
 
-  localStorage.setItem("my_accounts", JSON.stringify(updatedAccounts));
+  localStorage?.setItem("my_accounts", JSON.stringify(updatedAccounts));
   toast.success("Account removed successfully");
 }

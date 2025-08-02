@@ -1,3 +1,4 @@
+"use client"
 import OfferLoadinPage from "@/components/OfferLoadinPage";
 import React from "react";
 
