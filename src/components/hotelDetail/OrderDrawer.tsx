@@ -139,7 +139,7 @@ const OrderDrawer = ({
   const [isMoveUp, setMoveUp] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
-  const isPetraz = pathname.includes("PETRAZ-RESTAURANT") || pathname === "/";
+  const isPetraz = pathname.includes("PETRAZ") || pathname === "/";
 
   useEffect(() => {
     setIsQrScan(pathname.includes("qrScan") && !!qrId && !(tableNumber === 0));
@@ -336,8 +336,9 @@ const OrderDrawer = ({
         } else {
           setMoveUp(false);
         }
-      } else if (currentScrollY < lastScrollY) {
+      } else if (currentScrollY < lastScrollY) {        
         // Scrolling up -  move drawer up
+     
         setMoveUp(true);
       }
 
