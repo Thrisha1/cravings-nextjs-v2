@@ -372,7 +372,9 @@ const useOrderStore = create(
         }
       },
 
-      setOpenPlaceOrderModal: (open) => set({ open_place_order_modal: open }),
+      setOpenPlaceOrderModal: (open) => {
+        set({ open_place_order_modal: open })
+      },
 
       setUserCoordinates: (coords) => {
         set({ coordinates: coords });

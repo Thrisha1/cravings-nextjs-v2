@@ -58,8 +58,12 @@ export const calculateDeliveryDistanceAndCost = async (
     const distanceInKm = Math.ceil(exactDistance);
     const deliveryRate = hotelData?.delivery_rate || 0;
 
-    const { delivery_radius, first_km_range, is_fixed_rate , minimum_order_amount } =
-      hotelData?.delivery_rules || {};
+    const {
+      delivery_radius,
+      first_km_range,
+      is_fixed_rate,
+      minimum_order_amount,
+    } = hotelData?.delivery_rules || {};
 
     if (delivery_radius && distanceInKm > delivery_radius) {
       setDeliveryInfo({
@@ -100,7 +104,6 @@ export const calculateDeliveryDistanceAndCost = async (
     console.error("Error calculating delivery distance:", error);
   }
 };
-
 
 const OrderDrawer = ({
   styles,
@@ -149,11 +152,19 @@ const OrderDrawer = ({
   }, [hotelData]);
 
   useEffect(() => {
+    setOpenPlaceOrderModal(false);
+  }, [setOpenPlaceOrderModal]);
+
+  useEffect(() => {
     setOpenDrawerBottom((items?.length || 0) > 0 ? true : false);
+    if (isPetraz && (items?.length || 0) > 0) {
+      setMoveUp(true);
+    }
   }, [items, setOpenDrawerBottom]);
 
   const calculateGrandTotal = () => {
-    const baseTotal = items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
+    const baseTotal =
+      items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
     let grandTotal = baseTotal;
 
     if (hotelData?.gst_percentage) {
@@ -172,7 +183,6 @@ const OrderDrawer = ({
   };
 
   const getWhatsappLink = (orderId?: string) => {
-
     const savedAddress = userAddress || "N/A";
     const selectedWhatsAppNumber = localStorage?.getItem(
       `hotel-${hotelData.id}-whatsapp-area`
@@ -183,8 +193,6 @@ const OrderDrawer = ({
 
     // Also check if there's a more recent selection in the current session
     const currentSelectedArea = selectedArea || "";
-
-    
 
     let locationLink = "";
     const userLocationData = localStorage?.getItem("user-location-store");
@@ -200,61 +208,96 @@ const OrderDrawer = ({
       }
     }
 
-    const baseTotal = items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
+    const baseTotal =
+      items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
     const gstAmount = hotelData?.gst_percentage
       ? getGstAmount(baseTotal, hotelData.gst_percentage)
       : 0;
     const qrCharge = qrGroup?.extra_charge
       ? getExtraCharge(
-        items || [],
-        qrGroup.extra_charge,
-        qrGroup.charge_type || "FLAT_FEE"
-      )
+          items || [],
+          qrGroup.extra_charge,
+          qrGroup.charge_type || "FLAT_FEE"
+        )
       : 0;
     const deliveryCharge =
-      !isQrScan && orderType === 'delivery' && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
+      !isQrScan &&
+      orderType === "delivery" &&
+      deliveryInfo?.cost &&
+      !deliveryInfo?.isOutOfRange
         ? deliveryInfo.cost
         : 0;
     const grandTotal = baseTotal + gstAmount + qrCharge + deliveryCharge;
 
     // Check if multi-whatsapp is enabled and we have a selected area
-    const hasMultiWhatsapp = getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled;
+    const hasMultiWhatsapp = getFeatures(hotelData?.feature_flags || "")
+      ?.multiwhatsapp?.enabled;
     const hasMultipleWhatsappNumbers = hotelData?.whatsapp_numbers?.length > 1;
-    const shouldShowHotelLocation = (hasMultiWhatsapp || hasMultipleWhatsappNumbers) && currentSelectedArea && currentSelectedArea.trim() !== '';
-
-    
+    const shouldShowHotelLocation =
+      (hasMultiWhatsapp || hasMultipleWhatsappNumbers) &&
+      currentSelectedArea &&
+      currentSelectedArea.trim() !== "";
 
     const whatsappMsg = `
     *🍽️ Order Details 🍽️*
     
     *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
-    ${(tableNumber ?? 0) > 0 ? `*Table:* ${qrData?.table_name || tableNumber}` : `*Order Type:* ${orderType || "Delivery"}`}
-    ${shouldShowHotelLocation ? `\n*Hotel Location:* ${currentSelectedArea.toUpperCase()}` : ""}
-    ${(tableNumber ?? 0) > 0 ? "" : (orderType === 'delivery' ? `*Delivery Address:* ${savedAddress}${locationLink}` : "")}
+    ${
+      (tableNumber ?? 0) > 0
+        ? `*Table:* ${qrData?.table_name || tableNumber}`
+        : `*Order Type:* ${orderType || "Delivery"}`
+    }
+    ${
+      shouldShowHotelLocation
+        ? `\n*Hotel Location:* ${currentSelectedArea.toUpperCase()}`
+        : ""
+    }
+    ${
+      (tableNumber ?? 0) > 0
+        ? ""
+        : orderType === "delivery"
+        ? `*Delivery Address:* ${savedAddress}${locationLink}`
+        : ""
+    }
     *Time:* ${new Date().toLocaleTimeString()}
     
     *📋 Order Items:*
-    ${items?.map(
-      (item, index) =>
-        `${index + 1}. ${item.name} (${item.category.name})
-       ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(2)} = ${hotelData.currency}${(
-          item.price * item.quantity
-        ).toFixed(2)}`
-    ).join("\n\n")}
+    ${items
+      ?.map(
+        (item, index) =>
+          `${index + 1}. ${item.name} (${item.category.name})
+       ➤ Qty: ${item.quantity} × ${hotelData.currency}${item.price.toFixed(
+            2
+          )} = ${hotelData.currency}${(item.price * item.quantity).toFixed(2)}`
+      )
+      .join("\n\n")}
     
     *Subtotal:* ${hotelData.currency}${baseTotal.toFixed(2)}
     
-    ${hotelData?.gst_percentage
-        ? `*GST (${hotelData.gst_percentage}%):* ${hotelData.currency}${gstAmount.toFixed(2)}`
-        : ""}
+    ${
+      hotelData?.gst_percentage
+        ? `*GST (${hotelData.gst_percentage}%):* ${
+            hotelData.currency
+          }${gstAmount.toFixed(2)}`
+        : ""
+    }
     
-    ${!isQrScan && orderType === 'delivery' && deliveryInfo?.cost && !deliveryInfo?.isOutOfRange
-        ? `*Delivery Charge:* ${hotelData.currency}${deliveryInfo.cost.toFixed(2)}`
-        : ""}
+    ${
+      !isQrScan &&
+      orderType === "delivery" &&
+      deliveryInfo?.cost &&
+      !deliveryInfo?.isOutOfRange
+        ? `*Delivery Charge:* ${hotelData.currency}${deliveryInfo.cost.toFixed(
+            2
+          )}`
+        : ""
+    }
     
-    ${qrGroup?.extra_charge
+    ${
+      qrGroup?.extra_charge
         ? `*${qrGroup.name}:* ${hotelData.currency}${qrCharge.toFixed(2)}`
-        : ""}
+        : ""
+    }
     
     *Total Price:* ${hotelData.currency}${grandTotal.toFixed(2)}
     ${orderNote ? `\n*📝 Note:* ${orderNote}` : ""}
@@ -266,14 +309,10 @@ const OrderDrawer = ({
       hotelData?.phone ||
       "8590115462";
 
-    return `https://api.whatsapp.com/send?phone=${hotelData?.country_code || "+91"}${number}&text=${encodeURIComponent(
-      whatsappMsg
-    )}`;
+    return `https://api.whatsapp.com/send?phone=${
+      hotelData?.country_code || "+91"
+    }${number}&text=${encodeURIComponent(whatsappMsg)}`;
   };
-
-  useEffect(() => {
-    setOpenPlaceOrderModal(false);
-  }, [items]);
 
   const handlePlaceOrder = async () => {
     try {
@@ -289,20 +328,24 @@ const OrderDrawer = ({
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
+
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         // Scrolling down - move drrawer down
-        setMoveUp(false);
+        if (((items?.length ?? 0) > 0) && isPetraz) {
+          setMoveUp(true);
+        } else {
+          setMoveUp(false);
+        }
       } else if (currentScrollY < lastScrollY) {
         // Scrolling up -  move drawer up
         setMoveUp(true);
       }
-      
+
       setLastScrollY(currentScrollY);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
   return (
@@ -317,8 +360,18 @@ const OrderDrawer = ({
 
       <div
         style={{ ...styles.border }}
-        className={`fixed ${isMoveUp ? isPetraz ? 'bottom-24 sm:bottom-0' : 'bottom-16 sm:bottom-0' : 'bottom-0'} z-[200] left-1/2 -translate-x-1/2 transition-all duration-300 ${
-          !open_drawer_bottom ? "translate-y-[200%]" : isPetraz ? "translate-y-full" : "translate-y-0"
+        className={`fixed ${
+          isMoveUp
+            ? isPetraz
+              ? "bottom-24 sm:bottom-0"
+              : "bottom-16 sm:bottom-0"
+            : "bottom-0"
+        } z-[200] left-1/2 -translate-x-1/2 transition-all duration-300 ${
+          !open_drawer_bottom
+            ? "translate-y-[200%]"
+            : isPetraz
+            ? "translate-y-full"
+            : "translate-y-0"
         } lg:max-w-[50%] bg-white text-black w-full px-[8%] py-6 rounded-t-[35px] bottom-bar-shadow flex items-center justify-between`}
       >
         <div>
@@ -334,7 +387,8 @@ const OrderDrawer = ({
           <div className="flex gap-2 items-center text-sm text-black/70">
             <div>Items :</div>
             <div>{items?.length}</div>
-            {!isQrScan && orderType === 'delivery' &&
+            {!isQrScan &&
+              orderType === "delivery" &&
               deliveryInfo &&
               items?.length &&
               !deliveryInfo.isOutOfRange && (
