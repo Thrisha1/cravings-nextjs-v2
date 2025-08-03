@@ -41,6 +41,11 @@ export interface DeliveryRules {
   };
   is_fixed_rate: boolean;
   minimum_order_amount: number;
+  delivery_time_allowed: {
+    from: string;
+    to: string;
+  } | null;
+  isDeliveryActive : boolean;
 }
 
 export interface Order {

@@ -395,6 +395,97 @@ export function DeliveryAndGeoLocationSettings({
                   </div>
                 )}
               </div>
+
+              <div className="space-y-2">
+                <Label>Delivery Time Range</Label>
+                {isEditingDelivery ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-sm">From</Label>
+                      <Input
+                        type="time"
+                        value={deliveryRules.delivery_time_allowed?.from}
+                        onChange={(e) =>
+                          setDeliveryRules({
+                            ...deliveryRules,
+                            delivery_time_allowed: {
+                              from: e.target.value,
+                              to:
+                                deliveryRules.delivery_time_allowed?.to ||
+                                "23:59",
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm">To</Label>
+                      <Input
+                        type="time"
+                        value={deliveryRules.delivery_time_allowed?.to}
+                        onChange={(e) =>
+                          setDeliveryRules({
+                            ...deliveryRules,
+                            delivery_time_allowed: {
+                              from:
+                                deliveryRules.delivery_time_allowed?.from ||
+                                "00:00",
+                              to: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-md border bg-muted/50">
+                    {deliveryRules.delivery_time_allowed?.from} -{" "}
+                    {deliveryRules.delivery_time_allowed?.to}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Delivery Status</Label>
+                {isEditingDelivery ? (
+                  <Select
+                    value={
+                      deliveryRules.isDeliveryActive ? "active" : "inactive"
+                    }
+                    onValueChange={(value) =>
+                      setDeliveryRules({
+                        ...deliveryRules,
+                        isDeliveryActive: value === "active",
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        className={
+                          deliveryRules.isDeliveryActive ? "" : "text-red-500"
+                        }
+                        placeholder="Select status"
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive" className="text-red-500">
+                        Inactive
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="p-3 rounded-md border bg-muted/50">
+                    <span
+                      className={
+                        deliveryRules.isDeliveryActive ? "" : "text-red-500"
+                      }
+                    >
+                      {deliveryRules.isDeliveryActive ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
