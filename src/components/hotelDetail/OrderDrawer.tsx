@@ -12,6 +12,8 @@ import { getExtraCharge } from "@/lib/getExtraCharge";
 import path from "path/win32";
 import { useQrDataStore } from "@/store/qrDataStore";
 
+const bottomNavFilter = ["PETRAZ", "HENZU"];
+
 export const getGstAmount = (price: number, gstPercentage: number) => {
   return (price * gstPercentage) / 100;
 };
@@ -138,8 +140,9 @@ const OrderDrawer = ({
   const [features, setFeatures] = useState<FeatureFlags | null>(null);
   const [isMoveUp, setMoveUp] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
-
-  const isPetraz = pathname.includes("PETRAZ") || pathname === "/";
+  const isBottomNavHidden = bottomNavFilter.some((filter) =>
+    pathname.includes(filter)
+  );
 
   useEffect(() => {
     setIsQrScan(pathname.includes("qrScan") && !!qrId && !(tableNumber === 0));
@@ -157,7 +160,7 @@ const OrderDrawer = ({
 
   useEffect(() => {
     setOpenDrawerBottom((items?.length || 0) > 0 ? true : false);
-    if (isPetraz && (items?.length || 0) > 0) {
+    if (isBottomNavHidden && (items?.length || 0) > 0) {
       setMoveUp(true);
     }
   }, [items, setOpenDrawerBottom]);
@@ -331,7 +334,7 @@ const OrderDrawer = ({
 
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         // Scrolling down - move drrawer down
-        if (((items?.length ?? 0) > 0) && isPetraz) {
+        if (((items?.length ?? 0) > 0) && isBottomNavHidden) {
           setMoveUp(true);
         } else {
           setMoveUp(false);
@@ -363,14 +366,14 @@ const OrderDrawer = ({
         style={{ ...styles.border }}
         className={`fixed ${
           isMoveUp
-            ? isPetraz
+            ? isBottomNavHidden
               ? "bottom-24 sm:bottom-0"
               : "bottom-16 sm:bottom-0"
             : "bottom-0"
         } z-[200] left-1/2 -translate-x-1/2 transition-all duration-300 ${
           !open_drawer_bottom
             ? "translate-y-[200%]"
-            : isPetraz
+            : isBottomNavHidden
             ? "translate-y-full"
             : "translate-y-0"
         } lg:max-w-[50%] bg-white text-black w-full px-[8%] py-6 rounded-t-[35px] bottom-bar-shadow flex items-center justify-between`}
