@@ -182,9 +182,11 @@ query GetPartnerAndOffersQuery($id: uuid!) {
         name
         id
         price
+        variants
       }
       offer_price
       start_time
+      variant
     }
   }
 }

@@ -21,6 +21,17 @@ const OfferCard = ({
   onClick?: () => void;
 }) => {
   const router = useRouter();
+  
+  // Calculate the original price based on variant if available
+  const getOriginalPrice = () => {
+    if (offer.variant) {
+      return offer.variant.price;
+    }
+    return offer.menu.price;
+  };
+  
+  const originalPrice = getOriginalPrice();
+  
   return (
     <div
       className="cursor-pointer group-active:scale-95 h-full transition-all"
@@ -43,7 +54,7 @@ const OfferCard = ({
           <div className="absolute bottom-0  p-3  left-0 flex items-end bg-gradient-to-t from-black to-transparent w-full">
             <div className="grid w-full">
               <span className="text-white/70 line-through text-sm">
-                ₹{offer.menu.price.toFixed(0)}
+                ₹{originalPrice.toFixed(0)}
               </span>
               <span className="text-2xl font-bold text-white">
                 ₹{(offer.offer_price ?? 0).toFixed(0)}
@@ -59,6 +70,11 @@ const OfferCard = ({
         <CardHeader className="p-3 md:p-5 space-y-0">
           <CardTitle className="font-bold md:text-xl text-balance">
             {offer.menu.name}
+            {offer.variant && (
+              <span className="text-sm font-normal text-gray-600 ml-2">
+                ({offer.variant.name})
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
 

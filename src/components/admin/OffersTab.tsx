@@ -52,6 +52,10 @@ export function OffersTab() {
       start_time: string;
       end_time: string;
       offer_group?: OfferGroup;
+      variant?: {
+        name: string;
+        price: number;
+      };
     },
     notificationMessage: {
       title: string;

@@ -52,8 +52,8 @@ const ItemCard = ({
   const discountPercentage =
     offerData && shouldShowPrice
       ? Math.round(
-          ((offerData.menu.price - (offerData.offer_price ?? 0)) /
-            offerData.menu.price) *
+          (((offerData.variant ? offerData.variant.price : offerData.menu.price) - (offerData.offer_price ?? 0)) /
+            (offerData.variant ? offerData.variant.price : offerData.menu.price)) *
             100
         )
       : 0;
@@ -74,8 +74,11 @@ const ItemCard = ({
       });
       setVariantQuantities(newVariantQuantities);
     } else {
+      // For items without variants, check both regular item and variant-specific items (for offer items)
       const itemInCart = items?.find((i) => i.id === item.id);
-      setItemQuantity(itemInCart?.quantity || 0);
+      const variantItems = items?.filter((i) => i.id.startsWith(`${item.id}|`)) || [];
+      const totalQuantity = (itemInCart?.quantity || 0) + variantItems.reduce((sum, i) => sum + i.quantity, 0);
+      setItemQuantity(totalQuantity);
     }
   }, [items, item.id, item.variants?.length]);
 
@@ -87,6 +90,25 @@ const ItemCard = ({
   }, [variantQuantities]);
 
   const handleAddItem = () => {
+    // If this item has an offer with a specific variant, add that variant directly
+    if (offerData?.variant) {
+      addItem({
+        ...item,
+        id: `${item.id}|${offerData.variant.name}`,
+        name: `${item.name} (${offerData.variant.name})`,
+        price: offerData.offer_price || 0, // Use the offer price
+        variantSelections: [
+          {
+            name: offerData.variant.name,
+            price: offerData.variant.price,
+            quantity: 1,
+          },
+        ],
+      });
+      return;
+    }
+    
+    // Regular logic for items without offers
     if (hasVariants) {
       setShowVariants(!showVariants);
     } else {
@@ -133,7 +155,9 @@ const ItemCard = ({
     <>
       <div className="p-4 flex justify-between relative">
         <div>
-          <h3 className="capitalize text-lg font-semibold">{item.name}</h3>
+          <h3 className="capitalize text-lg font-semibold">
+            {offerData?.variant ? `${item.name} (${offerData.variant.name})` : item.name}
+          </h3>
           <p className="text-sm opacity-50">{item.description}</p>
           {/* --- MODIFIED: Wrapped entire price section in condition --- */}
           {shouldShowPrice && (
@@ -158,7 +182,7 @@ const ItemCard = ({
                       </div>
                       <span className="text-sm line-through opacity-70">
                         {hoteldata?.currency || "₹"}{" "}
-                        {offerData.menu.price}
+                        {offerData.variant ? offerData.variant.price : offerData.menu.price}
                       </span>
                     </div>
                   ) : (
@@ -212,7 +236,7 @@ const ItemCard = ({
 
             {isOrderable && (
               <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
-                {hasVariants ? (
+                {hasVariants && !offerData ? (
                   <div
                     onClick={() => setShowVariants(!showVariants)}
                     style={{

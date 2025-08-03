@@ -35,6 +35,10 @@ interface CreateOfferFormProps {
       start_time: string;
       end_time: string;
       offerGroup?: OfferGroup;
+      variant?: {
+        name: string;
+        price: number;
+      };
     },
     notificationMessage: {
       title: string;
@@ -54,6 +58,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     fromTime: "",
     toTime: "",
   });
+  const [selectedVariant, setSelectedVariant] = useState<string>("");
   const [newOfferGroup, setNewOfferGroup] = useState({
     name: "",
     categoryId: "",
@@ -202,6 +207,14 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       toast.error("Please select a menu item");
       return false;
     }
+    
+    // Check if selected item has variants and a variant is selected
+    const selectedItem = items.find((item) => item.id === newOffer.menuItemId);
+    if (selectedItem?.variants && selectedItem.variants.length > 0 && !selectedVariant) {
+      toast.error("Please select a variant");
+      return false;
+    }
+    
     if (!newOffer.newPrice || isNaN(parseFloat(newOffer.newPrice))) {
       toast.error("Please enter a valid new price");
       return false;
@@ -287,9 +300,10 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       const selectedItem = items.find(
         (item) => item.id === newOffer.menuItemId
       );
+      const variantText = selectedVariant ? ` (${selectedVariant})` : "";
       return `🔥 ${
         selectedItem?.name || "Special Item"
-      } - Limited-Time Deal at ${
+      }${variantText} - Limited-Time Deal at ${
         (userData as HotelData)?.store_name || "Our Store"
       }!`;
     }
@@ -329,9 +343,18 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       const selectedItem = items.find(
         (item) => item.id === newOffer.menuItemId
       );
-      return `Check out the new offer: ${selectedItem?.name} for just ${
+      const variantText = selectedVariant ? ` (${selectedVariant})` : "";
+      
+      // Get the original price from the selected variant
+      let originalPrice = selectedItem?.price || 0;
+      if (selectedVariant && slectedItem?.variants) {
+        const variant = slectedItem.variants.find(v => v.name === selectedVariant);
+        originalPrice = variant ? variant.price : originalPrice;
+      }
+      
+      return `Check out the new offer: ${selectedItem?.name}${variantText} - Now just ${
         (userData as HotelData)?.currency ?? "₹"
-      }${newOffer.newPrice}. Valid until ${formatDate(newOffer.toTime)}.`;
+      }${newOffer.newPrice} (was ${(userData as HotelData)?.currency ?? "₹"}${originalPrice.toFixed(2)}). Valid until ${formatDate(newOffer.toTime)}.`;
     }
   };
 
@@ -355,25 +378,50 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       title: notificationTitleRef.current?.value || getNotificationTitle() || "",
       body: notificationBodyRef.current?.value || getNotificationBody() || "",
     };
+
+    // Comprehensive logging of all form data
+    console.log("=== CREATE OFFER FORM DATA ===");
+    console.log("Form State:", {
+      newOffer,
+      selectedVariant,
+      slectedItem,
+      isOfferTypeGroup,
+      newOfferGroup,
+      groupType
+    });
+    console.log("Selected Item Details:", {
+      id: slectedItem?.id,
+      name: slectedItem?.name,
+      price: slectedItem?.price,
+      variants: slectedItem?.variants,
+      hasVariants: slectedItem?.variants && slectedItem.variants.length > 0
+    });
+    console.log("Variant Selection:", {
+      selectedVariant,
+      variantExists: selectedVariant ? "YES" : "NO"
+    });
+    console.log("Price Information:", {
+      newPrice: newOffer.newPrice,
+      originalPrice: slectedItem?.price,
+      variantPrice: selectedVariant && slectedItem?.variants ? 
+        slectedItem.variants.find(v => v.name === selectedVariant)?.price : "N/A"
+    });
+    console.log("Notification Message:", notificationMessage);
   
     try {
       if (!isOfferTypeGroup) {
-        console.log("Creating single offer:", {
+        const offerData = {
           menu_id: newOffer.menuItemId,
           offer_price: parseFloat(newOffer.newPrice),
           items_available: parseInt(newOffer.itemsAvailable),
           start_time: newOffer.fromTime,
           end_time: newOffer.toTime,
-        });
-  
+          variant: selectedVariant && slectedItem?.variants ? 
+            slectedItem.variants.find(v => v.name === selectedVariant) : undefined,
+        };
+        
         await onSubmit(
-          {
-            menu_id: newOffer.menuItemId,
-            offer_price: parseFloat(newOffer.newPrice),
-            items_available: parseInt(newOffer.itemsAvailable),
-            start_time: newOffer.fromTime,
-            end_time: newOffer.toTime,
-          },
+          offerData,
           notificationMessage
         );
       } else {
@@ -387,13 +435,6 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
             : 1;
           // Calculate offer price as a float with two decimals
           const offer_price = Math.round((item.price * (1 - percentage / 100)) * 100) / 100;
-          console.log("Creating offer for item in category:", {
-            menu_id: item.id,
-            offer_price,
-            items_available,
-            start_time: newOffer.fromTime,
-            end_time: newOffer.toTime,
-          });
           await onSubmit(
             {
               menu_id: item.id,
@@ -447,6 +488,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     toTime: "",
                   });
                   setSelectedItem(null);
+                  setSelectedVariant("");
                 } else {
                   // Reset group offer state
                   setNewOfferGroup({
@@ -520,7 +562,6 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     value={newOfferGroup.categoryId}
                     onValueChange={(value) => {
                       const categoryItems = getItemsByCategory(value);
-                      console.log("Category items found:", categoryItems);
                       setNewOfferGroup({
                         ...newOfferGroup,
                         categoryId: value,
@@ -693,6 +734,8 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                       (item) => item.id === value
                     );
                     setSelectedItem(selectedItem || null);
+                    // Reset variant selection when item changes
+                    setSelectedVariant("");
                     // Force close keyboard if open
                     if (document.activeElement instanceof HTMLElement) {
                       document.activeElement.blur();
@@ -705,12 +748,71 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                   <SelectContent>
                     {getAllItems().map((item) => (
                       <SelectItem key={item.id} value={item.id as string}>
-                        {item.name} - ₹{item.price?.toFixed(2) || "0.00"}
+                        {item.name} - {item.variants && item.variants.length > 0 ? "Variants Available" : `₹${item.price?.toFixed(2) || "0.00"}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Show original price for items without variants */}
+              {slectedItem && (!slectedItem.variants || slectedItem.variants.length === 0) && (
+                <div className="space-y-2">
+                  <Label>Original Price</Label>
+                  <div className="p-3 bg-gray-50 rounded border text-sm">
+                    <p className="font-medium">₹{slectedItem.price?.toFixed(2) || "0.00"}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Variant Selection - Show only if selected item has variants */}
+              {slectedItem?.variants && slectedItem.variants.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="variant">Select Variant</Label>
+                  <Select
+                    value={selectedVariant}
+                    onValueChange={(value) => {
+                      setSelectedVariant(value);
+                      // Update the new price to match the selected variant's price
+                      const variant = slectedItem.variants?.find(v => v.name === value);
+                      if (variant) {
+                        setNewOffer({ ...newOffer, newPrice: variant.price.toString() });
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="variant">
+                      <SelectValue placeholder="Select a variant" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {slectedItem.variants.map((variant) => (
+                        <SelectItem key={variant.name} value={variant.name}>
+                          {variant.name} - ₹{variant.price?.toFixed(2) || "0.00"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Show old price when variant is selected */}
+              {selectedVariant && slectedItem?.variants && (
+                <div className="space-y-2">
+                  <Label>Original Price</Label>
+                  <div className="p-3 bg-gray-50 rounded border text-sm">
+                    <p className="font-medium">
+                      ₹{(() => {
+                        const variant = slectedItem.variants.find(v => v.name === selectedVariant);
+                        // Always show the variant price as original price when a variant is selected
+                        if (variant && variant.price !== undefined && variant.price !== null) {
+                          return variant.price.toFixed(2);
+                        }
+                        return "0.00";
+                      })()}
+                    </p>
+                    <p className="text-gray-600">for {selectedVariant} variant</p>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="newPrice">New Price in ₹</Label>

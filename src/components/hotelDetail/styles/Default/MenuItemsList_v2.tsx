@@ -101,12 +101,24 @@ const MenuItemsList = ({
               // Find the offer for this item
               const offer = hotelData.offers?.find((o) => o.menu && o.menu.id === item.id);
               offerPrice = typeof offer?.offer_price === 'number' ? offer.offer_price : item.price;
-              oldPrice = typeof offer?.menu?.price === 'number' ? offer.menu.price : item.price;
+              
+              // Use variant price as old price if variant exists, otherwise use menu price
+              if (offer?.variant) {
+                oldPrice = offer.variant.price;
+              } else {
+                oldPrice = typeof offer?.menu?.price === 'number' ? offer.menu.price : item.price;
+              }
+              
               // Calculate discount for both group and single offers
-              if (typeof offer?.offer_price === 'number' && typeof offer?.menu?.price === 'number' && offer.menu.price > offer.offer_price) {
-                discountPercent = Math.round(((offer.menu.price - offer.offer_price) / offer.menu.price) * 100);
+              if (typeof offer?.offer_price === 'number' && oldPrice > offer.offer_price) {
+                discountPercent = Math.round(((oldPrice - offer.offer_price) / oldPrice) * 100);
               }
             }
+            
+            // Get variant name for display if item has an offer with variant
+            const offer = hotelData.offers?.find((o) => o.menu && o.menu.id === item.id);
+            const variantName = offer?.variant?.name;
+            const displayName = variantName ? `${item.name} (${variantName})` : item.name;
             return (
               <ItemCard
                 hotelData={hotelData}
@@ -120,6 +132,7 @@ const MenuItemsList = ({
                 offerPrice={offerPrice}
                 oldPrice={oldPrice}
                 discountPercent={discountPercent}
+                displayName={displayName}
               />
             );
           })}

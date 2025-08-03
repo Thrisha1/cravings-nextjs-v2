@@ -20,6 +20,7 @@ const ItemCard = ({
   offerPrice,
   oldPrice,
   discountPercent,
+  displayName,
 }: {
   item: HotelDataMenus;
   styles: Styles;
@@ -32,6 +33,7 @@ const ItemCard = ({
   offerPrice?: number;
   oldPrice?: number;
   discountPercent?: number;
+  displayName?: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showVariants, setShowVariants] = useState(false);
@@ -85,8 +87,11 @@ const ItemCard = ({
       });
       setVariantQuantities(newVariantQuantities);
     } else {
+      // For items without variants, check both regular item and variant-specific items (for offer items)
       const itemInCart = items?.find((i) => i.id === item.id);
-      setItemQuantity(itemInCart?.quantity || 0);
+      const variantItems = items?.filter((i) => i.id.startsWith(`${item.id}|`)) || [];
+      const totalQuantity = (itemInCart?.quantity || 0) + variantItems.reduce((sum, i) => sum + i.quantity, 0);
+      setItemQuantity(totalQuantity);
     }
   }, [items, item.id, item.variants?.length]);
 
@@ -98,6 +103,30 @@ const ItemCard = ({
   }, [variantQuantities]);
 
   const handleAddItem = () => {
+    // If this is an offer item with a specific variant, add that variant directly
+    if (isOfferItem && offerPrice && oldPrice) {
+      // Find the offer to get the variant information
+      const offer = hotelData?.offers?.find((o) => o.menu && o.menu.id === item.id);
+      if (offer?.variant) {
+        // Add the specific variant from the offer
+        addItem({
+          ...item,
+          id: `${item.id}|${offer.variant.name}`,
+          name: `${item.name} (${offer.variant.name})`,
+          price: offerPrice, // Use the offer price
+          variantSelections: [
+            {
+              name: offer.variant.name,
+              price: offer.variant.price,
+              quantity: 1,
+            },
+          ],
+        });
+        return;
+      }
+    }
+    
+    // Regular logic for items without offers
     if (hasVariants) {
       setShowVariants(!showVariants);
     } else {
@@ -168,7 +197,7 @@ const ItemCard = ({
                 spanClassName="opacity-100"
                 className="capitalize text-xl font-bold"
               >
-                {item.name}
+                {displayName || item.name}
               </DescriptionWithTextBreak>
               {currency !== "🚫" && (
                 <div
@@ -346,7 +375,7 @@ const ItemCard = ({
           {/* ADD BUTTONS LOGIC */}
           {showAddButton ? (
             <>
-              {hasVariants ? (
+              {hasVariants && !isOfferItem ? (
                 <div className="flex transition-all duration-500 gap-2 items-center justify-end w-full mt-2">
                   <div
                     onClick={() => setShowVariants((prev) => !prev)}
@@ -407,7 +436,7 @@ const ItemCard = ({
               )}
             </>
           ) : (
-            hasVariants && (
+            hasVariants && !isOfferItem && (
               <div className="flex transition-all duration-500 gap-2 items-center justify-end w-full mt-2">
                 <div
                   onClick={() => setShowVariants((prev) => !prev)}
