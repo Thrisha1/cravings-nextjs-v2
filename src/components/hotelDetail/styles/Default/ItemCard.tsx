@@ -21,6 +21,7 @@ const ItemCard = ({
   oldPrice,
   discountPercent,
   displayName,
+  hasMultipleVariantsOnOffer = false,
 }: {
   item: HotelDataMenus;
   styles: Styles;
@@ -34,6 +35,7 @@ const ItemCard = ({
   oldPrice?: number;
   discountPercent?: number;
   displayName?: string;
+  hasMultipleVariantsOnOffer?: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showVariants, setShowVariants] = useState(false);
@@ -103,6 +105,12 @@ const ItemCard = ({
   }, [variantQuantities]);
 
   const handleAddItem = () => {
+    // If this item has multiple variants on offer, show options instead of adding directly
+    if (hasMultipleVariantsOnOffer) {
+      setShowVariants(!showVariants);
+      return;
+    }
+    
     // If this is an offer item with a specific variant, add that variant directly
     if (isOfferItem && offerPrice && oldPrice) {
       // Find the offer to get the variant information
@@ -160,6 +168,13 @@ const ItemCard = ({
 
   const getVariantQuantity = (name: string) => {
     return variantQuantities[name] || 0;
+  };
+
+  // Check if a specific variant has an offer
+  const getVariantOffer = (variantName: string) => {
+    return hotelData?.offers?.find((o) => 
+      o.menu && o.menu.id === item.id && o.variant?.name === variantName
+    );
   };
 
   const isOrderable = item.is_available && !isOutOfStock;
@@ -226,9 +241,13 @@ const ItemCard = ({
                         </span>
                       ) : isOfferItem && offerPrice ? (
                         <span>
-                          <span className="line-through text-gray-400 mr-2">
-                            {currency} {parseInt(String(oldPrice ?? item.price))}
-                          </span>
+                          {hasMultipleVariantsOnOffer ? (
+                            <span className="text-sm font-bold">From </span>
+                          ) : (
+                            <span className="line-through text-gray-400 mr-2">
+                              {currency} {parseInt(String(oldPrice ?? item.price))}
+                            </span>
+                          )}
                           <span className="text-accent font-bold text-2xl" style={{ color: styles.accent }}>
                             {currency} {parseInt(String(offerPrice))}
                           </span>
@@ -300,74 +319,111 @@ const ItemCard = ({
           >
             {hasVariants && (
               <div className="w-full mt-2 space-y-3 divide-y-2 divide-gray-100">
-                {item.variants?.map((variant) => (
-                  <div
-                    key={variant.name}
-                    className="pt-3 rounded-lg flex justify-between items-center gap-5 w-full"
-                  >
-                    <div className="grid">
-                      <span className="font-semibold ">{variant.name}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div
-                        style={{ color: styles.accent }}
-                        className="text-2xl font-black text-nowrap"
-                      >
-                        {isPriceAsPerSize ? (
-                          <div className="text-sm font-normal">{`(Price as per size)`}</div>
-                        ) : (
-                          <>
-                            {currency}{" "}
-                            {hotelData?.id ===
-                            "767da2a8-746d-42b6-9539-528b6b96ae09"
-                              ? variant.price.toFixed(3)
-                              : variant.price}
-                          </>
-                        )}
+                {/* Show variants based on offer status */}
+                {(() => {
+                  if (isOfferItem && hasMultipleVariantsOnOffer) {
+                    // Show only variants that are on offer
+                    const offerVariants = hotelData?.offers
+                      ?.filter((o) => o.menu && o.menu.id === item.id && o.variant)
+                      ?.map((o) => o.variant)
+                      ?.filter(Boolean) || [];
+                    return offerVariants;
+                  } else if (isOfferItem && offerPrice && oldPrice && !hasMultipleVariantsOnOffer) {
+                    // Show only the offer variant for single variant offers
+                    const offer = hotelData?.offers?.find((o) => o.menu && o.menu.id === item.id);
+                    return offer?.variant ? [offer.variant] : item.variants || [];
+                  } else {
+                    // Show all variants for regular items
+                    return item.variants || [];
+                  }
+                })().map((variant) => {
+                  const variantOffer = getVariantOffer(variant.name);
+                  const hasVariantOffer = !!variantOffer;
+                  const variantOfferPrice = variantOffer?.offer_price;
+                  const variantOriginalPrice = variantOffer?.variant?.price || variant.price;
+
+                  return (
+                    <div
+                      key={variant.name}
+                      className="pt-3 rounded-lg flex justify-between items-center gap-5 w-full"
+                    >
+                      <div className="grid">
+                        <span className="font-semibold ">{variant.name}</span>
                       </div>
-                      {showAddButton && (
-                        <div className="flex gap-2 items-center justify-end">
-                          {getVariantQuantity(variant.name) > 0 ? (
-                            <div
-                              style={{
-                                backgroundColor: styles.accent,
-                                ...styles.border,
-                                color: "white",
-                              }}
-                              className="rounded-full transition-all duration-500 px-5 py-2 font-medium flex items-center gap-4 cursor-pointer"
-                            >
-                              <div
-                                className="active:scale-95"
-                                onClick={() => handleVariantRemove(variant)}
-                              >
-                                -
-                              </div>
-                              <div>{getVariantQuantity(variant.name)}</div>
-                              <div
-                                className="active:scale-95"
-                                onClick={() => handleVariantAdd(variant)}
-                              >
-                                +
-                              </div>
-                            </div>
+                      <div className="flex items-center gap-3">
+                        <div
+                          style={{ color: styles.accent }}
+                          className="text-2xl font-black text-nowrap"
+                        >
+                          {isPriceAsPerSize ? (
+                            <div className="text-sm font-normal">{`(Price as per size)`}</div>
                           ) : (
-                            <div
-                              onClick={() => handleVariantAdd(variant)}
-                              style={{
-                                backgroundColor: styles.accent,
-                                ...styles.border,
-                                color: "white",
-                              }}
-                              className="rounded-full px-6 py-2 font-medium cursor-pointer"
-                            >
-                              {"Add"}
-                            </div>
+                            <>
+                              {hasVariantOffer ? (
+                                <div className="flex flex-col items-end">
+                                  <span className="line-through text-gray-400 text-sm">
+                                    {currency} {variantOriginalPrice}
+                                  </span>
+                                  <span className="text-accent font-bold" style={{ color: styles.accent }}>
+                                    {currency} {variantOfferPrice}
+                                  </span>
+                                </div>
+                              ) : (
+                                <>
+                                  {currency}{" "}
+                                  {hotelData?.id ===
+                                  "767da2a8-746d-42b6-9539-528b6b96ae09"
+                                    ? variant.price.toFixed(3)
+                                    : variant.price}
+                                </>
+                              )}
+                            </>
                           )}
                         </div>
-                      )}
+                        {showAddButton && (
+                          <div className="flex gap-2 items-center justify-end">
+                            {getVariantQuantity(variant.name) > 0 ? (
+                              <div
+                                style={{
+                                  backgroundColor: styles.accent,
+                                  ...styles.border,
+                                  color: "white",
+                                }}
+                                className="rounded-full transition-all duration-500 px-5 py-2 font-medium flex items-center gap-4 cursor-pointer"
+                              >
+                                <div
+                                  className="active:scale-95"
+                                  onClick={() => handleVariantRemove(variant)}
+                                >
+                                  -
+                                </div>
+                                <div>{getVariantQuantity(variant.name)}</div>
+                                <div
+                                  className="active:scale-95"
+                                  onClick={() => handleVariantAdd(variant)}
+                                >
+                                  +
+                                </div>
+                              </div>
+                            ) : (
+                              <div
+                                onClick={() => handleVariantAdd(variant)}
+                                style={{
+                                  backgroundColor: styles.accent,
+                                  ...styles.border,
+                                  color: "white",
+                                }}
+                                className="rounded-full px-6 py-2 font-medium cursor-pointer"
+                              >
+                                {"Add"}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -391,6 +447,22 @@ const ItemCard = ({
                       : "Choose Options"}
                   </div>
                 </div>
+              ) : hasMultipleVariantsOnOffer ? (
+                <div className="flex transition-all duration-500 gap-2 items-center justify-end w-full mt-2">
+                  <div
+                    onClick={() => setShowVariants((prev) => !prev)}
+                    style={{
+                      backgroundColor: !showVariants ? styles.accent : "white",
+                      ...styles.border,
+                      color: !showVariants ? "white" : "black",
+                    }}
+                    className="rounded-full px-6 py-2 font-medium cursor-pointer"
+                  >
+                    {itemQuantity > 0
+                      ? `Added (${itemQuantity})`
+                      : "See Options"}
+                  </div>
+                </div>
               ) : (
                 <div className="flex gap-2 items-center justify-end w-full mt-2">
                   {itemQuantity > 0 ? (
@@ -406,9 +478,31 @@ const ItemCard = ({
                         className="active:scale-95"
                         onClick={() => {
                           if (itemQuantity > 1) {
-                            decreaseQuantity(item.id as string);
+                            // If this is an offer item with a specific variant, decrease that variant
+                            if (isOfferItem && offerPrice && oldPrice) {
+                              const offer = hotelData?.offers?.find((o) => o.menu && o.menu.id === item.id);
+                              if (offer?.variant) {
+                                const variantId = `${item.id}|${offer.variant.name}`;
+                                decreaseQuantity(variantId);
+                              } else {
+                                decreaseQuantity(item.id as string);
+                              }
+                            } else {
+                              decreaseQuantity(item.id as string);
+                            }
                           } else {
-                            removeItem(item.id as string);
+                            // If this is an offer item with a specific variant, remove that variant
+                            if (isOfferItem && offerPrice && oldPrice) {
+                              const offer = hotelData?.offers?.find((o) => o.menu && o.menu.id === item.id);
+                              if (offer?.variant) {
+                                const variantId = `${item.id}|${offer.variant.name}`;
+                                removeItem(variantId);
+                              } else {
+                                removeItem(item.id as string);
+                              }
+                            } else {
+                              removeItem(item.id as string);
+                            }
                           }
                         }}
                       >
@@ -436,7 +530,7 @@ const ItemCard = ({
               )}
             </>
           ) : (
-            hasVariants && !isOfferItem && (
+            (hasVariants && !isOfferItem) || hasMultipleVariantsOnOffer ? (
               <div className="flex transition-all duration-500 gap-2 items-center justify-end w-full mt-2">
                 <div
                   onClick={() => setShowVariants((prev) => !prev)}
@@ -450,7 +544,7 @@ const ItemCard = ({
                   {showVariants ? "Hide Options" : "Show Options"}
                 </div>
               </div>
-            )
+            ) : null
           )}
         </div>
       </div>

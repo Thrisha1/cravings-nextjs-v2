@@ -13,6 +13,8 @@ const ItemCard = ({
   offerData,
   feature_flags,
   tableNumber,
+  hasMultipleVariantsOnOffer = false,
+  allItemOffers,
 }: {
   item: HotelDataMenus;
   styles: DefaultHotelPageProps["styles"];
@@ -20,6 +22,8 @@ const ItemCard = ({
   offerData?: Offer;
   feature_flags: HotelData["feature_flags"];
   tableNumber: number;
+  hasMultipleVariantsOnOffer?: boolean;
+  allItemOffers?: Offer[];
 }) => {
   const [showVariants, setShowVariants] = useState(false);
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
@@ -51,11 +55,25 @@ const ItemCard = ({
   // Calculate discount percentage if offer exists
   const discountPercentage =
     offerData && shouldShowPrice
-      ? Math.round(
-          (((offerData.variant ? offerData.variant.price : offerData.menu.price) - (offerData.offer_price ?? 0)) /
-            (offerData.variant ? offerData.variant.price : offerData.menu.price)) *
-            100
-        )
+      ? (() => {
+          if (hasMultipleVariantsOnOffer && allItemOffers) {
+            // Calculate discount based on lowest offer price vs lowest original price
+            const lowestOfferPrice = Math.min(...allItemOffers.map(o => o.offer_price || 0));
+            const lowestOriginalPrice = Math.min(...allItemOffers.map(o => 
+              o.variant ? o.variant.price : (o.menu?.price || 0)
+            ));
+            if (lowestOriginalPrice > lowestOfferPrice) {
+              return Math.round(((lowestOriginalPrice - lowestOfferPrice) / lowestOriginalPrice) * 100);
+            }
+            return 0;
+          } else {
+            // Single variant offer
+            const originalPrice = offerData.variant ? offerData.variant.price : offerData.menu.price;
+            return Math.round(
+              ((originalPrice - (offerData.offer_price ?? 0)) / originalPrice) * 100
+            );
+          }
+        })()
       : 0;
 
   useEffect(() => {
@@ -90,6 +108,12 @@ const ItemCard = ({
   }, [variantQuantities]);
 
   const handleAddItem = () => {
+    // If this item has multiple variants on offer, show options instead of adding directly
+    if (hasMultipleVariantsOnOffer) {
+      setShowVariants(!showVariants);
+      return;
+    }
+    
     // If this item has an offer with a specific variant, add that variant directly
     if (offerData?.variant) {
       addItem({
@@ -145,6 +169,13 @@ const ItemCard = ({
     return variantQuantities[name] || 0;
   };
 
+  // Check if a specific variant has an offer
+  const getVariantOffer = (variantName: string) => {
+    return hoteldata?.offers?.find((o) => 
+      o.menu && o.menu.id === item.id && o.variant?.name === variantName
+    );
+  };
+
   const isOrderable = item.is_available && !isOutOfStock;
   const showAddButton =
     isOrderable &&
@@ -156,7 +187,7 @@ const ItemCard = ({
       <div className="p-4 flex justify-between relative">
         <div>
           <h3 className="capitalize text-lg font-semibold">
-            {offerData?.variant ? `${item.name} (${offerData.variant.name})` : item.name}
+            {offerData?.variant && !hasMultipleVariantsOnOffer ? `${item.name} (${offerData.variant.name})` : item.name}
           </h3>
           <p className="text-sm opacity-50">{item.description}</p>
           {/* --- MODIFIED: Wrapped entire price section in condition --- */}
@@ -180,10 +211,12 @@ const ItemCard = ({
                           {discountPercentage}% OFF
                         </span>
                       </div>
-                      <span className="text-sm line-through opacity-70">
-                        {hoteldata?.currency || "₹"}{" "}
-                        {offerData.variant ? offerData.variant.price : offerData.menu.price}
-                      </span>
+                      {!hasMultipleVariantsOnOffer && (
+                        <span className="text-sm line-through opacity-70">
+                          {hoteldata?.currency || "₹"}{" "}
+                          {offerData.variant ? offerData.variant.price : offerData.menu.price}
+                        </span>
+                      )}
                     </div>
                   ) : (
                     <div className="contents">
@@ -236,7 +269,7 @@ const ItemCard = ({
 
             {isOrderable && (
               <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
-                {hasVariants && !offerData ? (
+                {(hasVariants && !offerData) || hasMultipleVariantsOnOffer ? (
                   <div
                     onClick={() => setShowVariants(!showVariants)}
                     style={{
@@ -245,7 +278,7 @@ const ItemCard = ({
                     }}
                     className="rounded-full px-4 py-1 font-medium text-sm whitespace-nowrap h-fit cursor-pointer"
                   >
-                    {itemQuantity > 0 ? `Added (${itemQuantity})` : (showVariants ? "Hide Options" : "Show Options")}
+                    {itemQuantity > 0 ? `Added (${itemQuantity})` : (showVariants ? "Hide Options" : hasMultipleVariantsOnOffer ? "See Options" : "Show Options")}
                   </div>
                 ) : showAddButton && itemQuantity > 0 ? (
                   <div
@@ -258,11 +291,23 @@ const ItemCard = ({
                     <div
                       className="cursor-pointer active:scale-95"
                       onClick={(e) => {
-                        e.stopPropagation();
+                        e.preventDefault();
                         if (itemQuantity > 1) {
-                          decreaseQuantity(item.id as string);
+                          // If this item has an offer with a specific variant, decrease that variant
+                          if (offerData?.variant) {
+                            const variantId = `${item.id}|${offerData.variant.name}`;
+                            decreaseQuantity(variantId);
+                          } else {
+                            decreaseQuantity(item.id as string);
+                          }
                         } else {
-                          removeItem(item.id as string);
+                          // If this item has an offer with a specific variant, remove that variant
+                          if (offerData?.variant) {
+                            const variantId = `${item.id}|${offerData.variant.name}`;
+                            removeItem(variantId);
+                          } else {
+                            removeItem(item.id as string);
+                          }
                         }
                       }}
                     >
@@ -304,27 +349,61 @@ const ItemCard = ({
       {/* Variants section */}
       {showVariants && hasVariants && (
         <div className="w-full mt-2 space-y-3">
-          {item.variants?.map((variant) => (
-            <div
-              key={variant.name}
-              className="py-2 px-4 rounded-lg flex justify-between items-center gap-5 w-full"
-            >
-              <div className="grid">
-                <span className="font-semibold">{variant.name}</span>
-                 {/* --- MODIFIED: Wrapped variant price in condition --- */}
-                {shouldShowPrice &&
-                  !item.is_price_as_per_size &&
-                  showAddButton && (
-                    <div
-                      style={{
-                        color: styles?.accent || "#000",
-                      }}
-                      className="text-lg font-bold"
-                    >
-                      {hoteldata?.currency || "₹"} {variant.price}
-                    </div>
-                  )}
-              </div>
+          {/* Show variants based on offer status */}
+          {(() => {
+            if (hasMultipleVariantsOnOffer && allItemOffers) {
+              // Show only variants that are on offer
+              return allItemOffers
+                .filter((offer) => offer.variant)
+                .map((offer) => offer.variant!)
+                .filter(Boolean);
+            } else if (offerData?.variant && !hasMultipleVariantsOnOffer) {
+              // Show only the offer variant for single variant offers
+              return [offerData.variant];
+            } else {
+              // Show all variants for regular items
+              return item.variants || [];
+            }
+          })().filter(Boolean).map((variant) => {
+            const variantOffer = getVariantOffer(variant.name);
+            const hasVariantOffer = !!variantOffer;
+            const variantOfferPrice = variantOffer?.offer_price;
+            const variantOriginalPrice = variantOffer?.variant?.price || variant.price;
+
+            return (
+              <div
+                key={variant.name}
+                className="py-2 px-4 rounded-lg flex justify-between items-center gap-5 w-full"
+              >
+                <div className="grid">
+                  <span className="font-semibold">{variant.name}</span>
+                   {/* --- MODIFIED: Wrapped variant price in condition --- */}
+                  {shouldShowPrice &&
+                    !item.is_price_as_per_size &&
+                    showAddButton && (
+                      <div
+                        style={{
+                          color: styles?.accent || "#000",
+                        }}
+                        className="text-lg font-bold"
+                      >
+                        {hasVariantOffer ? (
+                          <div className="flex flex-col">
+                            <span className="line-through text-gray-400 text-sm">
+                              {hoteldata?.currency || "₹"} {variantOriginalPrice}
+                            </span>
+                            <span className="text-accent font-bold" style={{ color: styles.accent }}>
+                              {hoteldata?.currency || "₹"} {variantOfferPrice}
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            {hoteldata?.currency || "₹"} {variant.price}
+                          </>
+                        )}
+                      </div>
+                    )}
+                </div>
               {showAddButton ? (
                 <div className="flex gap-2 items-center justify-end">
                   {getVariantQuantity(variant.name) > 0 ? (
@@ -380,7 +459,8 @@ const ItemCard = ({
                 )
               )}
             </div>
-          ))}
+          );
+        })}
         </div>
       )}
     </>
