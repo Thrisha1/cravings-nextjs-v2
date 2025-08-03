@@ -36,9 +36,9 @@ export default function Login() {
     try {
       await signInWithPhone(cleanedPhone);
       await Notification.token.save();
-      const redirectPath = localStorage.getItem("redirectPath");
+      const redirectPath = localStorage?.getItem("redirectPath");
       if (redirectPath) {
-        localStorage.removeItem("redirectPath");
+        localStorage?.removeItem("redirectPath");
         navigate.push(redirectPath);
       } else {
         navigate.push("/");

@@ -67,8 +67,8 @@ export const useBulkUpload = () => {
   }, [fetchMenu, userData?.role]);
 
   useEffect(() => {
-    const savedItems = localStorage.getItem("bulkMenuItems");
-    const savedJsonInput = localStorage.getItem("jsonInput");
+    const savedItems = localStorage?.getItem("bulkMenuItems");
+    const savedJsonInput = localStorage?.getItem("jsonInput");
     if (savedJsonInput) {
       setJsonInput(savedJsonInput);
     }
@@ -93,7 +93,7 @@ export const useBulkUpload = () => {
   const handleJsonSubmit = async (jsonMenu?: string) => {
     try {
       const parsedItems = JSON.parse(jsonMenu || jsonInput);
-      localStorage.setItem("jsonInput", jsonMenu || jsonInput);
+      localStorage?.setItem("jsonInput", jsonMenu || jsonInput);
       const items = Array.isArray(parsedItems) ? parsedItems : [parsedItems];
 
       items.forEach(validateMenuItem);
@@ -112,7 +112,7 @@ export const useBulkUpload = () => {
       }));
 
       setMenuItems(initialItems);
-      localStorage.setItem("bulkMenuItems", JSON.stringify(initialItems));
+      localStorage?.setItem("bulkMenuItems", JSON.stringify(initialItems));
 
       toast.success("All items processed successfully!");
     } catch (error) {
@@ -126,8 +126,8 @@ export const useBulkUpload = () => {
   const handleClear = () => {
     setMenuItems([]);
     setJsonInput("");
-    localStorage.removeItem("bulkMenuItems");
-    localStorage.removeItem("jsonInput");
+    localStorage?.removeItem("bulkMenuItems");
+    localStorage?.removeItem("jsonInput");
   };
 
   const handleHotelSelect = async (hotelId: string) => {
@@ -174,7 +174,7 @@ export const useBulkUpload = () => {
       const updatedItems = [...menuItems];
       updatedItems[index] = { ...updatedItems[index], isAdded: true };
       setMenuItems(updatedItems);
-      localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+      localStorage?.setItem("bulkMenuItems", JSON.stringify(updatedItems));
       fetchMenu(hotelId);
       toast.success("Item added to menu successfully!");
     } catch (error) {
@@ -190,7 +190,7 @@ export const useBulkUpload = () => {
   const handleDelete = (index: number) => {
     const updatedItems = menuItems.filter((_, i) => i !== index);
     setMenuItems(updatedItems);
-    localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+    localStorage?.setItem("bulkMenuItems", JSON.stringify(updatedItems));
   };
 
   const handleSelectAll = () => {
@@ -201,7 +201,7 @@ export const useBulkUpload = () => {
       isSelected: newSelectAll,
     }));
     setMenuItems(updatedItems);
-    localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+    localStorage?.setItem("bulkMenuItems", JSON.stringify(updatedItems));
   };
 
   const handleSelectItem = (index: number) => {
@@ -215,7 +215,7 @@ export const useBulkUpload = () => {
       isSelected: !updatedItems[index].isSelected,
     };
     setMenuItems(updatedItems);
-    localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+    localStorage?.setItem("bulkMenuItems", JSON.stringify(updatedItems));
   };
 
   const handleUploadSelected = async (hotelId?: string) => {
@@ -280,7 +280,7 @@ export const useBulkUpload = () => {
 
         updatedItems[editingItem.index] = validatedItem;
         setMenuItems(updatedItems);
-        localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+        localStorage?.setItem("bulkMenuItems", JSON.stringify(updatedItems));
         setEditingItem(null);
         setIsEditModalOpen(false);
       } catch (err) {
@@ -322,7 +322,7 @@ export const useBulkUpload = () => {
       if (urls && urls.length > 0) {
         updatedItems[index].image = urls[0];
         setMenuItems([...updatedItems]);
-        localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+        localStorage?.setItem("bulkMenuItems", JSON.stringify(updatedItems));
       }
     } catch (error) {
       console.error("Error fetching image:", error);
@@ -338,7 +338,7 @@ export const useBulkUpload = () => {
         image: newImage,
       };
       setMenuItems(updatedItems);
-      localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+      localStorage?.setItem("bulkMenuItems", JSON.stringify(updatedItems));
     }
   };
 
@@ -409,7 +409,7 @@ export const useBulkUpload = () => {
 
         processedCount += batch.length;
         setMenuItems([...updatedItems]);
-        localStorage.setItem("bulkMenuItems", JSON.stringify(updatedItems));
+        localStorage?.setItem("bulkMenuItems", JSON.stringify(updatedItems));
       }
 
       toast.success(successMessage);

@@ -159,7 +159,7 @@ const OrdersTab = () => {
         orderAlertRef.current = true;
 
         // Show alert dialog with highest priority
-        const isAlertActive = localStorage.getItem("alertActive") === "1";
+        const isAlertActive = localStorage?.getItem("alertActive") === "1";
 
         if (isAlertActive) {
           soundRef.current?.play();
@@ -231,7 +231,7 @@ const OrdersTab = () => {
     if (value === "table" || value === "delivery" || value === "pos") {
       setActiveTab(value);
       setNewOrders((prev) => ({ ...prev, [value]: false }));
-      localStorage.setItem("ordersActiveTab", value);
+      localStorage?.setItem("ordersActiveTab", value);
     }
   };
 

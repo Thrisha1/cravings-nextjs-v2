@@ -13,7 +13,7 @@ import RegistrationForm from "./components/RegistrationForm";
 import MenuUploadForm from "./components/MenuUploadForm";
 import BusinessPreview from "./components/BusinessPreview";
 
-// Define localStorage keys
+// Define localStorage? keys
 const LS_BUSINESS_DATA = "cravings_onboard_business_data";
 const LS_CURRENT_STEP = "cravings_onboard_current_step";
 const LS_MENU_ITEMS = "cravings_onboard_menu_items";
@@ -84,25 +84,25 @@ export default function OnboardingPage() {
   // State for tracking errors
   const [error, setError] = useState<string | null>(null);
 
-  // Load data from localStorage on component mount
+  // Load data from localStorage? on component mount
   useEffect(() => {
     try {
       // Load business data
-      const storedBusinessData = localStorage.getItem(LS_BUSINESS_DATA);
+      const storedBusinessData = localStorage?.getItem(LS_BUSINESS_DATA);
       if (storedBusinessData) {
         const parsedData = JSON.parse(storedBusinessData);
         setBusinessData(parsedData);
       }
       
       // Load menu items
-      const storedMenuItems = localStorage.getItem(LS_MENU_ITEMS);
+      const storedMenuItems = localStorage?.getItem(LS_MENU_ITEMS);
       if (storedMenuItems) {
         const parsedMenuItems = JSON.parse(storedMenuItems);
         setMenuItems(parsedMenuItems);
       }
       
       // Load current step
-      const storedStep = localStorage.getItem(LS_CURRENT_STEP);
+      const storedStep = localStorage?.getItem(LS_CURRENT_STEP);
       if (storedStep) {
         const step = parseInt(storedStep);
         if (step >= 1 && step <= steps.length) {
@@ -110,20 +110,20 @@ export default function OnboardingPage() {
         }
       }
     } catch (err) {
-      console.error("Error loading data from localStorage:", err);
+      console.error("Error loading data from localStorage?:", err);
     }
   }, []);
   
-  // Save business data to localStorage whenever it changes
+  // Save business data to localStorage? whenever it changes
   useEffect(() => {
     try {
-      localStorage.setItem(LS_BUSINESS_DATA, JSON.stringify(businessData));
+      localStorage?.setItem(LS_BUSINESS_DATA, JSON.stringify(businessData));
     } catch (err) {
-      console.error("Error saving business data to localStorage:", err);
+      console.error("Error saving business data to localStorage?:", err);
     }
   }, [businessData]);
   
-  // Save menu items to localStorage whenever they change
+  // Save menu items to localStorage? whenever they change
   useEffect(() => {
     try {
       // Create a version with optimized image storage
@@ -139,21 +139,21 @@ export default function OnboardingPage() {
         return item;
       });
       
-      localStorage.setItem(LS_MENU_ITEMS, JSON.stringify(storableMenuItems));
+      localStorage?.setItem(LS_MENU_ITEMS, JSON.stringify(storableMenuItems));
     } catch (err) {
-      console.error("Error saving menu items to localStorage:", err);
+      console.error("Error saving menu items to localStorage?:", err);
       toast.error("Your menu data exceeded the storage limit. Some images might not persist between sessions.", {
         duration: 5000,
       });
     }
   }, [menuItems]);
   
-  // Save current step to localStorage whenever it changes
+  // Save current step to localStorage? whenever it changes
   useEffect(() => {
     try {
-      localStorage.setItem(LS_CURRENT_STEP, currentStep.toString());
+      localStorage?.setItem(LS_CURRENT_STEP, currentStep.toString());
     } catch (err) {
-      console.error("Error saving current step to localStorage:", err);
+      console.error("Error saving current step to localStorage?:", err);
     }
   }, [currentStep]);
 

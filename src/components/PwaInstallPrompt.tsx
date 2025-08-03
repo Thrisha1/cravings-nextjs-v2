@@ -20,12 +20,12 @@ const PwaInstallPrompt = () => {
   ];
 
   const handleOnClose = () => {
-    localStorage.setItem("isInstallable", "0");
+    localStorage?.setItem("isInstallable", "0");
     setIsDialogOpen(false);
   };
 
   useEffect(() => {
-    const hasClosed = localStorage.getItem("isInstallable");
+    const hasClosed = localStorage?.getItem("isInstallable");
     if (hasClosed === "0") return;
 
     if (isInstallable) {

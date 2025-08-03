@@ -84,6 +84,7 @@ export interface Order {
     phone?: string;
     email: string;
   };
+  tableName?: string | null; 
   extraCharges?:
     | {
         name: string;
@@ -371,7 +372,9 @@ const useOrderStore = create(
         }
       },
 
-      setOpenPlaceOrderModal: (open) => set({ open_place_order_modal: open }),
+      setOpenPlaceOrderModal: (open) => {
+        set({ open_place_order_modal: open })
+      },
 
       setUserCoordinates: (coords) => {
         set({ coordinates: coords });
@@ -401,6 +404,7 @@ const useOrderStore = create(
               notes: order.notes || null,
               userId: order.user_id,
               gstIncluded: order.gst_included,
+              tableName: order.qr_code?.table_name || order.table_name || null,
               extraCharges: order.extra_charges || [], // Handle null case
               delivery_charge: order.delivery_charge, // Include delivery_charge
               user: order.user,
@@ -1084,6 +1088,10 @@ const useOrderStore = create(
                 user_id
                 orderedby
                 captain_id
+                qr_code{
+                  table_name
+                }
+                table_name
                 captainid {
                   id
                   name
@@ -1159,6 +1167,7 @@ const useOrderStore = create(
               user: order.user,
               orderedby: order.orderedby,
               captain_id: order.captain_id,
+              tableName: order.qr_code?.table_name || order.table_name || null,
               captain: captainData, // Use the properly structured captain data
               items: order.order_items.map((i: any) => ({
                 id: i.menu?.id,
@@ -1207,7 +1216,6 @@ const useOrderStore = create(
 );
 
 function transformOrderFromHasura(order: any): Order {
-  console.log("Transforming order from Hasura:", order);
   return {
     id: order.id,
     items: order.order_items.map((item: any) => ({
@@ -1238,6 +1246,7 @@ function transformOrderFromHasura(order: any): Order {
     deliveryAddress: order.delivery_address,
     gstIncluded: order.gst_included || 0,
     orderedby: order.orderedby,
+    tableName: order.qr_code?.table_name || null,
     delivery_charge: order.delivery_charge || null,
     delivery_location: order.delivery_location,
     order_number: order.order_number,

@@ -20,7 +20,11 @@ query GetOrder($id: uuid!) {
     notes
     table_number
     qr_id
+    qr_code{
+      table_name
+    }
     type
+    table_name
     delivery_address
     delivery_location
     display_id
@@ -81,6 +85,7 @@ const PrintOrderPage = () => {
           })),
           extra_charges: orders_by_pk.extra_charges || [],
           tableNumber: orders_by_pk.table_number, // Ensure this matches your usage
+          tableName: orders_by_pk.qr_code?.table_name || orders_by_pk.table_name || null, // Ensure this matches your usage
           deliveryAddress: orders_by_pk.delivery_address, // Ensure this matches your usage
         };
 
@@ -214,8 +219,8 @@ const PrintOrderPage = () => {
     if (!order.tableNumber) return "Takeaway";
     return ` ${
       isParcel
-        ? `Parcel (Table ${order.tableNumber})`
-        : `Table ${order.tableNumber}`
+        ? `Parcel (Table ${order.tableName || order.tableNumber})`
+        : `Table ${order.tableName || order.tableNumber}`
     }`;
   };
 

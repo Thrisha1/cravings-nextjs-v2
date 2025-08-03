@@ -362,6 +362,7 @@ const page = async ({
         offers={filteredOffers}
         tableNumber={tableNumber}
         theme={theme}
+        qrData={qr_codes[0]}
         qrGroup={qr_codes[0].qr_group}
         qrId={validQrId}
         selectedCategory={ cat }

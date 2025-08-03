@@ -276,7 +276,7 @@ const OrderItemCard = ({
         <div>
           {localOrder.type === "table_order" && (
             <p className="text-sm">
-              Table: {localOrder.tableNumber || "N/A"}{" "}
+              Table: {localOrder.tableName || localOrder.tableNumber || "N/A"}{" "}
               {isParsel ? `( Parcel )` : ""}
             </p>
           )}

@@ -37,7 +37,8 @@ export const createOrderMutation = `
     $delivery_location: geography,
     $captain_id: uuid,
     $notes: String,
-    $display_id: String
+    $display_id: String,
+    $table_name: String
   ) {
     insert_orders_one(object: {
       id: $id
@@ -58,6 +59,7 @@ export const createOrderMutation = `
       captain_id: $captain_id
       notes: $notes
       display_id: $display_id
+      table_name: $table_name
     }) {
       id
       total_price
@@ -278,6 +280,9 @@ subscription GetPaginatedPartnerOrders(
     user_id
     orderedby
     captain_id
+    qr_code {
+      table_name
+    }
     captainid {
       id
       name
@@ -348,6 +353,10 @@ subscription GetUserOrders($user_id: uuid!) {
     type
     delivery_address
     delivery_location
+    table_name
+    qr_code {
+      table_name
+    }
     notes
     status
     status_history

@@ -78,13 +78,13 @@ const WhatsappGroupJoinAlertDialog = ({ isPetraz }: { isPetraz: boolean }) => {
 
   useEffect(() => {
     // 1. If user has ever clicked "Join Now", never show anything again.
-    const hasJoined = localStorage.getItem("whatsappDialogJoined");
+    const hasJoined = localStorage?.getItem("whatsappDialogJoined");
     if (hasJoined === "true") {
       return;
     }
 
     // 2. If user has previously closed the modal, show the floating icon immediately.
-    const closedTimestamp = localStorage.getItem(
+    const closedTimestamp = localStorage?.getItem(
       "whatsappDialogClosedTimestamp"
     );
     if (closedTimestamp) {
@@ -173,12 +173,12 @@ const WhatsappGroupJoinAlertDialog = ({ isPetraz }: { isPetraz: boolean }) => {
   };
 
   const handleJoin = () => {
-    localStorage.setItem("whatsappDialogJoined", "true");
+    localStorage?.setItem("whatsappDialogJoined", "true");
     setDisplayState("hidden"); // Hide component permanently
   };
 
   const handleClose = () => {
-    localStorage.setItem(
+    localStorage?.setItem(
       "whatsappDialogClosedTimestamp",
       Date.now().toString()
     );
