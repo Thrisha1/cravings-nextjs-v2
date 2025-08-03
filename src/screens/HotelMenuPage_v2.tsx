@@ -19,6 +19,7 @@ import Default from "@/components/hotelDetail/styles/Default/Default";
 import Compact from "@/components/hotelDetail/styles/Compact/Compact";
 import { saveUserLocation } from "@/lib/saveUserLocLocal";
 import { QrCode, useQrDataStore } from "@/store/qrDataStore";
+import DeliveryTimeCampain from "@/components/hotelDetail/DeliveryTimeCampain";
 
 export type MenuItem = {
   description: string;
@@ -121,9 +122,7 @@ const HotelMenuPage = ({
   // ✅ Memoize offeredItems to avoid recalculating on every render
   const offeredItems = useMemo(() => {
     if (!hoteldata?.menus || !offers) return [];
-    const activeOfferMenuIds = new Set(
-      offers.map((offer) => offer.menu?.id)
-    );
+    const activeOfferMenuIds = new Set(offers.map((offer) => offer.menu?.id));
     return hoteldata.menus.filter(
       (item) =>
         activeOfferMenuIds.has(item.id || "") &&
@@ -172,7 +171,8 @@ const HotelMenuPage = ({
     if (selectedCategory === "all") {
       filteredItems =
         hoteldata.menus.filter(
-          (item) => item.category.is_active === undefined || item.category.is_active
+          (item) =>
+            item.category.is_active === undefined || item.category.is_active
         ) || [];
     } else if (selectedCategory === "Offer") {
       filteredItems = offeredItems;
@@ -197,11 +197,13 @@ const HotelMenuPage = ({
 
   // ✅ Memoize top-selling items
   const topItems = useMemo(() => {
-    return hoteldata?.menus.filter(
-      (item) =>
-        item.is_top === true &&
-        (item.category.is_active === undefined || item.category.is_active)
-    ) || [];
+    return (
+      hoteldata?.menus.filter(
+        (item) =>
+          item.is_top === true &&
+          (item.category.is_active === undefined || item.category.is_active)
+      ) || []
+    );
   }, [hoteldata?.menus]);
 
   // ✅ Memoize the function passed as a prop to prevent child re-renders
@@ -246,12 +248,37 @@ const HotelMenuPage = ({
   };
 
   const features = getFeatures(hoteldata?.feature_flags || "");
+  const isWithinDeliveryTime = () => {
+    if (!hoteldata?.delivery_rules?.delivery_time_allowed) return true;
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+
+    const convertTimeToMinutes = (timeStr: string) => {
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const startTime = convertTimeToMinutes(
+      hoteldata.delivery_rules.delivery_time_allowed.from ?? "00:00"
+    );
+    const endTime = convertTimeToMinutes(
+      hoteldata.delivery_rules.delivery_time_allowed.to ?? "23:59"
+    );
+    return currentTime >= startTime && currentTime <= endTime;
+  };
   const showOrderDrawer =
     (pathname.includes("qrScan") && features?.ordering.enabled) ||
-    (!pathname.includes("qrScan") && features?.delivery.enabled);
+    (!pathname.includes("qrScan") &&
+      features?.delivery.enabled &&
+      (hoteldata?.delivery_rules?.isDeliveryActive ?? true) &&
+      isWithinDeliveryTime());
 
   return (
     <>
+      {features?.delivery.enabled &&
+        hoteldata?.delivery_rules?.delivery_time_allowed && (
+          <DeliveryTimeCampain deliveryRules={hoteldata.delivery_rules} />
+        )}
       {renderPage()}
       {showOrderDrawer && (
         <section>
