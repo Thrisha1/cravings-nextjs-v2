@@ -486,8 +486,38 @@ export function DeliveryAndGeoLocationSettings({
                   </div>
                 )}
               </div>
+
+              
             </div>
           )}
+
+
+          <div className="space-y-2">
+                <Label>Need Delivery Location</Label>
+                {isEditingDelivery ? (
+                  <Select
+                    value={deliveryRules.needDeliveryLocation ? "yes" : "no"}
+                    onValueChange={(value) =>
+                      setDeliveryRules({
+                        ...deliveryRules,
+                        needDeliveryLocation: value === "yes",
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select option" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="yes">Yes</SelectItem>
+                      <SelectItem value="no">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="p-3 rounded-md border bg-muted/50">
+                    {deliveryRules.needDeliveryLocation ? "Yes" : "No"}
+                  </div>
+                )}
+              </div>
         </div>
 
         {/* Help Text */}
