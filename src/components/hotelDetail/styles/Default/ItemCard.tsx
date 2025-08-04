@@ -47,12 +47,45 @@ const ItemCard = ({
     Record<string, number>
   >({});
 
+  const isWithinDeliveryTime = () => {
+    if (!hotelData?.delivery_rules?.delivery_time_allowed) {
+      return true;
+    }
+
+    const convertTimeToMinutes = (timeStr: string) => {
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+
+    const startTime = convertTimeToMinutes(
+      hotelData.delivery_rules.delivery_time_allowed.from ?? "00:00"
+    );
+    const endTime = convertTimeToMinutes(
+      hotelData.delivery_rules.delivery_time_allowed.to ?? "23:59"
+    );
+
+    if (startTime > endTime) {
+      return currentTime >= startTime || currentTime <= endTime;
+    } else {
+      return currentTime >= startTime && currentTime <= endTime;
+    }
+  };
+
   // --- Feature Flags & Stock Logic ---
-  const hasOrderingFeature = getFeatures(feature_flags || "")?.ordering.enabled;
+  const hasOrderingFeature =
+    getFeatures(feature_flags || "")?.ordering.enabled &&
+    (hotelData?.delivery_rules?.isDeliveryActive ?? true) &&
+    isWithinDeliveryTime();
   const hasDeliveryFeature =
-    getFeatures(feature_flags || "")?.delivery.enabled && tableNumber === 0;
-  const hasStockFeature = getFeatures(feature_flags || "")?.stockmanagement
-    ?.enabled;
+    getFeatures(feature_flags || "")?.delivery.enabled && tableNumber === 0 &&
+    (hotelData?.delivery_rules?.isDeliveryActive ?? true) &&
+    isWithinDeliveryTime();
+  
+    const hasStockFeature =
+    getFeatures(feature_flags || "")?.stockmanagement?.enabled 
 
   const isOutOfStock =
     hasStockFeature &&
@@ -186,7 +219,7 @@ const ItemCard = ({
   return (
     <div className="h-full relative overflow-hidden">
       {/* Discount badge for offer items */}
-      {typeof discountPercent === 'number' && discountPercent > 0 && (
+      {typeof discountPercent === "number" && discountPercent > 0 && (
         <div className="absolute top-3 right-3 z-10 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
           -{discountPercent}%
         </div>
@@ -229,7 +262,8 @@ const ItemCard = ({
                         <span className="">
                           <span className="text-sm font-bold">From </span>
                           <span>
-                            {currency} {hotelData?.id ===
+                            {currency}{" "}
+                            {hotelData?.id ===
                             "767da2a8-746d-42b6-9539-528b6b96ae09"
                               ? item.variants
                                   ?.sort((a, b) => a?.price - b?.price)[0]
@@ -254,7 +288,8 @@ const ItemCard = ({
                         </span>
                       ) : (
                         <span>
-                          {currency} {hotelData?.id ===
+                          {currency}{" "}
+                          {hotelData?.id ===
                           "767da2a8-746d-42b6-9539-528b6b96ae09"
                             ? item.price.toFixed(3)
                             : item.price}

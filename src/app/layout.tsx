@@ -31,7 +31,8 @@ export const metadata: Metadata = {
   },
 };
 
-const bottomNavFilter = "PETRAZ";
+const petrazFilter = "PETRAZ";
+const bottomNavFilter = ["PETRAZ" , "HENZU"];
 
 export default async function RootLayout({
   children,
@@ -46,13 +47,16 @@ export default async function RootLayout({
     : undefined;
 
   let isPetraz = false;
+  let isBottomNavHidden = false;
 
   if (pathname) {
     console.log("Current Pathname:", decodeURIComponent(pathname || ""));
 
-    isPetraz = pathname.includes(bottomNavFilter); 
+    isPetraz = pathname.includes(petrazFilter); 
+    isBottomNavHidden = bottomNavFilter.some(filter => pathname.includes(filter));
 
     console.log("Is Petraz:", isPetraz);
+    console.log("Is Bottom Nav Hidden:", isBottomNavHidden);
   }
 
   return (
@@ -90,7 +94,7 @@ export default async function RootLayout({
         {/* <PwaInstallPrompt /> */}
 
         {children}
-        {!isPetraz ? <BottomNav userData={user} /> : null}
+        {!isBottomNavHidden ? <BottomNav userData={user} /> : null}
       </body>
     </html>
   );
