@@ -336,7 +336,7 @@ const ItemCard = ({
                     // Show all variants for regular items
                     return item.variants || [];
                   }
-                })().map((variant) => {
+                })().filter((variant): variant is NonNullable<typeof variant> => Boolean(variant)).map((variant) => {
                   const variantOffer = getVariantOffer(variant.name);
                   const hasVariantOffer = !!variantOffer;
                   const variantOfferPrice = variantOffer?.offer_price;
