@@ -248,15 +248,19 @@ const HotelMenuPage = ({
   };
 
   const features = getFeatures(hoteldata?.feature_flags || "");
+
   const isWithinDeliveryTime = () => {
-    if (!hoteldata?.delivery_rules?.delivery_time_allowed) return true;
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
+    if (!hoteldata?.delivery_rules?.delivery_time_allowed) {
+      return true;
+    }
 
     const convertTimeToMinutes = (timeStr: string) => {
       const [hours, minutes] = timeStr.split(":").map(Number);
       return hours * 60 + minutes;
     };
+
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
 
     const startTime = convertTimeToMinutes(
       hoteldata.delivery_rules.delivery_time_allowed.from ?? "00:00"
@@ -264,8 +268,14 @@ const HotelMenuPage = ({
     const endTime = convertTimeToMinutes(
       hoteldata.delivery_rules.delivery_time_allowed.to ?? "23:59"
     );
-    return currentTime >= startTime && currentTime <= endTime;
+    
+    if (startTime > endTime) {
+      return currentTime >= startTime || currentTime <= endTime;
+    } else {
+      return currentTime >= startTime && currentTime <= endTime;
+    }
   };
+
   const showOrderDrawer =
     (pathname.includes("qrScan") && features?.ordering.enabled) ||
     (!pathname.includes("qrScan") &&

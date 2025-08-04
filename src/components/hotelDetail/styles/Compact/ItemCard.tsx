@@ -26,25 +26,32 @@ const ItemCard = ({
 
   // --- Feature Flags & Stock Logic ---
 
-  const isWithinDeliveryTime = () => {
-    if (!hoteldata?.delivery_rules?.delivery_time_allowed) return true;
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
+ const isWithinDeliveryTime = () => {
+  if (!hoteldata?.delivery_rules?.delivery_time_allowed) {
+    return true;
+  }
 
-    const convertTimeToMinutes = (timeStr: string) => {
-      const [hours, minutes] = timeStr.split(":").map(Number);
-      return hours * 60 + minutes;
-    };
-
-    const startTime = convertTimeToMinutes(
-      hoteldata.delivery_rules.delivery_time_allowed.from ?? "00:00"
-    );
-    const endTime = convertTimeToMinutes(
-      hoteldata.delivery_rules.delivery_time_allowed.to ?? "23:59"
-    );
-    console.log(startTime, endTime, currentTime);
-    return currentTime >= startTime && currentTime <= endTime;
+  const convertTimeToMinutes = (timeStr: string) => {
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    return hours * 60 + minutes;
   };
+
+  const now = new Date();
+  const currentTime = now.getHours() * 60 + now.getMinutes();
+
+  const startTime = convertTimeToMinutes(
+    hoteldata.delivery_rules.delivery_time_allowed.from ?? "00:00"
+  );
+  const endTime = convertTimeToMinutes(
+    hoteldata.delivery_rules.delivery_time_allowed.to ?? "23:59"
+  );
+
+  if (startTime > endTime) {
+    return currentTime >= startTime || currentTime <= endTime;
+  } else {
+    return currentTime >= startTime && currentTime <= endTime;
+  }
+};
 
   const hasDeliveryFeature =
     getFeatures(feature_flags || "")?.delivery.enabled &&
