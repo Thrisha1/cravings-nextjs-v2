@@ -3,6 +3,7 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import Offers from "@/screens/Offers";
 import { unstable_cache } from "next/cache";
 import React from "react";
+import { filterOffersByType } from "@/lib/offerFilters";
 
 const OfferMainPage = async () => {
   
@@ -19,7 +20,10 @@ const OfferMainPage = async () => {
 
   const { offers } = await getCachedOffers();
 
-  return <Offers offers={offers} />;
+  // Filter offers based on offer_type for offers page
+  const filteredOffers = filterOffersByType(offers, 'offers');
+
+  return <Offers offers={filteredOffers} />;
 };
 
 export default OfferMainPage;

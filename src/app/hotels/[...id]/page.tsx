@@ -15,6 +15,7 @@ import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
 import { Metadata } from "next";
 import { getSocialLinks } from "@/lib/getSocialLinks";
 import { usePartnerStore } from "@/store/usePartnerStore";
+import { filterOffersByType } from "@/lib/offerFilters";
 // import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
 
 export async function generateMetadata({
@@ -180,6 +181,9 @@ const HotelPage = async ({
       : offers.filter(
           (offer) => new Date(offer.end_time).setHours(0, 0, 0, 0) >= today
         );
+    
+    // Filter offers based on offer_type for hotels page
+    filteredOffers = filterOffersByType(filteredOffers, 'hotels');
   }
 
   // Use the store to fetch UPI data

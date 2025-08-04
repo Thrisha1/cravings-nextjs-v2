@@ -11,6 +11,7 @@ export const getOfferById = `
       items_available
       start_time
       deletion_status
+      offer_type
       variant
       menu {
         category {
@@ -45,6 +46,7 @@ export const getOffers = `
       enquiries
       items_available
       start_time
+      offer_type
       variant
       menu {
         category {
@@ -77,6 +79,7 @@ export const getPartnerOffers = `
     enquiries
     items_available
     start_time
+    offer_type
     variant
     menu {
         category {
@@ -106,6 +109,7 @@ mutation AddOffer($offer: offers_insert_input!) {
       items_available
       offer_price
       start_time
+      offer_type
       variant
       menu {
         category {

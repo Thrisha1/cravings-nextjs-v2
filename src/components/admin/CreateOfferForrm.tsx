@@ -34,6 +34,7 @@ interface CreateOfferFormProps {
       items_available?: number;
       start_time: string;
       end_time: string;
+      offer_type?: string;
       offerGroup?: OfferGroup;
       variant?: {
         name: string;
@@ -57,6 +58,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     itemsAvailable: "",
     fromTime: "",
     toTime: "",
+    offerType: "all", // Add offer_type field
   });
   const [selectedVariant, setSelectedVariant] = useState<string>("");
   const [newOfferGroup, setNewOfferGroup] = useState({
@@ -416,6 +418,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
           items_available: parseInt(newOffer.itemsAvailable),
           start_time: newOffer.fromTime,
           end_time: newOffer.toTime,
+          offer_type: newOffer.offerType,
           variant: selectedVariant && slectedItem?.variants ? 
             slectedItem.variants.find(v => v.name === selectedVariant) : undefined,
         };
@@ -451,6 +454,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                   items_available,
                   start_time: newOffer.fromTime,
                   end_time: newOffer.toTime,
+                  offer_type: newOffer.offerType,
                   variant: {
                     name: variant.name,
                     price: variant.price,
@@ -477,6 +481,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                   items_available,
                   start_time: newOffer.fromTime,
                   end_time: newOffer.toTime,
+                  offer_type: newOffer.offerType,
                 },
                 notificationMessage
               );
@@ -523,6 +528,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     itemsAvailable: "",
                     fromTime: "",
                     toTime: "",
+                    offerType: "all",
                   });
                   setSelectedItem(null);
                   setSelectedVariant("");
@@ -545,6 +551,25 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
               <SelectContent>
                 <SelectItem value="single">Single Item Offer</SelectItem>
                 <SelectItem value="group">Offer Group</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="offerTypeFilter">Offer Display Type</Label>
+            <Select
+              value={newOffer.offerType}
+              onValueChange={(value) => {
+                setNewOffer({ ...newOffer, offerType: value });
+              }}
+            >
+              <SelectTrigger id="offerTypeFilter">
+                <SelectValue placeholder="Select where to display offer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All (Hotels, Offers, QR Scan)</SelectItem>
+                <SelectItem value="delivery">Delivery Only (Hotels, Offers)</SelectItem>
+                <SelectItem value="dine_in">Dine-In Only (QR Scan)</SelectItem>
               </SelectContent>
             </Select>
           </div>

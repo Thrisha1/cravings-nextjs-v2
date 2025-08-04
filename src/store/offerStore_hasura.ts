@@ -60,6 +60,7 @@ export interface Offer {
   end_time: string;
   items_available?: number;
   offer_price?: number;
+  offer_type?: string;
   deletion_status?: number;
   offer_group?: OfferGroup;
   menu: MenuItem;
@@ -80,6 +81,7 @@ interface OfferState {
       items_available?: number;
       start_time: string;
       end_time: string;
+      offer_type?: string;
       offer_group?: OfferGroup;
       variant?: {
         name: string;
@@ -211,6 +213,7 @@ export const useOfferStore = create<OfferState>((set, get) => {
         items_available?: number;
         start_time: string;
         end_time: string;
+        offer_type?: string;
         offer_group?: OfferGroup;
         variant?: {
           name: string;
@@ -242,6 +245,7 @@ export const useOfferStore = create<OfferState>((set, get) => {
             items_available: offer.items_available,
             menu_item_id: offer.menu_id,
             offer_price: offer.offer_price ? Math.round(offer.offer_price) : undefined,
+            offer_type: offer.offer_type || 'all',
             variant: offer.variant || null,
           };
         } else {
