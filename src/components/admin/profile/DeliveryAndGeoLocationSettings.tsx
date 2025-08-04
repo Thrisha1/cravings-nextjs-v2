@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Pencil, MapPin, LocateFixed, X } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -63,10 +63,8 @@ interface DeliveryAndGeoLocationSettingsProps {
 export function DeliveryAndGeoLocationSettings({
   geoLocation,
   setGeoLocation,
-  geoLoading,
   geoSaving,
   geoError,
-  handleGetCurrentLocation,
   handleSaveGeoLocation,
   currency,
   deliveryRate,
@@ -101,11 +99,10 @@ export function DeliveryAndGeoLocationSettings({
         center: [
           geoLocation.longitude || 77.5946,
           geoLocation.latitude || 12.9716,
-        ], // Default to Bangalore if no location
+        ],
         zoom: 14,
       });
 
-      // Add marker if geoLocation exists
       if (geoLocation.latitude && geoLocation.longitude) {
         const newMarker = new mapboxgl.Marker()
           .setLngLat([geoLocation.longitude, geoLocation.latitude])
@@ -113,7 +110,6 @@ export function DeliveryAndGeoLocationSettings({
         setMarker(newMarker);
       }
 
-      // Add click event to place marker
       map.current.on("click", (e) => {
         if (marker) {
           marker.remove();
@@ -135,7 +131,7 @@ export function DeliveryAndGeoLocationSettings({
         }
       };
     }
-  }, [mapDialogOpen, geoLocation]);
+  }, [mapDialogOpen, geoLocation, marker]);
 
   const handleSaveMapLocation = () => {
     if (selectedLocation) {
@@ -153,7 +149,6 @@ export function DeliveryAndGeoLocationSettings({
 
   return (
     <div className="space-y-8 pt-2">
-      {/* Geo Location Section */}
       <div className="space-y-4 w-full">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Location</h3>
@@ -201,8 +196,10 @@ export function DeliveryAndGeoLocationSettings({
               <a
                 className="text-orange-600 underline"
                 href="https://www.google.com/maps"
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                Get Link {"-->"}{" "}
+                Get Link {"-->"}
               </a>
             </div>
           </div>
@@ -229,7 +226,6 @@ export function DeliveryAndGeoLocationSettings({
         {geoError && <p className="text-sm text-red-500">{geoError}</p>}
       </div>
 
-      {/* Delivery Settings Section */}
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Delivery Settings</h3>
@@ -267,7 +263,40 @@ export function DeliveryAndGeoLocationSettings({
           )}
         </div>
 
-        {/* Delivery Rate */}
+        <div className="space-y-2">
+          <Label>Need Delivery Location</Label>
+          {isEditingDelivery ? (
+            <Select
+              value={deliveryRules.needDeliveryLocation ? "yes" : "no"}
+              onValueChange={(value) => {
+                const needsLocation = value === "yes";
+                setDeliveryRules({
+                  ...deliveryRules,
+                  needDeliveryLocation: needsLocation,
+                  is_fixed_rate: needsLocation
+                    ? deliveryRules.is_fixed_rate
+                    : true,
+                });
+                if (!needsLocation) {
+                  setDeliveryRate(0);
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select option" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="p-3 rounded-md border bg-muted/50">
+              {deliveryRules.needDeliveryLocation ? "Yes" : "No"}
+            </div>
+          )}
+        </div>
+
         <div className="space-y-2">
           <Label>
             Delivery Rate {deliveryRules.is_fixed_rate ? "" : "(Per Km)"} (
@@ -283,295 +312,270 @@ export function DeliveryAndGeoLocationSettings({
             />
           ) : (
             <div className="p-3 rounded-md border bg-muted/50">
-              {deliveryRate ? deliveryRate.toFixed(2) : "Not set"}
+              {deliveryRate === 0
+                ? "Free"
+                : deliveryRate
+                ? deliveryRate.toFixed(2)
+                : "Not set"}
             </div>
           )}
         </div>
 
-        {/* Delivery Rules */}
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Delivery Radius */}
-          <div className="space-y-2">
-            <Label>Delivery Radius (km)</Label>
-            {isEditingDelivery ? (
-              <Input
-                type="number"
-                min="1"
-                value={deliveryRules.delivery_radius}
-                onChange={(e) =>
-                  setDeliveryRules({
-                    ...deliveryRules,
-                    delivery_radius: Number(e.target.value),
-                  })
-                }
-              />
-            ) : (
-              <div className="p-3 rounded-md border bg-muted/50">
-                {deliveryRules.delivery_radius} km
-              </div>
-            )}
-          </div>
-
-          {/* Rate Type */}
-          <div className="space-y-2">
-            <Label>Rate Type</Label>
-            {isEditingDelivery ? (
-              <Select
-                value={deliveryRules.is_fixed_rate ? "fixed" : "variable"}
-                onValueChange={(value) =>
-                  setDeliveryRules({
-                    ...deliveryRules,
-                    is_fixed_rate: value === "fixed",
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select rate type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fixed">Fixed Rate</SelectItem>
-                  <SelectItem value="variable">Variable (per km)</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="p-3 rounded-md border bg-muted/50">
-                {deliveryRules.is_fixed_rate
-                  ? "Fixed Rate"
-                  : "Variable (per km)"}
-              </div>
-            )}
-          </div>
-
-          {/* First KM Range and Amount */}
-          {!deliveryRules.is_fixed_rate && (
-            <div className="grid grid-cols-2 gap-4 w-full">
+        {deliveryRules.needDeliveryLocation && (
+          <>
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>First KM Range</Label>
+                <Label>Delivery Radius (km)</Label>
                 {isEditingDelivery ? (
                   <Input
                     type="number"
-                    min="0"
-                    step="0.1"
-                    value={deliveryRules.first_km_range.km}
+                    min="1"
+                    value={deliveryRules.delivery_radius}
                     onChange={(e) =>
                       setDeliveryRules({
                         ...deliveryRules,
-                        first_km_range: {
-                          ...deliveryRules.first_km_range,
-                          km: Number(e.target.value),
-                        },
+                        delivery_radius: Number(e.target.value),
                       })
                     }
-                    placeholder="Enter KM range"
                   />
                 ) : (
                   <div className="p-3 rounded-md border bg-muted/50">
-                    {deliveryRules.first_km_range.km} km
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>Amount ({currency?.value})</Label>
-                {isEditingDelivery ? (
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={deliveryRules.first_km_range.rate}
-                    onChange={(e) =>
-                      setDeliveryRules({
-                        ...deliveryRules,
-                        first_km_range: {
-                          ...deliveryRules.first_km_range,
-                          rate: Number(e.target.value),
-                        },
-                      })
-                    }
-                    placeholder="Enter amount"
-                  />
-                ) : (
-                  <div className="p-3 rounded-md border bg-muted/50">
-                    {deliveryRules.first_km_range.rate.toFixed(2)}
+                    {deliveryRules.delivery_radius} km
                   </div>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label>Delivery Time Range</Label>
-                {isEditingDelivery ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-sm">From</Label>
-                      <Input
-                        type="time"
-                        value={deliveryRules.delivery_time_allowed?.from}
-                        onChange={(e) =>
-                          setDeliveryRules({
-                            ...deliveryRules,
-                            delivery_time_allowed: {
-                              from: e.target.value,
-                              to:
-                                deliveryRules.delivery_time_allowed?.to ||
-                                "23:59",
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm">To</Label>
-                      <Input
-                        type="time"
-                        value={deliveryRules.delivery_time_allowed?.to}
-                        onChange={(e) =>
-                          setDeliveryRules({
-                            ...deliveryRules,
-                            delivery_time_allowed: {
-                              from:
-                                deliveryRules.delivery_time_allowed?.from ||
-                                "00:00",
-                              to: e.target.value,
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-3 rounded-md border bg-muted/50">
-                    {deliveryRules.delivery_time_allowed?.from} -{" "}
-                    {deliveryRules.delivery_time_allowed?.to}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Delivery Status</Label>
+                <Label>Rate Type</Label>
                 {isEditingDelivery ? (
                   <Select
-                    value={
-                      deliveryRules.isDeliveryActive ? "active" : "inactive"
-                    }
+                    value={deliveryRules.is_fixed_rate ? "fixed" : "variable"}
                     onValueChange={(value) =>
                       setDeliveryRules({
                         ...deliveryRules,
-                        isDeliveryActive: value === "active",
+                        is_fixed_rate: value === "fixed",
                       })
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue
-                        className={
-                          deliveryRules.isDeliveryActive ? "" : "text-red-500"
-                        }
-                        placeholder="Select status"
-                      />
+                      <SelectValue placeholder="Select rate type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive" className="text-red-500">
-                        Inactive
+                      <SelectItem value="fixed">Fixed Rate</SelectItem>
+                      <SelectItem value="variable">
+                        Variable (per km)
                       </SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
                   <div className="p-3 rounded-md border bg-muted/50">
-                    <span
-                      className={
-                        deliveryRules.isDeliveryActive ? "" : "text-red-500"
-                      }
-                    >
-                      {deliveryRules.isDeliveryActive ? "Active" : "Inactive"}
-                    </span>
+                    {deliveryRules.is_fixed_rate
+                      ? "Fixed Rate"
+                      : "Variable (per km)"}
                   </div>
                 )}
               </div>
 
-              
+              {!deliveryRules.is_fixed_rate && (
+                <div className="grid grid-cols-2 gap-4 w-full md:col-span-2">
+                  <div className="space-y-2">
+                    <Label>First KM Range</Label>
+                    {isEditingDelivery ? (
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={deliveryRules.first_km_range.km}
+                        onChange={(e) =>
+                          setDeliveryRules({
+                            ...deliveryRules,
+                            first_km_range: {
+                              ...deliveryRules.first_km_range,
+                              km: Number(e.target.value),
+                            },
+                          })
+                        }
+                        placeholder="Enter KM range"
+                      />
+                    ) : (
+                      <div className="p-3 rounded-md border bg-muted/50">
+                        {deliveryRules.first_km_range.km} km
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Amount ({currency?.value})</Label>
+                    {isEditingDelivery ? (
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={deliveryRules.first_km_range.rate}
+                        onChange={(e) =>
+                          setDeliveryRules({
+                            ...deliveryRules,
+                            first_km_range: {
+                              ...deliveryRules.first_km_range,
+                              rate: Number(e.target.value),
+                            },
+                          })
+                        }
+                        placeholder="Enter amount"
+                      />
+                    ) : (
+                      <div className="p-3 rounded-md border bg-muted/50">
+                        {deliveryRules.first_km_range.rate.toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
 
-
-          <div className="space-y-2">
-                <Label>Need Delivery Location</Label>
-                {isEditingDelivery ? (
-                  <Select
-                    value={deliveryRules.needDeliveryLocation ? "yes" : "no"}
-                    onValueChange={(value) =>
-                      setDeliveryRules({
-                        ...deliveryRules,
-                        needDeliveryLocation: value === "yes",
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select option" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">Yes</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div className="p-3 rounded-md border bg-muted/50">
-                    {deliveryRules.needDeliveryLocation ? "Yes" : "No"}
-                  </div>
-                )}
-              </div>
-        </div>
-
-        {/* Help Text */}
-        {!isEditingDelivery && (
-          <p className="text-sm text-muted-foreground">
-            {deliveryRules.is_fixed_rate
-              ? `Flat rate of ${currency?.value}${deliveryRate.toFixed(
-                  2
-                )} will be applied for deliveries within ${
-                  deliveryRules.delivery_radius
-                } km`
-              : deliveryRules.first_km_range.km > 0
-              ? `First ${
-                  deliveryRules.first_km_range.km
-                } km will be charged at ${
-                  currency?.value
-                }${deliveryRules.first_km_range.rate.toFixed(2)}, then ${
-                  currency?.value
-                }${deliveryRate.toFixed(2)} per km for deliveries within ${
-                  deliveryRules.delivery_radius
-                } km`
-              : `${currency?.value}${deliveryRate.toFixed(
-                  2
-                )} per km will be applied for deliveries within ${
-                  deliveryRules.delivery_radius
-                } km`}
-          </p>
+            {!isEditingDelivery && (
+              <p className="text-sm text-muted-foreground">
+                {deliveryRules.is_fixed_rate
+                  ? `Flat rate of ${currency?.value}${deliveryRate.toFixed(
+                      2
+                    )} will be applied for deliveries within ${
+                      deliveryRules.delivery_radius
+                    } km`
+                  : deliveryRules.first_km_range.km > 0
+                  ? `First ${
+                      deliveryRules.first_km_range.km
+                    } km will be charged at ${
+                      currency?.value
+                    }${deliveryRules.first_km_range.rate.toFixed(
+                      2
+                    )}, then ${currency?.value}${deliveryRate.toFixed(
+                      2
+                    )} per km for deliveries within ${
+                      deliveryRules.delivery_radius
+                    } km`
+                  : `${currency?.value}${deliveryRate.toFixed(
+                      2
+                    )} per km will be applied for deliveries within ${
+                      deliveryRules.delivery_radius
+                    } km`}
+              </p>
+            )}
+          </>
         )}
 
-        <div className="space-y-2">
-          <Label>Minimum Order Amount ({currency?.value})</Label>
-          {isEditingDelivery ? (
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={deliveryRules.minimum_order_amount}
-              onChange={(e) =>
-                setDeliveryRules({
-                  ...deliveryRules,
-                  minimum_order_amount: Number(e.target.value),
-                })
-              }
-              placeholder="Enter amount"
-            />
-          ) : (
-            <div className="p-3 rounded-md border bg-muted/50">
-              {deliveryRules.minimum_order_amount.toFixed(2)}
-            </div>
-          )}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Delivery Time Range</Label>
+            {isEditingDelivery ? (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-sm">From</Label>
+                  <Input
+                    type="time"
+                    value={deliveryRules.delivery_time_allowed?.from}
+                    onChange={(e) =>
+                      setDeliveryRules({
+                        ...deliveryRules,
+                        delivery_time_allowed: {
+                          from: e.target.value,
+                          to:
+                            deliveryRules.delivery_time_allowed?.to || "23:59",
+                        },
+                      })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm">To</Label>
+                  <Input
+                    type="time"
+                    value={deliveryRules.delivery_time_allowed?.to}
+                    onChange={(e) =>
+                      setDeliveryRules({
+                        ...deliveryRules,
+                        delivery_time_allowed: {
+                          from:
+                            deliveryRules.delivery_time_allowed?.from ||
+                            "00:00",
+                          to: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 rounded-md border bg-muted/50">
+                {deliveryRules.delivery_time_allowed?.from} -{" "}
+                {deliveryRules.delivery_time_allowed?.to}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Delivery Status</Label>
+            {isEditingDelivery ? (
+              <Select
+                value={deliveryRules.isDeliveryActive ? "active" : "inactive"}
+                onValueChange={(value) =>
+                  setDeliveryRules({
+                    ...deliveryRules,
+                    isDeliveryActive: value === "active",
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    className={
+                      deliveryRules.isDeliveryActive ? "" : "text-red-500"
+                    }
+                    placeholder="Select status"
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive" className="text-red-500">
+                    Inactive
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="p-3 rounded-md border bg-muted/50">
+                <span
+                  className={
+                    deliveryRules.isDeliveryActive ? "" : "text-red-500"
+                  }
+                >
+                  {deliveryRules.isDeliveryActive ? "Active" : "Inactive"}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Minimum Order Amount ({currency?.value})</Label>
+            {isEditingDelivery ? (
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={deliveryRules.minimum_order_amount}
+                onChange={(e) =>
+                  setDeliveryRules({
+                    ...deliveryRules,
+                    minimum_order_amount: Number(e.target.value),
+                  })
+                }
+                placeholder="Enter amount"
+              />
+            ) : (
+              <div className="p-3 rounded-md border bg-muted/50">
+                {deliveryRules.minimum_order_amount.toFixed(2)}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Map Dialog */}
       <Dialog open={mapDialogOpen} onOpenChange={setMapDialogOpen}>
         <DialogContent className="max-w-4xl h-[80vh]">
           <DialogHeader>

@@ -103,6 +103,7 @@ const OrderItemCard = ({
     } else {
       setDeliveryLocation(null);
     }
+
   }, [localOrder]);
 
   // Get the current status from status history
@@ -245,12 +246,15 @@ const OrderItemCard = ({
               (!localOrder.deliveryAddress ||
                 localOrder.deliveryAddress === "Unknown" ||
                 localOrder.deliveryAddress === "N/A" ||
-                !localOrder.delivery_location) && (
+                !localOrder.delivery_location) &&
+              ((userData as Partner)?.delivery_rules?.needDeliveryLocation ?? true) && (
                 <span className="text-red-600 font-bold text-sm">TAKEAWAY</span>
               )}
           </div>
           {(Number(localOrder.display_id) ?? 0) > 0 && (
-            <h2 className="text-sm text-gray-800 mt-2">ID: {localOrder.id.slice(0, 8)}</h2>
+            <h2 className="text-sm text-gray-800 mt-2">
+              ID: {localOrder.id.slice(0, 8)}
+            </h2>
           )}
           <p className="text-sm text-gray-500">
             {formatDate(localOrder.createdAt)}

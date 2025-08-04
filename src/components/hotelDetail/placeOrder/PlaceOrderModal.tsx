@@ -1140,19 +1140,21 @@ const PlaceOrderModal = ({
       return;
     }
 
-    if (isDelivery && !address && !isQrScan) {
-      toast.error("Please enter your delivery address");
-      return;
-    }
+    if (hotelData?.delivery_rules?.needDeliveryLocation ?? true) {
+      if (isDelivery && !address && !isQrScan) {
+        toast.error("Please enter your delivery address");
+        return;
+      }
 
-    if (isDelivery && hasDelivery && !selectedCoords && !isQrScan) {
-      toast.error("Please select your location");
-      return;
-    }
+      if (isDelivery && hasDelivery && !selectedCoords && !isQrScan) {
+        toast.error("Please select your location");
+        return;
+      }
 
-    if (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan) {
-      toast.error("Delivery is not available to your location");
-      return;
+      if (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan) {
+        toast.error("Delivery is not available to your location");
+        return;
+      }
     }
 
     if (hasMultiWhatsapp && !selectedLocation) {
@@ -1346,7 +1348,9 @@ const PlaceOrderModal = ({
                     tableName={qrData?.table_name || undefined}
                   />
                 </>
-              ) : isDelivery && orderType === "delivery" ? (
+              ) : isDelivery &&
+                orderType === "delivery" &&
+                (hotelData?.delivery_rules?.needDeliveryLocation ?? true) ? (
                 <AddressCard
                   address={address}
                   setAddress={setAddress}
