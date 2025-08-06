@@ -46,6 +46,7 @@ export interface DeliveryRules {
     to: string;
   } | null;
   isDeliveryActive : boolean;
+  needDeliveryLocation: boolean;
 }
 
 export interface Order {

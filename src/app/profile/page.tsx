@@ -196,6 +196,7 @@ export default function ProfilePage() {
     minimum_order_amount: 0,
     delivery_time_allowed: null,
     isDeliveryActive: true,
+    needDeliveryLocation: true,
   });
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [whatsappNumbers, setWhatsappNumbers] = useState<
@@ -286,6 +287,7 @@ export default function ProfilePage() {
           userData.delivery_rules?.minimum_order_amount || 0,
         delivery_time_allowed: userData.delivery_rules?.delivery_time_allowed || null,
         isDeliveryActive: userData.delivery_rules?.isDeliveryActive ?? true,
+        needDeliveryLocation: userData.delivery_rules?.needDeliveryLocation ?? true,
       });
       setGeoLocation({
         latitude: userData?.geo_location?.coordinates?.[1] || 0,
@@ -1197,6 +1199,7 @@ export default function ProfilePage() {
         minimum_order_amount: deliveryRules?.minimum_order_amount || 0,
         delivery_time_allowed: deliveryRules?.delivery_time_allowed || null,
         isDeliveryActive: deliveryRules?.isDeliveryActive ?? true,
+        needDeliveryLocation: deliveryRules?.needDeliveryLocation ?? true,
       } as DeliveryRules;
 
       await fetchFromHasura(updatePartnerMutation, {
