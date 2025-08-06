@@ -15,6 +15,8 @@ const ItemCard = ({
   tableNumber,
   hasMultipleVariantsOnOffer = false,
   allItemOffers,
+  currentCategory,
+  isOfferCategory,
 }: {
   item: HotelDataMenus;
   styles: DefaultHotelPageProps["styles"];
@@ -24,6 +26,8 @@ const ItemCard = ({
   tableNumber: number;
   hasMultipleVariantsOnOffer?: boolean;
   allItemOffers?: Offer[];
+  currentCategory?: string;
+  isOfferCategory?: boolean;
 }) => {
   const [showVariants, setShowVariants] = useState(false);
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
@@ -247,7 +251,7 @@ const ItemCard = ({
                         </span>
                       </div>
                       {!hasMultipleVariantsOnOffer && (
-                        <span className="text-sm line-through opacity-70">
+                        <span className="text-sm line-through opacity-70 font-light">
                           {hoteldata?.currency || "₹"}{" "}
                           {offerData.variant ? offerData.variant.price : offerData.menu.price}
                         </span>
@@ -384,17 +388,17 @@ const ItemCard = ({
         <div className="w-full mt-2 space-y-3">
           {/* Show variants based on offer status */}
           {(() => {
-            if (hasMultipleVariantsOnOffer && allItemOffers) {
-              // Show only variants that are on offer
+            if (isOfferCategory && hasMultipleVariantsOnOffer) {
+              // In Offer category: Show only variants that are on offer
               return allItemOffers
-                .filter((offer) => offer.variant)
-                .map((offer) => offer.variant!)
-                .filter(Boolean);
-            } else if (offerData?.variant && !hasMultipleVariantsOnOffer) {
-              // Show only the offer variant for single variant offers
+                ?.filter((offer) => offer.variant)
+                ?.map((offer) => offer.variant!)
+                ?.filter(Boolean) || [];
+            } else if (isOfferCategory && offerData?.variant && !hasMultipleVariantsOnOffer) {
+              // In Offer category: Show only the offer variant for single variant offers
               return [offerData.variant];
             } else {
-              // Show all variants for regular items
+              // In All category or other categories: Show all variants
               return item.variants || [];
             }
           })().filter(Boolean).map((variant) => {
@@ -422,7 +426,7 @@ const ItemCard = ({
                       >
                         {hasVariantOffer ? (
                           <div className="flex flex-col">
-                            <span className="line-through text-gray-400 text-sm">
+                            <span className="line-through text-gray-400 text-sm font-light">
                               {hoteldata?.currency || "₹"} {variantOriginalPrice}
                             </span>
                             <span className="text-accent font-bold" style={{ color: styles.accent }}>

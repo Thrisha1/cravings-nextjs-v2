@@ -365,6 +365,8 @@ const Compact = ({
                           key={item.id}
                           hasMultipleVariantsOnOffer={hasMultipleVariantsOnOffer}
                           allItemOffers={hasMultipleVariantsOnOffer ? itemOffers : undefined}
+                          currentCategory={category.id}
+                          isOfferCategory={category.id === "offers"}
                         />
                       );
                     })}

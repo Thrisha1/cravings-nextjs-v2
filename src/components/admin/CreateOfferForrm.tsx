@@ -76,6 +76,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
   const [groupType, setGroupType] = useState<
     "category" | "all" | "select" | undefined
   >(undefined);
+  const [itemSearch, setItemSearch] = useState(""); // Add search state
 
   const { userData } = useAuthStore();
 
@@ -286,6 +287,17 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
   // Helper function to get all items (including those without images)
   const getAllItems = () => {
     return items || [];
+  };
+
+  // Helper function to get filtered items based on search
+  const getFilteredItems = () => {
+    const allItems = getAllItems();
+    if (!itemSearch.trim()) return allItems;
+    
+    return allItems.filter(item => 
+      item.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
+      item.category?.name.toLowerCase().includes(itemSearch.toLowerCase())
+    );
   };
 
   // Helper function to get items by category
@@ -505,6 +517,11 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     }
   }, [groupType, isOfferTypeGroup, newOfferGroup.menuItemIds, newOfferGroup.categoryId]);
 
+  // Clear search when switching offer types
+  useEffect(() => {
+    setItemSearch("");
+  }, [isOfferTypeGroup, groupType]);
+
   return (
     <div className="max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 mb-8">
       <h2 className="text-2xl font-bold mb-4">Create New Offer</h2>
@@ -679,9 +696,30 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
               {groupType === "select" && (
                 <div className="space-y-2">
                   <Label>Select Menu Items</Label>
+                  
                   <div className="max-h-60 overflow-y-auto border rounded-md p-2">
+                    <div className="sticky top-0 bg-white pb-2 mb-2 border-b">
+                      <Input
+                        placeholder="Search items..."
+                        value={itemSearch}
+                        onChange={(e) => setItemSearch(e.target.value)}
+                        className="w-full"
+                        onKeyDown={(e) => {
+                          // Prevent dropdown navigation when typing in search
+                          e.stopPropagation();
+                        }}
+                        onFocus={(e) => {
+                          // Prevent dropdown from closing when search input is focused
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          // Prevent dropdown from closing when clicking search input
+                          e.stopPropagation();
+                        }}
+                      />
+                    </div>
                     <div className="space-y-2 grid grid-cols-1 gap-2">
-                      {getAllItems().map((item) => {
+                      {getFilteredItems().map((item) => {
                         const hasVariants = item.variants && item.variants.length > 0;
                         const isItemSelected = newOfferGroup.menuItemIds.includes(item.id as string);
                         const selectedVariants = newOfferGroup.menuItemIds.filter(id => 
@@ -793,6 +831,11 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                       })}
                     </div>
                   </div>
+                  {getFilteredItems().length === 0 && (
+                    <div className="text-center py-4 text-gray-500 text-sm">
+                      No items found matching "{itemSearch}"
+                    </div>
+                  )}
                   <p className="text-xs text-gray-500">
                     {newOfferGroup.menuItemIds.length} items selected
                   </p>
@@ -878,14 +921,47 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                   }}
                 >
                   <SelectTrigger id="menuItem">
-                    <SelectValue placeholder="Select a product" />
+                    <SelectValue placeholder="Search and select a product..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {getAllItems().map((item) => (
+                    <div className="p-2">
+                      <Input
+                        placeholder="Search items..."
+                        value={itemSearch}
+                        onChange={(e) => setItemSearch(e.target.value)}
+                        className="mb-2"
+                        onKeyDown={(e) => {
+                          // Prevent dropdown navigation when typing in search
+                          e.stopPropagation();
+                        }}
+                        onFocus={(e) => {
+                          // Prevent dropdown from closing when search input is focused
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          // Prevent dropdown from closing when clicking search input
+                          e.stopPropagation();
+                        }}
+                      />
+                    </div>
+                    {getFilteredItems().map((item) => (
                       <SelectItem key={item.id} value={item.id as string}>
-                        {item.name} - {item.variants && item.variants.length > 0 ? "Variants Available" : `₹${item.price?.toFixed(2) || "0.00"}`}
+                        <div className="flex flex-col">
+                          <span className="font-medium">{item.name}</span>
+                          <span className="text-xs text-gray-500">
+                            {item.category?.name} - {item.variants && item.variants.length > 0 ? 
+                              `${item.variants.length} variants` : 
+                              `₹${item.price?.toFixed(2) || "0.00"}`
+                            }
+                          </span>
+                        </div>
                       </SelectItem>
                     ))}
+                    {getFilteredItems().length === 0 && (
+                      <div className="px-2 py-1 text-sm text-gray-500">
+                        No items found matching "{itemSearch}"
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

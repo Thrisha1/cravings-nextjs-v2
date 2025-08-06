@@ -22,6 +22,8 @@ const ItemCard = ({
   discountPercent,
   displayName,
   hasMultipleVariantsOnOffer = false,
+  currentCategory,
+  isOfferCategory,
 }: {
   item: HotelDataMenus;
   styles: Styles;
@@ -36,6 +38,8 @@ const ItemCard = ({
   discountPercent?: number;
   displayName?: string;
   hasMultipleVariantsOnOffer?: boolean;
+  currentCategory?: string;
+  isOfferCategory?: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showVariants, setShowVariants] = useState(false);
@@ -258,7 +262,20 @@ const ItemCard = ({
                     <div className="text-sm font-normal">{`(Price as per size)`}</div>
                   ) : (
                     <>
-                      {hasVariants ? (
+                      {isOfferItem && offerPrice ? (
+                        <span>
+                          {hasMultipleVariantsOnOffer ? (
+                            <span className="text-sm font-bold">From </span>
+                          ) : (
+                            <span className="line-through text-gray-400 mr-2 font-light">
+                              {currency} {parseInt(String(oldPrice ?? item.price))}
+                            </span>
+                          )}
+                          <span className="text-accent font-bold text-2xl" style={{ color: styles.accent }}>
+                            {currency} {parseInt(String(offerPrice))}
+                          </span>
+                        </span>
+                      ) : hasVariants ? (
                         <span className="">
                           <span className="text-sm font-bold">From </span>
                           <span>
@@ -271,19 +288,6 @@ const ItemCard = ({
                               : item.variants?.sort(
                                   (a, b) => a?.price - b?.price
                                 )[0]?.price || item.price}
-                          </span>
-                        </span>
-                      ) : isOfferItem && offerPrice ? (
-                        <span>
-                          {hasMultipleVariantsOnOffer ? (
-                            <span className="text-sm font-bold">From </span>
-                          ) : (
-                            <span className="line-through text-gray-400 mr-2">
-                              {currency} {parseInt(String(oldPrice ?? item.price))}
-                            </span>
-                          )}
-                          <span className="text-accent font-bold text-2xl" style={{ color: styles.accent }}>
-                            {currency} {parseInt(String(offerPrice))}
                           </span>
                         </span>
                       ) : (
@@ -356,19 +360,19 @@ const ItemCard = ({
               <div className="w-full mt-2 space-y-3 divide-y-2 divide-gray-100">
                 {/* Show variants based on offer status */}
                 {(() => {
-                  if (isOfferItem && hasMultipleVariantsOnOffer) {
-                    // Show only variants that are on offer
+                  if (isOfferCategory && hasMultipleVariantsOnOffer) {
+                    // In Offer category: Show only variants that are on offer
                     const offerVariants = hotelData?.offers
                       ?.filter((o) => o.menu && o.menu.id === item.id && o.variant)
                       ?.map((o) => o.variant)
                       ?.filter(Boolean) || [];
                     return offerVariants;
-                  } else if (isOfferItem && offerPrice && oldPrice && !hasMultipleVariantsOnOffer) {
-                    // Show only the offer variant for single variant offers
+                  } else if (isOfferCategory && isOfferItem && offerPrice && oldPrice && !hasMultipleVariantsOnOffer) {
+                    // In Offer category: Show only the offer variant for single variant offers
                     const offer = hotelData?.offers?.find((o) => o.menu && o.menu.id === item.id);
                     return offer?.variant ? [offer.variant] : item.variants || [];
                   } else {
-                    // Show all variants for regular items
+                    // In All category or other categories: Show all variants
                     return item.variants || [];
                   }
                 })().filter((variant): variant is NonNullable<typeof variant> => Boolean(variant)).map((variant) => {
@@ -396,7 +400,7 @@ const ItemCard = ({
                             <>
                               {hasVariantOffer ? (
                                 <div className="flex flex-col items-end">
-                                  <span className="line-through text-gray-400 text-sm">
+                                  <span className="line-through text-gray-400 text-sm font-light">
                                     {currency} {variantOriginalPrice}
                                   </span>
                                   <span className="text-accent font-bold" style={{ color: styles.accent }}>

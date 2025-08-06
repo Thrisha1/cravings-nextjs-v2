@@ -98,10 +98,13 @@ const MenuItemsList = ({
             let oldPrice = item.price;
             let discountPercent = 0;
             let hasMultipleVariantsOnOffer = false;
+            let isOfferItem = false;
             
-            if (isOfferCategory) {
-              // Find all offers for this item
-              const itemOffers = hotelData.offers?.filter((o) => o.menu && o.menu.id === item.id) || [];
+            // Always check for offers for this item, regardless of category
+            const itemOffers = hotelData.offers?.filter((o) => o.menu && o.menu.id === item.id) || [];
+            
+            if (itemOffers.length > 0) {
+              isOfferItem = true;
               
               if (itemOffers.length > 1) {
                 // Multiple variants on offer - show "See Options" button
@@ -149,12 +152,14 @@ const MenuItemsList = ({
                 item={item}
                 styles={styles}
                 tableNumber={tableNumber}
-                isOfferItem={isOfferCategory}
+                isOfferItem={isOfferItem}
                 offerPrice={offerPrice}
                 oldPrice={oldPrice}
                 discountPercent={discountPercent}
                 displayName={displayName}
                 hasMultipleVariantsOnOffer={hasMultipleVariantsOnOffer}
+                currentCategory={selectedCat}
+                isOfferCategory={isOfferCategory}
               />
             );
           })}
