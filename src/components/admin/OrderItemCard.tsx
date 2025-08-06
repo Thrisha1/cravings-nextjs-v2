@@ -29,6 +29,7 @@ import {
 import AddNoteComponent from "./AddNoteComponent";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PrintButton from "./PrintButton";
 
 const OrderItemCard = ({
   order: initialOrder,
@@ -103,7 +104,6 @@ const OrderItemCard = ({
     } else {
       setDeliveryLocation(null);
     }
-
   }, [localOrder]);
 
   // Get the current status from status history
@@ -247,7 +247,8 @@ const OrderItemCard = ({
                 localOrder.deliveryAddress === "Unknown" ||
                 localOrder.deliveryAddress === "N/A" ||
                 !localOrder.delivery_location) &&
-              ((userData as Partner)?.delivery_rules?.needDeliveryLocation ?? true) && (
+              ((userData as Partner)?.delivery_rules?.needDeliveryLocation ??
+                true) && (
                 <span className="text-red-600 font-bold text-sm">TAKEAWAY</span>
               )}
           </div>
@@ -406,28 +407,8 @@ const OrderItemCard = ({
         <div className="mt-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
           {/* Left side buttons */}
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-            <Link
-              href={`/kot/${localOrder.id}`}
-              target="_blank"
-              passHref
-              className="flex-1 sm:flex-none"
-            >
-              <Button size="sm" variant="outline" className="w-full sm:w-auto">
-                <Printer className="h-4 w-4 mr-2" />
-                Print KOT
-              </Button>
-            </Link>
-            <Link
-              target="_blank"
-              href={`/bill/${localOrder.id}`}
-              passHref
-              className="flex-1 sm:flex-none"
-            >
-              <Button size="sm" variant="outline" className="w-full sm:w-auto">
-                <Printer className="h-4 w-4 mr-2" />
-                Print Bill
-              </Button>
-            </Link>
+            <PrintButton href={`/kot/${localOrder.id}`} text="Print KOT" />
+            <PrintButton href={`/bill/${localOrder.id}`} text="Print Bill" />
 
             <Button
               size="sm"

@@ -58,6 +58,14 @@ query GetOrder($id: uuid!) {
 }
 `;
 
+declare global {
+  interface Window {
+    electron?: {
+      silentPrint: (content: HTMLDivElement) => void;
+    };
+  }
+}
+
 const PrintOrderPage = () => {
   const { id } = useParams();
   const [order, setOrder] = useState<any>(null);
@@ -174,7 +182,13 @@ const PrintOrderPage = () => {
 
   useEffect(() => {
     if (!loading && order && printRef.current) {
-      handlePrint();
+      if(window.electron){
+        console.log("Using Electron silent print");
+        window.electron.silentPrint(printRef.current)
+      }else{
+        console.log("Using React to Print");
+        handlePrint();
+      }
     }
   }, [loading, order, handlePrint]);
 
