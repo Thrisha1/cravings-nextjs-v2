@@ -25,6 +25,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useOrderSubscriptionStore } from "@/store/orderSubscriptionStore";
 import AlertToggle from "./AlertToggle";
+import NewOrderAlertCard from "./orders/OrderDetailCard";
+import OrderDetailCard from "./orders/OrderDetailCard";
+import { OrderStatusDisplay, toStatusDisplayFormat } from "@/lib/statusHistory";
 
 const OrdersTab = () => {
   const router = useRouter();
@@ -40,11 +43,11 @@ const OrdersTab = () => {
     updateOrderStatus,
     updateOrderStatusHistory,
   } = useOrderStore();
-  const { 
-    orders, 
-    setOrders, 
-    removeOrder, 
-    loading, 
+  const {
+    orders,
+    setOrders,
+    removeOrder,
+    loading,
     setLoading,
     totalCount,
     currentPage,
@@ -53,7 +56,7 @@ const OrdersTab = () => {
     hasPreviousPage,
     setTotalCount,
     nextPage,
-    previousPage
+    previousPage,
   } = useOrderSubscriptionStore();
   const [activeTab, setActiveTab] = useState<"table" | "delivery" | "pos">(
     "delivery"
@@ -74,7 +77,8 @@ const OrdersTab = () => {
   const soundRef = useRef<Howl | null>(null);
   const { setOrder, setEditOrderModalOpen } = usePOSStore();
   const orderAlertRef = useRef<boolean>(false);
-  const [isCreateOrderOverlayOpen, setIsCreateOrderOverlayOpen] = useState(false);
+  const [isCreateOrderOverlayOpen, setIsCreateOrderOverlayOpen] =
+    useState(false);
 
   // Preload sound effect immediately
   useEffect(() => {
@@ -111,77 +115,77 @@ const OrdersTab = () => {
     const offset = (currentPage - 1) * limit;
 
     // Set up subscription for paginated orders
-    const unsubscribe = subscribePaginatedOrders(limit, offset, (paginatedOrders) => {
-      // First load - just record all existing orders
-      if (!initialLoadCompleted.current) {
-        paginatedOrders.forEach(order => {
+    const unsubscribe = subscribePaginatedOrders(
+      limit,
+      offset,
+      (paginatedOrders) => {
+        // First load - just record all existing orders
+        if (!initialLoadCompleted.current) {
+          paginatedOrders.forEach((order) => {
+            allSeenOrderIds.current.add(order.id);
+          });
+          initialLoadCompleted.current = true;
+          prevOrdersRef.current = paginatedOrders;
+          setLoading(false);
+          return;
+        }
+
+        // Find truly new orders - ones we haven't seen before in any pagination
+        const genuinelyNewOrders = paginatedOrders.filter(
+          (order) => !allSeenOrderIds.current.has(order.id)
+        );
+
+        // Add all current orders to our set of seen orders
+        paginatedOrders.forEach((order) => {
           allSeenOrderIds.current.add(order.id);
         });
-        initialLoadCompleted.current = true;
-        prevOrdersRef.current = paginatedOrders;
-        setLoading(false);
-        return;
-      }
 
-      
+        // Count new pending orders that we haven't seen before
+        const newTableOrders = genuinelyNewOrders.filter(
+          (order) => order.status === "pending" && order.type === "table_order"
+        );
 
-      // Find truly new orders - ones we haven't seen before in any pagination
-      const genuinelyNewOrders = paginatedOrders.filter(
-        order => !allSeenOrderIds.current.has(order.id)
-      );
+        const newDeliveryOrders = genuinelyNewOrders.filter(
+          (order) => order.status === "pending" && order.type === "delivery"
+        );
 
-      // Add all current orders to our set of seen orders
-      paginatedOrders.forEach(order => {
-        allSeenOrderIds.current.add(order.id);
-      });
+        const newPOSOrders = genuinelyNewOrders.filter(
+          (order) => order.type !== "table_order" && order.type !== "delivery"
+        );
 
-      // Count new pending orders that we haven't seen before
-      const newTableOrders = genuinelyNewOrders.filter(
-        order => order.status === "pending" && order.type === "table_order"
-      );
+        const totalNewOrders =
+          newTableOrders.length +
+          newDeliveryOrders.length +
+          newPOSOrders.length;
 
-      const newDeliveryOrders = genuinelyNewOrders.filter(
-        order => order.status === "pending" && order.type === "delivery"
-      );
+        if (totalNewOrders > 0 && !orderAlertRef.current) {
+          orderAlertRef.current = true;
 
-      const newPOSOrders = genuinelyNewOrders.filter(
-        order =>  order.type !== "table_order" && order.type !== "delivery"
-      );
+          // Show alert dialog with highest priority
+          const isAlertActive = localStorage?.getItem("alertActive") === "1";
 
-      
+          if (isAlertActive) {
+            soundRef.current?.play();
+            setNewOrderAlert({
+              show: true,
+              tableCount: newTableOrders.length,
+              deliveryCount: newDeliveryOrders.length,
+              posCount: newPOSOrders.length,
+            });
+          }
 
-      const totalNewOrders =
-        newTableOrders.length + newDeliveryOrders.length + newPOSOrders.length;
-
-      
-
-      if (totalNewOrders > 0 && !orderAlertRef.current) {
-        orderAlertRef.current = true;
-
-        // Show alert dialog with highest priority
-        const isAlertActive = localStorage?.getItem("alertActive") === "1";
-
-        if (isAlertActive) {
-          soundRef.current?.play();
-          setNewOrderAlert({
-            show: true,
-            tableCount: newTableOrders.length,
-            deliveryCount: newDeliveryOrders.length,
-            posCount: newPOSOrders.length,
+          // Update new order indicators
+          setNewOrders({
+            table: newTableOrders.length > 0,
+            delivery: newDeliveryOrders.length > 0,
+            pos: newPOSOrders.length > 0,
           });
         }
 
-        // Update new order indicators
-        setNewOrders({
-          table: newTableOrders.length > 0,
-          delivery: newDeliveryOrders.length > 0,
-          pos: newPOSOrders.length > 0,
-        });
+        prevOrdersRef.current = paginatedOrders;
+        setLoading(false);
       }
-
-      prevOrdersRef.current = paginatedOrders;
-      setLoading(false);
-    });
+    );
 
     return () => {
       unsubscribe();
@@ -191,7 +195,7 @@ const OrdersTab = () => {
   useEffect(() => {
     if (partnerOrders) {
       console.log("Partner orders updated:", partnerOrders);
-      
+
       setOrders(partnerOrders);
     }
   }, [partnerOrders, setOrders]);
@@ -236,15 +240,19 @@ const OrdersTab = () => {
   };
 
   useEffect(() => {
-    const filteredByTypeOrders = orders.filter((order) => {
-      if (activeTab === "table") return order.type === "table_order";
-      if (activeTab === "delivery") return order.type === "delivery";
-      if (activeTab === "pos") return order.type === "pos";
-      return false;
-    }).sort((a, b) => {
-      // Sort by created date, most recent first
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+    const filteredByTypeOrders = orders
+      .filter((order) => {
+        if (activeTab === "table") return order.type === "table_order";
+        if (activeTab === "delivery") return order.type === "delivery";
+        if (activeTab === "pos") return order.type === "pos";
+        return false;
+      })
+      .sort((a, b) => {
+        // Sort by created date, most recent first
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      });
 
     setSortedOrders(filteredByTypeOrders);
     setDisplayedOrders(filteredByTypeOrders);
@@ -277,13 +285,17 @@ const OrdersTab = () => {
 
   const handleGoToPage = () => {
     const pageNumber = parseInt(pageInput, 10);
-    if (!isNaN(pageNumber) && pageNumber >= 1 && pageNumber <= Math.ceil(totalCount / limit)) {
+    if (
+      !isNaN(pageNumber) &&
+      pageNumber >= 1 &&
+      pageNumber <= Math.ceil(totalCount / limit)
+    ) {
       useOrderSubscriptionStore.setState({ currentPage: pageNumber });
       setPageInput("");
       // Explicitly scroll to top for direct page input
       window.scrollTo({
         top: 0,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
     } else {
       toast.error("Invalid page number");
@@ -293,105 +305,65 @@ const OrdersTab = () => {
   const maxPages = Math.ceil(totalCount / limit) || 1;
   const startPage = Math.max(1, currentPage - 4);
   const endPage = Math.min(maxPages, startPage + 8);
-  
+
   useEffect(() => {
     if (pagesContainerRef.current) {
       const container = pagesContainerRef.current;
       const activeButton = container.querySelector("[data-active='true']");
-      
+
       if (activeButton) {
         const containerRect = container.getBoundingClientRect();
         const buttonRect = activeButton.getBoundingClientRect();
-        
-        const scrollLeft = buttonRect.left - containerRect.left - (containerRect.width / 2) + (buttonRect.width / 2);
+
+        const scrollLeft =
+          buttonRect.left -
+          containerRect.left -
+          containerRect.width / 2 +
+          buttonRect.width / 2;
         container.scrollTo({
           left: container.scrollLeft + scrollLeft,
-          behavior: 'smooth'
+          behavior: "smooth",
         });
       }
     }
   }, [currentPage]);
 
-
   useEffect(() => {
-
     const isTableEnabled = features?.ordering?.enabled;
     const isDeliveryEnabled = features?.delivery?.enabled;
     const isPosEnabled = features?.pos?.enabled;
 
-    if(isDeliveryEnabled){
+    if (isDeliveryEnabled) {
       setActiveTab("delivery");
-    } else if(isTableEnabled){
+    } else if (isTableEnabled) {
       setActiveTab("table");
-    } else if(isPosEnabled){
+    } else if (isPosEnabled) {
       setActiveTab("pos");
     }
-
-
-  },[features]);
+  }, [features]);
 
   // Scroll to top when page changes
   useEffect(() => {
     window.scrollTo({
       top: 0,
-      behavior: 'smooth'
+      behavior: "smooth",
     });
   }, [currentPage]);
 
   return (
     <div className="py-6 px-4 sm:px-[8%] max-w-7xl mx-auto relative">
+      {/* <AlertToggle /> */}
 
-      <AlertToggle/>
-
-      {/* High Priority New Order Alert Dialog */}
-      <AlertDialog
-        open={newOrderAlert.show}
-        onOpenChange={(open) => {
-          setNewOrderAlert((prev) => ({ ...prev, show: open }));
-          if (!open) {
-            orderAlertRef.current = false;
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>New Orders Received!</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have {newOrderAlert.tableCount} new table order(s),{" "}
-              {newOrderAlert.deliveryCount} new delivery order(s), and{" "}
-              {newOrderAlert.posCount} new POS order(s).
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction
-              onClick={() => {
-                setNewOrderAlert({
-                  show: false,
-                  tableCount: 0,
-                  deliveryCount: 0,
-                  posCount: 0,
-                });
-                orderAlertRef.current = false;
-                // Switch to the tab with most new orders
-                const maxCount = Math.max(
-                  newOrderAlert.tableCount,
-                  newOrderAlert.deliveryCount,
-                  newOrderAlert.posCount
-                );
-                if (newOrderAlert.tableCount === maxCount) {
-                  setActiveTab("table");
-                } else if (newOrderAlert.deliveryCount === maxCount) {
-                  setActiveTab("delivery");
-                } else {
-                  setActiveTab("pos");
-                }
-              }}
-            >
-              OK
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      
+          <OrderDetailCard
+            newOrderAlert={newOrderAlert.show}
+            orders={orders.filter((order) => order.status === "pending" && !toStatusDisplayFormat(order.status_history as OrderStatusDisplay)?.accepted?.isCompleted)}
+            onClose={() => {
+              setNewOrderAlert((prev) => ({ ...prev, show: false }));
+              orderAlertRef.current = false;
+            }}
+          />
+       
 
       <TodaysEarnings orders={orders} />
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
@@ -407,7 +379,7 @@ const OrdersTab = () => {
               Create New Order
             </Button>
           )}
-          <Button 
+          <Button
             size="sm"
             className="flex-1 sm:flex-none"
             onClick={() => router.push("/admin/orders/all")}
@@ -417,12 +389,17 @@ const OrdersTab = () => {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList
-          className="flex w-full gap-1 mb-6 rounded-lg p-1"
-        >
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="w-full"
+      >
+        <TabsList className="flex w-full gap-1 mb-6 rounded-lg p-1">
           {features?.delivery.enabled && (
-            <TabsTrigger value="delivery" className="relative flex-1 min-w-[100px] py-2">
+            <TabsTrigger
+              value="delivery"
+              className="relative flex-1 min-w-[100px] py-2"
+            >
               Deliveries
               {newOrders.delivery && (
                 <span className="absolute -top-1 -right-1 h-3 w-3">
@@ -432,7 +409,10 @@ const OrdersTab = () => {
               )}
             </TabsTrigger>
           )}
-          <TabsTrigger value="table" className="relative flex-1 min-w-[100px] py-2">
+          <TabsTrigger
+            value="table"
+            className="relative flex-1 min-w-[100px] py-2"
+          >
             Table Orders
             {newOrders.table && (
               <span className="absolute -top-1 -right-1 h-3 w-3">
@@ -442,7 +422,10 @@ const OrdersTab = () => {
             )}
           </TabsTrigger>
           {features?.pos.enabled && (
-            <TabsTrigger value="pos" className="relative flex-1 min-w-[100px] py-2">
+            <TabsTrigger
+              value="pos"
+              className="relative flex-1 min-w-[100px] py-2"
+            >
               POS Orders
               {newOrders.pos && (
                 <span className="absolute -top-1 -right-1 h-3 w-3">
@@ -485,7 +468,9 @@ const OrdersTab = () => {
                         }}
                         setOrder={setOrder}
                         setEditOrderModalOpen={setEditOrderModalOpen}
-                        gstPercentage={(userData as Partner)?.gst_percentage || 0}
+                        gstPercentage={
+                          (userData as Partner)?.gst_percentage || 0
+                        }
                       />
                     ))}
                   </>
@@ -517,7 +502,9 @@ const OrdersTab = () => {
                         }}
                         setOrder={setOrder}
                         setEditOrderModalOpen={setEditOrderModalOpen}
-                        gstPercentage={(userData as Partner)?.gst_percentage || 0}
+                        gstPercentage={
+                          (userData as Partner)?.gst_percentage || 0
+                        }
                       />
                     ))}
                   </>
@@ -533,16 +520,19 @@ const OrdersTab = () => {
                 ) : (
                   <>
                     {displayedOrders.map((order, index) => {
-                      const gstPercentage = (userData as Partner)?.gst_percentage || 0;
+                      const gstPercentage =
+                        (userData as Partner)?.gst_percentage || 0;
                       const foodSubtotal = order.items.reduce((sum, item) => {
                         return sum + item.price * item.quantity;
                       }, 0);
-                      const gstAmount = getGstAmount(foodSubtotal, gstPercentage);
-                      const totalPriceWithGst = foodSubtotal + gstAmount;
-                      const extraChargesTotal = (order?.extraCharges ?? []).reduce(
-                        (acc, charge) => acc + charge.amount,
-                        0
+                      const gstAmount = getGstAmount(
+                        foodSubtotal,
+                        gstPercentage
                       );
+                      const totalPriceWithGst = foodSubtotal + gstAmount;
+                      const extraChargesTotal = (
+                        order?.extraCharges ?? []
+                      ).reduce((acc, charge) => acc + charge.amount, 0);
                       const grandTotal = totalPriceWithGst + extraChargesTotal;
 
                       return (
@@ -572,37 +562,43 @@ const OrdersTab = () => {
       {/* Pagination Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
         <div className="text-sm text-gray-500">
-          Showing {orders.length > 0 ? (currentPage - 1) * limit + 1 : 0} - {Math.min(currentPage * limit, totalCount)} of {totalCount} orders
+          Showing {orders.length > 0 ? (currentPage - 1) * limit + 1 : 0} -{" "}
+          {Math.min(currentPage * limit, totalCount)} of {totalCount} orders
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleFirstPage}
             disabled={currentPage === 1 || loading}
           >
             First
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handlePreviousPage}
             disabled={!hasPreviousPage || loading}
           >
             <ChevronLeft className="h-4 w-4 mr-1" /> Prev
           </Button>
-          
-          <div 
+
+          <div
             className="flex overflow-x-auto hide-scrollbar max-w-[280px] transition-all duration-300 ease-in-out"
             ref={pagesContainerRef}
           >
-            {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map(page => (
+            {Array.from(
+              { length: endPage - startPage + 1 },
+              (_, i) => startPage + i
+            ).map((page) => (
               <Button
                 key={`page-${page}`}
                 variant={currentPage === page ? "default" : "outline"}
                 size="sm"
                 data-active={currentPage === page}
-                onClick={() => useOrderSubscriptionStore.setState({ currentPage: page })}
+                onClick={() =>
+                  useOrderSubscriptionStore.setState({ currentPage: page })
+                }
                 disabled={loading}
                 className="min-w-[40px] px-3"
               >
@@ -610,16 +606,16 @@ const OrdersTab = () => {
               </Button>
             ))}
           </div>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleNextPage}
             disabled={!hasNextPage || loading}
           >
             Next <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
-          
+
           <div className="flex items-center gap-1">
             <input
               type="text"
@@ -627,10 +623,10 @@ const OrdersTab = () => {
               placeholder="#"
               value={pageInput}
               onChange={(e) => setPageInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleGoToPage()}
+              onKeyDown={(e) => e.key === "Enter" && handleGoToPage()}
             />
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={handleGoToPage}
               disabled={loading}
@@ -640,7 +636,7 @@ const OrdersTab = () => {
           </div>
         </div>
       </div>
-      
+
       <style jsx global>{`
         .hide-scrollbar::-webkit-scrollbar {
           display: none;

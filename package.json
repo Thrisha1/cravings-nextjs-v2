@@ -88,6 +88,7 @@
     "recharts": "^2.12.7",
     "sharp": "^0.34.2",
     "sonner": "^1.7.2",
+    "swiper": "^11.2.10",
     "tailwind-merge": "^2.6.0",
     "tailwind-scrollbar-hide": "^2.0.0",
     "tailwindcss-animate": "^1.0.7",
