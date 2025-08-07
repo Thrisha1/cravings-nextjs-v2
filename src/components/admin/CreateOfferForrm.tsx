@@ -34,7 +34,12 @@ interface CreateOfferFormProps {
       items_available?: number;
       start_time: string;
       end_time: string;
+      offer_type?: string;
       offerGroup?: OfferGroup;
+      variant?: {
+        name: string;
+        price: number;
+      };
     },
     notificationMessage: {
       title: string;
@@ -53,7 +58,9 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     itemsAvailable: "",
     fromTime: "",
     toTime: "",
+    offerType: "all", // Add offer_type field
   });
+  const [selectedVariant, setSelectedVariant] = useState<string>("");
   const [newOfferGroup, setNewOfferGroup] = useState({
     name: "",
     categoryId: "",
@@ -69,6 +76,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
   const [groupType, setGroupType] = useState<
     "category" | "all" | "select" | undefined
   >(undefined);
+  const [itemSearch, setItemSearch] = useState(""); // Add search state
 
   const { userData } = useAuthStore();
 
@@ -202,6 +210,14 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       toast.error("Please select a menu item");
       return false;
     }
+    
+    // Check if selected item has variants and a variant is selected
+    const selectedItem = items.find((item) => item.id === newOffer.menuItemId);
+    if (selectedItem?.variants && selectedItem.variants.length > 0 && !selectedVariant) {
+      toast.error("Please select a variant");
+      return false;
+    }
+    
     if (!newOffer.newPrice || isNaN(parseFloat(newOffer.newPrice))) {
       toast.error("Please enter a valid new price");
       return false;
@@ -273,6 +289,17 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     return items || [];
   };
 
+  // Helper function to get filtered items based on search
+  const getFilteredItems = () => {
+    const allItems = getAllItems();
+    if (!itemSearch.trim()) return allItems;
+    
+    return allItems.filter(item => 
+      item.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
+      item.category?.name.toLowerCase().includes(itemSearch.toLowerCase())
+    );
+  };
+
   // Helper function to get items by category
   const getItemsByCategory = (categoryId: string) => {
     return getAllItems().filter((item) => item.category?.id === categoryId);
@@ -287,9 +314,10 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       const selectedItem = items.find(
         (item) => item.id === newOffer.menuItemId
       );
+      const variantText = selectedVariant ? ` (${selectedVariant})` : "";
       return `🔥 ${
         selectedItem?.name || "Special Item"
-      } - Limited-Time Deal at ${
+      }${variantText} - Limited-Time Deal at ${
         (userData as HotelData)?.store_name || "Our Store"
       }!`;
     }
@@ -329,9 +357,18 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       const selectedItem = items.find(
         (item) => item.id === newOffer.menuItemId
       );
-      return `Check out the new offer: ${selectedItem?.name} for just ${
+      const variantText = selectedVariant ? ` (${selectedVariant})` : "";
+      
+      // Get the original price from the selected variant
+      let originalPrice = selectedItem?.price || 0;
+      if (selectedVariant && slectedItem?.variants) {
+        const variant = slectedItem.variants.find(v => v.name === selectedVariant);
+        originalPrice = variant ? variant.price : originalPrice;
+      }
+      
+      return `Check out the new offer: ${selectedItem?.name}${variantText} - Now just ${
         (userData as HotelData)?.currency ?? "₹"
-      }${newOffer.newPrice}. Valid until ${formatDate(newOffer.toTime)}.`;
+      }${newOffer.newPrice} (was ${(userData as HotelData)?.currency ?? "₹"}${originalPrice.toFixed(2)}). Valid until ${formatDate(newOffer.toTime)}.`;
     }
   };
 
@@ -355,55 +392,113 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       title: notificationTitleRef.current?.value || getNotificationTitle() || "",
       body: notificationBodyRef.current?.value || getNotificationBody() || "",
     };
+
+    // Comprehensive logging of all form data
+    console.log("=== CREATE OFFER FORM DATA ===");
+    console.log("Form State:", {
+      newOffer,
+      selectedVariant,
+      slectedItem,
+      isOfferTypeGroup,
+      newOfferGroup,
+      groupType
+    });
+    console.log("Selected Item Details:", {
+      id: slectedItem?.id,
+      name: slectedItem?.name,
+      price: slectedItem?.price,
+      variants: slectedItem?.variants,
+      hasVariants: slectedItem?.variants && slectedItem.variants.length > 0
+    });
+    console.log("Variant Selection:", {
+      selectedVariant,
+      variantExists: selectedVariant ? "YES" : "NO"
+    });
+    console.log("Price Information:", {
+      newPrice: newOffer.newPrice,
+      originalPrice: slectedItem?.price,
+      variantPrice: selectedVariant && slectedItem?.variants ? 
+        slectedItem.variants.find(v => v.name === selectedVariant)?.price : "N/A"
+    });
+    console.log("Notification Message:", notificationMessage);
   
     try {
       if (!isOfferTypeGroup) {
-        console.log("Creating single offer:", {
+        const offerData = {
           menu_id: newOffer.menuItemId,
-          offer_price: parseFloat(newOffer.newPrice),
+          offer_price: Math.round(parseFloat(newOffer.newPrice)),
           items_available: parseInt(newOffer.itemsAvailable),
           start_time: newOffer.fromTime,
           end_time: newOffer.toTime,
-        });
-  
+          offer_type: newOffer.offerType,
+          variant: selectedVariant && slectedItem?.variants ? 
+            slectedItem.variants.find(v => v.name === selectedVariant) : undefined,
+        };
+        
         await onSubmit(
-          {
-            menu_id: newOffer.menuItemId,
-            offer_price: parseFloat(newOffer.newPrice),
-            items_available: parseInt(newOffer.itemsAvailable),
-            start_time: newOffer.fromTime,
-            end_time: newOffer.toTime,
-          },
+          offerData,
           notificationMessage
         );
       } else {
-        // For group/category offers, create an offer for each item in the category
+        // For group/category offers, create an offer for each selected item/variant
         const percentage = parseFloat(newOfferGroup.percentage);
-        const itemsToOffer = items.filter(item => newOfferGroup.menuItemIds.includes(item.id as string));
-        for (const item of itemsToOffer) {
-          // Use the menu item's available quantity if present, otherwise fallback to 1
-          const items_available = item.stocks && item.stocks[0] && typeof item.stocks[0].stock_quantity === 'number'
-            ? item.stocks[0].stock_quantity
-            : 1;
-          // Calculate offer price as a float with two decimals
-          const offer_price = Math.round((item.price * (1 - percentage / 100)) * 100) / 100;
-          console.log("Creating offer for item in category:", {
-            menu_id: item.id,
-            offer_price,
-            items_available,
-            start_time: newOffer.fromTime,
-            end_time: newOffer.toTime,
-          });
-          await onSubmit(
-            {
-              menu_id: item.id,
-              offer_price,
-              items_available,
-              start_time: newOffer.fromTime,
-              end_time: newOffer.toTime,
-            },
-            notificationMessage
-          );
+        
+        for (const selectedId of newOfferGroup.menuItemIds) {
+          // Check if this is a variant ID (contains '|')
+          if (selectedId.includes('|')) {
+            // This is a variant ID - format: itemId|variantName
+            const [itemId, variantName] = selectedId.split('|');
+            const item = items.find(item => item.id === itemId);
+            const variant = item?.variants?.find(v => v.name === variantName);
+            
+            if (item && variant) {
+              // Use the menu item's available quantity if present, otherwise fallback to 1
+              const items_available = item.stocks && item.stocks[0] && typeof item.stocks[0].stock_quantity === 'number'
+                ? item.stocks[0].stock_quantity
+                : 1;
+              // Calculate offer price based on variant price
+              const offer_price = Math.round(variant.price * (1 - percentage / 100));
+              
+              await onSubmit(
+                {
+                  menu_id: item.id,
+                  offer_price,
+                  items_available,
+                  start_time: newOffer.fromTime,
+                  end_time: newOffer.toTime,
+                  offer_type: newOffer.offerType,
+                  variant: {
+                    name: variant.name,
+                    price: variant.price,
+                  },
+                },
+                notificationMessage
+              );
+            }
+          } else {
+            // This is a regular item ID
+            const item = items.find(item => item.id === selectedId);
+            if (item) {
+              // Use the menu item's available quantity if present, otherwise fallback to 1
+              const items_available = item.stocks && item.stocks[0] && typeof item.stocks[0].stock_quantity === 'number'
+                ? item.stocks[0].stock_quantity
+                : 1;
+              // Calculate offer price as a float with two decimals
+              const offer_price = Math.round(item.price * (1 - percentage / 100));
+              
+              await onSubmit(
+                {
+                  menu_id: item.id,
+                  offer_price,
+                  items_available,
+                  start_time: newOffer.fromTime,
+                  end_time: newOffer.toTime,
+                  offer_type: newOffer.offerType,
+                },
+                notificationMessage
+              );
+            }
+          }
         }
       }
     } catch (error) {
@@ -421,6 +516,11 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
       console.log("Selected category:", newOfferGroup.categoryId);
     }
   }, [groupType, isOfferTypeGroup, newOfferGroup.menuItemIds, newOfferGroup.categoryId]);
+
+  // Clear search when switching offer types
+  useEffect(() => {
+    setItemSearch("");
+  }, [isOfferTypeGroup, groupType]);
 
   return (
     <div className="max-w-lg mx-auto bg-white rounded-lg shadow-lg p-6 mb-8">
@@ -445,8 +545,10 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     itemsAvailable: "",
                     fromTime: "",
                     toTime: "",
+                    offerType: "all",
                   });
                   setSelectedItem(null);
+                  setSelectedVariant("");
                 } else {
                   // Reset group offer state
                   setNewOfferGroup({
@@ -466,6 +568,25 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
               <SelectContent>
                 <SelectItem value="single">Single Item Offer</SelectItem>
                 <SelectItem value="group">Offer Group</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="offerTypeFilter">Offer Display Type</Label>
+            <Select
+              value={newOffer.offerType}
+              onValueChange={(value) => {
+                setNewOffer({ ...newOffer, offerType: value });
+              }}
+            >
+              <SelectTrigger id="offerTypeFilter">
+                <SelectValue placeholder="Select where to display offer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All (Hotels, Offers, QR Scan)</SelectItem>
+                <SelectItem value="delivery">Delivery Only (Hotels, Offers)</SelectItem>
+                <SelectItem value="dine_in">Dine-In Only (QR Scan)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -520,7 +641,6 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     value={newOfferGroup.categoryId}
                     onValueChange={(value) => {
                       const categoryItems = getItemsByCategory(value);
-                      console.log("Category items found:", categoryItems);
                       setNewOfferGroup({
                         ...newOfferGroup,
                         categoryId: value,
@@ -576,47 +696,146 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
               {groupType === "select" && (
                 <div className="space-y-2">
                   <Label>Select Menu Items</Label>
+                  
                   <div className="max-h-60 overflow-y-auto border rounded-md p-2">
+                    <div className="sticky top-0 bg-white pb-2 mb-2 border-b">
+                      <Input
+                        placeholder="Search items..."
+                        value={itemSearch}
+                        onChange={(e) => setItemSearch(e.target.value)}
+                        className="w-full"
+                        onKeyDown={(e) => {
+                          // Prevent dropdown navigation when typing in search
+                          e.stopPropagation();
+                        }}
+                        onFocus={(e) => {
+                          // Prevent dropdown from closing when search input is focused
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          // Prevent dropdown from closing when clicking search input
+                          e.stopPropagation();
+                        }}
+                      />
+                    </div>
                     <div className="space-y-2 grid grid-cols-1 gap-2">
-                      {getAllItems().map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded"
-                        >
-                          <Checkbox
-                            id={`item-${item.id}`}
-                            checked={newOfferGroup.menuItemIds.includes(
-                              item.id as string
+                      {getFilteredItems().map((item) => {
+                        const hasVariants = item.variants && item.variants.length > 0;
+                        const isItemSelected = newOfferGroup.menuItemIds.includes(item.id as string);
+                        const selectedVariants = newOfferGroup.menuItemIds.filter(id => 
+                          id.startsWith(`${item.id}|`)
+                        );
+                        const allVariantsSelected = hasVariants && 
+                          selectedVariants.length === (item.variants?.length || 0);
+
+                        return (
+                          <div key={item.id} className="space-y-1">
+                            {/* Main item checkbox */}
+                            <div className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                              <Checkbox
+                                id={`item-${item.id}`}
+                                checked={isItemSelected || allVariantsSelected}
+                                onCheckedChange={(checked) => {
+                                  if (checked && item.id) {
+                                    if (hasVariants) {
+                                      // If item has variants, select all variants
+                                      const variantIds = item.variants?.map(v => `${item.id}|${v.name}`) || [];
+                                      setNewOfferGroup({
+                                        ...newOfferGroup,
+                                        menuItemIds: [
+                                          ...newOfferGroup.menuItemIds.filter(id => 
+                                            !id.startsWith(`${item.id}|`) && id !== item.id
+                                          ),
+                                          ...variantIds,
+                                        ],
+                                      });
+                                    } else {
+                                      // If item has no variants, select the item itself
+                                      setNewOfferGroup({
+                                        ...newOfferGroup,
+                                        menuItemIds: [
+                                          ...newOfferGroup.menuItemIds,
+                                          item.id,
+                                        ],
+                                      });
+                                    }
+                                  } else {
+                                    // Remove item and all its variants
+                                    setNewOfferGroup({
+                                      ...newOfferGroup,
+                                      menuItemIds: newOfferGroup.menuItemIds.filter(
+                                        (id) => id !== item.id && !id.startsWith(`${item.id}|`)
+                                      ),
+                                    });
+                                  }
+                                }}
+                              />
+                              <Label
+                                className="text-sm cursor-pointer flex-1"
+                                htmlFor={`item-${item.id}`}
+                              >
+                                {item.name} - {hasVariants ? 
+                                  `₹${item.variants?.sort((a, b) => (a.price || 0) - (b.price || 0))[0]?.price?.toFixed(2) || "0.00"} (${item.variants?.length || 0} variants)` : 
+                                  `₹${item.price?.toFixed(2) || "0.00"}`
+                                }
+                              </Label>
+                            </div>
+
+                            {/* Variants dropdown for items with variants */}
+                            {hasVariants && (
+                              <div className="ml-6 space-y-1">
+                                {item.variants?.map((variant) => {
+                                  const variantId = `${item.id}|${variant.name}`;
+                                  const isVariantSelected = newOfferGroup.menuItemIds.includes(variantId);
+                                  
+                                  return (
+                                    <div
+                                      key={variantId}
+                                      className="flex items-center space-x-2 p-1 hover:bg-gray-50 rounded"
+                                    >
+                                      <Checkbox
+                                        id={`variant-${variantId}`}
+                                        checked={isVariantSelected}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            setNewOfferGroup({
+                                              ...newOfferGroup,
+                                              menuItemIds: [
+                                                ...newOfferGroup.menuItemIds,
+                                                variantId,
+                                              ],
+                                            });
+                                          } else {
+                                            setNewOfferGroup({
+                                              ...newOfferGroup,
+                                              menuItemIds: newOfferGroup.menuItemIds.filter(
+                                                (id) => id !== variantId
+                                              ),
+                                            });
+                                          }
+                                        }}
+                                      />
+                                      <Label
+                                        className="text-xs cursor-pointer flex-1"
+                                        htmlFor={`variant-${variantId}`}
+                                      >
+                                        {variant.name} - ₹{variant.price?.toFixed(2) || "0.00"}
+                                      </Label>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             )}
-                            onCheckedChange={(checked) => {
-                              if (checked && item.id) {
-                                setNewOfferGroup({
-                                  ...newOfferGroup,
-                                  menuItemIds: [
-                                    ...newOfferGroup.menuItemIds,
-                                    item.id,
-                                  ],
-                                });
-                              } else {
-                                setNewOfferGroup({
-                                  ...newOfferGroup,
-                                  menuItemIds: newOfferGroup.menuItemIds.filter(
-                                    (id) => id !== item.id
-                                  ),
-                                });
-                              }
-                            }}
-                          />
-                          <Label
-                            className="text-sm cursor-pointer flex-1"
-                            htmlFor={`item-${item.id}`}
-                          >
-                            {item.name} - ₹{item.price?.toFixed(2) || "0.00"}
-                          </Label>
-                        </div>
-                      ))}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
+                  {getFilteredItems().length === 0 && (
+                    <div className="text-center py-4 text-gray-500 text-sm">
+                      No items found matching "{itemSearch}"
+                    </div>
+                  )}
                   <p className="text-xs text-gray-500">
                     {newOfferGroup.menuItemIds.length} items selected
                   </p>
@@ -693,6 +912,8 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                       (item) => item.id === value
                     );
                     setSelectedItem(selectedItem || null);
+                    // Reset variant selection when item changes
+                    setSelectedVariant("");
                     // Force close keyboard if open
                     if (document.activeElement instanceof HTMLElement) {
                       document.activeElement.blur();
@@ -700,17 +921,109 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                   }}
                 >
                   <SelectTrigger id="menuItem">
-                    <SelectValue placeholder="Select a product" />
+                    <SelectValue placeholder="Search and select a product..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {getAllItems().map((item) => (
+                    <div className="p-2">
+                      <Input
+                        placeholder="Search items..."
+                        value={itemSearch}
+                        onChange={(e) => setItemSearch(e.target.value)}
+                        className="mb-2"
+                        onKeyDown={(e) => {
+                          // Prevent dropdown navigation when typing in search
+                          e.stopPropagation();
+                        }}
+                        onFocus={(e) => {
+                          // Prevent dropdown from closing when search input is focused
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          // Prevent dropdown from closing when clicking search input
+                          e.stopPropagation();
+                        }}
+                      />
+                    </div>
+                    {getFilteredItems().map((item) => (
                       <SelectItem key={item.id} value={item.id as string}>
-                        {item.name} - ₹{item.price?.toFixed(2) || "0.00"}
+                        <div className="flex flex-col">
+                          <span className="font-medium">{item.name}</span>
+                          <span className="text-xs text-gray-500">
+                            {item.category?.name} - {item.variants && item.variants.length > 0 ? 
+                              `${item.variants.length} variants` : 
+                              `₹${item.price?.toFixed(2) || "0.00"}`
+                            }
+                          </span>
+                        </div>
                       </SelectItem>
                     ))}
+                    {getFilteredItems().length === 0 && (
+                      <div className="px-2 py-1 text-sm text-gray-500">
+                        No items found matching "{itemSearch}"
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Show original price for items without variants */}
+              {slectedItem && (!slectedItem.variants || slectedItem.variants.length === 0) && (
+                <div className="space-y-2">
+                  <Label>Original Price</Label>
+                  <div className="p-3 bg-gray-50 rounded border text-sm">
+                    <p className="font-medium">₹{slectedItem.price?.toFixed(2) || "0.00"}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Variant Selection - Show only if selected item has variants */}
+              {slectedItem?.variants && slectedItem.variants.length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="variant">Select Variant</Label>
+                  <Select
+                    value={selectedVariant}
+                    onValueChange={(value) => {
+                      setSelectedVariant(value);
+                      // Update the new price to match the selected variant's price
+                      const variant = slectedItem.variants?.find(v => v.name === value);
+                      if (variant) {
+                        setNewOffer({ ...newOffer, newPrice: variant.price.toString() });
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="variant">
+                      <SelectValue placeholder="Select a variant" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {slectedItem.variants.map((variant) => (
+                        <SelectItem key={variant.name} value={variant.name}>
+                          {variant.name} - ₹{variant.price?.toFixed(2) || "0.00"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Show old price when variant is selected */}
+              {selectedVariant && slectedItem?.variants && (
+                <div className="space-y-2">
+                  <Label>Original Price</Label>
+                  <div className="p-3 bg-gray-50 rounded border text-sm">
+                    <p className="font-medium">
+                      ₹{(() => {
+                        const variant = slectedItem.variants.find(v => v.name === selectedVariant);
+                        // Always show the variant price as original price when a variant is selected
+                        if (variant && variant.price !== undefined && variant.price !== null) {
+                          return variant.price.toFixed(2);
+                        }
+                        return "0.00";
+                      })()}
+                    </p>
+                    <p className="text-gray-600">for {selectedVariant} variant</p>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="newPrice">New Price in ₹</Label>

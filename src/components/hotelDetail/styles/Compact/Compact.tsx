@@ -332,9 +332,27 @@ const Compact = ({
                   </h2>
                   <div className="grid grid-cols-1 gap-4 divide-y-2 divide-gray-200">
                     {itemsToDisplay.map((item) => {
-                      const offerData = offers?.find(
+                      // Find all offers for this item
+                      const itemOffers = offers?.filter(
                         (offer) => offer.menu.id === item.id
-                      );
+                      ) || [];
+                      
+                      let offerData = undefined;
+                      let hasMultipleVariantsOnOffer = false;
+                      
+                      if (itemOffers.length > 1) {
+                        // Multiple variants on offer - calculate lowest offer price
+                        hasMultipleVariantsOnOffer = true;
+                        const lowestOfferPrice = Math.min(...itemOffers.map(o => o.offer_price || 0));
+                        // Create a mock offer data with the lowest price for display
+                        offerData = {
+                          ...itemOffers[0],
+                          offer_price: lowestOfferPrice,
+                        };
+                      } else if (itemOffers.length === 1) {
+                        // Single variant on offer
+                        offerData = itemOffers[0];
+                      }
 
                       return (
                         <ItemCard
@@ -345,6 +363,10 @@ const Compact = ({
                           offerData={offerData}
                           styles={styles}
                           key={item.id}
+                          hasMultipleVariantsOnOffer={hasMultipleVariantsOnOffer}
+                          allItemOffers={hasMultipleVariantsOnOffer ? itemOffers : undefined}
+                          currentCategory={category.id}
+                          isOfferCategory={category.id === "offers"}
                         />
                       );
                     })}

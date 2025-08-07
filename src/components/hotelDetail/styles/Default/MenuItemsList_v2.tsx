@@ -97,16 +97,52 @@ const MenuItemsList = ({
             let offerPrice = item.price;
             let oldPrice = item.price;
             let discountPercent = 0;
-            if (isOfferCategory) {
-              // Find the offer for this item
-              const offer = hotelData.offers?.find((o) => o.menu && o.menu.id === item.id);
-              offerPrice = typeof offer?.offer_price === 'number' ? offer.offer_price : item.price;
-              oldPrice = typeof offer?.menu?.price === 'number' ? offer.menu.price : item.price;
-              // Calculate discount for both group and single offers
-              if (typeof offer?.offer_price === 'number' && typeof offer?.menu?.price === 'number' && offer.menu.price > offer.offer_price) {
-                discountPercent = Math.round(((offer.menu.price - offer.offer_price) / offer.menu.price) * 100);
+            let hasMultipleVariantsOnOffer = false;
+            let isOfferItem = false;
+            
+            // Always check for offers for this item, regardless of category
+            const itemOffers = hotelData.offers?.filter((o) => o.menu && o.menu.id === item.id) || [];
+            
+            if (itemOffers.length > 0) {
+              isOfferItem = true;
+              
+              if (itemOffers.length > 1) {
+                // Multiple variants on offer - show "See Options" button
+                hasMultipleVariantsOnOffer = true;
+                // Use the lowest offer price for display
+                const lowestOfferPrice = Math.min(...itemOffers.map(o => o.offer_price || 0));
+                offerPrice = lowestOfferPrice;
+                
+                // For multiple variants, we don't need oldPrice since we're showing "From" price
+                oldPrice = item.price; // This won't be used for display
+                
+                // Calculate discount based on the lowest offer price vs the lowest original price
+                const lowestOriginalPrice = Math.min(...itemOffers.map(o => 
+                  o.variant ? o.variant.price : (o.menu?.price || 0)
+                ));
+                if (lowestOriginalPrice > lowestOfferPrice) {
+                  discountPercent = Math.round(((lowestOriginalPrice - lowestOfferPrice) / lowestOriginalPrice) * 100);
+                }
+              } else if (itemOffers.length === 1) {
+                // Single variant on offer
+                const offer = itemOffers[0];
+                offerPrice = typeof offer?.offer_price === 'number' ? offer.offer_price : item.price;
+                
+                if (offer?.variant) {
+                  oldPrice = offer.variant.price;
+                } else {
+                  oldPrice = typeof offer?.menu?.price === 'number' ? offer.menu.price : item.price;
+                }
+                
+                if (typeof offer?.offer_price === 'number' && oldPrice > offer.offer_price) {
+                  discountPercent = Math.round(((oldPrice - offer.offer_price) / oldPrice) * 100);
+                }
               }
             }
+            
+            // Don't show variant name in display name for items with multiple variants on offer
+            const displayName = hasMultipleVariantsOnOffer ? item.name : item.name;
+            
             return (
               <ItemCard
                 hotelData={hotelData}
@@ -116,10 +152,14 @@ const MenuItemsList = ({
                 item={item}
                 styles={styles}
                 tableNumber={tableNumber}
-                isOfferItem={isOfferCategory}
+                isOfferItem={isOfferItem}
                 offerPrice={offerPrice}
                 oldPrice={oldPrice}
                 discountPercent={discountPercent}
+                displayName={displayName}
+                hasMultipleVariantsOnOffer={hasMultipleVariantsOnOffer}
+                currentCategory={selectedCat}
+                isOfferCategory={isOfferCategory}
               />
             );
           })}

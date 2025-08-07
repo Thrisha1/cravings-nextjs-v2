@@ -75,6 +75,7 @@ export function EditMenuItemForm({
     try {
       await onSubmit({
         ...editingItem,
+        price: variants.length > 0 ? "0" : editingItem.price, // Set price to "0" when variants exist
         variants: variants.length > 0 ? variants : undefined,
       });
     } finally {
@@ -165,6 +166,13 @@ export function EditMenuItemForm({
           />
         )}
         
+        {/* Show note when variants exist */}
+        {variants.length > 0 && (
+          <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded border">
+            <p>✅ Pricing will be set through the options below</p>
+          </div>
+        )}
+        
         <Textarea
           placeholder="Product Description"
           value={editingItem.description}
@@ -183,7 +191,9 @@ export function EditMenuItemForm({
         {/* Variants Section */}
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <h3 className="font-medium">Options</h3>
+            <h3 className="font-medium">
+              {variants.length > 0 ? "Pricing Options" : "Options"}
+            </h3>
             <Button
               type="button"
               variant="outline"

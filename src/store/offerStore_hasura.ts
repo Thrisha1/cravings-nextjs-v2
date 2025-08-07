@@ -38,6 +38,10 @@ interface MenuItem {
   id: string;
   name: string;
   price: number;
+  variants?: {
+    name: string;
+    price: number;
+  }[];
 }
 
 export interface OfferGroup {
@@ -56,10 +60,15 @@ export interface Offer {
   end_time: string;
   items_available?: number;
   offer_price?: number;
+  offer_type?: string;
   deletion_status?: number;
   offer_group?: OfferGroup;
   menu: MenuItem;
   partner?: Partner;
+  variant?: {
+    name: string;
+    price: number;
+  };
 }
 
 interface OfferState {
@@ -72,7 +81,12 @@ interface OfferState {
       items_available?: number;
       start_time: string;
       end_time: string;
+      offer_type?: string;
       offer_group?: OfferGroup;
+      variant?: {
+        name: string;
+        price: number;
+      };
     },
     notificationMessage: {
       title: string;
@@ -98,6 +112,29 @@ export const useOfferStore = create<OfferState>((set, get) => {
         //   async () => {
         const offers = await fetchFromHasura(getOffers);
 
+        // Parse variant JSON for each offer
+        const parsedOffers = offers.offers.map((offer: any) => {
+          let parsedVariant = undefined;
+          if (offer.variant) {
+            // Handle both string (JSON) and object formats for backward compatibility
+            if (typeof offer.variant === 'string') {
+              try {
+                const parsed = JSON.parse(offer.variant);
+                parsedVariant = Array.isArray(parsed) ? parsed[0] : parsed;
+              } catch (error) {
+                console.error("Error parsing variant JSON:", error);
+              }
+            } else {
+              // Direct object format
+              parsedVariant = offer.variant;
+            }
+          }
+          return {
+            ...offer,
+            variant: parsedVariant,
+          };
+        });
+
         // return off;
         //   },
         //   ["all-offers", "offers"],
@@ -105,8 +142,8 @@ export const useOfferStore = create<OfferState>((set, get) => {
         //     tags: ["all-offers", "offers"],
         //   }
         // )();
-        set({ offers: offers.offers });
-        return offers.offers;
+        set({ offers: parsedOffers });
+        return parsedOffers;
       } catch (error) {
         console.error(error);
         return get().offers;
@@ -135,12 +172,35 @@ export const useOfferStore = create<OfferState>((set, get) => {
           partner_id: targetId,
         });
 
+        // Parse variant JSON for each offer
+        const parsedOffers = offers.offers.map((offer: any) => {
+          let parsedVariant = undefined;
+          if (offer.variant) {
+            // Handle both string (JSON) and object formats for backward compatibility
+            if (typeof offer.variant === 'string') {
+              try {
+                const parsed = JSON.parse(offer.variant);
+                parsedVariant = Array.isArray(parsed) ? parsed[0] : parsed;
+              } catch (error) {
+                console.error("Error parsing variant JSON:", error);
+              }
+            } else {
+              // Direct object format
+              parsedVariant = offer.variant;
+            }
+          }
+          return {
+            ...offer,
+            variant: parsedVariant,
+          };
+        });
+
         //   return offs;
         // }, ["partner-offers-" + targetId, "offers"], {
         //   tags: ["partner-offers-" + targetId, "offers"]
         // })();
 
-        set({ offers: offers.offers });
+        set({ offers: parsedOffers });
       } catch (error) {
         console.error("Error fetching offers:", error);
       }
@@ -153,7 +213,12 @@ export const useOfferStore = create<OfferState>((set, get) => {
         items_available?: number;
         start_time: string;
         end_time: string;
+        offer_type?: string;
         offer_group?: OfferGroup;
+        variant?: {
+          name: string;
+          price: number;
+        };
       },
       notificationMessage: {
         title: string;
@@ -179,7 +244,9 @@ export const useOfferStore = create<OfferState>((set, get) => {
             ...common,
             items_available: offer.items_available,
             menu_item_id: offer.menu_id,
-            offer_price: offer.offer_price,
+            offer_price: offer.offer_price ? Math.round(offer.offer_price) : undefined,
+            offer_type: offer.offer_type || 'all',
+            variant: offer.variant || null,
           };
         } else {
 
@@ -206,22 +273,45 @@ export const useOfferStore = create<OfferState>((set, get) => {
 
         addedOffer = addedOffer.insert_offers.returning[0];
 
+        // Parse variant JSON for the added offer
+        const parsedAddedOffer = {
+          ...addedOffer,
+          variant: (() => {
+            if (addedOffer.variant) {
+              // Handle both string (JSON) and object formats for backward compatibility
+              if (typeof addedOffer.variant === 'string') {
+                try {
+                  const parsed = JSON.parse(addedOffer.variant);
+                  return Array.isArray(parsed) ? parsed[0] : parsed;
+                } catch (error) {
+                  console.error("Error parsing variant JSON:", error);
+                  return undefined;
+                }
+              } else {
+                // Direct object format
+                return addedOffer.variant;
+              }
+            }
+            return undefined;
+          })(),
+        };
+
         revalidateTag("offers");
         revalidateTag(user.id);
 
         set({
-          offers: [...get().offers, addedOffer],
+          offers: [...get().offers, parsedAddedOffer],
         });
         toast.dismiss();
         toast.success("Offer added successfully");
 
 
         if ('menu_item_id' in newOffer && newOffer.menu_item_id) {
-          await sendOfferWhatsAppMsg(addedOffer.id);
+          await sendOfferWhatsAppMsg(parsedAddedOffer.id);
         }
 
         await Notification.partner.sendOfferNotification(
-          addedOffer,
+          parsedAddedOffer,
           {
             title: notificationMessage.title ,
             body: notificationMessage.body ,

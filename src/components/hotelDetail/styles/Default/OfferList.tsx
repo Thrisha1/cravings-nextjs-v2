@@ -37,7 +37,7 @@ const OfferList = ({
         {offers.map((offer) => {
           if (!offer.menu || offer.menu.price == null) return null;
           const discount =
-            ((offer.menu.price - (offer.offer_price ?? 0)) / offer.menu.price) * 100;
+            (((offer.variant ? offer.variant.price : offer.menu.price) - (offer.offer_price ?? 0)) / (offer.variant ? offer.variant.price : offer.menu.price)) * 100;
           const isUpcoming = new Date(offer.start_time) > new Date();
 
           const item = menus.find((item) => item.id === offer.menu.id);

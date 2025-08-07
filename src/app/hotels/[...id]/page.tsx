@@ -15,6 +15,7 @@ import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
 import { Metadata } from "next";
 import { getSocialLinks } from "@/lib/getSocialLinks";
 import { usePartnerStore } from "@/store/usePartnerStore";
+import { filterOffersByType } from "@/lib/offerFilters";
 // import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
 
 export async function generateMetadata({
@@ -88,7 +89,12 @@ const isUUID = (str: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
 export interface HotelData extends Partner {
-  offers: Offer[];
+  offers: (Offer & {
+    variant?: {
+      name: string;
+      price: number;
+    };
+  })[];
   menus: HotelDataMenus[];
   fillteredMenus: HotelDataMenus[];
 }
@@ -134,6 +140,31 @@ const HotelPage = async ({
     : null;
   const offers = hoteldata?.offers;
 
+  // Parse variant JSON for offers
+  if (hoteldata?.offers) {
+    hoteldata.offers = hoteldata.offers.map((offer: any) => {
+      let parsedVariant = undefined;
+      if (offer.variant) {
+        // Handle both string (JSON) and object formats for backward compatibility
+        if (typeof offer.variant === 'string') {
+          try {
+            const parsed = JSON.parse(offer.variant);
+            parsedVariant = Array.isArray(parsed) ? parsed[0] : parsed;
+          } catch (error) {
+            console.error("Error parsing variant JSON in hotel data:", error);
+          }
+        } else {
+          // Direct object format
+          parsedVariant = offer.variant;
+        }
+      }
+      return {
+        ...offer,
+        variant: parsedVariant,
+      };
+    });
+  }
+
   let filteredOffers: Offer[] = [];
   if (offers) {
     const today = new Date().setHours(0, 0, 0, 0);
@@ -150,6 +181,9 @@ const HotelPage = async ({
       : offers.filter(
           (offer) => new Date(offer.end_time).setHours(0, 0, 0, 0) >= today
         );
+    
+    // Filter offers based on offer_type for hotels page
+    filteredOffers = filterOffersByType(filteredOffers, 'hotels');
   }
 
   // Use the store to fetch UPI data

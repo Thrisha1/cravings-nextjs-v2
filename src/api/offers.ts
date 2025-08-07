@@ -11,6 +11,8 @@ export const getOfferById = `
       items_available
       start_time
       deletion_status
+      offer_type
+      variant
       menu {
         category {
           name
@@ -20,6 +22,7 @@ export const getOfferById = `
         name
         price
         id
+        variants
       }
       partner {
         district
@@ -43,6 +46,8 @@ export const getOffers = `
       enquiries
       items_available
       start_time
+      offer_type
+      variant
       menu {
         category {
           name
@@ -52,6 +57,7 @@ export const getOffers = `
         name
         price
         id
+        variants
       }
       partner {
         district
@@ -73,6 +79,8 @@ export const getPartnerOffers = `
     enquiries
     items_available
     start_time
+    offer_type
+    variant
     menu {
         category {
           name
@@ -82,6 +90,7 @@ export const getPartnerOffers = `
       name
       price
       id
+      variants
     }
   }
 }
@@ -100,6 +109,8 @@ mutation AddOffer($offer: offers_insert_input!) {
       items_available
       offer_price
       start_time
+      offer_type
+      variant
       menu {
         category {
           name
@@ -109,6 +120,7 @@ mutation AddOffer($offer: offers_insert_input!) {
         id
         name
         price
+        variants
       }
     }
   }

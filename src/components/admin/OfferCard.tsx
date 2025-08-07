@@ -23,6 +23,10 @@ interface OfferCardProps {
     end_time: string;
     created_at: string;
     offerGroup?: OfferGroup;
+    variant?: {
+      name: string;
+      price: number;
+    };
   };
   isDeleting: boolean;
   onDelete: (id: string) => void;
@@ -39,7 +43,14 @@ export function OfferCard({ offer, isDeleting, onDelete }: OfferCardProps) {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg flex justify-between items-center">
-          <span>{isGroupOffer ? offer?.offerGroup?.name : offer.menu?.name}</span>
+          <span>
+            {isGroupOffer ? offer?.offerGroup?.name : offer.menu?.name}
+            {!isGroupOffer && offer.variant && (
+              <span className="text-sm font-normal text-gray-600 ml-2">
+                ({offer.variant.name})
+              </span>
+            )}
+          </span>
           {isGroupOffer && (
             <Button
               variant="ghost"
@@ -86,7 +97,7 @@ export function OfferCard({ offer, isDeleting, onDelete }: OfferCardProps) {
           ) : (
             <>
               <p className="text-lg">
-                Original Price: {currency}{offer.menu?.price.toFixed(2)}
+                Original Price: {currency}{offer.variant ? offer.variant.price.toFixed(2) : offer.menu?.price.toFixed(2)}
               </p>
               <p className="text-2xl font-bold text-green-600">
                 Offer Price: {currency}{offer.offer_price?.toFixed(2)}

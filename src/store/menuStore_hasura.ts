@@ -291,7 +291,7 @@ export const useMenuStore = create<MenuState>((set, get) => ({
         image_url: s3Url || "",
         image_source: item.image_source || "",
         partner_id: userData.id,
-        price: item.price,
+        price: item.variants && item.variants.length > 0 ? 0 : item.price, // Set 0 when variants exist
         description: item.description || "",
         variants : item.variants || [],
         is_price_as_per_size: item.is_price_as_per_size || false,
@@ -340,6 +340,11 @@ export const useMenuStore = create<MenuState>((set, get) => ({
 
       let catid: string | undefined;
       let changedItem = { ...otherItems };
+
+      // Handle price when variants exist - set to 0 if variants are present
+      if (changedItem.variants && changedItem.variants.length > 0 && changedItem.price === null) {
+        changedItem.price = 0;
+      }
 
       let cat = null;
 

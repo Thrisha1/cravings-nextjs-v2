@@ -214,8 +214,8 @@ const OffersList = ({
                   }
 
                   const discount = Math.round(
-                    ((offer.menu.price -(offer.offer_price ?? 0)) /
-                      offer.menu.price) *
+                    (((offer.variant ? offer.variant.price : offer.menu.price) -(offer.offer_price ?? 0)) /
+                      (offer.variant ? offer.variant.price : offer.menu.price)) *
                       100
                   );
                   const isUpcoming = new Date(offer.start_time) > new Date();

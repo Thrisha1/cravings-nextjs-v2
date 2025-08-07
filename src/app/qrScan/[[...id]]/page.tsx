@@ -21,6 +21,7 @@ import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 import { Metadata } from "next";
 import React from "react";
+import { filterOffersByType } from "@/lib/offerFilters";
 
 const isUUID = (str: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
@@ -218,6 +219,9 @@ const page = async ({
       : offers.filter(
           (offer) => new Date(offer.end_time).setHours(0, 0, 0, 0) >= today
         );
+    
+    // Filter offers based on offer_type for QR scan page
+    filteredOffers = filterOffersByType(filteredOffers, 'qrscan');
   }
 
   const theme = (
