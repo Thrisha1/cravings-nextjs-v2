@@ -172,14 +172,16 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
   onClose,
   newOrderAlert = false,
 }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const orderSetted = useRef(false);
   const [visibleOrders, setVisibleOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    if (orders.length > 0 && (newOrderAlert || !orderSetted.current)) {
+    console.log(orders.length > 0, newOrderAlert);
+    if (orders.length > 0 && newOrderAlert ) {
       setVisibleOrders(orders);
       orderSetted.current = true;
+      setIsOpen(true);
     }
   }, [orders, newOrderAlert]);
 
@@ -194,7 +196,10 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
 
   const handleClose = () => {
     setIsOpen(false);
+    orderSetted.current = false;
+    setVisibleOrders([]);
     onClose();
+  
   };
 
   const handleProcessed = (orderId: string) => {

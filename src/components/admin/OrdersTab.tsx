@@ -69,7 +69,7 @@ const OrdersTab = () => {
   const [sortedOrders, setSortedOrders] = useState<Order[]>([]);
   const [displayedOrders, setDisplayedOrders] = useState<Order[]>([]);
   const [newOrderAlert, setNewOrderAlert] = useState({
-    show: false,
+    show: true,
     tableCount: 0,
     deliveryCount: 0,
     posCount: 0,
@@ -158,21 +158,21 @@ const OrdersTab = () => {
           newDeliveryOrders.length +
           newPOSOrders.length;
 
-        if (totalNewOrders > 0 && !orderAlertRef.current) {
-          orderAlertRef.current = true;
+        if (totalNewOrders > 0 ) {
 
           // Show alert dialog with highest priority
-          const isAlertActive = localStorage?.getItem("alertActive") === "1";
+          // const isAlertActive = localStorage?.getItem("alertActive") === "1";
 
-          if (isAlertActive) {
+          // if (isAlertActive) {
             soundRef.current?.play();
+            console.log("new order sound played");
             setNewOrderAlert({
               show: true,
               tableCount: newTableOrders.length,
               deliveryCount: newDeliveryOrders.length,
               posCount: newPOSOrders.length,
             });
-          }
+          // }
 
           // Update new order indicators
           setNewOrders({

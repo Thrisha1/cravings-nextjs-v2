@@ -1226,8 +1226,8 @@ function transformOrderFromHasura(order: any): Order {
     id: order.id,
     items: order.order_items.map((item: any) => ({
       id: item.menu?.id || "",
-      name: item.menu?.name || "",
-      price: item.menu?.price || 0,
+      name: item.item?.name || item.menu?.name || "",
+      price: item.item?.offers?.[0]?.offer_price || item.item?.price || item.menu?.price || 0,
       quantity: item.quantity || 0,
       category: item.menu?.category?.name || "",
       image_url: item.menu?.image_url || "",
