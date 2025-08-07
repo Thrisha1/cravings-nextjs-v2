@@ -177,13 +177,18 @@ const OrderDetailCard: React.FC<OrderDetailCardProps> = ({
   const [visibleOrders, setVisibleOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    console.log(orders.length > 0, newOrderAlert);
     if (orders.length > 0 && newOrderAlert ) {
       setVisibleOrders(orders);
       orderSetted.current = true;
       setIsOpen(true);
     }
   }, [orders, newOrderAlert]);
+
+  useEffect(() => {
+    if(visibleOrders.length === 0) {
+      handleClose();
+    }
+  },[visibleOrders]);
 
   if (orders.length === 0) {
     return null;
