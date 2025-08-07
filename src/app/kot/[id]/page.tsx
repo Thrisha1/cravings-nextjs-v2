@@ -38,7 +38,7 @@ const PrintKOTPage = () => {
   const printRef = useRef<HTMLDivElement>(null);
   const [isParcel, setIsParcel] = useState(false);
   const searchParams = useSearchParams();
-
+  const silentPrint = searchParams.get("print") === "false";
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -58,7 +58,8 @@ const PrintKOTPage = () => {
             notes: item.item.kot_notes,
           })),
           tableNumber: orders_by_pk.table_number,
-          tableName: orders_by_pk.qr_code?.table_name || orders_by_pk.table_name || null,
+          tableName:
+            orders_by_pk.qr_code?.table_name || orders_by_pk.table_name || null,
           extra_charges: (orders_by_pk.extra_charges ?? []).map(
             (charge: any) => ({
               id: charge.id,
@@ -109,7 +110,6 @@ const PrintKOTPage = () => {
 
   useEffect(() => {
     if (!loading && order && printRef.current) {
-      const silentPrint = searchParams.get("print") === "false";
       if (!silentPrint) {
         handlePrint();
       } else {
@@ -138,13 +138,20 @@ const PrintKOTPage = () => {
         ref={printRef}
         id="printable-content"
         className="kot-template"
-        style={{
-          fontFamily: "monospace",
-          maxWidth: "300px",
-          margin: "0 auto",
-          padding: "16px",
-          backgroundColor: "white",
-        }}
+        style={
+          silentPrint
+            ? {
+                fontFamily: "monospace",
+                maxWidth: "300px",
+              }
+            : {
+                fontFamily: "monospace",
+                maxWidth: "300px",
+                margin: "0 auto",
+                padding: "16px",
+                backgroundColor: "white",
+              }
+        }
       >
         {/* Header */}
         <h2 className="text-xl font-bold text-center uppercase">

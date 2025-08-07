@@ -66,6 +66,7 @@ const PrintOrderPage = () => {
   const printRef = useRef<HTMLDivElement>(null);
   const [isParcel, setIsParcel] = useState(false);
   const searchParams = useSearchParams();
+  const silentPrint = searchParams.get("print") === "false";
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -176,7 +177,6 @@ const PrintOrderPage = () => {
 
   useEffect(() => {
     if (!loading && order && printRef.current) {
-      const silentPrint = searchParams.get("print") === "false";
       if (!silentPrint) {
         handlePrint();
       } else {
@@ -237,14 +237,21 @@ const PrintOrderPage = () => {
         ref={printRef}
         id="printable-content"
         className="bill-template "
-        style={{
-          fontFamily: "monospace",
-          maxWidth: "300px",
-          maxHeight: "280mm",
-          margin: "0 auto",
-          padding: "16px",
-          backgroundColor: "white",
-        }}
+        style={
+          silentPrint
+            ? {
+                fontFamily: "monospace",
+                maxWidth: "300px",
+              }
+            : {
+                fontFamily: "monospace",
+                maxWidth: "300px",
+                maxHeight: "280mm",
+                margin: "0 auto",
+                padding: "16px",
+                backgroundColor: "transparent",
+              }
+        }
       >
         {/* Header */}
         <h2 className="text-xl font-bold text-center uppercase">
