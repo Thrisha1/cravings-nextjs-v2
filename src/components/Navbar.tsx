@@ -25,6 +25,8 @@ const HIDDEN_PATHS = [
   "/hotels/[id]/menu/[mId]/reviews/new",
   "/hotels/[id]/menu/[mId]/reviews",
   "/captain",
+  "/bill/[id]",
+  "/kot/[id]"
 ];
 
 export function Navbar({ userData }: { userData: any }) {

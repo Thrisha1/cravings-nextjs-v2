@@ -7,7 +7,7 @@ import { getExtraCharge } from "@/lib/getExtraCharge";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { OrderItem } from "@/store/orderStore";
 import { ExtraCharge } from "@/store/posStore";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
 
@@ -58,14 +58,6 @@ query GetOrder($id: uuid!) {
 }
 `;
 
-declare global {
-  interface Window {
-    electron?: {
-      silentPrint: (content: HTMLDivElement) => void;
-    };
-  }
-}
-
 const PrintOrderPage = () => {
   const { id } = useParams();
   const [order, setOrder] = useState<any>(null);
@@ -73,6 +65,7 @@ const PrintOrderPage = () => {
   const [error, setError] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const [isParcel, setIsParcel] = useState(false);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -93,7 +86,8 @@ const PrintOrderPage = () => {
           })),
           extra_charges: orders_by_pk.extra_charges || [],
           tableNumber: orders_by_pk.table_number, // Ensure this matches your usage
-          tableName: orders_by_pk.qr_code?.table_name || orders_by_pk.table_name || null, // Ensure this matches your usage
+          tableName:
+            orders_by_pk.qr_code?.table_name || orders_by_pk.table_name || null, // Ensure this matches your usage
           deliveryAddress: orders_by_pk.delivery_address, // Ensure this matches your usage
         };
 
@@ -182,12 +176,11 @@ const PrintOrderPage = () => {
 
   useEffect(() => {
     if (!loading && order && printRef.current) {
-      if(window.electron){
-        console.log("Using Electron silent print");
-        window.electron.silentPrint(printRef.current)
-      }else{
-        console.log("Using React to Print");
+      const silentPrint = searchParams.get("print") === "false";
+      if (!silentPrint) {
         handlePrint();
+      } else {
+        console.log("Silent print mode enabled, waiting for user action...");
       }
     }
   }, [loading, order, handlePrint]);

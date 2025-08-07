@@ -3,7 +3,7 @@
 import { getDateOnly } from "@/lib/formatDate";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { ExtraCharge } from "@/store/posStore";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
 
@@ -37,6 +37,8 @@ const PrintKOTPage = () => {
   const [error, setError] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const [isParcel, setIsParcel] = useState(false);
+  const searchParams = useSearchParams();
+
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -107,7 +109,12 @@ const PrintKOTPage = () => {
 
   useEffect(() => {
     if (!loading && order && printRef.current) {
-      handlePrint();
+      const silentPrint = searchParams.get("print") === "false";
+      if (!silentPrint) {
+        handlePrint();
+      } else {
+        console.log("Silent print mode enabled, waiting for user action...");
+      }
     }
   }, [loading, order, handlePrint]);
 
