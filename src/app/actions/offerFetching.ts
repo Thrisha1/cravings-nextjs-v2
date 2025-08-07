@@ -79,10 +79,20 @@ export const filterAndSortOffers = async ({
   } else if (activeTab === "money saver") {
     // Sort by discount percentage (descending order)
     allOffers.sort((a: Offer, b: Offer) => {
-      const discountA =
-        ((a.menu.price - a.offer_price) / a.menu.price) * 100;
-      const discountB =
-        ((b.menu.price - b.offer_price) / b.menu.price) * 100;
+      // Add null checks and default values
+      const menuPriceA = a.menu?.price ?? 0;
+      const offerPriceA = a.offer_price ?? 0;
+      const menuPriceB = b.menu?.price ?? 0;
+      const offerPriceB = b.offer_price ?? 0;
+      
+      // Avoid division by zero
+      const discountA = menuPriceA > 0 
+        ? ((menuPriceA - offerPriceA) / menuPriceA) * 100 
+        : 0;
+      const discountB = menuPriceB > 0 
+        ? ((menuPriceB - offerPriceB) / menuPriceB) * 100 
+        : 0;
+      
       return discountB - discountA; // Higher discount comes first
     });
   } else {

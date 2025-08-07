@@ -41,6 +41,12 @@ export interface DeliveryRules {
   };
   is_fixed_rate: boolean;
   minimum_order_amount: number;
+  delivery_time_allowed: {
+    from: string;
+    to: string;
+  } | null;
+  isDeliveryActive : boolean;
+  needDeliveryLocation: boolean;
 }
 
 export interface Order {
@@ -53,6 +59,7 @@ export interface Order {
   qrId?: string | null;
   status: "pending" | "completed" | "cancelled";
   partnerId: string;
+  display_id?: string;
   status_history?: OrderStatusStorage;
   partner?: {
     gst_percentage?: number;
@@ -83,6 +90,7 @@ export interface Order {
     phone?: string;
     email: string;
   };
+  tableName?: string | null; 
   extraCharges?:
     | {
         name: string;
@@ -132,8 +140,8 @@ interface OrderState {
   deliveryCost: number | null;
   open_place_order_modal: boolean;
   setOpenPlaceOrderModal: (open: boolean) => void;
-  orderType: 'takeaway' | 'delivery' | null;
-  setOrderType: (type: 'takeaway' | 'delivery') => void;
+  orderType: "takeaway" | "delivery" | null;
+  setOrderType: (type: "takeaway" | "delivery") => void;
   setOpenDrawerBottom: (open: boolean) => void;
   setOpenOrderDrawer: (open: boolean) => void;
   setDeliveryInfo: (info: DeliveryInfo | null) => void;
@@ -212,12 +220,13 @@ const useOrderStore = create(
       open_place_order_modal: false,
       orderType: null,
 
-      setOrderType: (type: 'takeaway' | 'delivery') => {
+      setOrderType: (type: "takeaway" | "delivery") => {
         set({ orderType: type });
       },
 
       setOpenOrderDrawer: (open: boolean) => set({ open_order_drawer: open }),
-      setDeliveryInfo: (info: DeliveryInfo | null) => set({ deliveryInfo: info }),
+      setDeliveryInfo: (info: DeliveryInfo | null) =>
+        set({ deliveryInfo: info }),
       setDeliveryCost: (cost: number | null) => set({ deliveryCost: cost }),
       setOpenDrawerBottom: (open: boolean) => set({ open_drawer_bottom: open }),
 
@@ -369,7 +378,9 @@ const useOrderStore = create(
         }
       },
 
-      setOpenPlaceOrderModal: (open) => set({ open_place_order_modal: open }),
+      setOpenPlaceOrderModal: (open) => {
+        set({ open_place_order_modal: open })
+      },
 
       setUserCoordinates: (coords) => {
         set({ coordinates: coords });
@@ -399,6 +410,7 @@ const useOrderStore = create(
               notes: order.notes || null,
               userId: order.user_id,
               gstIncluded: order.gst_included,
+              tableName: order.qr_code?.table_name || order.table_name || null,
               extraCharges: order.extra_charges || [], // Handle null case
               delivery_charge: order.delivery_charge, // Include delivery_charge
               user: order.user,
@@ -443,6 +455,8 @@ const useOrderStore = create(
           },
           onNext: (data) => {
             if (data?.data?.orders) {
+              console.log(data.data.orders);
+
               const orders = data.data.orders.map(transformOrderFromHasura);
               set({ partnerOrders: orders });
 
@@ -939,6 +953,10 @@ const useOrderStore = create(
 
           const grandTotal = subtotal + (gstIncluded || 0) + totalExtraCharges;
 
+          const getNextDisplayOrderNumber = await getNextOrderNumber(
+            hotelData.id
+          );
+
           // Create order in database
           const orderResponse = await fetchFromHasura(createOrderMutation, {
             id: uuidv4(),
@@ -964,6 +982,7 @@ const useOrderStore = create(
                   }
                 : null,
             notes: notes || null,
+            display_id: getNextDisplayOrderNumber.toString(),
           });
 
           if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
@@ -1069,11 +1088,16 @@ const useOrderStore = create(
                 status_history
                 partner_id
                 gst_included
+                display_id
                 extra_charges
                 phone
                 user_id
                 orderedby
                 captain_id
+                qr_code{
+                  table_name
+                }
+                table_name
                 captainid {
                   id
                   name
@@ -1145,9 +1169,11 @@ const useOrderStore = create(
               delivery_charge: order.delivery_charge,
               status_history: order.status_history,
               userId: order.user_id,
+              display_id: order.display_id,
               user: order.user,
               orderedby: order.orderedby,
               captain_id: order.captain_id,
+              tableName: order.qr_code?.table_name || order.table_name || null,
               captain: captainData, // Use the properly structured captain data
               items: order.order_items.map((i: any) => ({
                 id: i.menu?.id,
@@ -1221,10 +1247,12 @@ function transformOrderFromHasura(order: any): Order {
     phone: order.phone,
     userId: order.user_id,
     user: order.user,
+    display_id: order.display_id,
     type: order.type,
     deliveryAddress: order.delivery_address,
     gstIncluded: order.gst_included || 0,
     orderedby: order.orderedby,
+    tableName: order.qr_code?.table_name || null,
     delivery_charge: order.delivery_charge || null,
     delivery_location: order.delivery_location,
     order_number: order.order_number,
@@ -1233,5 +1261,62 @@ function transformOrderFromHasura(order: any): Order {
     extraCharges: order.extra_charges,
   };
 }
+
+export const getNextOrderNumber = async (partnerId: string) => {
+  // today's date
+  const today = new Date();
+  const todayStart = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+    0,
+    0,
+    0,
+    0
+  );
+  const todayEnd = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+    23,
+    59,
+    59,
+    999
+  );
+
+  //get last of today
+  const { orders } = await fetchFromHasura(
+    `
+    query GetLastOrderOfToday($partnerId: uuid!) {
+      orders(
+        where: {
+          partner_id: { _eq: $partnerId },
+          created_at: { _gte: "${todayStart.toISOString()}", _lte: "${todayEnd.toISOString()}" }
+        },
+        order_by: { created_at: desc },
+        limit: 1
+      ) {
+        id
+        display_id
+      }
+    }
+  `,
+    {
+      partnerId: partnerId,
+    }
+  );
+
+  if (orders.length === 0) {
+    return 1;
+  } else {
+    const lastOrder = orders[0];
+    if (lastOrder.display_id !== null && lastOrder.display_id !== undefined) {
+      const lastDisplayId = parseInt(lastOrder.display_id, 10);
+      return lastDisplayId + 1;
+    } else {
+      return 1;
+    }
+  }
+};
 
 export default useOrderStore;

@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { QrCode } from "@/store/qrDataStore";
 
 interface POSConfirmModalProps {
   onClose: () => void;
@@ -30,7 +31,10 @@ interface QRCode {
   no_of_scans: number;
 }
 
-export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) => {
+export const POSConfirmModal = ({
+  onClose,
+  onConfirm,
+}: POSConfirmModalProps) => {
   const {
     cartItems,
     totalAmount,
@@ -41,6 +45,7 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
     addExtraCharge,
     setTableNumber,
     tableNumber,
+    setTableName,
     loading,
     addToCart,
     qrGroup,
@@ -53,13 +58,18 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
     extraCharges: storeExtraCharges,
     removeQrGroupCharge,
   } = usePOSStore();
-  
+
   const { userData } = useAuthStore();
   const partnerData = userData as Partner;
   const [phoneInput, setPhoneInput] = useState("");
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
-  const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0, id: "" });
+  const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({
+    name: "",
+    amount: 0,
+    id: "",
+  });
   const [tableNumbers, setTableNumbers] = useState<number[]>([]);
+  const [qrCodes, setQrCodes] = useState<QrCode[]>([]);
   const [isLoadingTables, setIsLoadingTables] = useState(true);
   const [isDelivery, setIsDelivery] = useState(false);
 
@@ -71,20 +81,22 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
   useEffect(() => {
     const fetchTableNumbers = async () => {
       if (!partnerData?.id) return;
-      
+
       try {
         setIsLoadingTables(true);
         const response = await fetchFromHasura(GET_QR_CODES_BY_PARTNER, {
-          partner_id: partnerData.id
+          partner_id: partnerData.id,
         });
-        
+
+        setQrCodes(response.qr_codes || []);
+
         if (response?.qr_codes) {
           // Filter out null table numbers and sort them
           const tables = response.qr_codes
             .map((qr: QRCode) => qr.table_number)
             .filter((num: number | null): num is number => num !== null)
             .sort((a: number, b: number) => a - b);
-          
+
           setTableNumbers(tables);
         }
       } catch (error) {
@@ -104,9 +116,15 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
 
   // Calculate totals
   const foodSubtotal = totalAmount;
-  const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
-  
-  const gstAmount = getGstAmount(foodSubtotal, partnerData?.gst_percentage || 0);
+  const extraChargesTotal = extraCharges.reduce(
+    (sum, charge) => sum + charge.amount,
+    0
+  );
+
+  const gstAmount = getGstAmount(
+    foodSubtotal,
+    partnerData?.gst_percentage || 0
+  );
   const grandTotal = foodSubtotal + gstAmount + extraChargesTotal;
 
   // Check if table selection is made (only required for dine-in)
@@ -131,10 +149,10 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
 
   const handleRemoveExtraCharge = (index: number) => {
     const chargeToRemove = extraCharges[index];
-    
+
     // If this was a QR group charge, use the store function
-    if (chargeToRemove.id.startsWith('qr-group-')) {
-      const qrGroupId = chargeToRemove.id.replace('qr-group-', '');
+    if (chargeToRemove.id.startsWith("qr-group-")) {
+      const qrGroupId = chargeToRemove.id.replace("qr-group-", "");
       removeQrGroupCharge(qrGroupId);
     } else {
       // Remove from store
@@ -152,14 +170,16 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
   const handleConfirmOrder = async () => {
     try {
       if (cartItems.length === 0) {
-        toast.error("Cart is empty. Please add items before confirming the order.");
+        toast.error(
+          "Cart is empty. Please add items before confirming the order."
+        );
         return;
       }
 
       setUserPhone(phoneInput || null);
-      
+
       // Extra charges are already in the store, no need to add them again
-      
+
       await checkout();
       onConfirm();
       setPhoneInput("");
@@ -218,21 +238,26 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
         {/* Table Selection - Only show for dine-in */}
         {!isDelivery && (
           <div>
-            <label className="block text-sm font-medium mb-2">Table Number</label>
+            <label className="block text-sm font-medium mb-2">Table's</label>
             {isLoadingTables ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="h-6 w-6 animate-spin" />
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-2">
-                {tableNumbers.map((table) => (
+                {qrCodes.map((qr) => (
                   <Button
-                    key={table}
-                    variant={tableNumber === table ? "default" : "outline"}
-                    onClick={() => setTableNumber(table)}
+                    key={qr.id}
+                    variant={
+                      tableNumber === qr.table_number ? "default" : "outline"
+                    }
+                    onClick={() => {
+                      setTableNumber(qr.table_number);
+                      setTableName(qr.table_name || null);
+                    }}
                     className="h-10"
                   >
-                    Table {table}
+                    Table {qr.table_name || qr.table_number}
                   </Button>
                 ))}
                 <Button
@@ -245,14 +270,18 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
               </div>
             )}
             {!isDelivery && !isTableSelected && (
-              <p className="text-sm text-red-500 mt-1">Please select a table or choose "No Table"</p>
+              <p className="text-sm text-red-500 mt-1">
+                Please select a table or choose "No Table"
+              </p>
             )}
           </div>
         )}
 
         {/* Phone Number */}
         <div>
-          <label className="block text-sm font-medium mb-2">Customer Phone (Optional)</label>
+          <label className="block text-sm font-medium mb-2">
+            Customer Phone (Optional)
+          </label>
           <Input
             type="tel"
             placeholder="Enter phone number"
@@ -263,21 +292,33 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
 
         {/* Extra Charges */}
         <div>
-          <label className="block text-sm font-medium mb-2">Extra Charges (Optional)</label>
+          <label className="block text-sm font-medium mb-2">
+            Extra Charges (Optional)
+          </label>
           <div className="space-y-3">
             <div className="flex gap-2">
               <Input
                 placeholder="Charge name"
                 value={newExtraCharge.name}
-                onChange={(e) => setNewExtraCharge({ ...newExtraCharge, name: e.target.value })}
+                onChange={(e) =>
+                  setNewExtraCharge({ ...newExtraCharge, name: e.target.value })
+                }
               />
               <Input
                 type="number"
                 placeholder="Amount"
                 value={newExtraCharge.amount || ""}
-                onChange={(e) => setNewExtraCharge({ ...newExtraCharge, amount: Number(e.target.value) })}
+                onChange={(e) =>
+                  setNewExtraCharge({
+                    ...newExtraCharge,
+                    amount: Number(e.target.value),
+                  })
+                }
               />
-              <Button onClick={handleAddExtraCharge} className="whitespace-nowrap">
+              <Button
+                onClick={handleAddExtraCharge}
+                className="whitespace-nowrap"
+              >
                 Add Charge
               </Button>
             </div>
@@ -293,7 +334,8 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
                       <div>
                         <div className="font-medium">{charge.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          {partnerData?.currency || "$"}{charge.amount.toFixed(2)}
+                          {partnerData?.currency || "$"}
+                          {charge.amount.toFixed(2)}
                         </div>
                       </div>
                       <Button
@@ -333,7 +375,9 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
             {cartItems.map((item, index) => (
               <div key={index} className="flex justify-between items-center">
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm truncate">{item.name}</div>
+                  <div className="font-medium text-sm truncate">
+                    {item.name}
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     {partnerData?.currency || "$"}
                     {item.price.toFixed(2)} each
@@ -364,21 +408,27 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
                 </div>
               </div>
             ))}
-            
+
             {/* Subtotal (Food only) */}
             <div className="flex justify-between text-sm border-t pt-2">
               <span>Subtotal</span>
-              <span>{partnerData?.currency || "$"}{foodSubtotal.toFixed(2)}</span>
+              <span>
+                {partnerData?.currency || "$"}
+                {foodSubtotal.toFixed(2)}
+              </span>
             </div>
 
             {/* GST (on food only) */}
             {(partnerData?.gst_percentage || 0) > 0 && (
               <div className="flex justify-between text-sm">
                 <span>{`GST (${partnerData?.gst_percentage || 0}%)`}</span>
-                <span>{partnerData?.currency || "$"}{gstAmount.toFixed(2)}</span>
+                <span>
+                  {partnerData?.currency || "$"}
+                  {gstAmount.toFixed(2)}
+                </span>
               </div>
             )}
-            
+
             {/* Extra Charges */}
             {extraCharges.length > 0 && (
               <>
@@ -388,12 +438,18 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
                 {extraCharges.map((charge, index) => (
                   <div key={index} className="flex justify-between text-sm">
                     <span className="ml-4">{charge.name}</span>
-                    <span>{partnerData?.currency || "$"}{charge.amount.toFixed(2)}</span>
+                    <span>
+                      {partnerData?.currency || "$"}
+                      {charge.amount.toFixed(2)}
+                    </span>
                   </div>
                 ))}
                 <div className="flex justify-between text-sm">
                   <span>Extra Charges Total:</span>
-                  <span>{partnerData?.currency || "$"}{extraChargesTotal.toFixed(2)}</span>
+                  <span>
+                    {partnerData?.currency || "$"}
+                    {extraChargesTotal.toFixed(2)}
+                  </span>
                 </div>
               </>
             )}
@@ -401,18 +457,17 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
             {/* Grand Total */}
             <div className="flex justify-between font-semibold mt-2 border-t pt-2">
               <span>Total</span>
-              <span>{partnerData?.currency || "$"}{grandTotal.toFixed(2)}</span>
+              <span>
+                {partnerData?.currency || "$"}
+                {grandTotal.toFixed(2)}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Modal Footer */}
         <div className="p-4 border-t flex gap-2">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="flex-1"
-          >
+          <Button variant="outline" onClick={onClose} className="flex-1">
             Cancel
           </Button>
           <Button
@@ -433,4 +488,4 @@ export const POSConfirmModal = ({ onClose, onConfirm }: POSConfirmModalProps) =>
       </div>
     </div>
   );
-}; 
+};

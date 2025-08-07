@@ -7,8 +7,8 @@ export function useRecentlyViewed() {
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
 
   useEffect(() => {
-    // Load recently viewed offers from localStorage on mount
-    const stored = localStorage.getItem(STORAGE_KEY);
+    // Load recently viewed offers from localStorage? on mount
+    const stored = localStorage?.getItem(STORAGE_KEY);
     if (stored) {
       setRecentlyViewed(JSON.parse(stored));
     }
@@ -25,8 +25,8 @@ export function useRecentlyViewed() {
       // Keep only the most recent MAX_RECENT_ITEMS
       const limited = updated.slice(0, MAX_RECENT_ITEMS);
       
-      // Save to localStorage
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(limited));
+      // Save to localStorage?
+      localStorage?.setItem(STORAGE_KEY, JSON.stringify(limited));
       
       return limited;
     });

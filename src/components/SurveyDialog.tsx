@@ -22,7 +22,7 @@
 
 //       console.log("Distance from nearest offer:", distanceNumber);
 //       const hasSurveySubmitted =
-//         localStorage.getItem("surveySubmitted") === "1";
+//         localStorage?.getItem("surveySubmitted") === "1";
 //       if (distanceNumber >= 35 && !hasSurveySubmitted) {
 //         setIsUserNearby(false);
 //       } else {
@@ -186,7 +186,7 @@
 
 //     setIsLoading(false);
 //     setIsUserNearby(true);
-//     localStorage.setItem("surveySubmitted", "1");
+//     localStorage?.setItem("surveySubmitted", "1");
 //   };
 
 //   return (

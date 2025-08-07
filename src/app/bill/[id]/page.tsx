@@ -2,6 +2,7 @@
 
 import { QrGroup } from "@/app/admin/qr-management/page";
 import { getGstAmount } from "@/components/hotelDetail/OrderDrawer";
+import { getDateOnly } from "@/lib/formatDate";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { OrderItem } from "@/store/orderStore";
@@ -19,9 +20,14 @@ query GetOrder($id: uuid!) {
     notes
     table_number
     qr_id
+    qr_code{
+      table_name
+    }
     type
+    table_name
     delivery_address
     delivery_location
+    display_id
     status
     status_history
     partner_id
@@ -58,13 +64,13 @@ const PrintOrderPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
-  const [isParcel , setIsParcel] = useState(false);
+  const [isParcel, setIsParcel] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
       try {
         const { orders_by_pk } = await fetchFromHasura(GET_ORDER_QUERY, { id });
-        
+
         if (!orders_by_pk) {
           throw new Error("Order not found");
         }
@@ -79,60 +85,77 @@ const PrintOrderPage = () => {
           })),
           extra_charges: orders_by_pk.extra_charges || [],
           tableNumber: orders_by_pk.table_number, // Ensure this matches your usage
+          tableName: orders_by_pk.qr_code?.table_name || orders_by_pk.table_name || null, // Ensure this matches your usage
           deliveryAddress: orders_by_pk.delivery_address, // Ensure this matches your usage
         };
 
         setOrder(formattedOrder);
-        setIsParcel(formattedOrder.extra_charges.some((charge: ExtraCharge) => charge.name.toLowerCase() === "parcel"));
-        
+        setIsParcel(
+          formattedOrder.extra_charges.some(
+            (charge: ExtraCharge) => charge.name.toLowerCase() === "parcel"
+          )
+        );
+
         // Calculate amounts for logging
         const foodSubtotal = formattedOrder.items.reduce(
-          (sum: number, item: OrderItem) => sum + item.price * item.quantity, 0
+          (sum: number, item: OrderItem) => sum + item.price * item.quantity,
+          0
         );
-        
+
         const chargesSubtotal = formattedOrder.extra_charges.reduce(
-          (sum: number, charge: any) => 
-            sum + getExtraCharge(
+          (sum: number, charge: any) =>
+            sum +
+            getExtraCharge(
               formattedOrder.items || [],
               charge.amount || 0,
               charge.charge_type as QrGroup["charge_type"]
-            ), 0
+            ),
+          0
         );
-        
+
         const gstPercentage = formattedOrder.partner?.gst_percentage || 0;
         const subtotal = foodSubtotal + chargesSubtotal;
         const gstAmount = (foodSubtotal * gstPercentage) / 100;
         const grandTotal = subtotal + gstAmount;
-        
+
         // Log the bill contents in JSON format
-        console.log('Bill Contents JSON:', JSON.stringify({
-          id: formattedOrder.id,
-          created_at: formattedOrder.created_at,
-          store_name: formattedOrder.partner?.store_name,
-          district: formattedOrder.partner?.district,
-          phone: formattedOrder.partner?.phone,
-          table_number: formattedOrder.tableNumber,
-          type: formattedOrder.type,
-          delivery_address: formattedOrder.deliveryAddress,
-          delivery_location: formattedOrder.delivery_location ? {
-            coordinates: formattedOrder.delivery_location.coordinates,
-            google_maps_link: `https://www.google.com/maps/place/${formattedOrder.delivery_location.coordinates[1]},${formattedOrder.delivery_location.coordinates[0]}`
-          } : null,
-          order_items: formattedOrder.items,
-          extra_charges: formattedOrder.extra_charges,
-          customer_phone: formattedOrder.phone,
-          customer_name: formattedOrder.user?.full_name,
-          calculations: {
-            food_subtotal: foodSubtotal,
-            charges_subtotal: chargesSubtotal,
-            subtotal: subtotal,
-            gst_percentage: gstPercentage,
-            gst_amount: gstAmount,
-            grand_total: grandTotal
-          },
-          currency: formattedOrder.partner?.currency || "$",
-          gst_no: formattedOrder.partner?.gst_no
-        }, null, 2));
+        console.log(
+          "Bill Contents JSON:",
+          JSON.stringify(
+            {
+              id: formattedOrder.id,
+              created_at: formattedOrder.created_at,
+              store_name: formattedOrder.partner?.store_name,
+              district: formattedOrder.partner?.district,
+              phone: formattedOrder.partner?.phone,
+              table_number: formattedOrder.tableNumber,
+              type: formattedOrder.type,
+              delivery_address: formattedOrder.deliveryAddress,
+              delivery_location: formattedOrder.delivery_location
+                ? {
+                    coordinates: formattedOrder.delivery_location.coordinates,
+                    google_maps_link: `https://www.google.com/maps/place/${formattedOrder.delivery_location.coordinates[1]},${formattedOrder.delivery_location.coordinates[0]}`,
+                  }
+                : null,
+              order_items: formattedOrder.items,
+              extra_charges: formattedOrder.extra_charges,
+              customer_phone: formattedOrder.phone,
+              customer_name: formattedOrder.user?.full_name,
+              calculations: {
+                food_subtotal: foodSubtotal,
+                charges_subtotal: chargesSubtotal,
+                subtotal: subtotal,
+                gst_percentage: gstPercentage,
+                gst_amount: gstAmount,
+                grand_total: grandTotal,
+              },
+              currency: formattedOrder.partner?.currency || "$",
+              gst_no: formattedOrder.partner?.gst_no,
+            },
+            null,
+            2
+          )
+        );
       } catch (err) {
         console.error("Error fetching order:", err);
         setError("Failed to load order details");
@@ -194,36 +217,52 @@ const PrintOrderPage = () => {
   const getOrderTypeText = () => {
     if (order.tableNumber === 0 || order.type === "delivery") return "Delivery";
     if (!order.tableNumber) return "Takeaway";
-    return ` ${isParcel ? `Parcel (Table ${order.tableNumber})` : `Table ${order.tableNumber}"`}`;
+    return ` ${
+      isParcel
+        ? `Parcel (Table ${order.tableName || order.tableNumber})`
+        : `Table ${order.tableName || order.tableNumber}`
+    }`;
   };
 
   return (
     <div className="p-4">
-      <div ref={printRef} id="printable-content" className="bill-template " style={{ 
-        fontFamily: "monospace", 
-        maxWidth: "300px",  
-        maxHeight: "280mm",
-        margin: "0 auto",
-        padding: "16px",
-        backgroundColor: "white"
-      }}>
+      <div
+        ref={printRef}
+        id="printable-content"
+        className="bill-template "
+        style={{
+          fontFamily: "monospace",
+          maxWidth: "300px",
+          maxHeight: "280mm",
+          margin: "0 auto",
+          padding: "16px",
+          backgroundColor: "white",
+        }}
+      >
         {/* Header */}
         <h2 className="text-xl font-bold text-center uppercase">
           {order?.partner?.store_name || "Restaurant"}
         </h2>
-        <p className="text-center text-xs mb-2">
+        <p className="text-center text-xs mb-1">
           {[order?.partner?.district].filter(Boolean).join(", ") || ""}
         </p>
-        <p className="text-center text-xs mb-2">
+        <p className="text-center text-xs mb-1">
           {order?.partner?.phone ? `Tel: ${order?.partner.phone}` : ""}
         </p>
+
         <div className="border-b border-black my-2"></div>
 
         {/* Order Info */}
         <div className="grid grid-cols-2 gap-2 text-sm mb-2">
           <div className=" gap-2">
-            <span className="font-medium">Order #:</span>
-            <span> {order.id.slice(0, 8)}</span>
+            <span className="font-medium">Order :</span>
+            <br />
+            <span>
+              {" "}
+              {(Number(order.display_id) ?? 0) > 0
+                ? `${order.display_id}-${getDateOnly(order.created_at)}`
+                : order.id.slice(0, 8)}
+            </span>
           </div>
           <div className="text-right">
             <span className="font-medium">Date:</span>
@@ -263,7 +302,9 @@ const PrintOrderPage = () => {
                 <>
                   <div className="text-sm flex gap-2 mb-1">
                     <div className="font-medium">Customer Phone:</div>
-                    <div className="text-xs">{order.user?.phone || order.phone}</div>
+                    <div className="text-xs">
+                      {order.user?.phone || order.phone}
+                    </div>
                   </div>
                 </>
               )}
@@ -316,9 +357,7 @@ const PrintOrderPage = () => {
         {order?.extra_charges?.length > 0 && (
           <>
             <div className="border-t border-dashed border-gray-400 my-2"></div>
-            <h3 className="font-bold text-sm uppercase mb-1">
-              Extra Charges
-            </h3>
+            <h3 className="font-bold text-sm uppercase mb-1">Extra Charges</h3>
             <ul className="space-y-1 text-sm">
               {order?.extra_charges?.map(
                 (charge: {
@@ -378,6 +417,11 @@ const PrintOrderPage = () => {
           <p className="mt-1">
             {order?.partner?.gst_no ? `GSTIN: ${order?.partner.gst_no}` : ""}
           </p>
+          {(Number(order.display_id) ?? 0) > 0 && (
+            <h2 className="text-xs font-light text-center mt-1">
+              ID: {order.id.slice(0, 8)}
+            </h2>
+          )}
         </div>
       </div>
     </div>

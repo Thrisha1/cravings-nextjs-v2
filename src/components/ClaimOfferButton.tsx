@@ -58,7 +58,7 @@ const getButtonState = (
   if (isClaimed) {
     return "claimed";
   }
-  if (offersClaimable >= offer.menu.price - offer.offer_price) {
+  if (offersClaimable >= offer.menu.price - (offer.offer_price ?? 0)) {
     return "available";
   }
   return "offerNotClaimable";
@@ -81,7 +81,7 @@ const ClaimOfferButton: React.FC<ClaimOfferButtonProps> = ({
       onClick={() => {
         if (isClaimed) {
           setShowTicket(true);
-        } else if (offersClaimable >= offer.menu.price - offer.offer_price) {
+        } else if (offersClaimable >= offer.menu.price - (offer.offer_price ?? 0)) {
           handleClaimOffer();
         } else {
           router.push("/coupons");
@@ -91,7 +91,7 @@ const ClaimOfferButton: React.FC<ClaimOfferButtonProps> = ({
     >
       {buttonState === "available" && (
         <div className="flex items-center">
-          <span>-{offer.menu.price - offer.offer_price}</span>
+          <span>-{offer.menu.price - (offer.offer_price ?? 0)}</span>
           <Banknote className="w-4 h-4 mr-2 ml-1" />
           {typeof text === "function" ? text(offer) : text}
         </div>
@@ -101,7 +101,7 @@ const ClaimOfferButton: React.FC<ClaimOfferButtonProps> = ({
           {typeof text === "function" ? text(offer) : text}
           {buttonState === "offerNotClaimable" && (
             <span className="text-sm text-white">
-              You need {offer.menu.price - offer.offer_price - offersClaimable}{" "}
+              You need {offer.menu.price - (offer.offer_price ?? 0) - offersClaimable}{" "}
               Rs more
             </span>
           )}

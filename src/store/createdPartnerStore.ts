@@ -48,7 +48,7 @@ export const useCreatedPartnerStore = create<CreatedPartnerState>()(
       },
     }),
     {
-      name: "created-partner-store", // localStorage key
+      name: "created-partner-store", // localStorage? key
     }
   )
 );

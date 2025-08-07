@@ -281,30 +281,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
-    const fcmToken = localStorage.getItem("fcmToken");
-    const isApp = localStorage.getItem("isApp");
+    const fcmToken = localStorage?.getItem("fcmToken");
+    const isApp = localStorage?.getItem("isApp");
     const accounts = await getAllAccounts();
     
-    // Preserve hotel-specific localStorage items
+    // Preserve hotel-specific localStorage? items
     const hotelLocationItems: { [key: string]: string | null } = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
+    for (let i = 0; i < localStorage?.length; i++) {
+      const key = localStorage?.key(i);
       if (key && (key.startsWith('hotel-') || key.startsWith('user-location-store'))) {
-        hotelLocationItems[key] = localStorage.getItem(key);
+        hotelLocationItems[key] = localStorage?.getItem(key);
       }
     }
     
     await Notification.token.remove();
     await removeAuthCookie();
     await removeLocationCookie();
-    localStorage.clear();
-    if (fcmToken) localStorage.setItem("fcmToken", fcmToken);
-    if (isApp) localStorage.setItem("isApp", isApp);
+    localStorage?.clear();
+    if (fcmToken) localStorage?.setItem("fcmToken", fcmToken);
+    if (isApp) localStorage?.setItem("isApp", isApp);
     
     // Restore hotel-specific items
     Object.entries(hotelLocationItems).forEach(([key, value]) => {
       if (value !== null) {
-        localStorage.setItem(key, value);
+        localStorage?.setItem(key, value);
       }
     });
     
@@ -397,7 +397,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         feature_flags: partner.feature_flags || "",
         status: partner.status || "inactive",
       });
-      localStorage.setItem("userId", partner.id);
+      localStorage?.setItem("userId", partner.id);
       set({
         userData: { ...partner, role: "partner" },
         features: getFeatures(partner?.feature_flags as string),
@@ -458,7 +458,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       await transferTempDataToUserAccount(user.id);
-
+      
 
       setAuthCookie({
         id: user.id,
@@ -466,7 +466,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         feature_flags: "",
         status: "active",
       });
-      localStorage.setItem("userId", user.id);
+      localStorage?.setItem("userId", user.id);
 
       addAccount({
         name: user.phone || "Guest",
@@ -483,7 +483,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         role: "user",
       };
     } catch (error) {
-      return null;
+      throw error;
     }
   },
 
@@ -508,7 +508,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         feature_flags: "",
         status: "active",
       });
-      localStorage.setItem("userId", superAdmin.id);
+      localStorage?.setItem("userId", superAdmin.id);
       addAccount({
         name: "Super Admin",
         email: superAdmin.email,

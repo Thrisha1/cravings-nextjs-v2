@@ -10,12 +10,13 @@ import {
   getOrdersOfPartnerQuery,
 } from "@/api/orders";
 import { deleteBillMutation } from "@/api/pos";
-import { Order } from "./orderStore";
+import { getNextOrderNumber, Order } from "./orderStore";
 import { v4 as uuidv4 } from "uuid";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import { getQrGroupForTable } from "@/lib/getQrGroupForTable";
 import { QrGroup } from "@/app/admin/qr-management/page";
 import { toast } from "sonner";
+import { table } from "console";
 
 interface QrCodeData {
   id: string;
@@ -23,6 +24,7 @@ interface QrCodeData {
   table_number: number | null;
   partner_id: string;
   no_of_scans: number;
+  table_name?: string | null;
 }
 
 interface CartItem extends MenuItem {
@@ -51,6 +53,8 @@ interface POSState {
   tableNumbers: number[];
   tableNumber: number | null;
   setTableNumber: (tableNumber: number | null) => void;
+  tableName: string | null;
+  setTableName: (tableName: string | null) => void;
   addToCart: (item: MenuItem) => void;
   removeFromCart: (itemId: string) => void;
   increaseQuantity: (itemId: string) => void;
@@ -64,6 +68,7 @@ interface POSState {
   order: Order | null;
   setOrder: (order: Order | null) => void;
   getPartnerTables: () => Promise<void>;
+  qrCodeData: QrCodeData[] | [];
   postCheckoutModalOpen: boolean;
   editOrderModalOpen: boolean;
   cartModalOpen: boolean;
@@ -109,6 +114,12 @@ export const usePOSStore = create<POSState>((set, get) => ({
   qrGroup: null,
   removedQrGroupCharges: [],
   orderNote: "",
+  tableName: null,
+  qrCodeData: [],
+
+  setTableName: (tableName: string | null) => {
+    set({ tableName });
+  },
 
   setDeliveryAddress: (address: string) => {
     set({ deliveryAddress: address });
@@ -177,6 +188,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
               table_number
               partner_id
               no_of_scans
+              table_name
             }
           }
         `,
@@ -199,6 +211,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
           .map((qr) => Number(qr.table_number))
           .sort((a: number, b: number) => a - b); // Sort numerically
 
+        
+
         // console.log("Extracted table numbers:", tableNumbers);
         
         if (tableNumbers.length === 0) {
@@ -211,7 +225,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
           });
         }
 
-        set({ tableNumbers });
+        set({ tableNumbers , qrCodeData: qrCodes || null });
       } else {
         // For partners, use their own ID
         const partnerId = userData.id;
@@ -465,6 +479,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
         orderNote: orderNote
       });
 
+      const getNextDisplayOrderNumber = await getNextOrderNumber(partnerId);
+
       // Create order in database
       const orderResponse = await fetchFromHasura(createOrderMutation, {
         id: orderId,
@@ -484,6 +500,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
         captain_id: isCaptainOrder ? userId : null,
         notes: orderNote || null,
         phone: get().userPhone || null,
+        display_id: getNextDisplayOrderNumber.toString(), 
+        table_name: get().tableName || null,
       });
 
       if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
@@ -570,6 +588,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         orderedby: isCaptainOrder ? "captain" : undefined,
         captain_id: isCaptainOrder ? userId : undefined,
         notes: orderNote || undefined,
+        display_id : getNextDisplayOrderNumber.toString(),
       };
 
       set({ order: newOrder, postCheckoutModalOpen: true });

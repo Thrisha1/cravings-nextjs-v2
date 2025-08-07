@@ -17,6 +17,7 @@ import KOTTemplate from "@/components/admin/pos/KOTTemplate";
 import BillTemplate from "@/components/admin/pos/BillTemplate";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import { toast } from "sonner";
+import { getDateOnly } from "@/lib/formatDate";
 
 export const CaptainCheckoutModal = () => {
   const {
@@ -58,9 +59,15 @@ export const CaptainCheckoutModal = () => {
   };
 
   // Calculate totals
-  const foodSubtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
-  
+  const foodSubtotal = order.items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const extraChargesTotal = extraCharges.reduce(
+    (sum, charge) => sum + charge.amount,
+    0
+  );
+
   const subtotal = foodSubtotal + extraChargesTotal;
   const gstAmount = calculateGst(foodSubtotal);
   const grandTotal = subtotal + gstAmount;
@@ -73,14 +80,14 @@ export const CaptainCheckoutModal = () => {
         console.error("Invalid date:", order.createdAt);
         return "Invalid date";
       }
-      return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: 'numeric',
+      return date.toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
         hour12: true,
-        timeZone: 'Asia/Kolkata'
+        timeZone: "Asia/Kolkata",
       });
     } catch (error) {
       console.error("Error formatting date:", error);
@@ -90,15 +97,24 @@ export const CaptainCheckoutModal = () => {
 
   return (
     <>
-      <Dialog
-        open={isOpen}
-        onOpenChange={setPostCheckoutModalOpen}
-      >
+      <Dialog open={isOpen} onOpenChange={setPostCheckoutModalOpen}>
         <DialogContent className="max-w-lg w-[90vw] h-[75vh] sm:max-h-[85vh] p-0 flex flex-col">
           <DialogHeader className="p-3 border-b bg-white z-10 shrink-0">
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-lg font-semibold">Order #{order.id.slice(0, 8)}</DialogTitle>
+                <DialogTitle>
+                  <div className="text-xl sm:text-2xl">
+                    Order{" "}
+                    {(Number(order.display_id) ?? 0) > 0
+                      ? `${order.display_id}-${getDateOnly(order.createdAt)}`
+                      : order.id.slice(0, 8)}
+                  </div>
+                  {(Number(order.display_id) ?? 0) > 0 && (
+                    <h2 className="text-sm text-gray-800 ">
+                      ID: {order.id.slice(0, 8)}
+                    </h2>
+                  )}
+                </DialogTitle>
                 {order.tableNumber && (
                   <DialogDescription className="text-sm text-green-600 font-medium mt-1">
                     Table {order.tableNumber}
@@ -138,13 +154,19 @@ export const CaptainCheckoutModal = () => {
                 <h3 className="font-semibold text-base mb-2">Order Items</h3>
                 <div className="space-y-2">
                   {order.items.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center text-sm">
+                    <div
+                      key={index}
+                      className="flex justify-between items-center text-sm"
+                    >
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-600">{item.quantity}x</span>
+                        <span className="font-medium text-gray-600">
+                          {item.quantity}x
+                        </span>
                         <span className="flex-1">{item.name}</span>
                       </div>
                       <span className="font-medium">
-                        {currency}{(item.price * item.quantity).toFixed(2)}
+                        {currency}
+                        {(item.price * item.quantity).toFixed(2)}
                       </span>
                     </div>
                   ))}
@@ -154,12 +176,20 @@ export const CaptainCheckoutModal = () => {
               {/* Extra Charges */}
               {extraCharges.length > 0 && (
                 <div className="bg-white border rounded-md p-3">
-                  <h3 className="font-semibold text-base mb-2">Extra Charges</h3>
+                  <h3 className="font-semibold text-base mb-2">
+                    Extra Charges
+                  </h3>
                   <div className="space-y-2">
                     {extraCharges.map((charge, index) => (
-                      <div key={index} className="flex justify-between items-center text-sm">
+                      <div
+                        key={index}
+                        className="flex justify-between items-center text-sm"
+                      >
                         <span>{charge.name}</span>
-                        <span className="font-medium">{currency}{charge.amount.toFixed(2)}</span>
+                        <span className="font-medium">
+                          {currency}
+                          {charge.amount.toFixed(2)}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -171,17 +201,26 @@ export const CaptainCheckoutModal = () => {
                 <div className="space-y-1">
                   <div className="flex justify-between items-center text-sm">
                     <span>Subtotal:</span>
-                    <span>{currency}{foodSubtotal.toFixed(2)}</span>
+                    <span>
+                      {currency}
+                      {foodSubtotal.toFixed(2)}
+                    </span>
                   </div>
                   {gstPercentage > 0 && (
                     <div className="flex justify-between items-center text-sm">
                       <span>GST ({gstPercentage}%):</span>
-                      <span>{currency}{gstAmount.toFixed(2)}</span>
+                      <span>
+                        {currency}
+                        {gstAmount.toFixed(2)}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between items-center pt-1 border-t border-gray-300 font-semibold">
                     <span>Grand Total:</span>
-                    <span>{currency}{grandTotal.toFixed(2)}</span>
+                    <span>
+                      {currency}
+                      {grandTotal.toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -218,10 +257,10 @@ export const CaptainCheckoutModal = () => {
         <KOTTemplate ref={kotRef} order={order} key={`kot-${order.id}`} />
 
         {/* Bill Template */}
-        <BillTemplate 
-          ref={billRef} 
-          order={order} 
-          userData={partnerData || captainData as any}
+        <BillTemplate
+          ref={billRef}
+          order={order}
+          userData={partnerData || (captainData as any)}
           extraCharges={extraCharges}
         />
       </div>

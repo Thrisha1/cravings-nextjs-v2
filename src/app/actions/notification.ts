@@ -51,12 +51,12 @@ const findPlatform = () => {
 
 class Token {
   async save() {
-    const tokenId = window.localStorage.getItem("tokenId");
+    const tokenId = window?.localStorage.getItem("tokenId");
     if (tokenId) {
       return;
     }
 
-    const token = window.localStorage.getItem("fcmToken");
+    const token = window?.localStorage.getItem("fcmToken");
     const user = await getAuthCookie();
     const tempUser = await getTempUserIdCookie();
 
@@ -93,12 +93,12 @@ class Token {
       console.error("Failed to save token");
       return;
     } else {
-      window.localStorage.setItem("tokenId", insert_device_tokens_one.id);
+      window?.localStorage.setItem("tokenId", insert_device_tokens_one.id);
     }
   }
 
   async remove() {
-    const tokenId = window.localStorage.getItem("tokenId");
+    const tokenId = window?.localStorage.getItem("tokenId");
     if (!tokenId) {
       return;
     }
@@ -250,8 +250,7 @@ class PartnerNotification {
         {
           url: `https://www.cravings.live/offers/${offer?.id || ""}`,
           channel_id: "cravings_channel_2",
-          sound: "default_sound",
-          image: offer.menu.image_url,
+          sound: "default_sound"
         }
       );
 

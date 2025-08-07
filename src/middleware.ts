@@ -5,7 +5,7 @@ import { decryptText } from "./lib/encrtption";
 import { cookies } from "next/headers";
 
 export async function middleware(request: NextRequest) {
-  const authToken = request.cookies.get("auth_token")?.value;
+  const authToken = request.cookies.get("new_auth_token")?.value;
   const pathname = request.nextUrl.pathname;
   const cookieStore = await cookies();
   const requestHeaders = new Headers(request.headers);
@@ -263,7 +263,7 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     console.error("Auth verification failed:", error);
     const response = NextResponse.redirect(new URL("/", request.url));
-    response.cookies.delete("auth_token");
+    response.cookies.delete("new_auth_token");
     return response;
   }
 }

@@ -90,16 +90,8 @@ export const getPartnerOffers = `
 /*...........mutation...........*/
 
 export const addOffer = `
-mutation AddOffer($created_at: timestamptz!, $end_time: timestamptz!, $items_available: Int!, $menu_item_id: uuid!, $offer_price: Int!, $partner_id: uuid!, $start_time: timestamptz!) {
-  insert_offers(objects: {
-    created_at: $created_at,
-    end_time: $end_time,
-    items_available: $items_available,
-    menu_item_id: $menu_item_id,
-    offer_price: $offer_price,
-    partner_id: $partner_id,
-    start_time: $start_time
-  }) {
+mutation AddOffer($offer: offers_insert_input!) {
+  insert_offers(objects: [$offer]) {
     returning {
       created_at
       end_time

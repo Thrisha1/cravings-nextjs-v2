@@ -105,7 +105,7 @@ export default function Offers({ offers : OFFERS }: { offers: Offer[] }) {
                   <div className="grid gap-2 gap-y-5 grid-cols-2 md:grid-cols-4 md:gap-x-5 md:gap-y-10">
                     {offers.map((offer) => {
                       const discount = Math.round(
-                        ((offer.menu.price - offer.offer_price) /
+                        ((offer.menu.price - (offer.offer_price ?? 0)) /
                           offer.menu.price) *
                           100
                       );

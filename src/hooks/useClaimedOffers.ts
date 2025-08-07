@@ -12,7 +12,7 @@ export function useClaimedOffers() {
   const [claimedOffers, setClaimedOffers] = useState<ClaimedOffer[]>([]);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage?.getItem(STORAGE_KEY);
     if (stored) {
       setClaimedOffers(JSON.parse(stored));
     }
@@ -27,7 +27,7 @@ export function useClaimedOffers() {
 
     setClaimedOffers((current) => {
       const updated = [...current, newClaim];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
   };

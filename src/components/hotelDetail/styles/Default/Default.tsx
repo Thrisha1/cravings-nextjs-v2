@@ -20,6 +20,7 @@ import {
 import { Offer } from "@/store/offerStore_hasura";
 import { Category } from "@/store/categoryStore_hasura";
 import { QrGroup } from "@/app/admin/qr-management/page";
+import { useSearchParams } from "next/navigation";
 
 export interface DefaultHotelPageProps {
   styles: Styles;
@@ -42,7 +43,6 @@ export interface DefaultHotelPageProps {
   qrId?: string | null;
 }
 
-
 const Default = ({
   styles,
   theme,
@@ -53,7 +53,7 @@ const Default = ({
   tableNumber,
   auth,
   topItems,
-  items,
+  items: initialItems,
   pathname,
   categories,
   setSelectedCategory,
@@ -62,6 +62,59 @@ const Default = ({
 }: DefaultHotelPageProps) => {
 
   const [isThemeDialogOpen, setIsThemeDialogOpen] = React.useState(false);
+  const searchParams = useSearchParams();
+  const selectedCategory = searchParams.get("cat") || "all";
+
+  // Helper function to check if a menu item has an active offer
+  const hasActiveOffer = (menuItemId: string) => {
+    return offers.some((offer) => offer.menu && offer.menu.id === menuItemId);
+  };
+
+  // getCategoryItems logic (updated to match HotelMenuPage_v2)
+  const getCategoryItems = (selectedCategory: string) => {
+    if (selectedCategory === "all") {
+      return (
+        hoteldata?.menus.filter(
+          (item) =>
+            item.category.is_active === undefined ||
+            item.category.is_active === true
+        ) || []
+      );
+    }
+    
+    // Handle the special "Offer" category
+    if (selectedCategory === "Offer") {
+      const offeredItems = hoteldata?.menus.filter(
+        (item) =>
+          item.id && hasActiveOffer(item.id) &&
+          (item.category.is_active === undefined ||
+            item.category.is_active === true)
+      ) || [];
+      
+      // Sort offered items with images first
+      const sortedItems = [...offeredItems].sort((a, b) => {
+        if (a.image_url.length && !b.image_url.length) return -1;
+        if (!a.image_url.length && b.image_url.length) return 1;
+        return 0;
+      });
+      return sortedItems;
+    }
+
+    const filteredItems = hoteldata?.menus.filter(
+      (item) =>
+        item.category.name === selectedCategory &&
+        (item.category.is_active === undefined ||
+          item.category.is_active === true)
+    );
+    const sortedItems = [...filteredItems].sort((a, b) => {
+      if (a.image_url.length && !b.image_url.length) return -1;
+      if (!a.image_url.length && b.image_url.length) return 1;
+      return 0;
+    });
+    return sortedItems;
+  };
+
+  const items = getCategoryItems(selectedCategory);
 
   return (
     <main
@@ -138,8 +191,8 @@ const Default = ({
             />
           </section>
 
-          {/* offers  */}
-          {offers.length > 0 && (
+          {/* offers - only show when NOT in Offer category */}
+          {/* {offers.length > 0 && selectedCategory !== "Offer" && (
             <section className="px-[8%]">
               <OfferList
                 offers={offers}
@@ -148,9 +201,9 @@ const Default = ({
                 features={getFeatures(hoteldata?.feature_flags || "")}
               />
             </section>
-          )}
+          )} */}
 
-          {/* popular  */}
+          {/* popular - always show (Must Try section) */}
           {topItems.length > 0 && (
             <section>
               <PopularItemsList
@@ -172,14 +225,11 @@ const Default = ({
               hotelData={hoteldata}
               categories={categories}
               setSelectedCategory={setSelectedCategory}
-              menu={hoteldata?.fillteredMenus}
               tableNumber={tableNumber}
             />
           </section>
         </>
       ) : null}
-
-      
 
       {/* rating  */}
       {!open_place_order_modal && (

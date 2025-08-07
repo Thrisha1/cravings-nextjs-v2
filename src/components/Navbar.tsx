@@ -39,7 +39,7 @@ export function Navbar({ userData }: { userData: any }) {
 
   useEffect(() => {
 
-    const isApp = window.localStorage.getItem("isApp");
+    const isApp = window?.localStorage.getItem("isApp");
     if (isApp === "true") {
       setIsInstalled(true);
     } else {

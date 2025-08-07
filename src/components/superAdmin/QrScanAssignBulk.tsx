@@ -24,6 +24,7 @@ type QrDetails = {
   id: string;
   qr_number: string;
   table_number: number | null;
+  table_name?: string | null;
   no_of_scans: number;
   partner_id: string | null;
   partner: {
@@ -44,6 +45,7 @@ const GET_QR_BY_PK = `
       id
       qr_number
       table_number
+      table_name
       no_of_scans
       partner_id
       partner {
@@ -64,13 +66,14 @@ const SEARCH_PARTNERS_QUERY = `
 `;
 
 const UPDATE_QR_DETAILS_MUTATION = `
-  mutation UpdateQrDetails($id: uuid!, $qrNumber: Int, $tableNumber: Int, $partnerId: uuid) {
+  mutation UpdateQrDetails($id: uuid!, $qrNumber: Int, $tableNumber: Int, $partnerId: uuid, $tableName: String) {
     update_qr_codes_by_pk(
       pk_columns: {id: $id},
       _set: {
         qr_number: $qrNumber,
         table_number: $tableNumber,
         partner_id: $partnerId
+        table_name: $tableName
       }
     ) {
       id
@@ -304,7 +307,8 @@ const QrScanAssignBulk = () => {
   };
 
   const handleEditQr = (qr: QrDetails) => {
-    setEditingQr(JSON.parse(JSON.stringify(qr)));
+    setEditingQr(qr);
+    console.log(qr)
     setPartnerSearchTerm(qr.partner?.store_name || "");
   };
 
@@ -363,6 +367,7 @@ const QrScanAssignBulk = () => {
           ? parseInt(String(qr.table_number), 10)
           : null,
         partnerId: qr.partner_id,
+        tableName: qr.table_name,
       };
       return fetchFromHasura(UPDATE_QR_DETAILS_MUTATION, variables);
     });
@@ -511,7 +516,7 @@ const QrScanAssignBulk = () => {
                         <p className="text-sm text-gray-900">
                           Table:{" "}
                           <span className="font-semibold">
-                            {qr.table_number || (
+                            {qr.table_name || qr.table_number || (
                               <span className="text-gray-400">N/A</span>
                             )}
                           </span>
@@ -616,6 +621,22 @@ const QrScanAssignBulk = () => {
                 id="table_number"
                 name="table_number"
                 value={editingQr.table_number || ""}
+                onChange={handleModalInputChange}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="table_name"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Table Name
+              </label>
+              <input
+                type="text"
+                id="table_name"
+                name="table_name"
+                value={editingQr.table_name || ""}
                 onChange={handleModalInputChange}
                 className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
               />

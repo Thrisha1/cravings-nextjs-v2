@@ -19,7 +19,7 @@ const CravingsCashInfoModal = () => {
       const getAllKeysRequest = store.getAllKeys();
 
       getAllKeysRequest.onsuccess = () => {
-        const notInitialRun = localStorage.getItem("notInitialRun");
+        const notInitialRun = localStorage?.getItem("notInitialRun");
 
         if (getAllKeysRequest.result.length == 0 && !notInitialRun) {
           setOpen(true);
@@ -41,7 +41,7 @@ const CravingsCashInfoModal = () => {
       open={open}
       onOpenChange={(value: boolean) => {
         setOpen(value);
-        localStorage.setItem("notInitialRun", "true");
+        localStorage?.setItem("notInitialRun", "true");
       }}
     >
       <DialogContent className="max-w-[90%] sm:max-w-sm grid justify-items-center rounded-3xl py-10 px-10 gap-5">

@@ -54,14 +54,15 @@ export function QrCodesTable({
   });
   const [isBulkGenerateOpen, setIsBulkGenerateOpen] = useState(false);
   const [numberOfQrs, setNumberOfQrs] = useState<number>(1);
+  const [startingNumber, setStartingNumber] = useState<number>(1);
   const [isBulkLoading, setIsBulkLoading] = useState(false);
 
   const handleBulkGenerate = async () => {
     setIsBulkLoading(true);
     try {
       const objects = Array.from({ length: numberOfQrs }, (_, index) => ({
-        qr_number: index + 1,
-        table_number: String(index + 1),
+        qr_number: startingNumber + index,
+        table_number: String(startingNumber + index),
         partner_id: partnerId,
         no_of_scans: 0,
       }));
@@ -75,6 +76,7 @@ export function QrCodesTable({
         toast.success(`${numberOfQrs} QR codes generated successfully`);
         setIsBulkGenerateOpen(false);
         setNumberOfQrs(1);
+        setStartingNumber(1);
       }
     } catch (error) {
       toast.error("Failed to generate QR codes");
@@ -219,7 +221,7 @@ export function QrCodesTable({
         const base64 = await QRCode.toDataURL(qrUrl);
 
         // Add row
-        const row = worksheet.addRow([qr.table_number, '']);
+        worksheet.addRow([qr.table_number, '']);
 
         // Add image to workbook
         const imageId = workbook.addImage({
@@ -412,7 +414,7 @@ export function QrCodesTable({
           <DialogHeader>
             <DialogTitle>Generate Multiple QR Codes</DialogTitle>
             <DialogDescription>
-              Enter the number of QR codes you want to generate. The QR number and table number will start from 1.
+              Enter the number of QR codes you want to generate and the starting number.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -425,6 +427,19 @@ export function QrCodesTable({
                 type="number"
                 value={numberOfQrs}
                 onChange={(e) => setNumberOfQrs(Math.max(1, parseInt(e.target.value) || 1))}
+                className="col-span-3"
+                min="1"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="startingNumber" className="text-right">
+                Start From
+              </Label>
+              <Input
+                id="startingNumber"
+                type="number"
+                value={startingNumber}
+                onChange={(e) => setStartingNumber(Math.max(1, parseInt(e.target.value) || 1))}
                 className="col-span-3"
                 min="1"
               />

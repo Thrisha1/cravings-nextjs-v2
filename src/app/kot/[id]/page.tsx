@@ -1,5 +1,6 @@
 "use client";
 
+import { getDateOnly } from "@/lib/formatDate";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { ExtraCharge } from "@/store/posStore";
 import { useParams } from "next/navigation";
@@ -12,9 +13,14 @@ query GetOrder($id: uuid!) {
     id
     created_at
     table_number
+    display_id
     type
     notes
+    table_name
     extra_charges
+    qr_code{
+      table_name
+    }
     order_items {
       id
       quantity
@@ -50,6 +56,7 @@ const PrintKOTPage = () => {
             notes: item.item.kot_notes,
           })),
           tableNumber: orders_by_pk.table_number,
+          tableName: orders_by_pk.qr_code?.table_name || orders_by_pk.table_name || null,
           extra_charges: (orders_by_pk.extra_charges ?? []).map(
             (charge: any) => ({
               id: charge.id,
@@ -113,8 +120,8 @@ const PrintKOTPage = () => {
     if (!order.tableNumber) return "Takeaway";
     return ` ${
       isParcel
-        ? `Parcel (Table ${order.tableNumber})`
-        : `Table ${order.tableNumber}"`
+        ? `Parcel (Table ${order.tableName || order.tableNumber})`
+        : `Table ${order.tableName || order.tableNumber}`
     }`;
   };
 
@@ -141,8 +148,13 @@ const PrintKOTPage = () => {
         {/* Order Info */}
         <div className="grid grid-cols-2 gap-2 text-sm mb-2">
           <div>
-            <span className="font-medium">Order #:</span>
-            <span> {order.id.slice(0, 8)}</span>
+            <span className="font-medium">Order :</span>
+            <br />
+            <span>
+              {(Number(order.display_id) ?? 0) > 0
+                ? `${order.display_id}-${getDateOnly(order.created_at)}`
+                : order.id.slice(0, 8)}
+            </span>
           </div>
           <div className="text-right">
             <span className="font-medium">Type:</span>
@@ -197,6 +209,11 @@ const PrintKOTPage = () => {
         {/* Footer */}
         <div className="border-t border-black mt-4 pt-2 text-center text-xs">
           <p>Generated at: {new Date().toLocaleTimeString()}</p>
+          {(Number(order.display_id) ?? 0) > 0 && (
+            <h2 className="text-xs font-light text-center mt-1">
+              ID: {order.id.slice(0, 8)}
+            </h2>
+          )}
         </div>
       </div>
     </div>

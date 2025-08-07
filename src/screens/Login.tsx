@@ -36,15 +36,16 @@ export default function Login() {
     try {
       await signInWithPhone(cleanedPhone);
       await Notification.token.save();
-      const redirectPath = localStorage.getItem("redirectPath");
+      const redirectPath = localStorage?.getItem("redirectPath");
       if (redirectPath) {
-        localStorage.removeItem("redirectPath");
+        localStorage?.removeItem("redirectPath");
         navigate.push(redirectPath);
       } else {
         navigate.push("/");
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
+      console.error("Sign in error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -59,6 +60,7 @@ export default function Login() {
       navigate.push("/admin");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to sign in");
+      console.error("Sign in error:", error);
     } finally {
       setIsLoading(false);
     }

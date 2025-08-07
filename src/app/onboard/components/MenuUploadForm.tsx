@@ -89,7 +89,7 @@ export default function MenuUploadForm({
   // Load categories from local storage on component mount
   useEffect(() => {
     try {
-      const storedCategories = localStorage.getItem(LS_CATEGORIES);
+      const storedCategories = localStorage?.getItem(LS_CATEGORIES);
       if (storedCategories) {
         const parsedCategories = JSON.parse(storedCategories) as string[];
         setCategories(parsedCategories);
@@ -102,7 +102,7 @@ export default function MenuUploadForm({
   // Save categories to local storage whenever they change
   useEffect(() => {
     try {
-      localStorage.setItem(LS_CATEGORIES, JSON.stringify(categories));
+      localStorage?.setItem(LS_CATEGORIES, JSON.stringify(categories));
     } catch (error) {
       console.error("Error saving categories to local storage:", error);
     }

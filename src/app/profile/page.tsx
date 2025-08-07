@@ -194,6 +194,9 @@ export default function ProfilePage() {
     },
     is_fixed_rate: false,
     minimum_order_amount: 0,
+    delivery_time_allowed: null,
+    isDeliveryActive: true,
+    needDeliveryLocation: true,
   });
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [whatsappNumbers, setWhatsappNumbers] = useState<
@@ -271,6 +274,8 @@ export default function ProfilePage() {
         enabled: (userData.gst_percentage || 0) > 0 ? true : false,
       });
       setIsShopOpen(userData.is_shop_open);
+
+
       setDeliveryRules({
         delivery_radius: userData.delivery_rules?.delivery_radius || 5,
         first_km_range: {
@@ -280,6 +285,9 @@ export default function ProfilePage() {
         is_fixed_rate: userData.delivery_rules?.is_fixed_rate || false,
         minimum_order_amount:
           userData.delivery_rules?.minimum_order_amount || 0,
+        delivery_time_allowed: userData.delivery_rules?.delivery_time_allowed || null,
+        isDeliveryActive: userData.delivery_rules?.isDeliveryActive ?? true,
+        needDeliveryLocation: userData.delivery_rules?.needDeliveryLocation ?? true,
       });
       setGeoLocation({
         latitude: userData?.geo_location?.coordinates?.[1] || 0,
@@ -322,8 +330,8 @@ export default function ProfilePage() {
 
   useEffect(() => {
     console.log(
-      window.localStorage.getItem("fcmToken"),
-      "FCM Token from localStorage"
+      window?.localStorage.getItem("fcmToken"),
+      "FCM Token from localStorage?"
     );
     if (userData?.role === "partner" && features?.captainordering.enabled) {
       const fetchCaptainOrders = async () => {
@@ -1189,6 +1197,9 @@ export default function ProfilePage() {
         },
         is_fixed_rate: deliveryRules?.is_fixed_rate || false,
         minimum_order_amount: deliveryRules?.minimum_order_amount || 0,
+        delivery_time_allowed: deliveryRules?.delivery_time_allowed || null,
+        isDeliveryActive: deliveryRules?.isDeliveryActive ?? true,
+        needDeliveryLocation: deliveryRules?.needDeliveryLocation ?? true,
       } as DeliveryRules;
 
       await fetchFromHasura(updatePartnerMutation, {

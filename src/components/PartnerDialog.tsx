@@ -84,7 +84,7 @@ export function PartnerDialog() {
       }
     }
     
-    localStorage.setItem("partnerFormData", JSON.stringify(formData));
+    localStorage?.setItem("partnerFormData", JSON.stringify(formData));
     return true;
   };
 
@@ -128,7 +128,7 @@ export function PartnerDialog() {
       );
       
       toast.success("Account created successfully!");
-      localStorage.removeItem("partnerFormData");
+      localStorage?.removeItem("partnerFormData");
       setTimeout(() => {
         router.push("/admin");
       }, 1000);

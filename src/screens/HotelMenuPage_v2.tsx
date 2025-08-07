@@ -6,7 +6,8 @@ import { ThemeConfig } from "@/components/hotelDetail/ThemeChangeButton";
 import { Category } from "@/store/categoryStore_hasura";
 import OrderDrawer from "@/components/hotelDetail/OrderDrawer";
 import useOrderStore from "@/store/orderStore";
-import { useEffect } from "react";
+// Import useMemo and useCallback
+import { useEffect, useMemo, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getFeatures } from "@/lib/getFeatures";
 import { QrGroup } from "@/app/admin/qr-management/page";
@@ -17,6 +18,8 @@ import { INCREMENT_QR_CODE_SCAN_COUNT } from "@/api/qrcodes";
 import Default from "@/components/hotelDetail/styles/Default/Default";
 import Compact from "@/components/hotelDetail/styles/Compact/Compact";
 import { saveUserLocation } from "@/lib/saveUserLocLocal";
+import { QrCode, useQrDataStore } from "@/store/qrDataStore";
+import DeliveryTimeCampain from "@/components/hotelDetail/DeliveryTimeCampain";
 
 export type MenuItem = {
   description: string;
@@ -50,6 +53,7 @@ interface HotelMenuPageProps {
   qrGroup?: QrGroup | null;
   qrId?: string | null;
   selectedCategory?: string;
+  qrData?: QrCode | null;
 }
 
 const HotelMenuPage = ({
@@ -59,11 +63,16 @@ const HotelMenuPage = ({
   theme,
   tableNumber,
   socialLinks,
+  qrData,
   qrGroup,
   qrId,
   selectedCategory: selectedCategoryProp,
 }: HotelMenuPageProps) => {
   const router = useRouter();
+  const pathname = usePathname();
+  const { setHotelId, genOrderId, open_place_order_modal } = useOrderStore();
+  const { setQrData } = useQrDataStore();
+
   const styles: Styles = {
     backgroundColor: theme?.colors?.bg || "#F5F5F5",
     color: theme?.colors?.text || "#000",
@@ -75,26 +84,21 @@ const HotelMenuPage = ({
     },
   };
 
-  const { setHotelId, genOrderId, open_place_order_modal } = useOrderStore();
-
-  const pathname = usePathname();
-
-
   useEffect(() => {
     saveUserLocation(false);
-  },[]);
+  }, []);
+
+  useEffect(() => {
+    setQrData(qrData || null);
+  }, [qrData, setQrData]);
 
   useEffect(() => {
     const handleUpdateQrCount = async () => {
       if (!qrId) return;
-
-      const canUpdateScanCount = (await getQrScanCookie(qrId)) ? false : true;
-
+      const canUpdateScanCount = !(await getQrScanCookie(qrId));
       if (canUpdateScanCount) {
         try {
-          await fetchFromHasura(INCREMENT_QR_CODE_SCAN_COUNT, {
-            id: qrId,
-          });
+          await fetchFromHasura(INCREMENT_QR_CODE_SCAN_COUNT, { id: qrId });
           await setQrScanCookie(qrId);
         } catch (error) {
           console.error("Failed to update QR scan count:", error);
@@ -108,27 +112,33 @@ const HotelMenuPage = ({
   }, [qrId]);
 
   useEffect(() => {
-    if (hoteldata) {
+    if (hoteldata?.id) {
       setHotelId(hoteldata.id);
       genOrderId();
+      addToRecent(hoteldata.id);
     }
-  }, [hoteldata, setHotelId, genOrderId]);
+  }, [hoteldata?.id, setHotelId, genOrderId]);
 
-  useEffect(() => {
-    if (hoteldata?.id) {
-      addToRecent(hoteldata?.id);
-    }
-  }, [hoteldata?.id]);
+  // ✅ Memoize offeredItems to avoid recalculating on every render
+  const offeredItems = useMemo(() => {
+    if (!hoteldata?.menus || !offers) return [];
+    const activeOfferMenuIds = new Set(offers.map((offer) => offer.menu?.id));
+    return hoteldata.menus.filter(
+      (item) =>
+        activeOfferMenuIds.has(item.id || "") &&
+        (item.category.is_active === undefined || item.category.is_active)
+    );
+  }, [hoteldata?.menus, offers]);
 
-  const getCategories = () => {
+  // ✅ Memoize categories to prevent recalculating unless the menu changes
+  const categories = useMemo(() => {
+    if (!hoteldata?.menus) return [];
     const uniqueCategoriesMap = new Map<string, Category>();
 
     hoteldata.menus.forEach((item) => {
-      // Only add category if it's active (is_active is true) or if is_active is undefined (backward compatibility)
       if (
         !uniqueCategoriesMap.has(item.category.name) &&
-        (item.category.is_active === undefined ||
-          item.category.is_active === true)
+        (item.category.is_active === undefined || item.category.is_active)
       ) {
         uniqueCategoriesMap.set(item.category.name, item.category);
       }
@@ -137,62 +147,78 @@ const HotelMenuPage = ({
     const uniqueCategories = Array.from(uniqueCategoriesMap.values()).sort(
       (a, b) => (a.priority || 0) - (b.priority || 0)
     );
-    return uniqueCategories;
-  };
 
-  const getCategoryItems = (selectedCategory: string) => {
-    if (selectedCategory === "all") {
-      return (
-        hoteldata?.menus.filter(
-          (item) =>
-            item.category.is_active === undefined ||
-            item.category.is_active === true
-        ) || []
-      );
+    if (offeredItems.length > 0) {
+      const offerCategory: Category = {
+        id: "offer-category",
+        name: "Offer",
+        priority: -999,
+        is_active: true,
+      };
+      return [offerCategory, ...uniqueCategories];
     }
-    const filteredItems = hoteldata?.menus.filter(
-      (item) =>
-        item.category.name === selectedCategory &&
-        (item.category.is_active === undefined ||
-          item.category.is_active === true)
-    );
-    const sortedItems = [...filteredItems].sort((a, b) => {
-      if (a.image_url.length && !b.image_url.length) return -1;
-      if (!a.image_url.length && b.image_url.length) return 1;
+    return uniqueCategories;
+  }, [hoteldata?.menus, offeredItems]);
+
+  const selectedCategory = selectedCategoryProp || "all";
+
+  // ✅ Memoize the filtered and sorted items for the selected category
+  const items = useMemo(() => {
+    if (!hoteldata?.menus) return [];
+
+    let filteredItems = [];
+
+    if (selectedCategory === "all") {
+      filteredItems =
+        hoteldata.menus.filter(
+          (item) =>
+            item.category.is_active === undefined || item.category.is_active
+        ) || [];
+    } else if (selectedCategory === "Offer") {
+      filteredItems = offeredItems;
+    } else {
+      filteredItems =
+        hoteldata.menus.filter(
+          (item) =>
+            item.category.name === selectedCategory &&
+            (item.category.is_active === undefined || item.category.is_active)
+        ) || [];
+    }
+
+    // Sort items with images to appear first
+    return [...filteredItems].sort((a, b) => {
+      const aHasImage = a.image_url && a.image_url.length > 0;
+      const bHasImage = b.image_url && b.image_url.length > 0;
+      if (aHasImage && !bHasImage) return -1;
+      if (!aHasImage && bHasImage) return 1;
       return 0;
     });
-    return sortedItems;
-  };
+  }, [selectedCategory, hoteldata?.menus, offeredItems]);
 
-  const getTopItems = () => {
-    const filteredItems = hoteldata?.menus.filter(
-      (item) =>
-        item.is_top === true &&
-        (item.category.is_active === undefined ||
-          item.category.is_active === true)
+  // ✅ Memoize top-selling items
+  const topItems = useMemo(() => {
+    return (
+      hoteldata?.menus.filter(
+        (item) =>
+          item.is_top === true &&
+          (item.category.is_active === undefined || item.category.is_active)
+      ) || []
     );
-    return filteredItems;
-  };
+  }, [hoteldata?.menus]);
 
-  const setSelectedCategory = (category: string) => {
-    if (category === "all") {
+  // ✅ Memoize the function passed as a prop to prevent child re-renders
+  const setSelectedCategory = useCallback(
+    (category: string) => {
       const url = new URL(window.location.href);
-      url.searchParams.delete("cat");
+      if (category === "all") {
+        url.searchParams.delete("cat");
+      } else {
+        url.searchParams.set("cat", category);
+      }
       router.push(url.toString(), { scroll: false });
-    } else {
-      const url = new URL(window.location.href);
-      url.searchParams.set("cat", category);
-      router.push(url.toString(), { scroll: false });
-    }
-  };
-
-  const topItems = getTopItems();
-  const categories = getCategories();
-  const selectedCategory = selectedCategoryProp || "all";
-  const items = getCategoryItems(selectedCategory);
-
-  console.log(selectedCategory, "selectedCategory");
-  
+    },
+    [router]
+  );
 
   const defaultProps = {
     offers,
@@ -221,15 +247,50 @@ const HotelMenuPage = ({
     }
   };
 
+  const features = getFeatures(hoteldata?.feature_flags || "");
+
+  const isWithinDeliveryTime = () => {
+    if (!hoteldata?.delivery_rules?.delivery_time_allowed) {
+      return true;
+    }
+
+    const convertTimeToMinutes = (timeStr: string) => {
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+
+    const startTime = convertTimeToMinutes(
+      hoteldata.delivery_rules.delivery_time_allowed.from ?? "00:00"
+    );
+    const endTime = convertTimeToMinutes(
+      hoteldata.delivery_rules.delivery_time_allowed.to ?? "23:59"
+    );
+    
+    if (startTime > endTime) {
+      return currentTime >= startTime || currentTime <= endTime;
+    } else {
+      return currentTime >= startTime && currentTime <= endTime;
+    }
+  };
+
+  const showOrderDrawer =
+    (pathname.includes("qrScan") && features?.ordering.enabled) ||
+    (!pathname.includes("qrScan") &&
+      features?.delivery.enabled &&
+      (hoteldata?.delivery_rules?.isDeliveryActive ?? true) &&
+      isWithinDeliveryTime());
+
   return (
     <>
+      {features?.delivery.enabled &&
+        hoteldata?.delivery_rules?.delivery_time_allowed && (
+          <DeliveryTimeCampain deliveryRules={hoteldata.delivery_rules} />
+        )}
       {renderPage()}
-
-      {/* order drawer  */}
-      {((pathname.includes("qrScan") &&
-        getFeatures(hoteldata?.feature_flags || "")?.ordering.enabled) ||
-        (!pathname.includes("qrScan") &&
-          getFeatures(hoteldata?.feature_flags || "")?.delivery.enabled)) && (
+      {showOrderDrawer && (
         <section>
           <OrderDrawer
             qrGroup={qrGroup}

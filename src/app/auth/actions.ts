@@ -5,7 +5,7 @@ import { encryptText, decryptText } from "@/lib/encrtption";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 
 export const getAuthCookie = async () => {
-  const cookie = (await cookies()).get("auth_token")?.value;
+  const cookie = (await cookies()).get("new_auth_token")?.value;
   return cookie
     ? (decryptText(cookie) as {
         id: string;
@@ -23,7 +23,7 @@ export const setAuthCookie = async (data: {
   status: string;
 }) => {
   const encrypted = encryptText(data);
-  (await cookies()).set("auth_token", encrypted, {
+  (await cookies()).set("new_auth_token", encrypted, {
     httpOnly: true,
     secure: true,
     maxAge: 60 * 60 * 24 * 30,
@@ -37,7 +37,7 @@ export const setAuthCookie = async (data: {
 export const removeAuthCookie = async () => {
   console.log("Removing auth cookie");
 
-  (await cookies()).delete("auth_token");
+  (await cookies()).delete("new_auth_token");
 };
 
 export const updateAuthCookie = async (

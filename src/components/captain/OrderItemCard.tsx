@@ -20,10 +20,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { getDateOnly } from "@/lib/formatDate";
 
 interface OrderItemCardProps {
   order: Order;
-  updateOrderStatus: (orderId: string, status: "completed" | "cancelled") => Promise<void>;
+  updateOrderStatus: (
+    orderId: string,
+    status: "completed" | "cancelled"
+  ) => Promise<void>;
   deleteOrder: (orderId: string) => Promise<void>;
   setOrder: (order: Order | null) => void;
   setEditOrderModalOpen: (open: boolean) => void;
@@ -44,18 +48,18 @@ const OrderItemCard = ({
 }: OrderItemCardProps) => {
   const { userData } = useAuthStore();
   const captainData = userData as Captain | null;
-//   const billRef = useRef<HTMLDivElement>(null);
-//   const kotRef = useRef<HTMLDivElement>(null);
+  //   const billRef = useRef<HTMLDivElement>(null);
+  //   const kotRef = useRef<HTMLDivElement>(null);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
-//   const handlePrintBill = useReactToPrint({
-//     content: () => billRef.current,
-//   });
+  //   const handlePrintBill = useReactToPrint({
+  //     content: () => billRef.current,
+  //   });
 
-//   const handlePrintKOT = useReactToPrint({
-//     content: () => kotRef.current,
-//   });
+  //   const handlePrintKOT = useReactToPrint({
+  //     content: () => kotRef.current,
+  //   });
 
   // Add console logging for grantTotal
   // console.log("OrderItemCard grantTotal details:", {
@@ -130,11 +134,14 @@ const OrderItemCard = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Completed Order?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel this completed order? This action will mark the order as cancelled.
+              Are you sure you want to cancel this completed order? This action
+              will mark the order as cancelled.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCancelling}>No, keep it</AlertDialogCancel>
+            <AlertDialogCancel disabled={isCancelling}>
+              No, keep it
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancel}
               disabled={isCancelling}
@@ -153,22 +160,35 @@ const OrderItemCard = ({
             <div className="flex items-center justify-between sm:justify-start gap-2">
               <div className="flex items-center gap-2">
                 <div className="font-medium text-base sm:text-lg truncate">
-                  {order.orderedby === "captain" 
-                    ? `Order #${order.id.split('-')[0].toUpperCase()}`
-                    : order.type === "delivery" 
-                      ? "Delivery Order" 
-                      : order.type === "table_order" 
-                        ? "Table Order" 
-                        : "POS Order"}
+                  {order.orderedby === "captain"
+                    ? `Order ${
+                        (Number(order.display_id) ?? 0) > 0
+                          ? `${order.display_id}-${getDateOnly(
+                              order.createdAt
+                            )}`
+                          : order.id.slice(0, 8)
+                      }`
+                    : order.type === "delivery"
+                    ? "Delivery Order"
+                    : order.type === "table_order"
+                    ? "Table Order"
+                    : "POS Order"}
+                  {(Number(order.display_id) ?? 0) > 0 && (
+                    <h2 className="text-sm text-gray-800">
+                      ID: {order.id.slice(0, 8)}
+                    </h2>
+                  )}
                 </div>
                 {/* Show TAKEAWAY label for orders with no delivery address or location */}
-                {order.type === "delivery" && 
-                 (!order.deliveryAddress || 
-                  order.deliveryAddress === "Unknown" || 
-                  order.deliveryAddress === "N/A" ||
-                  !order.delivery_location) && (
-                  <span className="text-red-600 font-bold text-sm ">TAKEAWAY</span>
-                )}
+                {order.type === "delivery" &&
+                  (!order.deliveryAddress ||
+                    order.deliveryAddress === "Unknown" ||
+                    order.deliveryAddress === "N/A" ||
+                    !order.delivery_location) && (
+                    <span className="text-red-600 font-bold text-sm ">
+                      TAKEAWAY
+                    </span>
+                  )}
               </div>
               <div
                 className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs whitespace-nowrap ${getStatusColor(
@@ -185,11 +205,14 @@ const OrderItemCard = ({
               <div className="text-sm text-gray-600 mt-1 truncate">
                 Captain: {order.captain?.name || "Unknown Captain"}
                 {order.tableNumber && (
-                  <span className="ml-2">• Table {order.tableNumber}</span>
+                  <span className="ml-2">• Table {order.tableName || order.tableNumber}</span>
                 )}
-                {(order.user?.phone || order.phone) && (order.user?.phone || order.phone || "").trim() !== "" && (
-                  <span className="ml-2">• Customer: {order.user?.phone || order.phone}</span>
-                )}
+                {(order.user?.phone || order.phone) &&
+                  (order.user?.phone || order.phone || "").trim() !== "" && (
+                    <span className="ml-2">
+                      • Customer: {order.user?.phone || order.phone}
+                    </span>
+                  )}
               </div>
             )}
             <div className="text-sm text-gray-500 mt-1">
@@ -227,7 +250,12 @@ const OrderItemCard = ({
         <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-between">
           {/* Left side - KOT and Cancel buttons */}
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-            <Link href={`/kot/${order.id}`} target="_blank" passHref className="flex-1 sm:flex-none">
+            <Link
+              href={`/kot/${order.id}`}
+              target="_blank"
+              passHref
+              className="flex-1 sm:flex-none"
+            >
               <Button
                 size="sm"
                 variant="outline"
@@ -270,15 +298,15 @@ const OrderItemCard = ({
       {/* Hidden templates for printing */}
       <div style={{ display: "none" }}>
         {/* <div ref={billRef}> */}
-          {/* <BillTemplate
+        {/* <BillTemplate
             order={order}
             userData={userData}
             gstAmount={gstAmount}
             gstPercentage={gstPercentage}
             grantTotal={grantTotal}
           /> */}
-        </div>
-        {/* <div ref={kotRef}>
+      </div>
+      {/* <div ref={kotRef}>
           <KOTTemplate order={order} />
         </div> */}
       {/* </div> */}
@@ -286,4 +314,4 @@ const OrderItemCard = ({
   );
 };
 
-export default OrderItemCard; 
+export default OrderItemCard;

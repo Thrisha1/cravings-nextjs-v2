@@ -71,7 +71,7 @@ export default function OfferDetail({
 
   const isUpcoming = new Date(offer.start_time) > new Date();
   const discount = Math.round(
-    ((offer.menu.price - offer.offer_price) / offer.menu.price) * 100
+    ((offer.menu.price - (offer.offer_price ?? 0)) / offer.menu.price) * 100
   );
 
   return (
@@ -104,7 +104,7 @@ export default function OfferDetail({
                 ₹{offer.menu.price.toFixed(0)}
               </span>
               <span className="text-4xl font-bold text-white">
-                ₹{offer.offer_price.toFixed(0)}
+                ₹{(offer.offer_price ?? 0).toFixed(0)}
               </span>
               <div className="text-base font-bold text-orange-600 flex items-center gap-1">
                 <span>★</span>
@@ -186,12 +186,12 @@ export default function OfferDetail({
                     <Badge
                       variant="secondary"
                       className={
-                        offer.enquiries > offer.items_available
+                        offer.enquiries > (offer.items_available ?? 0)
                           ? "bg-red-600 text-white"
                           : "bg-orange-500 text-white"
                       }
                     >
-                      {offer.enquiries > offer.items_available
+                      {offer.enquiries > (offer.items_available ?? 0)
                         ? "High Demand"
                         : "In Demand"}
                     </Badge>

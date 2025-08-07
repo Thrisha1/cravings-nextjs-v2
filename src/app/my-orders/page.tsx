@@ -165,7 +165,7 @@ const Page = () => {
                   {order.tableNumber && (
                     <p className="text-sm">
                       <span className="font-medium">Table:</span>{" "}
-                      {order.tableNumber}
+                      {order.tableName || order.tableNumber}
                     </p>
                   )}
                   {order.phone && (
@@ -180,7 +180,7 @@ const Page = () => {
                     </p>
                   )}
 
-                  {order.delivery_location && (
+                  {order.delivery_location && order.deliveryAddress && (
                     <p className="text-sm">
                       {/* <span className="font-medium">Delivery Location:</span>{" "} */}
                       <a

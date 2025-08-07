@@ -16,3 +16,16 @@ export function formatDate(input: string): string {
 
   return istDate.toLocaleString("en-US", options);
 }
+
+
+export function getDateOnly (input: string): string {
+  //eg : JUN 2
+  const date = new Date(input);
+  const options: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    timeZone: "Asia/Kolkata",
+  };
+  return date.toLocaleDateString("en-US", options);
+}
+

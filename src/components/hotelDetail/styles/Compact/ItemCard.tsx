@@ -25,9 +25,45 @@ const ItemCard = ({
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
 
   // --- Feature Flags & Stock Logic ---
-  const hasOrderingFeature = getFeatures(feature_flags || "")?.ordering.enabled;
+
+ const isWithinDeliveryTime = () => {
+  if (!hoteldata?.delivery_rules?.delivery_time_allowed) {
+    return true;
+  }
+
+  const convertTimeToMinutes = (timeStr: string) => {
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const now = new Date();
+  const currentTime = now.getHours() * 60 + now.getMinutes();
+
+  const startTime = convertTimeToMinutes(
+    hoteldata.delivery_rules.delivery_time_allowed.from ?? "00:00"
+  );
+  const endTime = convertTimeToMinutes(
+    hoteldata.delivery_rules.delivery_time_allowed.to ?? "23:59"
+  );
+
+  if (startTime > endTime) {
+    return currentTime >= startTime || currentTime <= endTime;
+  } else {
+    return currentTime >= startTime && currentTime <= endTime;
+  }
+};
+
   const hasDeliveryFeature =
-    getFeatures(feature_flags || "")?.delivery.enabled && tableNumber === 0;
+    getFeatures(feature_flags || "")?.delivery.enabled &&
+    tableNumber === 0 &&
+    (hoteldata?.delivery_rules?.isDeliveryActive ?? true) &&
+    isWithinDeliveryTime();
+
+  const hasOrderingFeature =
+    getFeatures(feature_flags || "")?.ordering.enabled &&
+    (hoteldata?.delivery_rules?.isDeliveryActive ?? true) &&
+    isWithinDeliveryTime();
+
   const hasStockFeature = getFeatures(feature_flags || "")?.stockmanagement
     ?.enabled;
 
@@ -52,7 +88,7 @@ const ItemCard = ({
   const discountPercentage =
     offerData && shouldShowPrice
       ? Math.round(
-          ((offerData.menu.price - offerData.offer_price) /
+          ((offerData.menu.price - (offerData.offer_price ?? 0)) /
             offerData.menu.price) *
             100
         )
@@ -149,16 +185,14 @@ const ItemCard = ({
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
                         <span className="text-red-500">
-                          {hoteldata?.currency || "₹"}{" "}
-                          {offerData.offer_price}
+                          {hoteldata?.currency || "₹"} {offerData.offer_price}
                         </span>
                         <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded">
                           {discountPercentage}% OFF
                         </span>
                       </div>
                       <span className="text-sm line-through opacity-70">
-                        {hoteldata?.currency || "₹"}{" "}
-                        {offerData.menu.price}
+                        {hoteldata?.currency || "₹"} {offerData.menu.price}
                       </span>
                     </div>
                   ) : (
@@ -181,9 +215,7 @@ const ItemCard = ({
           {showStock && (
             <div className="text-xs mt-1">
               {isOutOfStock ? (
-                <span className="text-red-500 font-semibold">
-                  Out of Stock
-                </span>
+                <span className="text-red-500 font-semibold">Out of Stock</span>
               ) : (
                 <span className="text-green-600">
                   In Stock: {stockQuantity}
@@ -221,7 +253,11 @@ const ItemCard = ({
                     }}
                     className="rounded-full px-4 py-1 font-medium text-sm whitespace-nowrap h-fit cursor-pointer"
                   >
-                    {itemQuantity > 0 ? `Added (${itemQuantity})` : (showVariants ? "Hide Options" : "Show Options")}
+                    {itemQuantity > 0
+                      ? `Added (${itemQuantity})`
+                      : showVariants
+                      ? "Hide Options"
+                      : "Show Options"}
                   </div>
                 ) : showAddButton && itemQuantity > 0 ? (
                   <div
@@ -287,7 +323,7 @@ const ItemCard = ({
             >
               <div className="grid">
                 <span className="font-semibold">{variant.name}</span>
-                 {/* --- MODIFIED: Wrapped variant price in condition --- */}
+                {/* --- MODIFIED: Wrapped variant price in condition --- */}
                 {shouldShowPrice &&
                   !item.is_price_as_per_size &&
                   showAddButton && (
