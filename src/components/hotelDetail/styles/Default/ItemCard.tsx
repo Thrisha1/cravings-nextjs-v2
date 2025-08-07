@@ -267,7 +267,7 @@ const ItemCard = ({
                           {hasMultipleVariantsOnOffer ? (
                             <span className="text-sm font-bold">From </span>
                           ) : (
-                            <span className="line-through text-gray-400 mr-2 font-light">
+                            <span className="line-through text-gray-400 mr-2 text-sm font-medium">
                               {currency} {parseInt(String(oldPrice ?? item.price))}
                             </span>
                           )}
@@ -400,7 +400,7 @@ const ItemCard = ({
                             <>
                               {hasVariantOffer ? (
                                 <div className="flex flex-col items-end">
-                                  <span className="line-through text-gray-400 text-sm font-light">
+                                  <span className="line-through text-gray-400 text-sm font-normal">
                                     {currency} {variantOriginalPrice}
                                   </span>
                                   <span className="text-accent font-bold" style={{ color: styles.accent }}>
