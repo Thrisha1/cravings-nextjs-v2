@@ -187,6 +187,19 @@ export function QrCodesTable({
       });
   };
 
+  const handleCopySingleLink = (qrId: string) => {
+    const link = `https://cravings.live/qrScan/${store_name.replace(/\s+/g, '-')}/${qrId}`;
+    
+    navigator.clipboard.writeText(link)
+      .then(() => {
+        toast.success("QR link copied to clipboard");
+      })
+      .catch((error) => {
+        console.error('Failed to copy link:', error);
+        toast.error("Failed to copy link to clipboard");
+      });
+  };
+
   const generateTableSheet = async () => {
     try {
       const workbook = new ExcelJS.Workbook();
@@ -335,6 +348,9 @@ export function QrCodesTable({
                       </Button>
                       <Button variant="destructive" onClick={() => handleDelete(qr.id)} disabled={isLoading}>
                         Delete
+                      </Button>
+                      <Button onClick={() => handleCopySingleLink(qr.id)} disabled={isLoading}>
+                        Copy Link
                       </Button>
                     </>
                   )}
