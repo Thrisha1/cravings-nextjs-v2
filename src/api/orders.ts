@@ -71,6 +71,7 @@ export const createOrderMutation = `
 export const createOrderItemsMutation = `
                   mutation CreateOrderItems($orderItems: [order_items_insert_input!]!) {
                     insert_order_items(objects: $orderItems) {
+                      affected_rows
                     }
                   }
 `;
