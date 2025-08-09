@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { getAuthCookie } from "@/app/auth/actions";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import {
+  createNewPurchaseItemQuery,
   createNewSupplierQuery,
   GetMonthlyTotalQuery,
   GetPaginatedPurchasesQuery,
@@ -26,6 +27,7 @@ interface InventoryStore {
   selectedPurchase: PartnerPurchase | null;
   isCreatingPurchase: boolean;
   isCreatingSupplier: boolean;
+  currentPurchase: Partial<PartnerPurchase> | null;
   startCreatingPurchase: () => void;
   cancelCreatingPurchase: () => void;
   selectPurchase: (purchase: PartnerPurchase) => void;
@@ -50,6 +52,7 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
   selectedPurchase: null,
   isCreatingPurchase: false,
   isCreatingSupplier: false,
+  currentPurchase: null,
 
   startCreatingPurchase: () =>
     set({ isCreatingPurchase: true, selectedPurchase: null }),
@@ -164,9 +167,23 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     }
   },
 
-  createNewPurchaseItem(item) {
-    console.log("Creating a new purchase item...", item);
-    // Placeholder for creating a new purchase item logic
+  createNewPurchaseItem: async (item) => {
+    try {
+      const cookies = await getAuthCookie();
+      if (!cookies || cookies.role !== "partner") {
+        throw new Error("Unauthorized");
+      }
+
+      const { purchase_item } = await fetchFromHasura(createNewPurchaseItemQuery, {
+        ...item,
+        partner_id: cookies.id,
+        supplier_id: get().currentPurchase?.supplier_id,
+      });
+
+      console.log("New purchase item created:", purchase_item);
+    } catch (error) {
+      console.error("Failed to create new purchase item:", error);
+    }
   },
 
   createNewPurchase: async () => {
@@ -174,6 +191,8 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     if (isCreatingPurchase) return;
 
     set({ isCreatingPurchase: true, selectedPurchase: null });
+
+    console.log("Creating a new purchase..." , get().currentPurchase);
 
     try {
       console.log("Creating a new purchase...");
