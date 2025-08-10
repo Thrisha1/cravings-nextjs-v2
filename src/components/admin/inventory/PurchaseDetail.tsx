@@ -52,7 +52,6 @@ export const PurchaseDetail = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Item</TableHead>
-                    <TableHead>Category</TableHead>
                     <TableHead className="text-right">Qty</TableHead>
                     <TableHead className="text-right">Unit Price</TableHead>
                     <TableHead className="text-right">Subtotal</TableHead>
@@ -64,13 +63,12 @@ export const PurchaseDetail = () => {
                       <TableCell className="font-medium">
                         {tx.purchase_item.name}
                       </TableCell>
-                      <TableCell>{tx.purchase_item.category}</TableCell>
                       <TableCell className="text-right">{tx.quantity}</TableCell>
                       <TableCell className="text-right">
                         {formatCurrency(tx.unit_price)}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {formatCurrency(tx.total_price)}
+                        {formatCurrency(tx.quantity * tx.unit_price)}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -5,6 +5,9 @@ type Supplier = {
   address?: string;
   phone?: string;
   created_at: string;
+
+  // not table types 
+  isNew?: boolean; 
 };
 
 type Purchase = {
@@ -19,17 +22,14 @@ type Purchase = {
 type PurchaseItem = {
   id: string;
   name: string;
-  category: string;
   created_at: string;
   partner_id: string;
-  supplier_id: string;
 };
 
 type PurchaseTransaction = {
   id: string;
   purchase_id: string;
   quantity: number;
-  total_price: number;
   unit_price: number;
   created_at: string;
   item_id: string;

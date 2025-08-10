@@ -18,11 +18,9 @@ query GetPaginatedPurchases($partnerId: uuid!, $limit: Int!, $offset: Int!) {
     }
     purchase_transactions {
       id
-      total_price
       unit_price
       quantity
       purchase_item {
-        category
         id
         name
       }
@@ -49,28 +47,107 @@ query GetMonthlyTotal($partnerId: uuid!, $startDate: timestamptz!, $endDate: tim
 `;
 
 export const createNewSupplierQuery = `
-mutation CreateNewSupplier($name: String!, $phone: String!, $address: String!, $partner_id: uuid!) {
-  insert_suppliers(objects: { name: $name, phone: $phone, address: $address, partner_id: $partner_id , created_at: now() }) {
+mutation CreateNewSupplier($id: uuid!, $name: String!, $phone: String, $address: String, $partner_id: uuid!) {
+  insert_suppliers_one(object: { id: $id, name: $name, phone: $phone, address: $address, partner_id: $partner_id }) {
+    id
+    name
+    phone
+    address
+  }
+}`;
+
+
+
+export const createNewPurchaseItemQuery = `
+mutation CreateNewPurchaseItem($items: [purchase_items_insert_input!]!) {
+  insert_purchase_items(
+    objects: $items,
+    on_conflict: {
+      constraint: purchase_items_partner_id_name_key, 
+      update_columns: [name] 
+    }
+  ) {
     returning {
       id
       name
-      phone
-      address
+    }
+  }
+}
+`;
+
+export const createNewPurchaseTransactionQuery = `
+mutation CreateNewPurchaseTransaction($transactions: [purchase_transactions_insert_input!]!) {
+  insert_purchase_transactions(objects: $transactions) {
+    returning {
+      id
+      purchase_id
+      item_id
+      quantity
+      unit_price
+    }
+  }
+}
+`;
+
+export const createNewPurchaseQuery = `
+mutation CreateNewPurchase($id: uuid!, $partner_id: uuid!, $supplier_id: uuid!, $total_price: numeric!, $purchase_date: timestamptz!) {
+  insert_purchases(objects: { id: $id, partner_id: $partner_id, supplier_id: $supplier_id, total_price: $total_price, purchase_date: $purchase_date}) {
+    returning {
+      id
+      created_at
+      purchase_date
+      total_price
+      supplier {
+        address
+        id
+        name
+        phone
+      }
+      purchase_transactions {
+        id
+        unit_price
+        quantity
+        purchase_item {
+          id
+          name
+        }
+      }
     }
   }
 }
 `;
 
 
-export const createNewPurchaseItemQuery = `
-mutation CreateNewPurchaseItem($name: String!, $category: String!, $unit_price: Float!, $partner_id: uuid! , supplier_id: uuid!) {
-  insert_purchase_items(objects: { name: $name, category: $category, unit_price: $unit_price, partner_id: $partner_id, created_at: now(), supplier_id: supplier_id }) {
-    returning {
-      id
-      name
-      category
-      unit_price
+export const CreateFullPurchaseMutation = `
+mutation CreateFullPurchase(
+  $purchase_id: uuid!,
+  $partner_id: uuid!,
+  $purchase_date: timestamptz!,
+  $supplier_id: uuid!,
+  $total_price: numeric!,
+  $transactions: [purchase_transactions_insert_input!]!
+) {
+  insert_purchases_one(
+    object: {
+      id: $purchase_id,
+      partner_id: $partner_id,
+      purchase_date: $purchase_date,
+      supplier_id: $supplier_id,
+      total_price: $total_price,
+      purchase_transactions: {
+        data: $transactions,
+        
+        # This part is crucial for creating NEW items on the fly
+        on_conflict: {
+          constraint: purchase_transactions_pkey,
+          update_columns: [quantity, unit_price]
+        }
+      }
     }
+  ) {
+    id
+    purchase_date
+    total_price
   }
 }
 `;

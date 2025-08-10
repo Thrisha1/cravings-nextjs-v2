@@ -45,15 +45,16 @@ const PurchaseCard = ({ purchase }: { purchase: PartnerPurchase }) => (
           }).format(purchase.total_price)}
         </span>
       </div>
-      <div className="flex justify-between items-center">
-        <span className="text-muted-foreground">Status</span>
+      {/* <div className="flex justify-between items-center">
+        <span className="text-muted-foreground">Status</span> */}
         {/* This is a placeholder, you'd get status from your data */}
-        <Badge variant="secondary">Received</Badge>
-      </div>
+        {/* <Badge variant="secondary">Received</Badge>
+      </div> */}
       <p className="text-xs text-muted-foreground pt-2">ID: {purchase.id}</p>
     </CardContent>
     <CardFooter>
       <Button
+        onClick={() => useInventoryStore.getState().selectPurchase(purchase)}
         variant="outline"
         className="w-full text-orange-600 border-orange-600 hover:bg-orange-600 hover:text-white"
       >

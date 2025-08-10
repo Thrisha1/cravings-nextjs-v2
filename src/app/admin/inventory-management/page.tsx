@@ -27,12 +27,12 @@ const InventoryPage = () => {
     fetchTotalAmountThisMonth,
     fetchPaginatedPurchases,
     clearPurchases,
-    isCreatingPurchase,
-    startCreatingPurchase,
+    isCreatePurchasePage,
+    setIsCreatePurchasePage,
   } = useInventoryStore();
 
   useEffect(() => {
-    if (!selectedPurchase && !isCreatingPurchase) {
+    if (!selectedPurchase && !isCreatePurchasePage) {
       fetchTotalAmountThisMonth();
       if (useInventoryStore.getState().purchases.length === 0) {
         fetchPaginatedPurchases();
@@ -40,13 +40,13 @@ const InventoryPage = () => {
     }
     return () => {
       const state = useInventoryStore.getState();
-      if (!state.selectedPurchase && !state.isCreatingPurchase) {
+      if (!state.selectedPurchase && !state.isCreatePurchasePage) {
         clearPurchases();
       }
     };
   }, [
     selectedPurchase,
-    isCreatingPurchase,
+    isCreatePurchasePage,
     fetchTotalAmountThisMonth,
     fetchPaginatedPurchases,
     clearPurchases,
@@ -56,15 +56,15 @@ const InventoryPage = () => {
 
    if (selectedPurchase) {
     return (
-      <main className="p-4 md:p-6 lg:p-8">
+      <main className="p-4 pb-40 md:p-6 md:pb-40 lg:p-8 lg:pb-40">
         <PurchaseDetail />
       </main>
     );
   }
 
-  if (isCreatingPurchase) {
+  if (isCreatePurchasePage) {
     return (
-      <main className="py-10 px-[15%]">
+      <main className="pt-4 sm:pt-10 pb-40 px-4 sm:px-[15%]">
         <CreateNewPurchasePage />
       </main>
     );
@@ -72,12 +72,12 @@ const InventoryPage = () => {
 
 
   return (
-    <main className="p-4 md:p-6 lg:p-8 space-y-8">
+    <main className="p-4 pb-40 md:p-6 md:pb-40 lg:p-8 lg:pb-40 space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold tracking-tight">
           Inventory Management
         </h1>
-        <Button  onClick={startCreatingPurchase} className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700">
+        <Button  onClick={() => setIsCreatePurchasePage(true)} className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700">
           <PlusCircle size={20} />
           New Purchase
         </Button>

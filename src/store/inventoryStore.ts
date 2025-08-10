@@ -3,6 +3,8 @@ import { getAuthCookie } from "@/app/auth/actions";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import {
   createNewPurchaseItemQuery,
+  createNewPurchaseQuery,
+  createNewPurchaseTransactionQuery,
   createNewSupplierQuery,
   GetMonthlyTotalQuery,
   GetPaginatedPurchasesQuery,
@@ -15,6 +17,14 @@ export interface PartnerPurchaseTransaction extends PurchaseTransaction {
 export interface PartnerPurchase extends Purchase {
   supplier: Supplier;
   purchase_transactions: PartnerPurchaseTransaction[];
+  purchase_items?:
+    | {
+        id: string;
+        name: string;
+        quantity: number;
+        unit_price: number;
+      }[]
+    | null;
 }
 
 interface InventoryStore {
@@ -25,19 +35,27 @@ interface InventoryStore {
   hasMore: boolean;
   initialLoadFinished: boolean;
   selectedPurchase: PartnerPurchase | null;
-  isCreatingPurchase: boolean;
+  isCreatePurchasePage: boolean;
   isCreatingSupplier: boolean;
-  currentPurchase: Partial<PartnerPurchase> | null;
-  startCreatingPurchase: () => void;
-  cancelCreatingPurchase: () => void;
+  isCreatingPurchase: boolean;
+  setIsCreatePurchasePage: (value: boolean) => void;
   selectPurchase: (purchase: PartnerPurchase) => void;
   clearSelectedPurchase: () => void;
   fetchPaginatedPurchases: () => Promise<void>;
   fetchTotalAmountThisMonth: () => Promise<void>;
   clearPurchases: () => void;
-  createNewPurchase: () => void;
-  createNewSupplier: (supplier: Omit<Supplier, "id" | "partner_id" | "created_at">) => void;
-  createNewPurchaseItem: (item: Omit<PurchaseItem, "id">) => void;
+  createNewPurchase: (
+    currentPurchase: Partial<PartnerPurchase>
+  ) => Promise<void>;
+  createNewSupplier: (
+    currentPurchase: Partial<PartnerPurchase>
+  ) => Promise<void>;
+  createNewPurchaseTransaction: (
+    purchase: Partial<PartnerPurchase>
+  ) => Promise<void>;
+  createNewPurchaseItem: (
+    currentPurchase: Partial<PartnerPurchase>
+  ) => Promise<{ purchase_items: Partial<PurchaseItem>[] }>;
 }
 
 const PAGE_SIZE = 15;
@@ -50,17 +68,15 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
   hasMore: true,
   initialLoadFinished: false,
   selectedPurchase: null,
-  isCreatingPurchase: false,
+  isCreatePurchasePage: false,
   isCreatingSupplier: false,
-  currentPurchase: null,
+  isCreatingPurchase: false,
 
-  startCreatingPurchase: () =>
-    set({ isCreatingPurchase: true, selectedPurchase: null }),
-  cancelCreatingPurchase: () => set({ isCreatingPurchase: false }),
+  setIsCreatePurchasePage: (value) => set({ isCreatePurchasePage: value }),
 
   selectPurchase: (purchase) => set({ selectedPurchase: purchase }),
   clearSelectedPurchase: () =>
-    set({ selectedPurchase: null, isCreatingPurchase: false }),
+    set({ selectedPurchase: null, isCreatePurchasePage: false }),
 
   clearPurchases: () =>
     set({
@@ -138,9 +154,9 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
     }
   },
 
-  createNewSupplier: async (sup) => {
+  createNewSupplier: async (purchase) => {
     const { isCreatingSupplier } = get();
-    if (isCreatingSupplier) return;
+    if (isCreatingSupplier || !purchase.supplier?.isNew) return;
 
     set({ isCreatingSupplier: true });
 
@@ -151,9 +167,13 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
       }
 
       const { supplier } = await fetchFromHasura(createNewSupplierQuery, {
-        name: sup.name,
-        phone: sup.phone,
-        address: sup.address,
+        id: purchase.supplier?.id,
+        name: purchase.supplier?.name
+          ?.trim()
+          .toLowerCase()
+          .replace(/\s+/g, "_"),
+        phone: purchase.supplier?.phone,
+        address: purchase.supplier?.address,
         partner_id: cookies.id,
       });
 
@@ -161,43 +181,106 @@ export const useInventoryStore = create<InventoryStore>((set, get) => ({
 
       console.log("Creating a new supplier...");
     } catch (error) {
-      console.error("Failed to create new supplier:", error);
+      throw error;
     } finally {
       set({ isCreatingSupplier: false });
     }
   },
 
-  createNewPurchaseItem: async (item) => {
+  createNewPurchaseItem: async (currentPurchase) => {
     try {
       const cookies = await getAuthCookie();
       if (!cookies || cookies.role !== "partner") {
         throw new Error("Unauthorized");
       }
 
-      const { purchase_item } = await fetchFromHasura(createNewPurchaseItemQuery, {
-        ...item,
+      const items = currentPurchase.purchase_items?.map((item) => ({
+        id: item.id,
+        name: item.name.trim().toLowerCase().replace(/\s+/g, "_"),
         partner_id: cookies.id,
-        supplier_id: get().currentPurchase?.supplier_id,
-      });
+      }));
 
-      console.log("New purchase item created:", purchase_item);
+      const { insert_purchase_items } = await fetchFromHasura(
+        createNewPurchaseItemQuery,
+        { items: items }
+      );
+
+      return {
+        purchase_items: insert_purchase_items.returning,
+      };
+
     } catch (error) {
-      console.error("Failed to create new purchase item:", error);
+      throw error;
     }
   },
 
-  createNewPurchase: async () => {
+  createNewPurchaseTransaction: async (purchase) => {
+    try {
+      const cookies = await getAuthCookie();
+      if (!cookies || cookies.role !== "partner") {
+        throw new Error("Unauthorized");
+      }
+
+      const transactions = purchase.purchase_items?.map((item) => ({
+        purchase_id: purchase.id,
+        item_id: item.id,
+        partner_id: cookies?.id,
+        supplier_id: purchase.supplier?.id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+      }));
+
+      const { purchase_transaction } = await fetchFromHasura(
+        createNewPurchaseTransactionQuery,
+        { transactions }
+      );
+
+      console.log("New purchase transaction created:", purchase_transaction);
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  createNewPurchase: async (currentPurchase) => {
     const { isCreatingPurchase } = get();
     if (isCreatingPurchase) return;
 
     set({ isCreatingPurchase: true, selectedPurchase: null });
 
-    console.log("Creating a new purchase..." , get().currentPurchase);
+    const cookies = await getAuthCookie();
+    if (!cookies || cookies.role !== "partner") {
+      throw new Error("Unauthorized");
+    }
 
     try {
-      console.log("Creating a new purchase...");
+      await get().createNewSupplier(currentPurchase);
+      const { purchase_items } = await get().createNewPurchaseItem(
+        currentPurchase
+      );
+      const { insert_purchases_one } = await fetchFromHasura(
+        createNewPurchaseQuery,
+        {
+          id: currentPurchase.id,
+          partner_id: cookies.id,
+          supplier_id: currentPurchase.supplier?.id,
+          total_price: currentPurchase.total_price,
+          purchase_date: currentPurchase.purchase_date,
+        }
+      );
+      await get().createNewPurchaseTransaction({
+        ...currentPurchase,
+        purchase_items: currentPurchase.purchase_items?.map((item) => ({
+          ...item,
+          id: purchase_items.find((i) => i.name === item.name)?.id || item.id,
+        })),
+      });
+
+      set({
+        selectedPurchase: insert_purchases_one,
+        isCreatePurchasePage: false,
+      });
     } catch (error) {
-      console.error("Failed to create new purchase:", error);
+      throw error;
     } finally {
       set({ isCreatingPurchase: false });
     }
