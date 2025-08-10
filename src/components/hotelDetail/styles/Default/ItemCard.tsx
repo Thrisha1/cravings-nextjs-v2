@@ -24,6 +24,8 @@ const ItemCard = ({
   hasMultipleVariantsOnOffer = false,
   currentCategory,
   isOfferCategory,
+  isUpcomingOffer = false,
+  activeOffers = [],
 }: {
   item: HotelDataMenus;
   styles: Styles;
@@ -40,6 +42,8 @@ const ItemCard = ({
   hasMultipleVariantsOnOffer?: boolean;
   currentCategory?: string;
   isOfferCategory?: boolean;
+  isUpcomingOffer?: boolean;
+  activeOffers?: any[];
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showVariants, setShowVariants] = useState(false);
@@ -50,6 +54,46 @@ const ItemCard = ({
   const [variantQuantities, setVariantQuantities] = useState<
     Record<string, number>
   >({});
+  const [timeUntilOffer, setTimeUntilOffer] = useState<string>("");
+
+  // Countdown timer for upcoming offers
+  useEffect(() => {
+    if (isUpcomingOffer && activeOffers.length > 0) {
+      const updateTimer = () => {
+        const now = new Date();
+        const earliestStartTime = new Date(Math.min(...activeOffers.map(o => new Date(o.start_time).getTime())));
+        const timeDiff = earliestStartTime.getTime() - now.getTime();
+        
+        if (timeDiff <= 0) {
+          setTimeUntilOffer("");
+          return;
+        }
+        
+        const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+        
+        let timeString = "";
+        if (days > 0) {
+          timeString = `${days}d ${hours}h`;
+        } else if (hours > 0) {
+          timeString = `${hours}h ${minutes}m`;
+        } else if (minutes > 0) {
+          timeString = `${minutes}m ${seconds}s`;
+        } else {
+          timeString = `${seconds}s`;
+        }
+        
+        setTimeUntilOffer(timeString);
+      };
+      
+      updateTimer();
+      const interval = setInterval(updateTimer, 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [isUpcomingOffer, activeOffers]);
 
   const isWithinDeliveryTime = () => {
     if (!hotelData?.delivery_rules?.delivery_time_allowed) {
@@ -94,10 +138,11 @@ const ItemCard = ({
   const isOutOfStock =
     hasStockFeature &&
     (item.stocks?.length ?? 0) > 0 &&
-    (item.stocks?.[0]?.stock_quantity ?? 1) <= 0;
+    (item.stocks?.[0]?.stock_quantity ?? 1) <= 0 &&
+    !isUpcomingOffer; // Don't show out of stock for upcoming offers
 
   const showStock = hasStockFeature && (item.stocks?.[0]?.show_stock ?? false);
-  const stockQuantity = item.stocks?.[0]?.stock_quantity;
+  const stockQuantity = item.stocks?.[0]?.stock_quantity ?? 0;
 
   const hasVariants = (item.variants?.length ?? 0) > 0;
   const isPriceAsPerSize = item.is_price_as_per_size;
@@ -158,7 +203,7 @@ const ItemCard = ({
           ...item,
           id: `${item.id}|${offer.variant.name}`,
           name: `${item.name} (${offer.variant.name})`,
-          price: offerPrice, // Use the offer price
+          price: isUpcomingOffer ? offer.variant.price : offerPrice, // Use original price for upcoming offers, offer price for active offers
           variantSelections: [
             {
               name: offer.variant.name,
@@ -178,6 +223,7 @@ const ItemCard = ({
       addItem({
         ...item,
         variantSelections: [],
+        price: isUpcomingOffer ? item.price : (offerPrice || item.price), // Use original price for upcoming offers
       });
     }
   };
@@ -214,7 +260,7 @@ const ItemCard = ({
     );
   };
 
-  const isOrderable = item.is_available && !isOutOfStock;
+  const isOrderable = item.is_available && !isOutOfStock && !isUpcomingOffer;
   const showAddButton =
     isOrderable &&
     (hasOrderingFeature || hasDeliveryFeature) &&
@@ -226,6 +272,12 @@ const ItemCard = ({
       {typeof discountPercent === "number" && discountPercent > 0 && (
         <div className="absolute top-3 right-3 z-10 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
           -{discountPercent}%
+        </div>
+      )}
+      {/* Upcoming offer badge */}
+      {isUpcomingOffer && (
+        <div className="absolute top-3 right-3 z-10 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+          {timeUntilOffer ? `Coming in ${timeUntilOffer}` : "Coming Soon"}
         </div>
       )}
       <div
@@ -268,7 +320,7 @@ const ItemCard = ({
                             <span className="text-sm font-bold">From </span>
                           ) : (
                             <span className="line-through text-gray-400 mr-2 text-sm font-medium">
-                              {currency} {parseInt(String(oldPrice ?? item.price))}
+                              {currency} {parseInt(String(isUpcomingOffer ? oldPrice : (oldPrice ?? item.price)))}
                             </span>
                           )}
                           <span className="text-accent font-bold text-2xl" style={{ color: styles.accent }}>
@@ -329,7 +381,7 @@ const ItemCard = ({
                   }`}
                 />
 
-                {!isOrderable && (
+                {(!isOrderable && !isUpcomingOffer) && (
                   <div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-center text-sm font-semibold py-2 px-3 w-full">
                     {!item.is_available ? "Unavailable" : "Out of Stock"}
                   </div>

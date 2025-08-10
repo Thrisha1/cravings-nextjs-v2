@@ -17,6 +17,8 @@ const ItemCard = ({
   allItemOffers,
   currentCategory,
   isOfferCategory,
+  isUpcomingOffer = false,
+  activeOffers = [],
 }: {
   item: HotelDataMenus;
   styles: DefaultHotelPageProps["styles"];
@@ -28,9 +30,51 @@ const ItemCard = ({
   allItemOffers?: Offer[];
   currentCategory?: string;
   isOfferCategory?: boolean;
+  isUpcomingOffer?: boolean;
+  activeOffers?: Offer[];
 }) => {
   const [showVariants, setShowVariants] = useState(false);
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
+  const [timeUntilOffer, setTimeUntilOffer] = useState<string>("");
+
+  // Countdown timer for upcoming offers
+  useEffect(() => {
+    if (isUpcomingOffer && activeOffers.length > 0) {
+      const updateTimer = () => {
+        const now = new Date();
+        const earliestStartTime = new Date(Math.min(...activeOffers.map(o => new Date(o.start_time).getTime())));
+        const timeDiff = earliestStartTime.getTime() - now.getTime();
+        
+        if (timeDiff <= 0) {
+          setTimeUntilOffer("");
+          return;
+        }
+        
+        const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+        
+        let timeString = "";
+        if (days > 0) {
+          timeString = `${days}d ${hours}h`;
+        } else if (hours > 0) {
+          timeString = `${hours}h ${minutes}m`;
+        } else if (minutes > 0) {
+          timeString = `${minutes}m ${seconds}s`;
+        } else {
+          timeString = `${seconds}s`;
+        }
+        
+        setTimeUntilOffer(timeString);
+      };
+      
+      updateTimer();
+      const interval = setInterval(updateTimer, 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [isUpcomingOffer, activeOffers]);
 
   // --- Feature Flags & Stock Logic ---
 
@@ -78,10 +122,11 @@ const ItemCard = ({
   const isOutOfStock =
     hasStockFeature &&
     (item.stocks?.length ?? 0) > 0 &&
-    (item.stocks?.[0]?.stock_quantity ?? 1) <= 0;
+    (item.stocks?.[0]?.stock_quantity ?? 1) <= 0 &&
+    !isUpcomingOffer; // Don't show out of stock for upcoming offers
 
   const showStock = hasStockFeature && (item.stocks?.[0]?.show_stock ?? false);
-  const stockQuantity = item.stocks?.[0]?.stock_quantity;
+  const stockQuantity = item.stocks?.[0]?.stock_quantity ?? 0;
 
   const hasVariants = (item.variants?.length ?? 0) > 0;
   const [itemQuantity, setItemQuantity] = useState<number>(0);
@@ -160,7 +205,7 @@ const ItemCard = ({
         ...item,
         id: `${item.id}|${offerData.variant.name}`,
         name: `${item.name} (${offerData.variant.name})`,
-        price: offerData.offer_price || 0, // Use the offer price
+        price: isUpcomingOffer ? offerData.variant.price : (offerData.offer_price || 0), // Use original price for upcoming offers, offer price for active offers
         variantSelections: [
           {
             name: offerData.variant.name,
@@ -179,7 +224,7 @@ const ItemCard = ({
       addItem({
         ...item,
         variantSelections: [],
-        price: offerData?.offer_price || item.price, // Use offer price if available
+        price: isUpcomingOffer ? item.price : (offerData?.offer_price || item.price), // Use original price for upcoming offers
       });
     }
   };
@@ -216,7 +261,7 @@ const ItemCard = ({
     );
   };
 
-  const isOrderable = item.is_available && !isOutOfStock;
+  const isOrderable = item.is_available && !isOutOfStock && !isUpcomingOffer;
   const showAddButton =
     isOrderable &&
     (hasOrderingFeature || hasDeliveryFeature) &&
@@ -225,6 +270,12 @@ const ItemCard = ({
   return (
     <>
       <div className="p-4 flex justify-between relative">
+        {/* Upcoming offer badge */}
+        {isUpcomingOffer && (
+          <div className="absolute top-2 right-2 z-10 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow">
+            {timeUntilOffer ? `Coming in ${timeUntilOffer}` : "Coming Soon"}
+          </div>
+        )}
         <div>
           <h3 className="capitalize text-lg font-semibold">
             {offerData?.variant && !hasMultipleVariantsOnOffer ? `${item.name} (${offerData.variant.name})` : item.name}
@@ -244,7 +295,7 @@ const ItemCard = ({
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
                         <span className="text-red-500">
-                          {hoteldata?.currency || "₹"} {offerData.offer_price}
+                          {hoteldata?.currency || "₹"} {isUpcomingOffer ? (offerData.variant ? offerData.variant.price : offerData.menu.price) : offerData.offer_price}
                         </span>
                         <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded">
                           {discountPercentage}% OFF
@@ -253,7 +304,7 @@ const ItemCard = ({
                       {!hasMultipleVariantsOnOffer && (
                         <span className="text-sm line-through opacity-70 font-light">
                           {hoteldata?.currency || "₹"}{" "}
-                          {offerData.variant ? offerData.variant.price : offerData.menu.price}
+                          {isUpcomingOffer ? offerData.offer_price : (offerData.variant ? offerData.variant.price : offerData.menu.price)}
                         </span>
                       )}
                     </div>
@@ -298,7 +349,7 @@ const ItemCard = ({
                 } ${!item.is_available || isOutOfStock ? "grayscale" : ""}`}
               />
             </div>
-            {(!item.is_available || isOutOfStock) && (
+            {(!item.is_available || (isOutOfStock && !isUpcomingOffer)) && (
               <div className="absolute top-1/2 left-0 -translate-y-1/2 bg-red-500 text-white text-center text-xs font-semibold py-1 px-2 w-full">
                 {!item.is_available ? "Unavailable" : "Out of Stock"}
               </div>

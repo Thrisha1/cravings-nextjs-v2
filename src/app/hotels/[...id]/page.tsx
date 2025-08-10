@@ -240,9 +240,13 @@ const HotelPage = async ({
   }
 
   const menuItemWithOfferPrice = hoteldata?.menus?.map((item) => {
+    // Check if item has active offers (not upcoming)
+    const now = new Date();
+    const activeOffers = item.offers?.filter(offer => new Date(offer.start_time) <= now) || [];
+    
     return {
       ...item,
-      price: item.offers?.[0]?.offer_price || item.price,
+      price: activeOffers.length > 0 ? activeOffers[0].offer_price : item.price,
     };
   });
 
@@ -295,10 +299,6 @@ const HotelPage = async ({
       const sortedItems = [...(hotelMenus ?? [])].sort((a, b) => {
         if (a.image_url.length && !b.image_url.length) return -1;
         if (!a.image_url.length && b.image_url.length) return 1;
-        filteredMenus.push({
-          ...a,
-          price: a.offers?.[0]?.offer_price || a.price,
-        });
         return 0;
       });
       const sortByCategoryPriority: any = (
@@ -310,10 +310,16 @@ const HotelPage = async ({
         return categoryA - categoryB;
       };
       sortedItems.sort(sortByCategoryPriority);
-      filteredMenus = sortedItems.map((item) => ({
-        ...item,
-        price: item.offers?.[0]?.offer_price || item.price,
-      }));
+      filteredMenus = sortedItems.map((item) => {
+        // Check if item has active offers (not upcoming)
+        const now = new Date();
+        const activeOffers = item.offers?.filter(offer => new Date(offer.start_time) <= now) || [];
+        
+        return {
+          ...item,
+          price: activeOffers.length > 0 ? activeOffers[0].offer_price : item.price,
+        };
+      });
     } else {
       const filteredItems = (hotelMenus ?? []).filter(
         (item) => item.category.name === cat
@@ -321,17 +327,19 @@ const HotelPage = async ({
       const sortedItems = [...filteredItems].sort((a, b) => {
         if (a.image_url.length && !b.image_url.length) return -1;
         if (!a.image_url.length && b.image_url.length) return 1;
-        filteredMenus.push({
-          ...a,
-          price: a.offers?.[0]?.offer_price || a.price,
-        });
         return 0;
       });
 
-      filteredMenus = sortedItems.map((item) => ({
-        ...item,
-        price: item.offers?.[0]?.offer_price || item.price,
-      }));
+      filteredMenus = sortedItems.map((item) => {
+        // Check if item has active offers (not upcoming)
+        const now = new Date();
+        const activeOffers = item.offers?.filter(offer => new Date(offer.start_time) <= now) || [];
+        
+        return {
+          ...item,
+          price: activeOffers.length > 0 ? activeOffers[0].offer_price : item.price,
+        };
+      });
 
     }
   }
