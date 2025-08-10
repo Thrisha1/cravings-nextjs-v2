@@ -130,6 +130,7 @@ const OrderDrawer = ({
     setOpenPlaceOrderModal,
     setOpenOrderDrawer,
     deliveryInfo,
+    setDeliveryInfo,
     orderNote,
     orderType,
   } = useOrderStore();
@@ -151,6 +152,14 @@ const OrderDrawer = ({
   useEffect(() => {
     if (hotelData) {
       setFeatures(getFeatures(hotelData?.feature_flags as string));
+      setDeliveryInfo({
+        distance: deliveryInfo?.distance || 0,
+        cost: deliveryInfo?.cost || 0,
+        ratePerKm: deliveryInfo?.ratePerKm || 0,
+        isOutOfRange: deliveryInfo?.isOutOfRange || false,
+        minimumOrderAmount:
+          hotelData?.delivery_rules?.minimum_order_amount || 0,
+      });
     }
   }, [hotelData]);
 
@@ -334,14 +343,14 @@ const OrderDrawer = ({
 
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         // Scrolling down - move drrawer down
-        if (((items?.length ?? 0) > 0) && isBottomNavHidden) {
+        if ((items?.length ?? 0) > 0 && isBottomNavHidden) {
           setMoveUp(true);
         } else {
           setMoveUp(false);
         }
-      } else if (currentScrollY < lastScrollY) {        
+      } else if (currentScrollY < lastScrollY) {
         // Scrolling up -  move drawer up
-     
+
         setMoveUp(true);
       }
 

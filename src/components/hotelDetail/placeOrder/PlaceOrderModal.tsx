@@ -1407,7 +1407,7 @@ const PlaceOrderModal = ({
                   orderType === "delivery" &&
                   (totalPrice ?? 0) < minimumOrderAmount)) && (
                 <div className="text-sm text-red-600 p-2 bg-red-50 rounded text-center">
-                  Minimum order amount for delivery is{" "}
+                  Minimum order amount for delivery is
                   {hotelData?.currency || "₹"}
                   {deliveryInfo?.minimumOrderAmount.toFixed(2)}
                 </div>
