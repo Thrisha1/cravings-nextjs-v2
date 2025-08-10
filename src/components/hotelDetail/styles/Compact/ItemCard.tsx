@@ -295,7 +295,7 @@ const ItemCard = ({
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
                         <span className="text-red-500">
-                          {hoteldata?.currency || "₹"} {isUpcomingOffer ? (offerData.variant ? offerData.variant.price : offerData.menu.price) : offerData.offer_price}
+                          {hoteldata?.currency || "₹"} {offerData.offer_price}
                         </span>
                         <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded">
                           {discountPercentage}% OFF
@@ -304,7 +304,7 @@ const ItemCard = ({
                       {!hasMultipleVariantsOnOffer && (
                         <span className="text-sm line-through opacity-70 font-light">
                           {hoteldata?.currency || "₹"}{" "}
-                          {isUpcomingOffer ? offerData.offer_price : (offerData.variant ? offerData.variant.price : offerData.menu.price)}
+                          {offerData.variant ? offerData.variant.price : offerData.menu.price}
                         </span>
                       )}
                     </div>

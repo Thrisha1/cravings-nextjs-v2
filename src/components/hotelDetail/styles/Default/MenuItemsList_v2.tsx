@@ -164,9 +164,9 @@ const MenuItemsList = ({
                     o.variant ? o.variant.price : (o.menu?.price || 0)
                   ));
                   
-                  // For upcoming offers: show original price as main, offer price as strikethrough
-                  offerPrice = lowestOriginalPrice; // Main displayed price (original)
-                  oldPrice = lowestOfferPrice; // Strikethrough price (future offer price)
+                  // For upcoming offers: show offer price as main, original price as strikethrough
+                  offerPrice = lowestOfferPrice; // Main displayed price (offer)
+                  oldPrice = lowestOriginalPrice; // Strikethrough price (original price)
                   
                   if (lowestOriginalPrice > lowestOfferPrice) {
                     discountPercent = Math.round(((lowestOriginalPrice - lowestOfferPrice) / lowestOriginalPrice) * 100);
@@ -177,9 +177,9 @@ const MenuItemsList = ({
                   const originalPrice = offer?.variant ? offer.variant.price : (offer?.menu?.price || item.price);
                   const futureOfferPrice = typeof offer?.offer_price === 'number' ? offer.offer_price : item.price;
                   
-                  // For upcoming offers: show original price as main, offer price as strikethrough
-                  offerPrice = originalPrice; // Main displayed price (original)
-                  oldPrice = futureOfferPrice; // Strikethrough price (future offer price)
+                  // For upcoming offers: show offer price as main, original price as strikethrough
+                  offerPrice = futureOfferPrice; // Main displayed price (offer)
+                  oldPrice = originalPrice; // Strikethrough price (original price)
                   
                   if (originalPrice > futureOfferPrice) {
                     discountPercent = Math.round(((originalPrice - futureOfferPrice) / originalPrice) * 100);
