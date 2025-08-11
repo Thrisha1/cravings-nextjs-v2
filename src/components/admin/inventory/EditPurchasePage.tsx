@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { useInventoryStore } from "@/store/inventoryStore";
+import { PartnerPurchase, useInventoryStore } from "@/store/inventoryStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,10 @@ import { fetchFromHasura } from "@/lib/hasuraClient";
 import { getAuthCookie } from "@/app/auth/actions";
 import { v4 } from "uuid";
 
-interface SelectedPurchaseItem extends PurchaseItem {
+// This interface should match the one in your Create page
+interface SelectedPurchaseItem {
+  id: string;
+  name: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -30,13 +33,14 @@ const useDebounce = (value: string, delay: number) => {
   return debouncedValue;
 };
 
-export const CreateNewPurchasePage = () => {
-  const { setIsCreatePurchasePage, createNewPurchase } = useInventoryStore();
+export const EditPurchasePage = () => {
+  const {
+    selectedPurchase,
+    setIsEditPurchasePage,
+    updatePurchase, 
+  } = useInventoryStore();
 
-  const [purchaseDate, setPurchaseDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
-
+  const [purchaseDate, setPurchaseDate] = useState("");
   const [supplierSearchQuery, setSupplierSearchQuery] = useState("");
   const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
@@ -52,9 +56,7 @@ export const CreateNewPurchasePage = () => {
   const [newItemQuantity, setNewItemQuantity] = useState(1);
   const [newItemUnitPrice, setNewItemUnitPrice] = useState(0);
 
-  const [selectedItems, setSelectedItems] = useState<
-    Omit<SelectedPurchaseItem, "created_at" | "supplier_id" | "partner_id">[]
-  >([]);
+  const [selectedItems, setSelectedItems] = useState<SelectedPurchaseItem[]>([]);
   const [grandTotal, setGrandTotal] = useState(0);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +64,29 @@ export const CreateNewPurchasePage = () => {
 
   const debouncedItemSearch = useDebounce(itemSearchQuery, 500);
 
+  // Pre-populate form with selected purchase data
+  useEffect(() => {
+    if (selectedPurchase) {
+      setPurchaseDate(
+        new Date(selectedPurchase.purchase_date).toISOString().split("T")[0]
+      );
+      setSelectedSupplier(selectedPurchase.supplier);
+      setSupplierSearchQuery(selectedPurchase.supplier.name);
+      setSupplierAddress(selectedPurchase.supplier.address || "");
+      setSupplierPhone(selectedPurchase.supplier.phone || "");
+
+      const initialItems = selectedPurchase.purchase_transactions.map((tx) => ({
+        id: tx.purchase_item.id,
+        name: tx.purchase_item.name,
+        quantity: tx.quantity,
+        unitPrice: tx.unit_price,
+        totalPrice: tx.quantity * tx.unit_price,
+      }));
+      setSelectedItems(initialItems);
+    }
+  }, [selectedPurchase]);
+
+  // Fetch all suppliers for the search dropdown
   useEffect(() => {
     const fetchAllSuppliers = async () => {
       try {
@@ -91,14 +116,13 @@ export const CreateNewPurchasePage = () => {
   }, []);
 
   const filteredSuppliers = useMemo(() => {
-    if (!supplierSearchQuery) {
-      return allSuppliers;
-    }
+    if (!supplierSearchQuery) return allSuppliers;
     return allSuppliers.filter((supplier) =>
       supplier.name.toLowerCase().includes(supplierSearchQuery.toLowerCase())
     );
   }, [supplierSearchQuery, allSuppliers]);
 
+  // Search for purchase items
   useEffect(() => {
     const searchItems = async () => {
       if (debouncedItemSearch.length < 2) {
@@ -125,7 +149,6 @@ export const CreateNewPurchasePage = () => {
         setIsItemDropdownOpen(data.purchase_items.length > 0);
       } catch (err) {
         console.error("Error searching items:", err);
-        setError("Failed to search for items.");
       }
     };
     searchItems();
@@ -133,8 +156,8 @@ export const CreateNewPurchasePage = () => {
 
   const handleSelectSupplier = (supplier: Supplier) => {
     setSelectedSupplier(supplier);
-    setSupplierAddress(supplier?.address || "");
-    setSupplierPhone(supplier?.phone || "");
+    setSupplierAddress(supplier.address || "");
+    setSupplierPhone(supplier.phone || "");
     setSupplierSearchQuery(supplier.name);
     setIsSupplierDropdownOpen(false);
   };
@@ -155,32 +178,20 @@ export const CreateNewPurchasePage = () => {
       setError("Please enter a valid quantity and unit price.");
       return;
     }
-
     const itemDetails = newItem
       ? { id: newItem.id, name: newItem.name }
       : { id: v4(), name: itemSearchQuery.trim() };
-
-    if (
-      selectedItems.some(
-        (item) => item.name.toLowerCase() === itemDetails.name.toLowerCase()
-      )
-    ) {
+    if (selectedItems.some((item) => item.name.toLowerCase() === itemDetails.name.toLowerCase())) {
       setError(`Item "${itemDetails.name}" is already in the purchase list.`);
       return;
     }
-
-    const newItemForPurchase: Omit<
-      SelectedPurchaseItem,
-      "created_at" | "partner_id" | "supplier_id"
-    > = {
+    const newItemForPurchase: SelectedPurchaseItem = {
       ...itemDetails,
       quantity: newItemQuantity,
       unitPrice: newItemUnitPrice,
       totalPrice: newItemQuantity * newItemUnitPrice,
     };
-
     setSelectedItems([...selectedItems, newItemForPurchase]);
-
     setNewItem(null);
     setItemSearchQuery("");
     setNewItemQuantity(1);
@@ -197,21 +208,22 @@ export const CreateNewPurchasePage = () => {
     setGrandTotal(total);
   }, [selectedItems]);
 
-  const handleCreatePurchase = async (event: React.FormEvent) => {
+  const handleUpdatePurchase = async (event: React.FormEvent) => {
     event.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    const isNewSupplierValid =
-      !selectedSupplier && supplierSearchQuery.trim() && supplierAddress.trim();
-    if (!selectedSupplier && !isNewSupplierValid) {
-      setError(
-        "A supplier must be selected, or a new supplier's name and address must be provided."
-      );
-      setIsLoading(false);
+    if (!selectedPurchase) {
+      setError("No purchase selected for update.");
       return;
     }
 
+    setIsLoading(true);
+    setError(null);
+
+    const isNewSupplierValid = !selectedSupplier && supplierSearchQuery.trim() && supplierAddress.trim();
+    if (!selectedSupplier && !isNewSupplierValid) {
+      setError("A supplier must be selected, or a new supplier's name and address must be provided.");
+      setIsLoading(false);
+      return;
+    }
     if (selectedItems.length === 0) {
       setError("At least one purchase item is required.");
       setIsLoading(false);
@@ -220,42 +232,44 @@ export const CreateNewPurchasePage = () => {
 
     const supplierData = selectedSupplier
       ? selectedSupplier
-      : ({
+      : {
           id: v4(),
           name: supplierSearchQuery.trim().toLowerCase().replace(/\s+/g, "_"),
           address: supplierAddress.trim(),
           phone: supplierPhone.trim(),
           isNew: true,
-        } as Supplier);
-
-    const purchaseId = v4();
+        };
 
     const finalPurchase = {
-      id: purchaseId,
+      id: selectedPurchase.id,
       purchase_date: purchaseDate,
       supplier: supplierData,
-      purchase_items: selectedItems.map(
-        ({ id, name, quantity, unitPrice }) => ({
-          id,
-          name: name.trim().toLowerCase().replace(/\s+/g, "_"),
-          quantity,
-          unit_price: unitPrice,
-        })
-      ),
+      purchase_items: selectedItems.map(({ id, name, quantity, unitPrice }) => ({
+        id,
+        name: name.replace(/ /g, "_").toLowerCase().trim(),
+        quantity,
+        unit_price: unitPrice,
+      })),
       total_price: grandTotal,
-    };
+    } as Partial<PartnerPurchase>;
 
-    console.log("Creating new purchase:", finalPurchase);
+    console.log(finalPurchase);
 
     try {
-      await createNewPurchase(finalPurchase);
+      await updatePurchase(finalPurchase);
       setIsLoading(false);
     } catch (error) {
-      console.error("Failed to create new purchase:", error);
+      console.error("Failed to update purchase:", error);
       setError("An unexpected error occurred while saving the purchase.");
       setIsLoading(false);
     }
   };
+  
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(amount);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
@@ -263,16 +277,16 @@ export const CreateNewPurchasePage = () => {
         <Button
           variant="outline"
           size="icon"
-          onClick={() => setIsCreatePurchasePage(false)}
+          onClick={() => setIsEditPurchasePage(false)}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-          Create New Purchase
+          Edit Purchase
         </h1>
       </div>
 
-      <form onSubmit={handleCreatePurchase} className="space-y-8">
+      <form onSubmit={handleUpdatePurchase} className="space-y-8">
         <Card>
           <CardHeader>
             <CardTitle>Purchase Details</CardTitle>
@@ -338,7 +352,7 @@ export const CreateNewPurchasePage = () => {
                   placeholder="Supplier address"
                   value={supplierAddress}
                   onChange={(e) => setSupplierAddress(e.target.value)}
-                  disabled={!!selectedSupplier}
+                  disabled={!!selectedSupplier && !selectedSupplier.isNew}
                   required={!selectedSupplier}
                 />
               </div>
@@ -351,7 +365,7 @@ export const CreateNewPurchasePage = () => {
                   placeholder="Supplier phone (optional)"
                   value={supplierPhone}
                   onChange={(e) => setSupplierPhone(e.target.value)}
-                  disabled={!!selectedSupplier}
+                  disabled={!!selectedSupplier && !selectedSupplier.isNew}
                 />
               </div>
             </div>
@@ -384,10 +398,10 @@ export const CreateNewPurchasePage = () => {
                           <td className="p-2 capitalize">{item.name.replace(/_/g, " ")}</td>
                           <td className="p-2 text-right">{item.quantity}</td>
                           <td className="p-2 text-right">
-                            ${item.unitPrice.toFixed(2)}
+                            {formatCurrency(item.unitPrice)}
                           </td>
                           <td className="p-2 text-right font-medium">
-                            ${item.totalPrice.toFixed(2)}
+                            {formatCurrency(item.totalPrice)}
                           </td>
                           <td className="p-2 text-right">
                             <Button
@@ -495,7 +509,7 @@ export const CreateNewPurchasePage = () => {
             <div className="flex justify-between items-center mb-4">
               <span className="text-lg font-medium">Grand Total</span>
               <span className="text-2xl font-bold tracking-tight">
-                ${grandTotal.toFixed(2)}
+                {formatCurrency(grandTotal)}
               </span>
             </div>
             {error && (
@@ -506,7 +520,7 @@ export const CreateNewPurchasePage = () => {
               className="w-full bg-orange-500 text-white hover:bg-orange-600"
               disabled={isLoading}
             >
-              {isLoading ? "Creating..." : "Create Purchase"}
+              {isLoading ? "Saving Changes..." : "Save Changes"}
             </Button>
           </CardContent>
         </Card>

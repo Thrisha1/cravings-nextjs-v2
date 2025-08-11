@@ -12,14 +12,48 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Building, Calendar, Phone, MapPin } from "lucide-react";
+import {
+  ArrowLeft,
+  Building,
+  MapPin,
+  Pencil, // Import Pencil icon
+  Phone,
+  Trash2, // Import Trash2 icon
+} from "lucide-react";
 
 export const PurchaseDetail = () => {
-  const { selectedPurchase, clearSelectedPurchase } = useInventoryStore();
+  const {
+    selectedPurchase,
+    clearSelectedPurchase,
+    setIsEditPurchasePage, // Get setter for edit mode
+    deletePurchase, // Get delete action
+  } = useInventoryStore();
 
   if (!selectedPurchase) {
-    return null; 
+    return null;
   }
+
+  // Handler to switch to the edit view
+  const handleEdit = () => {
+    setIsEditPurchasePage(true);
+  };
+
+  // Handler for the delete action
+  const handleDelete = async () => {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this purchase? This action cannot be undone."
+      )
+    ) {
+      try {
+        await deletePurchase(selectedPurchase.id);
+        // The store logic will handle clearing the view and updating the list
+      } catch (error) {
+        console.error("Failed to delete purchase:", error);
+        alert("Failed to delete the purchase. Please try again.");
+      }
+    }
+  };
 
   const { supplier, purchase_date, total_price, purchase_transactions } =
     selectedPurchase;
@@ -37,7 +71,20 @@ export const PurchaseDetail = () => {
         <Button variant="outline" size="icon" onClick={clearSelectedPurchase}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-3xl font-bold tracking-tight">Purchase Details</h1>
+        <h1 className="text-3xl font-bold tracking-tight flex-grow">
+          Purchase Details
+        </h1>
+        {/* --- Action Buttons --- */}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={handleEdit}>
+            <Pencil className="h-4 w-4" />
+            <span className="sr-only">Edit Purchase</span>
+          </Button>
+          <Button variant="destructive" size="icon" onClick={handleDelete}>
+            <Trash2 className="h-4 w-4" />
+            <span className="sr-only">Delete Purchase</span>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -60,10 +107,12 @@ export const PurchaseDetail = () => {
                 <TableBody>
                   {purchase_transactions.map((tx) => (
                     <TableRow key={tx.id}>
-                      <TableCell className="font-medium">
-                        {tx.purchase_item.name}
+                      <TableCell className="font-medium capitalize">
+                        {tx.purchase_item.name.replace(/_/g, " ")}
                       </TableCell>
-                      <TableCell className="text-right">{tx.quantity}</TableCell>
+                      <TableCell className="text-right">
+                        {tx.quantity}
+                      </TableCell>
                       <TableCell className="text-right">
                         {formatCurrency(tx.unit_price)}
                       </TableCell>
@@ -89,7 +138,9 @@ export const PurchaseDetail = () => {
                 <span className="text-muted-foreground">Purchase Date</span>
                 <span className="font-medium">
                   {new Date(purchase_date).toLocaleDateString("en-IN", {
-                    year: "numeric", month: "long", day: "numeric",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
                   })}
                 </span>
               </div>
@@ -109,18 +160,24 @@ export const PurchaseDetail = () => {
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center gap-3">
                 <Building className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium capitalize">{supplier.name.replace(/_/g, " ")}</span>
+                <span className="font-medium capitalize">
+                  {supplier.name.replace(/_/g, " ")}
+                </span>
               </div>
               {supplier.phone && (
                 <div className="flex items-center gap-3">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{supplier.phone}</span>
+                  <span className="text-muted-foreground">
+                    {supplier.phone}
+                  </span>
                 </div>
               )}
               {supplier.address && (
                 <div className="flex items-start gap-3">
                   <MapPin className="h-4 w-4 text-muted-foreground mt-1" />
-                  <span className="text-muted-foreground">{supplier.address}</span>
+                  <span className="text-muted-foreground">
+                    {supplier.address}
+                  </span>
                 </div>
               )}
             </CardContent>

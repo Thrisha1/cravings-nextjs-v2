@@ -5,16 +5,11 @@ import { useInventoryStore } from "@/store/inventoryStore";
 import { PurchaseList } from "@/components/admin/inventory/PurchaseList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Loader2,
-  PlusCircle,
-  IndianRupee,
-  Truck,
-  Building,
-} from "lucide-react";
+import { Loader2, PlusCircle, IndianRupee } from "lucide-react";
 import { PurchaseListSkeleton } from "@/components/admin/inventory/PurchaseListSkelton";
 import { PurchaseDetail } from "@/components/admin/inventory/PurchaseDetail";
 import { CreateNewPurchasePage } from "@/components/admin/inventory/CreateNewPurchasePage";
+import { EditPurchasePage } from "@/components/admin/inventory/EditPurchasePage";
 
 const InventoryPage = () => {
   const {
@@ -24,35 +19,54 @@ const InventoryPage = () => {
     hasMore,
     initialLoadFinished,
     selectedPurchase,
+    isCreatePurchasePage,
+    isEditPurchasePage, // State to control edit view
     fetchTotalAmountThisMonth,
     fetchPaginatedPurchases,
     clearPurchases,
-    isCreatePurchasePage,
     setIsCreatePurchasePage,
   } = useInventoryStore();
 
   useEffect(() => {
-    if (!selectedPurchase && !isCreatePurchasePage) {
+    // This condition ensures we only fetch when on the main list view
+    if (!selectedPurchase && !isCreatePurchasePage && !isEditPurchasePage) {
       fetchTotalAmountThisMonth();
       fetchPaginatedPurchases();
     }
+    // Cleanup function to clear data when leaving the main list view
     return () => {
       const state = useInventoryStore.getState();
-      if (!state.selectedPurchase && !state.isCreatePurchasePage) {
+      if (
+        !state.selectedPurchase &&
+        !state.isCreatePurchasePage &&
+        !state.isEditPurchasePage
+      ) {
         clearPurchases();
       }
     };
   }, [
     selectedPurchase,
     isCreatePurchasePage,
+    isEditPurchasePage, // Added to dependency array
     fetchTotalAmountThisMonth,
     fetchPaginatedPurchases,
     clearPurchases,
   ]);
 
-  const showSkeleton = isLoading || !initialLoadFinished;
+  // Show skeleton only on the initial load
+  const showSkeleton = isLoading && purchases.length === 0;
 
-   if (selectedPurchase) {
+  // Render Edit Page if isEditPurchasePage is true
+  if (isEditPurchasePage) {
+    return (
+      <main className="pt-4 sm:pt-10 pb-40 px-4 sm:px-[15%]">
+        <EditPurchasePage />
+      </main>
+    );
+  }
+
+  // Render Purchase Detail view if a purchase is selected
+  if (selectedPurchase) {
     return (
       <main className="p-4 pb-40 md:p-6 md:pb-40 lg:p-8 lg:pb-40">
         <PurchaseDetail />
@@ -60,6 +74,7 @@ const InventoryPage = () => {
     );
   }
 
+  // Render Create New Purchase page
   if (isCreatePurchasePage) {
     return (
       <main className="pt-4 sm:pt-10 pb-40 px-4 sm:px-[15%]">
@@ -68,14 +83,17 @@ const InventoryPage = () => {
     );
   }
 
-
+  // Default view: The main inventory list and stats
   return (
     <main className="p-4 pb-40 md:p-6 md:pb-40 lg:p-8 lg:pb-40 space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold tracking-tight">
           Inventory Management
         </h1>
-        <Button  onClick={() => setIsCreatePurchasePage(true)} className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700">
+        <Button
+          onClick={() => setIsCreatePurchasePage(true)}
+          className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700"
+        >
           <PlusCircle size={20} />
           New Purchase
         </Button>
@@ -99,16 +117,6 @@ const InventoryPage = () => {
             </p>
           </CardContent>
         </Card>
-        {/* <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New Suppliers</CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">+2</p>
-            <p className="text-xs text-muted-foreground">Added this month</p>
-          </CardContent>
-        </Card> */}
       </div>
 
       <div className="space-y-4">
@@ -130,7 +138,7 @@ const InventoryPage = () => {
           </>
         )}
 
-        {(initialLoadFinished && hasMore) && (
+        {initialLoadFinished && hasMore && (
           <div className="flex justify-center pt-4">
             <Button
               onClick={() => fetchPaginatedPurchases()}

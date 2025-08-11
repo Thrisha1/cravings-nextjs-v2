@@ -6,8 +6,11 @@ import {
   createNewPurchaseQuery,
   createNewPurchaseTransactionQuery,
   createNewSupplierQuery,
+  DeletePurchaseMutation,
+  DeleteTransactionsByPurchaseIdMutation,
   GetMonthlyTotalQuery,
   GetPaginatedPurchasesQuery,
+  UpdatePurchaseMutation,
 } from "@/api/inventory";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -40,6 +43,10 @@ interface InventoryStore {
   isCreatingSupplier: boolean;
   isCreatingPurchase: boolean;
   totalPurchases: number;
+  isEditPurchasePage: boolean;
+  updatePurchase: (purchase: Partial<PartnerPurchase>) => Promise<void>;
+  deletePurchase: (purchaseId: string) => Promise<void>; 
+  setIsEditPurchasePage: (value: boolean) => void;
   setIsCreatePurchasePage: (value: boolean) => void;
   selectPurchase: (purchase: PartnerPurchase) => void;
   clearSelectedPurchase: () => void;
@@ -80,6 +87,9 @@ export const useInventoryStore = create<InventoryStore>()(
       isCreatingSupplier: false,
       isCreatingPurchase: false,
       totalPurchases: 0,
+      isEditPurchasePage: false,
+
+      setIsEditPurchasePage: (value) => set({ isEditPurchasePage: value }),
 
       setIsCreatePurchasePage: (value) => set({ isCreatePurchasePage: value }),
 
@@ -134,7 +144,7 @@ export const useInventoryStore = create<InventoryStore>()(
 
       fetchPaginatedPurchases: async (forceFetch = false) => {
         if (!forceFetch && get().purchases.length > 0) {
-          set({ isLoading: false , initialLoadFinished: true  });
+          set({ isLoading: false, initialLoadFinished: true });
           return;
         }
 
@@ -162,7 +172,8 @@ export const useInventoryStore = create<InventoryStore>()(
           set({
             purchases: [...get().purchases, ...newPurchases],
             page: get().page + 1,
-            hasMore: offset + PAGE_SIZE < data.purchases_aggregate.aggregate.count,
+            hasMore:
+              offset + PAGE_SIZE < data.purchases_aggregate.aggregate.count,
             isLoading: false,
             totalPurchases: data.purchases_aggregate.aggregate.count || 0,
           });
@@ -306,6 +317,94 @@ export const useInventoryStore = create<InventoryStore>()(
           throw error;
         } finally {
           set({ isCreatingPurchase: false });
+        }
+      },
+
+      updatePurchase: async (currentPurchase) => {
+        set({ isCreatingPurchase: true }); // Use the same loading state
+
+        const cookies = await getAuthCookie();
+        if (!cookies || !cookies.id) {
+            set({ isCreatingPurchase: false });
+            throw new Error("Unauthorized");
+        }
+
+        try {
+            // 1. Handle Supplier: Create if it's new
+            await get().createNewSupplier(currentPurchase);
+
+            // 2. Handle Purchase Items: Create any new items
+            const { purchase_items } = await get().createNewPurchaseItem(currentPurchase);
+
+            // 3. Delete old transactions associated with this purchase
+            await fetchFromHasura(DeleteTransactionsByPurchaseIdMutation, {
+                purchaseId: currentPurchase.id,
+            });
+            
+            // 4. Update the main purchase record
+            await fetchFromHasura(UpdatePurchaseMutation, {
+                id: currentPurchase.id,
+                purchase_date: currentPurchase.purchase_date,
+                supplier_id: currentPurchase.supplier?.id,
+                total_price: currentPurchase.total_price,
+            });
+
+            const updatedItems = currentPurchase.purchase_items?.map((item) => ({
+                ...item,
+                id: purchase_items.find((i) => i.name === item.name)?.id || item.id,
+            }));
+
+            const updatedPurchase = {
+              ...currentPurchase,
+              purchase_items: updatedItems,
+            };
+
+            debugger;
+
+            // 5. Create the new, updated transactions
+            await get().createNewPurchaseTransaction(updatedPurchase);
+
+            // 6. Force a full refresh of data to ensure consistency
+            set({
+                selectedPurchase: null,
+                isEditPurchasePage: false,
+                purchases: [], // Clear existing list
+                page: 0,
+                hasMore: true,
+            });
+            await get().fetchPaginatedPurchases(true); // Force refetch
+            await get().fetchTotalAmountThisMonth(true); // Force refetch
+
+        } catch (error) {
+            console.error("Failed to update purchase:", error);
+            throw error;
+        } finally {
+            set({ isCreatingPurchase: false });
+        }
+      },
+
+      deletePurchase: async (purchaseId: string) => {
+        set({ isLoading: true });
+        try {
+          const cookies = await getAuthCookie();
+          if (!cookies?.id) throw new Error("User not authenticated.");
+
+          await fetchFromHasura(DeletePurchaseMutation, { id: purchaseId });
+
+          // Update state after successful deletion
+          set((state) => ({
+            purchases: state.purchases.filter((p) => p.id !== purchaseId),
+            totalPurchases: state.totalPurchases - 1,
+            selectedPurchase: null, // Go back to the list
+            isLoading: false,
+          }));
+
+          // Refetch month total since it has changed
+          await get().fetchTotalAmountThisMonth(true);
+        } catch (error) {
+          console.error("Error deleting purchase:", error);
+          set({ isLoading: false });
+          throw error; // Re-throw to be caught by the component
         }
       },
     }),

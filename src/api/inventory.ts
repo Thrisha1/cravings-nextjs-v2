@@ -156,3 +156,28 @@ mutation CreateFullPurchase(
   }
 }
 `;
+
+
+export const DeletePurchaseMutation = `
+  mutation DeletePurchase($id: uuid!) {
+    delete_purchases_by_pk(id: $id) {
+      id
+    }
+  }
+`;
+
+export const UpdatePurchaseMutation = `
+  mutation UpdatePurchase($id: uuid!, $purchase_date: timestamptz!, $supplier_id: uuid!, $total_price: numeric!) {
+    update_purchases_by_pk(pk_columns: {id: $id}, _set: {purchase_date: $purchase_date, supplier_id: $supplier_id, total_price: $total_price}) {
+      id
+    }
+  }
+`;
+
+export const DeleteTransactionsByPurchaseIdMutation = `
+  mutation DeleteTransactionsByPurchaseId($purchaseId: uuid!) {
+    delete_purchase_transactions(where: {purchase_id: {_eq: $purchaseId}}) {
+      affected_rows
+    }
+  }
+`;
