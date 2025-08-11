@@ -184,8 +184,11 @@ export function Navbar({ userData }: { userData: any }) {
             userData.status === "active"
               ? [{ href: "/admin/orders", label: "Orders" }]
               : []),
-            ...(features?.stockmanagement.access && userData.status === "active"
+            ...(features?.stockmanagement.enabled && userData.status === "active"
               ? [{ href: "/admin/stock-management", label: "Stock Management" }]
+              : []),
+            ...(features?.purchasemanagement.enabled && userData.status === "active"
+              ? [{ href: "/admin/purchase-management", label: "Purchase Management" }]
               : []),
           ]
         : []),

@@ -46,7 +46,8 @@ const FeatureFlagManagement = () => {
     multiwhatsapp: "Enables multiple WhatsApp numbers for a partner.",
     pos: "Enables POS feature for a partner.",
     stockmanagement: "Enables stock management feature for a partner.",
-    captainordering: "Enables captain account creation and management for partners. Partners can create and manage captain accounts for taking orders."
+    captainordering: "Enables captain account creation and management for partners. Partners can create and manage captain accounts for taking orders.",
+    purchasemanagement: "Enables purchase management feature for a partner."
   };
 
   const getAllPartners = async () => {
@@ -75,7 +76,8 @@ const FeatureFlagManagement = () => {
               multiwhatsapp: { access: false, enabled: false },
               pos: { access: false, enabled: false },
               stockmanagement: { access: false, enabled: false },
-              captainordering: { access: false, enabled: false }
+              captainordering: { access: false, enabled: false },
+              purchasemanagement: { access: false, enabled: false }
             };
 
             // Merge existing flags with defaults

@@ -275,7 +275,6 @@ export default function ProfilePage() {
       });
       setIsShopOpen(userData.is_shop_open);
 
-
       setDeliveryRules({
         delivery_radius: userData.delivery_rules?.delivery_radius || 5,
         first_km_range: {
@@ -285,9 +284,11 @@ export default function ProfilePage() {
         is_fixed_rate: userData.delivery_rules?.is_fixed_rate || false,
         minimum_order_amount:
           userData.delivery_rules?.minimum_order_amount || 0,
-        delivery_time_allowed: userData.delivery_rules?.delivery_time_allowed || null,
+        delivery_time_allowed:
+          userData.delivery_rules?.delivery_time_allowed || null,
         isDeliveryActive: userData.delivery_rules?.isDeliveryActive ?? true,
-        needDeliveryLocation: userData.delivery_rules?.needDeliveryLocation ?? true,
+        needDeliveryLocation:
+          userData.delivery_rules?.needDeliveryLocation ?? true,
       });
       setGeoLocation({
         latitude: userData?.geo_location?.coordinates?.[1] || 0,
@@ -2487,6 +2488,37 @@ export default function ProfilePage() {
                       </div>
                     )}
 
+                    {/* for purchasemanagement */}
+                    {features.purchasemanagement.access && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <div className="font-medium">Purchase Management</div>
+                            <div className="text-sm text-gray-500">
+                              {features.purchasemanagement.enabled
+                                ? "Enabled"
+                                : "Disabled"}
+                            </div>
+                          </div>
+                          <Switch
+                            checked={features.purchasemanagement.enabled}
+                            onCheckedChange={(enabled) => {
+                              const updates = {
+                                ...features,
+                                purchasemanagement: {
+                                  ...features.purchasemanagement,
+                                  enabled: enabled,
+                                },
+                              };
+                              setFeatures(updates);
+                              setUserFeatures(updates);
+                              handleFeatureEnabledChange(updates);
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     {features.captainordering.access && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -2528,6 +2560,8 @@ export default function ProfilePage() {
                         )}
                       </div>
                     )}
+
+                    
                   </>
                 )}
               </div>
