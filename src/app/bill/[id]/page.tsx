@@ -232,7 +232,7 @@ const PrintOrderPage = () => {
   };
 
   return (
-    <div className="p-4">
+    <div className="">
       <div
         ref={printRef}
         id="printable-content"
