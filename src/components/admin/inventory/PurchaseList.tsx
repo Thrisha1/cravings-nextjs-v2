@@ -26,7 +26,7 @@ interface PurchaseListProps {
 const PurchaseCard = ({ purchase }: { purchase: PartnerPurchase }) => (
   <Card className="shadow-sm">
     <CardHeader>
-      <CardTitle className="text-lg">{purchase.supplier.name}</CardTitle>
+      <CardTitle className="text-lg capitalize">{purchase.supplier.name.replace(/_/g, " ")}</CardTitle>
       <p className="text-sm text-muted-foreground">
         {new Date(purchase.purchase_date).toLocaleDateString("en-IN", {
           year: "numeric",
@@ -101,7 +101,7 @@ export const PurchaseList = ({ purchases }: PurchaseListProps) => {
                 <TableCell>
                   {new Date(purchase.purchase_date).toLocaleDateString("en-IN")}
                 </TableCell>
-                <TableCell>{purchase.supplier.name}</TableCell>
+                <TableCell className="capitalize">{purchase.supplier.name.replace(/_/g, " ")}</TableCell>
                 <TableCell className="text-right font-medium">
                   {new Intl.NumberFormat("en-IN", {
                     style: "currency",

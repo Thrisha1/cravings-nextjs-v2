@@ -34,9 +34,7 @@ const InventoryPage = () => {
   useEffect(() => {
     if (!selectedPurchase && !isCreatePurchasePage) {
       fetchTotalAmountThisMonth();
-      if (useInventoryStore.getState().purchases.length === 0) {
-        fetchPaginatedPurchases();
-      }
+      fetchPaginatedPurchases();
     }
     return () => {
       const state = useInventoryStore.getState();
@@ -132,7 +130,7 @@ const InventoryPage = () => {
           </>
         )}
 
-        {initialLoadFinished && hasMore && (
+        {(initialLoadFinished && hasMore) && (
           <div className="flex justify-center pt-4">
             <Button
               onClick={() => fetchPaginatedPurchases()}

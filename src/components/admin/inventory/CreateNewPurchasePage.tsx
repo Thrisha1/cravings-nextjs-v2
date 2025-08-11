@@ -296,7 +296,8 @@ export const CreateNewPurchasePage = () => {
                   id="supplier"
                   type="text"
                   placeholder="Type or search supplier..."
-                  value={supplierSearchQuery}
+                  className="capitalize"
+                  value={supplierSearchQuery?.replace(/_/g, " ")}
                   onChange={(e) => {
                     setSupplierSearchQuery(e.target.value);
                     if (selectedSupplier) {
@@ -318,10 +319,10 @@ export const CreateNewPurchasePage = () => {
                       {filteredSuppliers.map((supplier) => (
                         <li
                           key={supplier.id}
-                          className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100"
+                          className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 capitalize"
                           onMouseDown={() => handleSelectSupplier(supplier)}
                         >
-                          {supplier.name}
+                          {supplier.name.replace(/_/g, " ")}
                         </li>
                       ))}
                     </ul>
@@ -380,7 +381,7 @@ export const CreateNewPurchasePage = () => {
                     <tbody>
                       {selectedItems.map((item) => (
                         <tr key={item.id} className="border-b">
-                          <td className="p-2">{item.name}</td>
+                          <td className="p-2 capitalize">{item.name.replace(/_/g, " ")}</td>
                           <td className="p-2 text-right">{item.quantity}</td>
                           <td className="p-2 text-right">
                             ${item.unitPrice.toFixed(2)}
@@ -418,7 +419,8 @@ export const CreateNewPurchasePage = () => {
                       id="item-search"
                       type="text"
                       placeholder="Type or search item..."
-                      value={itemSearchQuery}
+                      className="capitalize"
+                      value={itemSearchQuery.replace(/_/g, " ")}
                       onChange={(e) => {
                         setItemSearchQuery(e.target.value);
                         setNewItem(null);
@@ -435,10 +437,10 @@ export const CreateNewPurchasePage = () => {
                           {items.map((item) => (
                             <li
                               key={item.id}
-                              className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100"
+                              className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 capitalize"
                               onMouseDown={() => handleSelectItem(item)}
                             >
-                              {item.name}
+                              {item.name.replace(/_/g, " ")}
                             </li>
                           ))}
                         </ul>

@@ -109,7 +109,7 @@ export const PurchaseDetail = () => {
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center gap-3">
                 <Building className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{supplier.name}</span>
+                <span className="font-medium capitalize">{supplier.name.replace(/_/g, " ")}</span>
               </div>
               {supplier.phone && (
                 <div className="flex items-center gap-3">

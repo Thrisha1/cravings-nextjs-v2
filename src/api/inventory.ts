@@ -26,6 +26,11 @@ query GetPaginatedPurchases($partnerId: uuid!, $limit: Int!, $offset: Int!) {
       }
     }
   }
+  purchases_aggregate {
+    aggregate {
+      count
+    }
+  }
 }
 `;
 
