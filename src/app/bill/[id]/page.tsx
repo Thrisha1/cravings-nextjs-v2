@@ -68,7 +68,7 @@ const PrintOrderPage = () => {
   const [isParcel, setIsParcel] = useState(false);
   const searchParams = useSearchParams();
   const silentPrint = searchParams.get("print") === "false";
-  const printWidth = searchParams.get("w") || "44mm";
+  const printWidth = searchParams.get("w") || "66mm";
 
   useEffect(() => {
     const fetchOrder = async () => {
