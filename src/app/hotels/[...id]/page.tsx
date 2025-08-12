@@ -242,11 +242,13 @@ const HotelPage = async ({
   const menuItemWithOfferPrice = hoteldata?.menus?.map((item) => {
     // Check if item has active offers (not upcoming)
     const now = new Date();
-    const activeOffers = item.offers?.filter(offer => new Date(offer.start_time) <= now) || [];
+    const activeOffers = hoteldata?.offers?.filter(offer => 
+      offer.menu && offer.menu.id === item.id && new Date(offer.start_time) <= now
+    ) || [];
     
     return {
       ...item,
-      price: activeOffers.length > 0 ? activeOffers[0].offer_price : item.price,
+      price: activeOffers.length > 0 && activeOffers[0].offer_price ? activeOffers[0].offer_price : item.price,
     };
   });
 
@@ -313,11 +315,13 @@ const HotelPage = async ({
       filteredMenus = sortedItems.map((item) => {
         // Check if item has active offers (not upcoming)
         const now = new Date();
-        const activeOffers = item.offers?.filter(offer => new Date(offer.start_time) <= now) || [];
+        const activeOffers = hoteldata?.offers?.filter(offer => 
+          offer.menu && offer.menu.id === item.id && new Date(offer.start_time) <= now
+        ) || [];
         
         return {
           ...item,
-          price: activeOffers.length > 0 ? activeOffers[0].offer_price : item.price,
+          price: activeOffers.length > 0 && activeOffers[0].offer_price ? activeOffers[0].offer_price : item.price,
         };
       });
     } else {
@@ -333,11 +337,13 @@ const HotelPage = async ({
       filteredMenus = sortedItems.map((item) => {
         // Check if item has active offers (not upcoming)
         const now = new Date();
-        const activeOffers = item.offers?.filter(offer => new Date(offer.start_time) <= now) || [];
+        const activeOffers = hoteldata?.offers?.filter(offer => 
+          offer.menu && offer.menu.id === item.id && new Date(offer.start_time) <= now
+        ) || [];
         
         return {
           ...item,
-          price: activeOffers.length > 0 ? activeOffers[0].offer_price : item.price,
+          price: activeOffers.length > 0 && activeOffers[0].offer_price ? activeOffers[0].offer_price : item.price,
         };
       });
 
