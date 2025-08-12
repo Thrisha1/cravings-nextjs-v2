@@ -39,6 +39,7 @@ const PrintKOTPage = () => {
   const [isParcel, setIsParcel] = useState(false);
   const searchParams = useSearchParams();
   const silentPrint = searchParams.get("print") === "false";
+  const printWidth = searchParams.get("w") || "44mm";
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -142,11 +143,11 @@ const PrintKOTPage = () => {
           silentPrint
             ? {
                 fontFamily: "monospace",
-                maxWidth: "300px",
+                maxWidth: printWidth,
               }
             : {
                 fontFamily: "monospace",
-                maxWidth: "300px",
+                maxWidth: printWidth,
                 margin: "0 auto",
                 padding: "16px",
                 backgroundColor: "white",

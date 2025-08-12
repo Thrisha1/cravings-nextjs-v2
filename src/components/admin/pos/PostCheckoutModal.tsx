@@ -113,13 +113,21 @@ export const PostCheckoutModal = () => {
                     </h2>
                   )}
                 </DialogTitle>
+                <div className="flex gap-2 justify-end items-center">
+                  <Button
+                  onClick={()=>router.push('/admin/orders')}
+                  className="px-4 py-2.5 text-base font-semibold border-2 hover:bg-gray-900"
+                >
+                  Back to Orders
+                </Button>
                 <Button
                   variant="outline"
                   onClick={handleClose}
                   className="px-4 py-2.5 text-base font-semibold border-2 hover:bg-gray-100"
                 >
-                  Back
+                  Close
                 </Button>
+                </div>
               </div>
               <DialogDescription className="text-base pb-1">
                 {order.tableNumber && (

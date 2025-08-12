@@ -67,6 +67,7 @@ const PrintOrderPage = () => {
   const [isParcel, setIsParcel] = useState(false);
   const searchParams = useSearchParams();
   const silentPrint = searchParams.get("print") === "false";
+  const printWidth = searchParams.get("w") || "44mm";
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -241,12 +242,11 @@ const PrintOrderPage = () => {
           silentPrint
             ? {
                 fontFamily: "monospace",
-                maxWidth: "300px",
+                maxWidth: printWidth,
               }
             : {
                 fontFamily: "monospace",
-                maxWidth: "300px",
-                maxHeight: "280mm",
+                maxWidth: printWidth,
                 margin: "0 auto",
                 padding: "16px",
                 backgroundColor: "transparent",
@@ -267,7 +267,7 @@ const PrintOrderPage = () => {
         <div className="border-b border-black my-2"></div>
 
         {/* Order Info */}
-        <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+        <div className="grid grid-cols-2 gap-2 text-xs mb-2">
           <div className=" gap-2">
             <span className="font-medium">Order :</span>
             <br />
@@ -307,7 +307,7 @@ const PrintOrderPage = () => {
           order.type == "delivery") && (
           <>
             <div className="border-t border-black my-2"></div>
-            <div className="text-sm">
+            <div className="text-xs">
               <div className="font-bold text-sm uppercase mb-1">
                 Order Details:
               </div>
@@ -324,19 +324,19 @@ const PrintOrderPage = () => {
               )}
               {order.deliveryAddress !== "" && (
                 <div className="mb-1 flex gap-2">
-                  <div className="font-medium">Address:</div>
-                  <div className="text-xs">{order.deliveryAddress}</div>
+                  <div className="font-medium h-fit">Address:</div>
+                  <div className="text-[10px]">{order.deliveryAddress}</div>
                 </div>
               )}
               {!order.tableNumber && order.delivery_location && (
                 <>
-                  <div className="text-sm flex gap-2">
+                  <div className="text-xs flex gap-2">
                     <div className="font-medium">Delivery Location:</div>
                     <br />
                     <div className="text-xs">
                       <img
                         alt="QR Code for Delivery Location"
-                        className="w-16 h-16"
+                        className="w-10 h-9"
                         src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(
                           `https://www.google.com/maps/place/${order.delivery_location?.coordinates[1]},${order.delivery_location?.coordinates[0]}`
                         )}`}
@@ -352,8 +352,8 @@ const PrintOrderPage = () => {
         <div className="border-b border-black my-2"></div>
 
         {/* Order Items */}
-        <h3 className="font-bold text-sm uppercase mb-1">Items Ordered</h3>
-        <ul className="space-y-1 text-sm">
+        <h3 className="font-bold text-xs uppercase mb-1">Items Ordered</h3>
+        <ul className="space-y-1 text-xs">
           {(order?.items ?? []).map((item: OrderItem) => (
             <li key={item.id} className="flex justify-between">
               <span>
@@ -371,8 +371,8 @@ const PrintOrderPage = () => {
         {order?.extra_charges?.length > 0 && (
           <>
             <div className="border-t border-dashed border-gray-400 my-2"></div>
-            <h3 className="font-bold text-sm uppercase mb-1">Extra Charges</h3>
-            <ul className="space-y-1 text-sm">
+            <h3 className="font-bold text-xs uppercase mb-1">Extra Charges</h3>
+            <ul className="space-y-1 text-xs">
               {order?.extra_charges?.map(
                 (charge: {
                   id: string;
@@ -399,7 +399,7 @@ const PrintOrderPage = () => {
 
         {/* Totals */}
         <div className="border-t border-black my-2"></div>
-        <div className="space-y-1 text-sm">
+        <div className="space-y-1 text-xs">
           <div className="flex justify-between">
             <span>Subtotal:</span>
             <span>
