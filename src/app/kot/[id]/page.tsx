@@ -6,6 +6,7 @@ import { ExtraCharge } from "@/store/posStore";
 import { useParams, useSearchParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
+import "./print-css.css"; // Import the CSS for printing
 
 const GET_ORDER_QUERY = `
 query GetOrder($id: uuid!) {
