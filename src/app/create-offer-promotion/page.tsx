@@ -7,10 +7,10 @@ import { CreateCustomOfferForm } from "@/components/customOfferAndPormotion/Crea
 const page = async ({
   searchParams,
 }: {
-  searchParams: { type?: Promise<string> } | undefined;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) => {
   const cookies = await getAuthCookie();
-  const type = await searchParams?.type;
+  const type = (await searchParams)?.type;
 
   if (cookies?.id) {
     if (type === "offer") {
