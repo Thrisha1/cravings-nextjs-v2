@@ -148,3 +148,24 @@ export const incrementOfferEnquiry = `
       }
     }
   }`;
+
+// Cleanup expired custom menu items
+export const cleanupExpiredCustomItems = `
+  mutation CleanupExpiredCustomItems($partner_id: uuid!) {
+    update_menu(
+      where: {
+        partner_id: { _eq: $partner_id },
+        category: { name: { _eq: "custom" } },
+        offers: { end_time: { _lt: "now()" } },
+        deletion_status: { _eq: 0 }
+      },
+      _set: { deletion_status: 1 }
+    ) {
+      affected_rows
+      returning {
+        id
+        name
+      }
+    }
+  }
+`;

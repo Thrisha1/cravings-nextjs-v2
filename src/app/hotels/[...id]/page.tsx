@@ -140,6 +140,18 @@ const HotelPage = async ({
     : null;
   const offers = hoteldata?.offers;
 
+  // Cleanup expired custom menu items
+  if (hoteldata?.id) {
+    try {
+      const { cleanupExpiredCustomItems } = await import('@/api/offers');
+      await fetchFromHasura(cleanupExpiredCustomItems, {
+        partner_id: hoteldata.id
+      });
+    } catch (error) {
+      console.error("Error cleaning up expired custom items:", error);
+    }
+  }
+
   // Parse variant JSON for offers
   if (hoteldata?.offers) {
     hoteldata.offers = hoteldata.offers.map((offer: any) => {
