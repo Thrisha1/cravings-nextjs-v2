@@ -124,6 +124,7 @@ const Currencies = [
   { label: "KWD", value: "د.ك" },
   { label: "BHD", value: "د.ب" },
   { label: "QAR", value: "ر.ق" },
+  {label: "OMR", value: "ر.ع."},
   { label: "None", value: " " },
 ];
 
