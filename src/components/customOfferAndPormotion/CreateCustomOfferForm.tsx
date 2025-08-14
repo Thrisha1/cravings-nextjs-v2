@@ -28,6 +28,7 @@ import { getAuthCookie } from "@/app/auth/actions";
 import { formatDate } from "@/lib/formatDate";
 import { OfferGroup, useOfferStore } from "@/store/offerStore_hasura";
 import { useRouter } from "next/navigation";
+import { MultipleImageUploader } from "./MultipleImageUploader";
 // import { get } from "http";
 
 export function CreateCustomOfferForm() {
@@ -65,6 +66,7 @@ export function CreateCustomOfferForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const formContainerRef = useRef<HTMLDivElement>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
 
   // Custom menu item state
   const [customMenuItem, setCustomMenuItem] = useState({
@@ -90,6 +92,16 @@ export function CreateCustomOfferForm() {
   const offerGroupNameRef = useRef<HTMLInputElement>(null);
   const offerGroupDescriptionRef = useRef<HTMLInputElement>(null);
   */
+
+  useEffect(() => {
+    setNewOffer((newOffer) => ({
+      ...newOffer,
+      fromTime: new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16),
+      toTime: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 16),
+    }));
+  }, []);
 
   const [notificationMessage, setNotificationMessage] = useState<{
     title?: string;
@@ -538,7 +550,7 @@ export function CreateCustomOfferForm() {
           </div>
           */}
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="offerTypeFilter">Offer Display Type</Label>
             <Select
               value={newOffer.offerType}
@@ -559,7 +571,7 @@ export function CreateCustomOfferForm() {
                 <SelectItem value="dine_in">Dine-In Only (QR Scan)</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </div> */}
 
           {/* Custom Menu Item Form */}
           {isCustomOffer && (
@@ -723,7 +735,7 @@ export function CreateCustomOfferForm() {
             />
           </div>
 
-          <div className="border-t-2 border-black/10 pt-4">
+          {/* <div className="border-t-2 border-black/10 pt-4">
             <Accordion type="single" collapsible>
               <AccordionItem value="item-1">
                 <AccordionTrigger>
@@ -770,7 +782,10 @@ export function CreateCustomOfferForm() {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-          </div>
+          </div> */}
+
+      <MultipleImageUploader setImageUrls={setImageUrls} />
+
 
           <div className="flex justify-end gap-2 mt-6">
             <Button variant="outline" onClick={onCancel} type="button">
@@ -787,6 +802,7 @@ export function CreateCustomOfferForm() {
           </div>
         </form>
       </div>
+      
     </div>
   );
 }
