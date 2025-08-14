@@ -74,6 +74,7 @@ export function CreateCustomOfferForm() {
     description: "",
     price: "",
     image_url: "",
+    image_urls: imageUrls, 
   });
 
   const { userData } = useAuthStore();
@@ -92,6 +93,14 @@ export function CreateCustomOfferForm() {
   const offerGroupNameRef = useRef<HTMLInputElement>(null);
   const offerGroupDescriptionRef = useRef<HTMLInputElement>(null);
   */
+
+  useEffect(() => {
+    setCustomMenuItem((prev) => ({
+      ...prev,
+      image_url: imageUrls[0] || "",
+      image_urls: imageUrls,
+    }));
+  }, [imageUrls]);
 
   useEffect(() => {
     setNewOffer((newOffer) => ({
@@ -123,6 +132,7 @@ export function CreateCustomOfferForm() {
       items_available?: number;
       start_time: string;
       end_time: string;
+      image_urls?: string[];
       offer_group?: OfferGroup;
       variant?: {
         name: string;
@@ -246,71 +256,77 @@ export function CreateCustomOfferForm() {
   };
 
   // This function now only validates custom item offers
-  const validateCustomItemOffer = () => {
-    // Custom offer validation
-    if (!customMenuItem.name.trim()) {
-      toast.error("Please enter item name");
-      return false;
-    }
-    if (!customMenuItem.price || isNaN(parseFloat(customMenuItem.price))) {
+const validateCustomItemOffer = () => {
+  // Custom offer validation
+  if (!customMenuItem.name.trim()) {
+    toast.error("Please enter item name");
+    return false;
+  }
+
+  // --- MODIFIED PRICE VALIDATION ---
+
+  const hasOriginalPrice = customMenuItem.price && String(customMenuItem.price).trim() !== '';
+  const hasNewPrice = newOffer.newPrice && String(newOffer.newPrice).trim() !== '';
+
+  let originalPrice = NaN;
+  let offerPrice = NaN;
+
+  // 1. Validate Original Price if it exists
+  if (hasOriginalPrice) {
+    originalPrice = parseFloat(customMenuItem.price);
+    if (isNaN(originalPrice)) {
       toast.error("Please enter a valid original price");
       return false;
     }
-    if (parseFloat(customMenuItem.price) <= 0) {
+    if (originalPrice <= 0) {
       toast.error("Original price must be greater than 0");
       return false;
     }
+  }
 
-    /* --- Commented out: Logic for non-custom single item offers ---
-    } else {
-      // Regular offer validation
-      if (!newOffer.menuItemId) {
-        toast.error("Please select a menu item");
-        return false;
-      }
-    }
-    
-    // Check if selected item has variants and a variant is selected
-    const selectedItem = items.find((item) => item.id === newOffer.menuItemId);
-    if (selectedItem?.variants && selectedItem.variants.length > 0 && !selectedVariant) {
-      toast.error("Please select a variant");
-      return false;
-    }
-    */
-
-    if (!newOffer.newPrice || isNaN(parseFloat(newOffer.newPrice))) {
+  // 2. Validate New Price if it exists
+  if (hasNewPrice) {
+    offerPrice = parseFloat(newOffer.newPrice);
+    if (isNaN(offerPrice)) {
       toast.error("Please enter a valid new price");
       return false;
     }
+    // It's good practice to ensure the offer price is also positive
+    if (offerPrice <= 0) {
+        toast.error("Offer price must be greater than 0");
+        return false;
+    }
+  }
 
-    // For custom offers, validate that offer price is less than original price
-    const originalPrice = parseFloat(customMenuItem.price);
-    const offerPrice = parseFloat(newOffer.newPrice);
-
+  // 3. Compare prices only if BOTH were provided and are valid numbers
+  if (hasOriginalPrice && hasNewPrice) {
     if (offerPrice >= originalPrice) {
       toast.error("Offer price must be less than original price");
       return false;
     }
+  }
 
-    if (!newOffer.itemsAvailable || isNaN(parseInt(newOffer.itemsAvailable))) {
-      toast.error("Please enter a valid number of items available");
-      return false;
-    }
-    if (!newOffer.fromTime) {
-      toast.error("Please select a from time");
-      return false;
-    }
-    if (!newOffer.toTime) {
-      toast.error("Please select a to time");
-      return false;
-    }
+  // --- END OF MODIFIED PRICE VALIDATION ---
 
-    if (!validateFromToTime()) {
-      return false;
-    }
+  if (!newOffer.itemsAvailable || isNaN(parseInt(newOffer.itemsAvailable))) {
+    toast.error("Please enter a valid number of items available");
+    return false;
+  }
+  if (!newOffer.fromTime) {
+    toast.error("Please select a from time");
+    return false;
+  }
+  if (!newOffer.toTime) {
+    toast.error("Please select a to time");
+    return false;
+  }
 
-    return true;
-  };
+  if (!validateFromToTime()) {
+    return false;
+  }
+
+  return true;
+};
 
   /* --- Commented out: Validation logic for Group offers ---
   const validateGroupItemOffer = () => {
@@ -473,6 +489,7 @@ export function CreateCustomOfferForm() {
             items_available: parseInt(newOffer.itemsAvailable),
             start_time: newOffer.fromTime,
             end_time: newOffer.toTime,
+            image_urls: customMenuItem.image_urls || [],
             // The offer_type here refers to display settings (all, delivery, dine_in)
             offer_type: newOffer.offerType,
           };
@@ -511,7 +528,7 @@ export function CreateCustomOfferForm() {
   */
 
   return (
-    <div className="max-w-lg mx-auto bg-white rounded-lg p-6 mb-8">
+    <div className="max-w-lg mx-auto bg-white rounded-lg p-6 py-10 mb-8">
       <h2 className="text-2xl font-bold mb-4">Create Offer</h2>
       <div ref={formContainerRef}>
         <form
@@ -577,7 +594,7 @@ export function CreateCustomOfferForm() {
           {isCustomOffer && (
             <>
               {/* <div className="space-y-4 p-4 border rounded-lg bg-blue-50"> */}
-              <div>
+              <div className="space-y-4">
                 {/* <h3 className="text-lg font-semibold text-blue-800">
                   Create New Menu Item for Offer
                 </h3> */}
@@ -616,7 +633,7 @@ export function CreateCustomOfferForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="customItemPrice">Original Price *</Label>
+                  <Label htmlFor="customItemPrice">Original Price </Label>
                   <Input
                     id="customItemPrice"
                     type="number"
@@ -628,11 +645,11 @@ export function CreateCustomOfferForm() {
                         price: e.target.value,
                       })
                     }
-                    required
+                    
                   />
                 </div>
 
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label htmlFor="customItemImage">Image URL (Optional)</Label>
                   <Input
                     id="customItemImage"
@@ -646,7 +663,7 @@ export function CreateCustomOfferForm() {
                       })
                     }
                   />
-                </div>
+                </div> */}
               </div>
               {/* Offer details fields are now part of the custom offer flow */}
               <div className="space-y-2">
@@ -706,7 +723,7 @@ export function CreateCustomOfferForm() {
           */}
 
           <div className="space-y-2">
-            <Label htmlFor="fromTime">From Time</Label>
+            <Label htmlFor="fromTime">From Time *</Label>
             <Input
               ref={fromTimeInputRef}
               id="fromTime"
@@ -721,7 +738,7 @@ export function CreateCustomOfferForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="toTime">To Time</Label>
+            <Label htmlFor="toTime">To Time *</Label>
             <Input
               ref={toTimeInputRef}
               id="toTime"
@@ -784,8 +801,10 @@ export function CreateCustomOfferForm() {
             </Accordion>
           </div> */}
 
-      <MultipleImageUploader setImageUrls={setImageUrls} />
-
+          <div>
+            <Label className="block mt-2">Upload Images (Optional)</Label>
+            <MultipleImageUploader setImageUrls={setImageUrls} />
+          </div>
 
           <div className="flex justify-end gap-2 mt-6">
             <Button variant="outline" onClick={onCancel} type="button">
@@ -802,7 +821,6 @@ export function CreateCustomOfferForm() {
           </div>
         </form>
       </div>
-      
     </div>
   );
 }

@@ -146,7 +146,20 @@ query GetPartnerAndOffersQuery($id: uuid!) {
     delivery_rate
     business_type
     delivery_rules
-    menus(where: {deletion_status: {_eq: 0}, is_available : {_eq :true}  ,category: {is_active: {_eq: true}}}) {
+    menus(where: {
+    deletion_status: {_eq: 0},
+    is_available: {_eq: true},
+    _and: [
+      {
+        category: {
+          _or: [
+            {is_active: {_eq: true}},
+            {name: {_eq: "custom"}}
+          ]
+        }
+      }
+    ]
+  }) {
       category {
         name
         id
@@ -176,6 +189,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
       end_time
       enquiries
       id
+      image_urls
       menu {
         image_url
         description

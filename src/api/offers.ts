@@ -9,6 +9,7 @@ export const getOfferById = `
       end_time
       enquiries
       items_available
+      image_urls
       start_time
       deletion_status
       offer_type
@@ -36,7 +37,7 @@ export const getOfferById = `
 export const getOffers = `
   query GetOffers {
     offers(
-      where: { deletion_status: { _eq: 0 } , end_time: { _gt: "now()" } , offer_price: { _is_null: false } , menu_item_id: { _is_null: false } },
+      where: { deletion_status: { _eq: 0 } , end_time: { _gt: "now()" } , menu_item_id: { _is_null: false } },
       order_by: { created_at: desc }
     ) {
       created_at
@@ -45,6 +46,7 @@ export const getOffers = `
       end_time
       enquiries
       items_available
+      image_urls
       start_time
       offer_type
       variant
@@ -63,6 +65,7 @@ export const getOffers = `
         district
         store_name
         location
+        feature_flags
         id
       }
     }
@@ -80,6 +83,7 @@ export const getPartnerOffers = `
     items_available
     start_time
     offer_type
+    image_urls
     variant
     menu {
         category {
@@ -111,6 +115,7 @@ mutation AddOffer($offer: offers_insert_input!) {
       start_time
       offer_type
       variant
+      image_urls
       menu {
         category {
           name

@@ -1,10 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Offer, OfferGroup } from "@/store/offerStore_hasura";
 import { formatDate } from "@/lib/formatDate";
 import { HotelData } from "@/app/hotels/[...id]/page";
@@ -85,7 +80,10 @@ export function OfferCard({ offer, isDeleting, onDelete }: OfferCardProps) {
                   <h4 className="font-medium mb-2">Included Items:</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {(offer?.offerGroup?.menu_items ?? [])?.map((item) => (
-                      <div key={item.id} className="flex items-center space-x-2">
+                      <div
+                        key={item.id}
+                        className="flex items-center space-x-2"
+                      >
                         <Checkbox checked disabled />
                         <span className="text-sm">{item.name}</span>
                       </div>
@@ -96,16 +94,23 @@ export function OfferCard({ offer, isDeleting, onDelete }: OfferCardProps) {
             </>
           ) : (
             <>
-              <p className="text-lg">
-                Original Price: {currency}{offer.variant ? offer.variant.price.toFixed(2) : offer.menu?.price.toFixed(2)}
-              </p>
-              <p className="text-2xl font-bold text-green-600">
-                Offer Price: {currency}{offer.offer_price?.toFixed(2)}
-              </p>
-              {offer.items_available !== undefined && (
-                <p className="text-sm">
-                  Available: {offer.items_available}
+              {((offer.variant ? offer.variant.price : offer.menu?.price) ??
+                0) > 0 && (
+                <p className="text-lg">
+                  Original Price: {currency}
+                  {offer.variant
+                    ? offer.variant.price.toFixed(2)
+                    : offer.menu?.price.toFixed(2)}
                 </p>
+              )}
+              {(offer.offer_price ?? 0) > 0 && (
+                <p className="text-2xl font-bold text-green-600">
+                  Offer Price: {currency}
+                  {offer.offer_price?.toFixed(2)}
+                </p>
+              )}
+              {offer.items_available !== undefined && (
+                <p className="text-sm">Available: {offer.items_available}</p>
               )}
             </>
           )}

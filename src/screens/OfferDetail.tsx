@@ -29,6 +29,9 @@ import { Button } from "@/components/ui/button";
 import { useClaimedOffersStore } from "@/store/claimedOfferStore_hasura";
 import ClaimedOfferModal from "@/components/ClaimedOfferModal";
 import Img from "@/components/Img";
+import { getFeatures } from "@/lib/getFeatures";
+import ImageCarousel from "@/components/offerDetail/ImageCarousel";
+import { OfferCard } from "@/components/admin/OfferCard";
 
 export default function OfferDetail({
   offer,
@@ -66,16 +69,24 @@ export default function OfferDetail({
     }
 
     // setClaimModalOpen(true);
-    navigate.push(`/hotels/${hotelData.store_name.replace(/\s+/g, '-')}/${hotelData.id}`);
+    navigate.push(
+      getFeatures(offer?.partner?.feature_flags || "")?.delivery?.access
+        ? "/hotels/" + hotelData.id
+        : hotelData?.location
+    );
   };
 
   const isUpcoming = new Date(offer.start_time) > new Date();
-  const discount = Math.round(
-    ((offer.menu.price - (offer.offer_price ?? 0)) / offer.menu.price) * 100
-  );
+  const discount =
+    (offer.menu.price ?? 0) > 0 && (offer.offer_price ?? 0) > 0
+      ? Math.round(
+          ((offer.menu.price - (offer.offer_price ?? 0)) / offer.menu.price) *
+            100
+        )
+      : 0;
 
   return (
-    <div className="min-h-screen w-full md:bg-gradient-to-b from-orange-50 to-orange-100 md:pt-10">
+    <div className="min-h-[110vh] w-full md:bg-gradient-to-b from-orange-50 to-orange-100 md:pt-10">
       <div className="max-w-4xl mx-auto">
         <Card className="overflow-hidden shadow-none border-none transition-shadow relative rounded-none md:rounded-xl">
           <div
@@ -86,13 +97,14 @@ export default function OfferDetail({
           </div>
 
           <div className="relative">
-            <Img
-              src={offer.menu.image_url}
+            {/* <Img
+              src={offer.menu.image_url ?? "/image_placeholder.png"}
               alt={offer.menu.name}
               width={500}
               height={500}
               className="w-full h-64 object-cover"
-            />
+            /> */}
+            <ImageCarousel imageUrls={offer.image_urls ? offer.image_urls : [offer.menu.image_url]} altText={offer.menu.name} />
 
             <div className="grid bg-gradient-to-t from-black to-transparentr p-5 sm:p-3 absolute bottom-0 left-0 w-full">
               <Share
@@ -100,19 +112,23 @@ export default function OfferDetail({
                 className={"absolute bottom-6 right-2"}
               />
 
-              <span className="text-white/70 line-through text-xl">
-                ₹{offer.menu.price.toFixed(0)}
-              </span>
-              <span className="text-4xl font-bold text-white">
-                ₹{(offer.offer_price ?? 0).toFixed(0)}
-              </span>
-              <div className="text-base font-bold text-orange-600 flex items-center gap-1">
-                <span>★</span>
-                {/* <span>{offer.rating?.toFixed(1) || "0"}</span> */}
-              </div>
+              {offer.menu?.price > 0 && (
+                <span className="text-white/70 line-through text-xl">
+                  ₹{offer.menu.price.toFixed(0)}
+                </span>
+              )}
+              {(offer.offer_price ?? 0 > 0) && (
+                <span className="text-4xl font-bold text-white">
+                  ₹{(offer.offer_price ?? 0).toFixed(0)}
+                </span>
+              )}
+              {/* <div className="text-base font-bold text-orange-600 flex items-center gap-1">
+                <span>★</span> */}
+              {/* <span>{offer.rating?.toFixed(1) || "0"}</span> */}
+              {/* </div> */}
             </div>
           </div>
-          <DiscountBadge discount={discount} />
+          {discount > 0 && <DiscountBadge discount={discount} />}
           <CardHeader>
             <div className="flex justify-between items-start">
               <div className="space-y-4">
@@ -227,7 +243,12 @@ export default function OfferDetail({
                     ) : (
                       <Link
                         className={`w-full flex justify-center py-2 px-3 text-[15px] font-semibold transition-all text-white bg-orange-600 hover:bg-orange-700 rounded-sm `}
-                        href={`/hotels/${hotelData.store_name.replace(/\s+/g, '-')}/${hotelData.id}`}
+                        href={
+                          getFeatures(offer?.partner?.feature_flags || "")
+                            ?.delivery?.access
+                            ? "/hotels/" + hotelData.id
+                            : hotelData?.location
+                        }
                       >
                         Claim Offer
                       </Link>
