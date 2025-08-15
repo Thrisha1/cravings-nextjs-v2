@@ -49,6 +49,7 @@ import { toast } from "sonner";
 import { formatDate } from "@/lib/formatDate";
 import convertLocToCoord from "@/app/actions/convertLocToCoord";
 import { revalidateTag } from "@/app/actions/revalidate";
+import { deleteFileFromS3 } from "@/app/actions/aws-s3";
 
 const ExploreOfferManage = () => {
   const [offers, setOffers] = useState<CommonOffer[]>([]);
@@ -117,10 +118,29 @@ const ExploreOfferManage = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetchFromHasura(deleteCommonOffer, { id });
+      const { delete_common_offers_by_pk } = await fetchFromHasura(
+        deleteCommonOffer,
+        { id }
+      );
+
+      const { image_url, image_urls } = delete_common_offers_by_pk;
+
+      if (image_urls.length > 0) {
+        const deleteImages = Promise.all(
+          image_urls.map((url: string) => {
+            return deleteFileFromS3(url);
+          })
+        ).then(() => {
+          console.log("All images deleted from S3");
+        });
+        await deleteImages;
+      } else {
+        await deleteFileFromS3(image_url);
+      }
+
       setOffers(offers.filter((offer) => offer.id !== id));
       toast.success("Offer deleted successfully");
-      revalidateTag("all-common-offers"); 
+      revalidateTag("all-common-offers");
       revalidateTag(id);
     } catch (error) {
       toast.error("Failed to delete offer");
