@@ -18,6 +18,7 @@ import BillTemplate from "./BillTemplate";
 import { useRouter } from "next/navigation";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import { getDateOnly } from "@/lib/formatDate";
+import Link from "next/link";
 
 export const PostCheckoutModal = () => {
   const {
@@ -238,24 +239,22 @@ export const PostCheckoutModal = () => {
               {/* Action Buttons */}
               <div className="flex flex-col gap-3 pb-4">
                 <div className="flex gap-3">
-                  <Button
-                    onClick={() => {
-                      router.push("/kot/" + order.id);
-                    }}
-                    className="flex-1 py-3 text-base font-semibold"
+                  <Link
+                    href={"/kot/" + order.id}
+                    target="_blank"
+                    className="flex-1 py-3 text-base font-semibold flex items-center gap-1 bg-gray-100 justify-center border-[1px] border-black/20 rounded-md"
                   >
                     <Printer className="h-4 w-4 mr-2" />
                     Print KOT
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      router.push("/bill/" + order.id);
-                    }}
-                    className="flex-1 py-3 text-base font-semibold"
+                  </Link>
+                  <Link
+                    href={"/bill/" + order.id}
+                    target="_blank"
+                    className="flex-1 py-3 text-base font-semibold flex items-center gap-1 bg-gray-100 justify-center border-[1px] border-black/20 rounded-md"
                   >
                     <Printer className="h-4 w-4 mr-2" />
                     Print Bill
-                  </Button>
+                  </Link>
                 </div>
                 <Button
                   variant="outline"
