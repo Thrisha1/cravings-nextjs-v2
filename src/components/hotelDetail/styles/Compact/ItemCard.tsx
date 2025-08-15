@@ -17,6 +17,8 @@ const ItemCard = ({
   allItemOffers,
   currentCategory,
   isOfferCategory,
+  isUpcomingOffer = false,
+  activeOffers = [],
 }: {
   item: HotelDataMenus;
   styles: DefaultHotelPageProps["styles"];
@@ -27,7 +29,9 @@ const ItemCard = ({
   hasMultipleVariantsOnOffer?: boolean;
   allItemOffers?: Offer[];
   currentCategory?: string;
+  isUpcomingOffer?: boolean;
   isOfferCategory?: boolean;
+  activeOffers?: any[];
 }) => {
   const [showVariants, setShowVariants] = useState(false);
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
