@@ -1,5 +1,6 @@
 import { getCommonOfferById } from "@/api/common_offers";
 import DeleteExploreOfferBtn from "@/components/explore/DeleteExploreOfferBtn";
+import ImageList from "@/components/explore/ImageList";
 import ResendOfferMsgBtn from "@/components/explore/ResendOfferMsgBtn";
 import ShareExploreItemBtn from "@/components/explore/ShareExploreItemBtn";
 import InstaReelEmbeded from "@/components/InstaReelEmbeded";
@@ -107,7 +108,7 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
 
   return (
     <section className=" overflow-hidden min-h-screen bg-gradient-to-b from-orange-50 to-orange-100">
-      <main className="pt-5 pb-10 px-[8%] lg:py-40 grid gap-10 lg:grid-cols-2 lg:place-items-center relative">
+      <main className="pt-5 pb-14 px-[8%] lg:py-40 grid gap-10 lg:grid-cols-2 lg:place-items-center relative">
         {/* report button  */}
         <div className="absolute top-5 right-5 grid gap-5">
           {role === "superadmin" ? (
@@ -179,6 +180,14 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
             </p>
           )}
         </div>
+
+       {
+        (commonOffer?.image_urls ?? []).length > 0 && (
+          <div>
+            <ImageList images={commonOffer.image_urls || []} />
+          </div>
+        )
+       }
 
         {/* {commonOffer.insta_link && (
           <InstaReelEmbeded

@@ -32,6 +32,7 @@ export interface CommonOffer {
   insta_link: string | null;
   likes: number;
   image_url: string;
+  image_urls?: string[];
   id: string;
   distance_meters?: number;
   district: string;

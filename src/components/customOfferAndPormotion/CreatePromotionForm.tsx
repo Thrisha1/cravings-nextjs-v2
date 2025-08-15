@@ -23,6 +23,7 @@ import { revalidateTag } from "@/app/actions/revalidate";
 import { sendCommonOfferWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 import convertLocToCoord from "@/app/actions/convertLocToCoord";
 import { Partner, useAuthStore } from "@/store/authStore";
+import { MultipleImageUploader } from "./MultipleImageUploader";
 
 export interface CommonOffer {
   partner_name: string;
@@ -33,6 +34,7 @@ export interface CommonOffer {
   insta_link: string | null;
   likes: number;
   image_url: string;
+  image_urls?: string[];
   id: string;
   distance_meters?: number;
   district: string;
@@ -95,10 +97,12 @@ export default function CreateCustomOfferForm() {
   const { userData } = useAuthStore();
   const [errors, setErrors] = useState({
     insta_link: "",
-    location: ""
+    location: "",
+    image_urls: "",
   });
   const [isFetchingThumbnail, setIsFetchingThumbnail] = useState(false);
   const [instagramLinkChanged, setInstagramLinkChanged] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchThumbnail = async () => {
@@ -109,7 +113,7 @@ export default function CreateCustomOfferForm() {
 
       const reelId = extractInstagramReelId(formData.insta_link);
       console.log("Extracted Reel ID:", reelId);
-      
+
       if (!reelId) {
         setImagePreview(null);
         return;
@@ -118,25 +122,29 @@ export default function CreateCustomOfferForm() {
       setIsFetchingThumbnail(true);
       try {
         const thumbnailUrl = getInstagramThumbnailUrl(reelId);
-        
+
         // Create a proxy request to avoid CORS issues
-        const proxyUrl = `${process.env.NEXT_PUBLIC_SERVER_URL}/api/insta-proxy?url=${encodeURIComponent(thumbnailUrl)}`;
+        const proxyUrl = `${
+          process.env.NEXT_PUBLIC_SERVER_URL
+        }/api/insta-proxy?url=${encodeURIComponent(thumbnailUrl)}`;
         const response = await fetch(proxyUrl);
-        
+
         if (response.ok) {
           const blob = await response.blob();
           const objectUrl = URL.createObjectURL(blob);
           setImagePreview(objectUrl);
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
-            image_url: objectUrl
+            image_url: objectUrl,
           }));
         } else {
           throw new Error("Thumbnail not found");
         }
       } catch (error) {
         console.error("Failed to fetch Instagram thumbnail:", error);
-        toast.warning("Couldn't fetch Instagram thumbnail automatically. Please upload an image manually.");
+        toast.warning(
+          "Couldn't fetch Instagram thumbnail automatically. Please upload an image manually."
+        );
         setImagePreview(null);
       } finally {
         setIsFetchingThumbnail(false);
@@ -151,8 +159,17 @@ export default function CreateCustomOfferForm() {
     }
   }, [formData.insta_link, instagramLinkChanged]);
 
+  useEffect(() => {
+    if (imageUrls.length > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        image_urls: imageUrls,
+        image_url: imageUrls[0] || "",
+      }));
+    }
+  }, [imageUrls]);
 
-  useEffect(()=>{
+  useEffect(() => {
     if (userData) {
       setFormData((prev) => ({
         ...prev,
@@ -161,7 +178,7 @@ export default function CreateCustomOfferForm() {
         district: (userData as Partner).district || "",
       }));
     }
-  },[userData])
+  }, [userData]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -174,7 +191,7 @@ export default function CreateCustomOfferForm() {
 
     // Clear error when user types
     if (name === "insta_link" || name === "location") {
-      setErrors(prev => ({...prev, [name]: ""}));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
 
     // Track Instagram link changes
@@ -196,12 +213,15 @@ export default function CreateCustomOfferForm() {
   };
 
   const resetForm = () => {
+    setImageUrls([]);
     setFormData(initialFormData);
     setImagePreview(null);
-    setErrors({ insta_link: "", location: "" });
+    setErrors({ insta_link: "", location: "", image_urls: "" });
     setInstagramLinkChanged(false);
     // Clear file input
-    const fileInput = document.getElementById("image-upload") as HTMLInputElement;
+    const fileInput = document.getElementById(
+      "image-upload"
+    ) as HTMLInputElement;
     if (fileInput) {
       fileInput.value = "";
     }
@@ -209,7 +229,7 @@ export default function CreateCustomOfferForm() {
 
   const validateForm = () => {
     let valid = true;
-    const newErrors = { insta_link: "", location: "" };
+    const newErrors = { insta_link: "", location: "", image_urls: "" };
 
     if (formData.insta_link && !isValidInstagramLink(formData.insta_link)) {
       newErrors.insta_link = "Please enter a valid Instagram Reel link";
@@ -221,13 +241,18 @@ export default function CreateCustomOfferForm() {
       valid = false;
     }
 
+    if (imageUrls.length === 0) {
+      newErrors.image_urls = "At least one image is required";
+      valid = false;
+    }
+
     setErrors(newErrors);
     return valid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -238,28 +263,28 @@ export default function CreateCustomOfferForm() {
       let s3Url = null;
 
       // Upload image to S3 if exists
-      if (formData.image_url) {
-        // If the image is from Instagram, we need to fetch it first
-        let imageToUpload = formData.image_url;
-        
-        if (formData.image_url.includes('instagram.com')) {
-          const response = await fetch(formData.image_url);
-          const blob = await response.blob();
-          imageToUpload = URL.createObjectURL(blob);
-        }
+      // if (formData.image_url) {
+      //   // If the image is from Instagram, we need to fetch it first
+      //   let imageToUpload = formData.image_url;
 
-        const processedImage = await processImage(
-          imageToUpload,
-          `local`
-        );
+      //   if (formData.image_url.includes("instagram.com")) {
+      //     const response = await fetch(formData.image_url);
+      //     const blob = await response.blob();
+      //     imageToUpload = URL.createObjectURL(blob);
+      //   }
 
-        const formattedName = formData.item_name.replace(/[^a-zA-Z0-9]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_"); 
+      //   const processedImage = await processImage(imageToUpload, `local`);
 
-        s3Url = await uploadFileToS3(
-          processedImage,
-          `common_offers/${formattedName}_${Date.now()}.webp`
-        );
-      }
+      //   const formattedName = formData.item_name
+      //     .replace(/[^a-zA-Z0-9]/g, "_")
+      //     .replace(/\s+/g, "_")
+      //     .replace(/_+/g, "_");
+
+      //   s3Url = await uploadFileToS3(
+      //     processedImage,
+      //     `common_offers/${formattedName}_${Date.now()}.webp`
+      //   );
+      // }
 
       const coordinates = await convertLocToCoord(formData.location as string);
 
@@ -267,11 +292,10 @@ export default function CreateCustomOfferForm() {
       const itemData = {
         ...formData,
         district: formData.district.toLowerCase(),
-        image_url: s3Url,
         location: formData.location || null,
         description: formData.description || null,
         insta_link: formData.insta_link || null,
-        coordinates
+        coordinates,
       };
 
       const { id, ...payload } = itemData;
@@ -286,7 +310,7 @@ export default function CreateCustomOfferForm() {
       toast.success("Item created successfully!");
       revalidateTag("all-common-offers");
       await sendCommonOfferWhatsAppMsg(insert_common_offers_one.id);
-      
+
       // Reset form after successful submission
       resetForm();
     } catch (error) {
@@ -298,10 +322,8 @@ export default function CreateCustomOfferForm() {
   };
 
   return (
-    <div className="mx-auto px-4 pb-10">
-        <h1 className="text-2xl font-bold my-4">
-            Create Promotion
-        </h1>
+    <div className="mx-auto px-4 pb-14">
+      <h1 className="text-2xl font-bold my-4">Create Promotion</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Partner Name */}
@@ -325,12 +347,7 @@ export default function CreateCustomOfferForm() {
 
           {/* Item Name */}
           <div>
-            <Label
-              htmlFor="item_name"
-              
-            >
-              Item Name *
-            </Label>
+            <Label htmlFor="item_name">Item Name *</Label>
             <Input
               type="text"
               id="item_name"
@@ -344,12 +361,7 @@ export default function CreateCustomOfferForm() {
 
           {/* Price */}
           <div>
-            <Label
-              htmlFor="price"
-              
-            >
-              Price *
-            </Label>
+            <Label htmlFor="price">Price {`( Optional )`}</Label>
             <Input
               type="number"
               id="price"
@@ -391,13 +403,8 @@ export default function CreateCustomOfferForm() {
           </div> */}
 
           {/* Location */}
-          {/* <div>
-            <Label
-              htmlFor="location"
-              
-            >
-              Google Maps Location Link *
-            </Label>
+          <div>
+            <Label htmlFor="location">Google Maps Location Link *</Label>
             <Input
               type="url"
               id="location"
@@ -411,16 +418,11 @@ export default function CreateCustomOfferForm() {
             {errors.location && (
               <p className="mt-1 text-sm text-red-600">{errors.location}</p>
             )}
-          </div> */}
+          </div>
 
           {/* Instagram Link */}
           <div>
-            <Label
-              htmlFor="insta_link"
-              
-            >
-              Instagram Link (optional)
-            </Label>
+            <Label htmlFor="insta_link">Instagram Link (optional)</Label>
             <Input
               type="url"
               id="insta_link"
@@ -438,12 +440,7 @@ export default function CreateCustomOfferForm() {
 
         {/* Description */}
         <div>
-          <Label
-            htmlFor="description"
-            
-          >
-            Description (optional)
-          </Label>
+          <Label htmlFor="description">Description (optional)</Label>
           <Textarea
             id="description"
             name="description"
@@ -456,13 +453,13 @@ export default function CreateCustomOfferForm() {
 
         {/* Image Upload */}
         <div>
-          <Label >
+          {/* <Label >
             {formData.insta_link && isValidInstagramLink(formData.insta_link)
               ? "Instagram Reel Thumbnail"
               : "Item Image (optional - upload manually or provide Instagram Reel link)"}
-          </Label>
-          
-          <div className="mt-4">
+          </Label> */}
+
+          {/* <div className="mt-4">
             {isFetchingThumbnail ? (
               <div className="w-64 h-64 border border-gray-200 rounded-md flex items-center justify-center bg-gray-100">
                 <p>Loading Instagram thumbnail...</p>
@@ -491,20 +488,23 @@ export default function CreateCustomOfferForm() {
                 )}
               </div>
             )}
-          </div>
+          </div> */}
 
           <div className="mt-4">
-            <Label >
-              Upload Custom Image (optional)
-            </Label>
-            <Input
+            <Label>Images {`(min:1)*`}</Label>
+            {errors.image_urls && (
+              <p className="mt-1 text-sm text-red-600">{errors.image_urls}</p>
+            )}
+
+            {/* <Input
               id="image-upload"
               name="image-upload"
               type="file"
               accept="image/*"
               onChange={handleFileChange}
               className="bg-white focus-visible:ring-orange-500"
-            />
+            /> */}
+            <MultipleImageUploader setImageUrls={setImageUrls} maxImages={10} />
           </div>
         </div>
 
