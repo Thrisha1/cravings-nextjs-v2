@@ -17,6 +17,8 @@ const ItemCard = ({
   allItemOffers,
   currentCategory,
   isOfferCategory,
+  isUpcomingOffer = false,
+  activeOffers = [],
 }: {
   item: HotelDataMenus;
   styles: DefaultHotelPageProps["styles"];
@@ -27,7 +29,9 @@ const ItemCard = ({
   hasMultipleVariantsOnOffer?: boolean;
   allItemOffers?: Offer[];
   currentCategory?: string;
+  isUpcomingOffer?: boolean;
   isOfferCategory?: boolean;
+  activeOffers?: any[];
 }) => {
   const [showVariants, setShowVariants] = useState(false);
   const { addItem, items, decreaseQuantity, removeItem } = useOrderStore();
@@ -160,7 +164,7 @@ const ItemCard = ({
         ...item,
         id: `${item.id}|${offerData.variant.name}`,
         name: `${item.name} (${offerData.variant.name})`,
-        price: offerData.offer_price || 0, // Use the offer price
+        price: isUpcomingOffer ? offerData.variant.price : (offerData.offer_price || 0), // Use original price for upcoming offers, offer price for active offers
         variantSelections: [
           {
             name: offerData.variant.name,
@@ -179,17 +183,22 @@ const ItemCard = ({
       addItem({
         ...item,
         variantSelections: [],
-        price: offerData?.offer_price || item.price, // Use offer price if available
+        price: isUpcomingOffer ? item.price : (offerData?.offer_price || item.price), // Use original price for upcoming offers
       });
     }
   };
 
   const handleVariantAdd = (variant: any) => {
+    const variantOffer = getVariantOffer(variant.name);
+    const hasVariantOffer = !!variantOffer;
+    const isVariantUpcoming = hasVariantOffer && new Date(variantOffer.start_time) > new Date();
+    const finalPrice = hasVariantOffer && !isVariantUpcoming ? variantOffer.offer_price : variant.price;
+    
     addItem({
       ...item,
       id: `${item.id}|${variant.name}`,
       name: `${item.name} (${variant.name})`,
-      price: variant.price,
+      price: finalPrice,
       variantSelections: [
         {
           name: variant.name,

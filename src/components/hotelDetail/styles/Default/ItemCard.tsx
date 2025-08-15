@@ -24,6 +24,8 @@ const ItemCard = ({
   hasMultipleVariantsOnOffer = false,
   currentCategory,
   isOfferCategory,
+  isUpcomingOffer = false,
+  activeOffers = [],
 }: {
   item: HotelDataMenus;
   styles: Styles;
@@ -40,6 +42,8 @@ const ItemCard = ({
   hasMultipleVariantsOnOffer?: boolean;
   currentCategory?: string;
   isOfferCategory?: boolean;
+  isUpcomingOffer?: boolean;
+  activeOffers?: any[];
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showVariants, setShowVariants] = useState(false);
@@ -87,9 +91,9 @@ const ItemCard = ({
     getFeatures(feature_flags || "")?.delivery.enabled && tableNumber === 0 &&
     (hotelData?.delivery_rules?.isDeliveryActive ?? true) &&
     isWithinDeliveryTime();
-  
-    const hasStockFeature =
-    getFeatures(feature_flags || "")?.stockmanagement?.enabled 
+
+  const hasStockFeature =
+    getFeatures(feature_flags || "")?.stockmanagement?.enabled
 
   const isOutOfStock =
     hasStockFeature &&
@@ -147,7 +151,7 @@ const ItemCard = ({
       setShowVariants(!showVariants);
       return;
     }
-    
+
     // If this is an offer item with a specific variant, add that variant directly
     if (isOfferItem && offerPrice && oldPrice) {
       // Find the offer to get the variant information
@@ -158,7 +162,7 @@ const ItemCard = ({
           ...item,
           id: `${item.id}|${offer.variant.name}`,
           name: `${item.name} (${offer.variant.name})`,
-          price: offerPrice, // Use the offer price
+          price: isUpcomingOffer ? offer.variant.price : offerPrice, // Use original price for upcoming offers, offer price for active offers
           variantSelections: [
             {
               name: offer.variant.name,
@@ -170,7 +174,7 @@ const ItemCard = ({
         return;
       }
     }
-    
+
     // Regular logic for items without offers
     if (hasVariants) {
       setShowVariants(!showVariants);
@@ -178,16 +182,22 @@ const ItemCard = ({
       addItem({
         ...item,
         variantSelections: [],
+        price: isUpcomingOffer ? item.price : (offerPrice || item.price), // Use original price for upcoming offers
       });
     }
   };
 
   const handleVariantAdd = (variant: any) => {
+    const variantOffer = getVariantOffer(variant.name);
+    const hasVariantOffer = !!variantOffer;
+    const isVariantUpcoming = hasVariantOffer && new Date(variantOffer.start_time) > new Date();
+    const finalPrice = hasVariantOffer && !isVariantUpcoming ? variantOffer.offer_price : variant.price;
+
     addItem({
       ...item,
       id: `${item.id}|${variant.name}`,
       name: `${item.name} (${variant.name})`,
-      price: variant.price,
+      price: finalPrice,
       variantSelections: [
         {
           name: variant.name,
@@ -209,7 +219,7 @@ const ItemCard = ({
 
   // Check if a specific variant has an offer
   const getVariantOffer = (variantName: string) => {
-    return hotelData?.offers?.find((o) => 
+    return hotelData?.offers?.find((o) =>
       o.menu && o.menu.id === item.id && o.variant?.name === variantName
     );
   };
@@ -239,9 +249,8 @@ const ItemCard = ({
             className={`flex justify-between w-full items-start cursor-pointer`}
           >
             <div
-              className={`flex flex-col justify-center ${
-                item.image_url ? "w-1/2" : "w-full"
-              } ${!isOrderable ? "opacity-50" : ""}`}
+              className={`flex flex-col justify-center ${item.image_url ? "w-1/2" : "w-full"
+                } ${!isOrderable ? "opacity-50" : ""}`}
             >
               <DescriptionWithTextBreak
                 showMore={false}
@@ -281,20 +290,20 @@ const ItemCard = ({
                           <span>
                             {currency}{" "}
                             {hotelData?.id ===
-                            "767da2a8-746d-42b6-9539-528b6b96ae09"
+                              "767da2a8-746d-42b6-9539-528b6b96ae09"
                               ? item.variants
-                                  ?.sort((a, b) => a?.price - b?.price)[0]
-                                  ?.price?.toFixed(3) || item.price.toFixed(3)
+                                ?.sort((a, b) => a?.price - b?.price)[0]
+                                ?.price?.toFixed(3) || item.price.toFixed(3)
                               : item.variants?.sort(
-                                  (a, b) => a?.price - b?.price
-                                )[0]?.price || item.price}
+                                (a, b) => a?.price - b?.price
+                              )[0]?.price || item.price}
                           </span>
                         </span>
                       ) : (
                         <span>
                           {currency}{" "}
                           {hotelData?.id ===
-                          "767da2a8-746d-42b6-9539-528b6b96ae09"
+                            "767da2a8-746d-42b6-9539-528b6b96ae09"
                             ? item.price.toFixed(3)
                             : item.price}
                         </span>
@@ -324,9 +333,8 @@ const ItemCard = ({
                 <Img
                   src={item.image_url.replace("+", "%2B")}
                   alt={item.name}
-                  className={`object-cover w-full h-full ${
-                    !isOrderable ? "grayscale" : ""
-                  }`}
+                  className={`object-cover w-full h-full ${!isOrderable ? "grayscale" : ""
+                    }`}
                 />
 
                 {!isOrderable && (
@@ -340,9 +348,8 @@ const ItemCard = ({
 
           <DescriptionWithTextBreak
             maxChars={100}
-            className={`text-sm opacity-50 mt-1 ${
-              !isOrderable ? "opacity-25" : ""
-            }`}
+            className={`text-sm opacity-50 mt-1 ${!isOrderable ? "opacity-25" : ""
+              }`}
           >
             {item.description}
           </DescriptionWithTextBreak>
@@ -411,7 +418,7 @@ const ItemCard = ({
                                 <>
                                   {currency}{" "}
                                   {hotelData?.id ===
-                                  "767da2a8-746d-42b6-9539-528b6b96ae09"
+                                    "767da2a8-746d-42b6-9539-528b6b96ae09"
                                     ? variant.price.toFixed(3)
                                     : variant.price}
                                 </>
