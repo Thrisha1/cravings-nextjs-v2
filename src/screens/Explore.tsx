@@ -100,7 +100,6 @@ const Explore = ({
           const { latitude, longitude } = position.coords;
           try {
             if (latitude && longitude) {
-              debugger;
               await setLocationCookie(latitude, longitude);
               toast.success("Location updated successfully");
               window.location.reload();
