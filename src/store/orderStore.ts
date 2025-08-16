@@ -657,6 +657,8 @@ const useOrderStore = create(
                 totalPrice: hotelOrder.totalPrice + item.price,
               };
             }
+
+            debugger;
           } else {
             // Original logic for items without variants
             const existingItem = hotelOrder.items.find((i) => i.id === item.id);
@@ -993,6 +995,9 @@ const useOrderStore = create(
 
           const orderId = orderResponse.insert_orders_one.id;
 
+
+          debugger;
+
           // Create order items
           const itemsResponse = await fetchFromHasura(
             createOrderItemsMutation,
@@ -1222,12 +1227,13 @@ const useOrderStore = create(
 );
 
 function transformOrderFromHasura(order: any): Order {
-  return {
+ 
+    return {
     id: order.id,
     items: order.order_items.map((item: any) => ({
       id: item.menu?.id || "",
       name: item.item?.name || item.menu?.name || "",
-      price: item.item?.offers?.[0]?.offer_price || item.item?.price || item.menu?.price || 0,
+      price: item.item?.price || item.menu?.price || 0,
       quantity: item.quantity || 0,
       category: item.menu?.category?.name || "",
       image_url: item.menu?.image_url || "",

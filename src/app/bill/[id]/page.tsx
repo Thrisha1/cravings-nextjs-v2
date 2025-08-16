@@ -329,7 +329,7 @@ const PrintOrderPage = () => {
                   <div className="text-[10px]">{order.deliveryAddress}</div>
                 </div>
               )}
-              {!order.tableNumber && order.delivery_location && (
+              {!order.tableNumber && order.delivery_location && order.delivery_location?.coordinates[1] > 0 && order.delivery_location?.coordinates[0] > 0 && (
                 <>
                   <div className="text-xs flex gap-2">
                     <div className="font-medium">Delivery Location:</div>
@@ -337,7 +337,7 @@ const PrintOrderPage = () => {
                     <div className="text-xs">
                       <img
                         alt="QR Code for Delivery Location"
-                        className="w-10 h-9"
+                        className="w-16 h-16"
                         src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(
                           `https://www.google.com/maps/place/${order.delivery_location?.coordinates[1]},${order.delivery_location?.coordinates[0]}`
                         )}`}
