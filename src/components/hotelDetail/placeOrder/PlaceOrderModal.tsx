@@ -1430,7 +1430,7 @@ const PlaceOrderModal = ({
                   return null;
                 })()}
 
-                {user
+                {user?.role !== "partner"
                   ? (() => {
                       // Debug: Check current location before generating link
                       const currentSelectedArea = localStorage?.getItem(
@@ -1479,7 +1479,9 @@ const PlaceOrderModal = ({
                         </Link>
                       );
                     })()
-                  : null}
+                  : (
+                    <div className="text-red-500 text-center text-sm bg-red-50 py-2 rounded-sm"> Login as user to place orders </div>
+                  )}
                 <Button
                   variant="outline"
                   onClick={() => {

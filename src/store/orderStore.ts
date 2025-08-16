@@ -6,6 +6,7 @@ import { useAuthStore, Captain } from "./authStore";
 import {
   createOrderItemsMutation,
   createOrderMutation,
+  createOrderWithItemsMutation,
   ordersCountSubscription,
   paginatedOrdersSubscription,
   subscriptionQuery,
@@ -658,7 +659,6 @@ const useOrderStore = create(
               };
             }
 
-            debugger;
           } else {
             // Original logic for items without variants
             const existingItem = hotelOrder.items.find((i) => i.id === item.id);
@@ -959,9 +959,11 @@ const useOrderStore = create(
             hotelData.id
           );
 
+          const orderId = uuidv4();
+
           // Create order in database
-          const orderResponse = await fetchFromHasura(createOrderMutation, {
-            id: uuidv4(),
+          const orderResponse = await fetchFromHasura(createOrderWithItemsMutation, {
+            id: orderId,
             totalPrice: grandTotal,
             gst_included: gstIncluded,
             extra_charges: exCharges.length > 0 ? exCharges : null,
@@ -985,25 +987,7 @@ const useOrderStore = create(
                 : null,
             notes: notes || null,
             display_id: getNextDisplayOrderNumber.toString(),
-          });
-
-          if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
-            throw new Error(
-              orderResponse.errors?.[0]?.message || "Failed to create order"
-            );
-          }
-
-          const orderId = orderResponse.insert_orders_one.id;
-
-
-          debugger;
-
-          // Create order items
-          const itemsResponse = await fetchFromHasura(
-            createOrderItemsMutation,
-            {
-              orderItems: currentOrder.items.map((item) => ({
-                order_id: orderId,
+            orderItems: currentOrder.items.map((item) => ({
                 menu_id: item.id.split("|")[0],
                 quantity: item.quantity,
                 item: {
@@ -1014,14 +998,14 @@ const useOrderStore = create(
                   category: item.category,
                 },
               })),
-            }
-          );
+          });
 
-          if (itemsResponse.errors) {
+          if (orderResponse.errors || !orderResponse?.insert_orders_one?.id) {
             throw new Error(
-              itemsResponse.errors?.[0]?.message || "Failed to add order items"
+              orderResponse.errors?.[0]?.message || "Failed to create order"
             );
           }
+
 
           // Prepare new order object
           const newOrder: Order = {
