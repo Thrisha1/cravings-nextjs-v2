@@ -7,7 +7,7 @@ import { toast } from "sonner";
 const ShareExploreItemBtn = ({ offer }: { offer: CommonOffer }) => {
   const handleShare = async () => {
     try {
-      const message = `*🚨 KIDILAN FOOD SPOT ALERT 🚨*\n\n🎉 *${offer.partner_name}* is offering *${offer.item_name}* at *₹${offer.price}*! 🌟\n\n🔗 View offer: https://www.cravings.live/explore/${offer.id}\n\nDon't miss out on this amazing offer from *Cravings*! 🍽️✨`;
+      const message = `*🚨 KIDILAN FOOD SPOT ALERT 🚨*\n\n🎉 *${offer.partner_name}* is offering *${offer.item_name}*${offer.price > 0 ? ` at *₹${offer.price}*!` : ''} 🌟\n\n🔗 View offer: https://www.cravings.live/explore/${offer.id}\n\nDon't miss out on this amazing offer from *Cravings*! 🍽️✨`;
 
       const shareData = {
         title: `KIDILAN FOOD SPOT ALERT`,
