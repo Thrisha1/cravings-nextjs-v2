@@ -51,16 +51,27 @@ query GetMonthlyTotal($partnerId: uuid!, $startDate: timestamptz!, $endDate: tim
 }
 `;
 
-export const createNewSupplierQuery = `
-mutation CreateNewSupplier($id: uuid!, $name: String!, $phone: String, $address: String, $partner_id: uuid!) {
-  insert_suppliers_one(object: { id: $id, name: $name, phone: $phone, address: $address, partner_id: $partner_id }) {
+export const UpsertSupplierQuery = `
+mutation UpsertSupplier($id: uuid!, $name: String!, $phone: String, $address: String, $partner_id: uuid!) {
+  insert_suppliers_one(
+    object: { 
+      id: $id, 
+      name: $name, 
+      phone: $phone, 
+      address: $address, 
+      partner_id: $partner_id 
+    },
+    on_conflict: {
+      constraint: suppliers_pkey,
+      update_columns: [name, phone, address]
+    }
+  ) {
     id
     name
     phone
     address
   }
 }`;
-
 
 
 export const createNewPurchaseItemQuery = `

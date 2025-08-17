@@ -5,11 +5,12 @@ import { useInventoryStore } from "@/store/inventoryStore";
 import { PurchaseList } from "@/components/admin/inventory/PurchaseList";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, IndianRupee } from "lucide-react";
+import { Loader2, PlusCircle, IndianRupee, ShoppingBasket } from "lucide-react";
 import { PurchaseListSkeleton } from "@/components/admin/inventory/PurchaseListSkelton";
 import { PurchaseDetail } from "@/components/admin/inventory/PurchaseDetail";
 import { CreateNewPurchasePage } from "@/components/admin/inventory/CreateNewPurchasePage";
 import { EditPurchasePage } from "@/components/admin/inventory/EditPurchasePage";
+import InventoryViewPage from "@/components/admin/inventory/InventoryViewPage";
 
 const InventoryPage = () => {
   const {
@@ -25,6 +26,8 @@ const InventoryPage = () => {
     fetchPaginatedPurchases,
     clearPurchases,
     setIsCreatePurchasePage,
+    setIsInventoryPage,
+    isInventoryPage,
   } = useInventoryStore();
 
   useEffect(() => {
@@ -55,6 +58,14 @@ const InventoryPage = () => {
 
   // Show skeleton only on the initial load
   const showSkeleton = isLoading && purchases.length === 0;
+
+  if (isInventoryPage) {
+    return (
+      <main className="pt-4 sm:pt-10 pb-40 px-4 sm:px-[15%]">
+        <InventoryViewPage />
+      </main>
+    );
+  }
 
   // Render Edit Page if isEditPurchasePage is true
   if (isEditPurchasePage) {
@@ -88,15 +99,22 @@ const InventoryPage = () => {
     <main className="p-4 pb-40 md:p-6 md:pb-40 lg:p-8 lg:pb-40 space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold tracking-tight">
-          Inventory Management
+          Purchase / Inventory <br /> Management
         </h1>
-        <Button
-          onClick={() => setIsCreatePurchasePage(true)}
-          className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700"
-        >
-          <PlusCircle size={20} />
-          New Purchase
-        </Button>
+
+        <div className="flex gap-2 items-center">
+          <Button onClick={() => setIsInventoryPage(true)}>
+            <ShoppingBasket size={20} />
+            Inventory
+          </Button>
+          <Button
+            onClick={() => setIsCreatePurchasePage(true)}
+            className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700"
+          >
+            <PlusCircle size={20} />
+            New Purchase
+          </Button>
+        </div>
       </div>
 
       {/* --- Dashboard Stats Grid --- */}

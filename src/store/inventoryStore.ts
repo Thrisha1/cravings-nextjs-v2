@@ -5,12 +5,12 @@ import {
   createNewPurchaseItemQuery,
   createNewPurchaseQuery,
   createNewPurchaseTransactionQuery,
-  createNewSupplierQuery,
   DeletePurchaseMutation,
   DeleteTransactionsByPurchaseIdMutation,
   GetMonthlyTotalQuery,
   GetPaginatedPurchasesQuery,
   UpdatePurchaseMutation,
+  UpsertSupplierQuery,
 } from "@/api/inventory";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -44,6 +44,8 @@ interface InventoryStore {
   isCreatingPurchase: boolean;
   totalPurchases: number;
   isEditPurchasePage: boolean;
+  isInventoryPage: boolean;
+  setIsInventoryPage: (value: boolean) => void;
   updatePurchase: (purchase: Partial<PartnerPurchase>) => Promise<void>;
   deletePurchase: (purchaseId: string) => Promise<void>; 
   setIsEditPurchasePage: (value: boolean) => void;
@@ -88,6 +90,9 @@ export const useInventoryStore = create<InventoryStore>()(
       isCreatingPurchase: false,
       totalPurchases: 0,
       isEditPurchasePage: false,
+      isInventoryPage: false,
+
+      setIsInventoryPage: (value) => set({ isInventoryPage: value }),
 
       setIsEditPurchasePage: (value) => set({ isEditPurchasePage: value }),
 
@@ -187,7 +192,7 @@ export const useInventoryStore = create<InventoryStore>()(
 
       createNewSupplier: async (purchase) => {
         const { isCreatingSupplier } = get();
-        if (isCreatingSupplier || !purchase.supplier?.isNew) return;
+        if (isCreatingSupplier) return;
 
         set({ isCreatingSupplier: true });
 
@@ -197,7 +202,7 @@ export const useInventoryStore = create<InventoryStore>()(
             throw new Error("Unauthorized");
           }
 
-          const { supplier } = await fetchFromHasura(createNewSupplierQuery, {
+          const { supplier } = await fetchFromHasura(UpsertSupplierQuery, {
             id: purchase.supplier?.id,
             name: purchase.supplier?.name
               ?.trim()
@@ -313,6 +318,8 @@ export const useInventoryStore = create<InventoryStore>()(
             selectedPurchase: insert_purchases_one,
             isCreatePurchasePage: false,
           });
+
+          get().fetchTotalAmountThisMonth(true); // Force refetch
         } catch (error) {
           throw error;
         } finally {

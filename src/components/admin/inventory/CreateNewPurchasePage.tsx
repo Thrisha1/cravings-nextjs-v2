@@ -91,12 +91,13 @@ export const CreateNewPurchasePage = () => {
   }, []);
 
   const filteredSuppliers = useMemo(() => {
-    if (!supplierSearchQuery) {
-      return allSuppliers;
-    }
-    return allSuppliers.filter((supplier) =>
-      supplier.name.toLowerCase().includes(supplierSearchQuery.toLowerCase())
-    );
+    // if (!supplierSearchQuery) {
+    //   return allSuppliers;
+    // }
+    // return allSuppliers.filter((supplier) =>
+    //   supplier.name.toLowerCase().includes(supplierSearchQuery.toLowerCase())
+    // );
+    return allSuppliers
   }, [supplierSearchQuery, allSuppliers]);
 
   useEffect(() => {
@@ -219,7 +220,12 @@ export const CreateNewPurchasePage = () => {
     }
 
     const supplierData = selectedSupplier
-      ? selectedSupplier
+      ? ({
+        ...selectedSupplier,
+        address: supplierAddress.trim(),
+        phone: supplierPhone.trim(),
+        isNew: false,
+      })
       : ({
           id: v4(),
           name: supplierSearchQuery.trim().toLowerCase().replace(/\s+/g, "_"),
@@ -338,7 +344,6 @@ export const CreateNewPurchasePage = () => {
                   placeholder="Supplier address"
                   value={supplierAddress}
                   onChange={(e) => setSupplierAddress(e.target.value)}
-                  disabled={!!selectedSupplier}
                   required={!selectedSupplier}
                 />
               </div>
@@ -351,7 +356,6 @@ export const CreateNewPurchasePage = () => {
                   placeholder="Supplier phone (optional)"
                   value={supplierPhone}
                   onChange={(e) => setSupplierPhone(e.target.value)}
-                  disabled={!!selectedSupplier}
                 />
               </div>
             </div>
@@ -384,10 +388,10 @@ export const CreateNewPurchasePage = () => {
                           <td className="p-2 capitalize">{item.name.replace(/_/g, " ")}</td>
                           <td className="p-2 text-right">{item.quantity}</td>
                           <td className="p-2 text-right">
-                            ${item.unitPrice.toFixed(2)}
+                            ₹{item.unitPrice.toFixed(2)}
                           </td>
                           <td className="p-2 text-right font-medium">
-                            ${item.totalPrice.toFixed(2)}
+                            ₹{item.totalPrice.toFixed(2)}
                           </td>
                           <td className="p-2 text-right">
                             <Button
@@ -495,7 +499,7 @@ export const CreateNewPurchasePage = () => {
             <div className="flex justify-between items-center mb-4">
               <span className="text-lg font-medium">Grand Total</span>
               <span className="text-2xl font-bold tracking-tight">
-                ${grandTotal.toFixed(2)}
+                ₹{grandTotal.toFixed(2)}
               </span>
             </div>
             {error && (
