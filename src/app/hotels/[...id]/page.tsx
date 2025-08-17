@@ -32,6 +32,7 @@ export async function generateMetadata({
       try {
         const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
           id,
+          offer_types: ["delivery" , "all"]
         });
 
         return {
@@ -125,6 +126,7 @@ const HotelPage = async ({
       try {
         return fetchFromHasura(getPartnerAndOffersQuery, {
           id,
+          offer_types: ["delivery" , "all"]
         });
       } catch (error) {
         console.error("Error fetching hotel data:", error);

@@ -115,8 +115,10 @@ export const getPartnerByIdQuery = `
   }
   `;
 
+
+
 export const getPartnerAndOffersQuery = `
-query GetPartnerAndOffersQuery($id: uuid!) {
+query GetPartnerAndOffersQuery($id: uuid! , $offer_types: [String!]) {
   partners(where: {id: {_eq: $id}}) {
     district
     location
@@ -176,7 +178,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
       is_price_as_per_size
       name
       price
-      offers(where: {_and: [{end_time: {_gt: "now()"}}, {deletion_status: {_eq: 0}}]}) {
+      offers(where: {_and: [{ offer_type : { _in : $offer_types } } ,{end_time: {_gt: "now()"}}, {deletion_status: {_eq: 0}}]}) {
         offer_price
       }
       stocks{
@@ -185,7 +187,7 @@ query GetPartnerAndOffersQuery($id: uuid!) {
         show_stock
       }
     }
-    offers(where: {_and: [{end_time: {_gt: "now()"}}, {deletion_status: {_eq: 0}}]}) {
+    offers(where: {_and: [{ offer_type : { _in : $offer_types } } ,{end_time: {_gt: "now()"}}, {deletion_status: {_eq: 0}}]}) {
       end_time
       enquiries
       id

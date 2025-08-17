@@ -48,6 +48,7 @@ export async function generateMetadata({
 
         const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
           id: hotelId,
+          offer_types: ["dine_in" , "all"]
         });
 
         return {
@@ -186,6 +187,7 @@ const page = async ({
       try {
         const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
           id,
+          offer_types: ["dine_in" , "all"]
         });
         return {
           id,
