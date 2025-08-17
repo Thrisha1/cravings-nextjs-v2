@@ -6,6 +6,7 @@ import { ExtraCharge } from "@/store/posStore";
 import { useParams, useSearchParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
+import "./print-css.css"; // Import the CSS for printing
 
 const GET_ORDER_QUERY = `
 query GetOrder($id: uuid!) {
@@ -39,6 +40,7 @@ const PrintKOTPage = () => {
   const [isParcel, setIsParcel] = useState(false);
   const searchParams = useSearchParams();
   const silentPrint = searchParams.get("print") === "false";
+  const printWidth = searchParams.get("w") || "72mm";
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -133,7 +135,7 @@ const PrintKOTPage = () => {
   };
 
   return (
-    <div className="p-4">
+    <div className="">
       <div
         ref={printRef}
         id="printable-content"
@@ -142,11 +144,11 @@ const PrintKOTPage = () => {
           silentPrint
             ? {
                 fontFamily: "monospace",
-                maxWidth: "300px",
+                maxWidth: printWidth,
               }
             : {
                 fontFamily: "monospace",
-                maxWidth: "300px",
+                maxWidth: printWidth,
                 margin: "0 auto",
                 padding: "16px",
                 backgroundColor: "white",
@@ -214,17 +216,17 @@ const PrintKOTPage = () => {
                 </span>
               </div>
               {item.notes && (
-                <div className="text-xs pl-4 mt-1 italic">- {item.notes}</div>
+                <div className="text-sm pl-4 mt-1 italic">- {item.notes}</div>
               )}
             </li>
           ))}
         </ul>
 
         {/* Footer */}
-        <div className="border-t border-black mt-4 pt-2 text-center text-xs">
+        <div className="border-t border-black mt-4 pt-2 text-center text-sm">
           <p>Generated at: {new Date().toLocaleTimeString()}</p>
           {(Number(order.display_id) ?? 0) > 0 && (
-            <h2 className="text-xs font-light text-center mt-1">
+            <h2 className="text-sm font-light text-center mt-1">
               ID: {order.id.slice(0, 8)}
             </h2>
           )}

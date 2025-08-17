@@ -339,19 +339,68 @@ const Compact = ({
                       
                       let offerData = undefined;
                       let hasMultipleVariantsOnOffer = false;
+                      let isUpcomingOffer = false;
+                      let activeOffers: any[] = [];
+                      let upcomingOffers: any[] = [];
                       
-                      if (itemOffers.length > 1) {
-                        // Multiple variants on offer - calculate lowest offer price
-                        hasMultipleVariantsOnOffer = true;
-                        const lowestOfferPrice = Math.min(...itemOffers.map(o => o.offer_price || 0));
-                        // Create a mock offer data with the lowest price for display
-                        offerData = {
-                          ...itemOffers[0],
-                          offer_price: lowestOfferPrice,
-                        };
-                      } else if (itemOffers.length === 1) {
-                        // Single variant on offer
-                        offerData = itemOffers[0];
+                      if (itemOffers.length > 0) {
+                        // Check for upcoming offers (start_time > current time)
+                        const now = new Date();
+                        upcomingOffers = itemOffers.filter(offer => new Date(offer.start_time) > now);
+                        activeOffers = itemOffers.filter(offer => new Date(offer.start_time) <= now);
+                        
+                        // If there are upcoming offers, mark as upcoming
+                        if (upcomingOffers.length > 0) {
+                          isUpcomingOffer = true;
+                        }
+                        
+                        if (isUpcomingOffer) {
+                          // For upcoming offers, ONLY show original price - don't use offer price at all
+                          if (upcomingOffers.length > 1) {
+                            // Multiple variants on upcoming offer
+                            hasMultipleVariantsOnOffer = true;
+                            const lowestOfferPrice = Math.min(...upcomingOffers.map(o => o.offer_price || 0));
+                            const lowestOriginalPrice = Math.min(...upcomingOffers.map(o => 
+                              o.variant ? o.variant.price : (o.menu?.price || 0)
+                            ));
+                            
+                            // For upcoming offers: show original price as main, offer price as strikethrough
+                            offerData = {
+                              ...upcomingOffers[0],
+                              offer_price: lowestOriginalPrice, // Main displayed price (original)
+                              menu: { ...upcomingOffers[0].menu, price: lowestOfferPrice }, // Future offer price for strikethrough
+                            };
+                          } else if (upcomingOffers.length === 1) {
+                            // Single variant on upcoming offer
+                            const offer = upcomingOffers[0];
+                            const originalPrice = offer?.variant ? offer.variant.price : (offer?.menu?.price || item.price);
+                            const futureOfferPrice = typeof offer?.offer_price === 'number' ? offer.offer_price : item.price;
+                            
+                            // For upcoming offers: show original price as main, offer price as strikethrough
+                            offerData = {
+                              ...offer,
+                              offer_price: originalPrice, // Main displayed price (original)
+                              menu: { ...offer.menu, price: futureOfferPrice }, // Future offer price for strikethrough
+                            };
+                          }
+                        } else {
+                          // For active offers, use the existing logic
+                          const offersToUse = activeOffers;
+                          
+                          if (offersToUse.length > 1) {
+                            // Multiple variants on offer - calculate lowest offer price
+                            hasMultipleVariantsOnOffer = true;
+                            const lowestOfferPrice = Math.min(...offersToUse.map(o => o.offer_price || 0));
+                            // Create a mock offer data with the lowest price for display
+                            offerData = {
+                              ...offersToUse[0],
+                              offer_price: lowestOfferPrice,
+                            };
+                          } else if (offersToUse.length === 1) {
+                            // Single variant on offer
+                            offerData = offersToUse[0];
+                          }
+                        }
                       }
 
                       return (
@@ -367,6 +416,8 @@ const Compact = ({
                           allItemOffers={hasMultipleVariantsOnOffer ? itemOffers : undefined}
                           currentCategory={category.id}
                           isOfferCategory={category.id === "offers"}
+                          isUpcomingOffer={isUpcomingOffer}
+                          activeOffers={isUpcomingOffer ? upcomingOffers : activeOffers}
                         />
                       );
                     })}

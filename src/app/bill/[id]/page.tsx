@@ -10,6 +10,7 @@ import { ExtraCharge } from "@/store/posStore";
 import { useParams, useSearchParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
+import "./print-css.css"; // Import the CSS for printing
 
 const GET_ORDER_QUERY = `
 query GetOrder($id: uuid!) {
@@ -67,6 +68,7 @@ const PrintOrderPage = () => {
   const [isParcel, setIsParcel] = useState(false);
   const searchParams = useSearchParams();
   const silentPrint = searchParams.get("print") === "false";
+  const printWidth = searchParams.get("w") || "72mm";
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -232,7 +234,7 @@ const PrintOrderPage = () => {
   };
 
   return (
-    <div className="p-4">
+    <div className="">
       <div
         ref={printRef}
         id="printable-content"
@@ -241,12 +243,11 @@ const PrintOrderPage = () => {
           silentPrint
             ? {
                 fontFamily: "monospace",
-                maxWidth: "300px",
+                maxWidth: printWidth,
               }
             : {
                 fontFamily: "monospace",
-                maxWidth: "300px",
-                maxHeight: "280mm",
+                maxWidth: printWidth,
                 margin: "0 auto",
                 padding: "16px",
                 backgroundColor: "transparent",
@@ -257,10 +258,10 @@ const PrintOrderPage = () => {
         <h2 className="text-xl font-bold text-center uppercase">
           {order?.partner?.store_name || "Restaurant"}
         </h2>
-        <p className="text-center text-xs mb-1">
+        <p className="text-center text-sm mb-1">
           {[order?.partner?.district].filter(Boolean).join(", ") || ""}
         </p>
-        <p className="text-center text-xs mb-1">
+        <p className="text-center text-sm mb-1">
           {order?.partner?.phone ? `Tel: ${order?.partner.phone}` : ""}
         </p>
 
@@ -316,7 +317,7 @@ const PrintOrderPage = () => {
                 <>
                   <div className="text-sm flex gap-2 mb-1">
                     <div className="font-medium">Customer Phone:</div>
-                    <div className="text-xs">
+                    <div className="text-sm">
                       {order.user?.phone || order.phone}
                     </div>
                   </div>
@@ -324,16 +325,16 @@ const PrintOrderPage = () => {
               )}
               {order.deliveryAddress !== "" && (
                 <div className="mb-1 flex gap-2">
-                  <div className="font-medium">Address:</div>
-                  <div className="text-xs">{order.deliveryAddress}</div>
+                  <div className="font-medium h-fit">Address:</div>
+                  <div className="text-[12px]">{order.deliveryAddress}</div>
                 </div>
               )}
-              {!order.tableNumber && order.delivery_location && (
+              {!order.tableNumber && order.delivery_location && order.delivery_location?.coordinates[1] > 0 && order.delivery_location?.coordinates[0] > 0 && (
                 <>
                   <div className="text-sm flex gap-2">
                     <div className="font-medium">Delivery Location:</div>
                     <br />
-                    <div className="text-xs">
+                    <div className="text-sm">
                       <img
                         alt="QR Code for Delivery Location"
                         className="w-16 h-16"
@@ -426,13 +427,13 @@ const PrintOrderPage = () => {
         </div>
 
         {/* Footer */}
-        <div className="text-center text-xs mt-4 pt-2 border-t border-dashed border-gray-400">
+        <div className="text-center text-sm mt-4 pt-2 border-t border-dashed border-gray-400">
           <p>Thank you for your visit!</p>
           <p className="mt-1">
             {order?.partner?.gst_no ? `GSTIN: ${order?.partner.gst_no}` : ""}
           </p>
           {(Number(order.display_id) ?? 0) > 0 && (
-            <h2 className="text-xs font-light text-center mt-1">
+            <h2 className="text-sm font-light text-center mt-1">
               ID: {order.id.slice(0, 8)}
             </h2>
           )}
