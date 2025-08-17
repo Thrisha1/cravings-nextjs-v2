@@ -3,15 +3,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { uploadFileToS3 } from "@/app/actions/aws-s3";
 import { processImage } from "@/lib/processImage";
 import { toast } from "sonner";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
-import { fetchFromHasura } from "@/lib/hasuraClient";
-import { uploadCommonOffer } from "@/api/common_offers";
+
 import {
   Select,
   SelectContent,
@@ -20,8 +18,8 @@ import {
   SelectValue,
 } from "../ui/select";
 import { revalidateTag } from "@/app/actions/revalidate";
-import { sendCommonOfferWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
-import convertLocToCoord from "@/app/actions/convertLocToCoord";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
+
 
 export interface CommonOffer {
   partner_name: string;
@@ -97,6 +95,8 @@ export default function OfferUploadSuperAdmin() {
   });
   const [isFetchingThumbnail, setIsFetchingThumbnail] = useState(false);
   const [instagramLinkChanged, setInstagramLinkChanged] = useState(false);
+  const [isPasteLinkOpen, setIsPasteLinkOpen] = useState(false);
+  const [pasteLinkValue, setPasteLinkValue] = useState("");
 
   useEffect(() => {
     const fetchThumbnail = async () => {
@@ -221,70 +221,109 @@ export default function OfferUploadSuperAdmin() {
     setIsSubmitting(true);
 
     try {
-      let s3Url = null;
+      let image_base64: string | null = null;
 
-      // Upload image to S3 if exists
       if (formData.image_url) {
-        // If the image is from Instagram, we need to fetch it first
-        let imageToUpload = formData.image_url;
-        
-        if (formData.image_url.includes('instagram.com')) {
+        let imageToProcess = formData.image_url;
+
+        if (formData.image_url.includes("instagram.com")) {
           const response = await fetch(formData.image_url);
           const blob = await response.blob();
-          imageToUpload = URL.createObjectURL(blob);
+          imageToProcess = URL.createObjectURL(blob);
         }
 
-        const processedImage = await processImage(
-          imageToUpload,
-          `local`
-        );
-
-        const formattedName = formData.item_name.replace(/[^a-zA-Z0-9]/g, "_").replace(/\s+/g, "_").replace(/_+/g, "_"); 
-
-        s3Url = await uploadFileToS3(
-          processedImage,
-          `common_offers/${formattedName}_${Date.now()}.webp`
-        );
+        image_base64 = await processImage(imageToProcess, `local`);
       }
 
-      const coordinates = await convertLocToCoord(formData.location as string);
-
-      // Prepare item data for API
-      const itemData = {
-        ...formData,
-        district: formData.district.toLowerCase(),
-        image_url: s3Url,
+      const payload = {
+        partner_name: formData.partner_name,
+        item_name: formData.item_name,
+        price: Number(formData.price),
         location: formData.location || null,
         description: formData.description || null,
         insta_link: formData.insta_link || null,
-        coordinates
+        likes: Number(formData.likes || 0),
+        district: formData.district,
+        image_base64: image_base64,
       };
 
-      const { id, ...payload } = itemData;
+      const res = await fetch(`/api/common-offers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-      const { insert_common_offers_one } = await fetchFromHasura(
-        uploadCommonOffer,
-        {
-          ...payload,
-        }
-      );
+      if (!res.ok) {
+        const raw = await res.text().catch(() => "");
+        let parsed: any = null;
+        try {
+          parsed = raw ? JSON.parse(raw) : null;
+        } catch {}
+        console.error("POST /api/common-offers failed", {
+          status: res.status,
+          statusText: res.statusText,
+          responseBody: raw,
+          parsed,
+        });
+        throw new Error(parsed?.error || `Request failed with status ${res.status}`);
+      }
+
+      const data = await res.json();
 
       toast.success("Item created successfully!");
       revalidateTag("all-common-offers");
-      await sendCommonOfferWhatsAppMsg(insert_common_offers_one.id);
       
       // Reset form after successful submission
       resetForm();
     } catch (error) {
-      console.error("Error creating item:", error);
+      console.error("Error creating item:", error, { payload: {
+        partner_name: formData.partner_name,
+        item_name: formData.item_name,
+        price: Number(formData.price),
+        location: formData.location || null,
+        description: formData.description || null,
+        insta_link: formData.insta_link || null,
+        likes: Number(formData.likes || 0),
+        district: formData.district,
+      }});
       toast.error("Failed to create item. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handlePasteLinkSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const url = pasteLinkValue.trim();
+    if (!url) {
+      setIsPasteLinkOpen(false);
+      return;
+    }
+
+    setFormData(prev => ({ ...prev, insta_link: url }));
+    setInstagramLinkChanged(true);
+
+    void fetch(`http://localhost:5000/download`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    }).catch(() => {});
+
+    setIsPasteLinkOpen(false);
+    setPasteLinkValue("");
+  };
+
   return (
     <div className="mx-auto">
+      <div className="flex justify-end mb-4">
+        <Button
+          type="button"
+          onClick={() => setIsPasteLinkOpen(true)}
+          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none"
+        >
+          Paste Link
+        </Button>
+      </div>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Partner Name */}
@@ -509,6 +548,33 @@ export default function OfferUploadSuperAdmin() {
           </Button>
         </div>
       </form>
+
+      <Dialog open={isPasteLinkOpen} onOpenChange={setIsPasteLinkOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Paste Instagram URL</DialogTitle>
+            <DialogDescription>Paste the Instagram reel URL. We will send it to the downloader and set your form link.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handlePasteLinkSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="paste-insta-link" className="block text-sm font-medium text-gray-700 mb-1">Instagram URL</Label>
+              <Input
+                id="paste-insta-link"
+                name="paste-insta-link"
+                type="url"
+                placeholder="https://www.instagram.com/reel/..."
+                value={pasteLinkValue}
+                onChange={(e) => setPasteLinkValue(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md bg-white focus-visible:ring-orange-500"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" onClick={() => setIsPasteLinkOpen(false)} className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">Cancel</Button>
+              <Button type="submit" className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700">Submit</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
