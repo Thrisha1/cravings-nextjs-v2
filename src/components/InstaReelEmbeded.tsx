@@ -13,7 +13,7 @@ const InstaReelEmbed = ({ url, image }: { url: string; image: string }) => {
 
   return (
     <div className="flex justify-start">
-      <div className="w-[228px] h-[380px]  overflow-clip origin-center rounded-xl relative shadow-xl">
+      <div className="w-[285px] h-[475px]  overflow-clip origin-center rounded-xl relative shadow-xl">
         <div className="absolute bottom-0 left-0 z-[15] text-white font-bold flex-col flex justify-end bg-gradient-to-t from-black to-transparent p-5 h-[20%] w-full ">
           ▶ View Reel
           <p className="text-sm text-white/70 font-medium">Click to view reel</p>
@@ -22,8 +22,8 @@ const InstaReelEmbed = ({ url, image }: { url: string; image: string }) => {
         <InstagramEmbed
           placeholderDisabled
           url={url}
-          width={328}
-          className="-translate-y-20 -translate-x-[49px]  z-[10]"
+          width={400}
+          className="-translate-y-20 -translate-x-[57px]  z-[10]"
         />
         <Img
           src={image}

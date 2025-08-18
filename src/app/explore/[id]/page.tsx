@@ -3,7 +3,6 @@ import DeleteExploreOfferBtn from "@/components/explore/DeleteExploreOfferBtn";
 import ImageList from "@/components/explore/ImageList";
 import ResendOfferMsgBtn from "@/components/explore/ResendOfferMsgBtn";
 import ShareExploreItemBtn from "@/components/explore/ShareExploreItemBtn";
-import InstaReelEmbeded from "@/components/InstaReelEmbeded";
 import ReportReelModal from "@/components/ReportReelModal";
 import { CommonOffer } from "@/components/superAdmin/OfferUploadSuperAdmin";
 import { decryptText } from "@/lib/encrtption";
@@ -182,19 +181,14 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
         </div>
 
        {
-        (commonOffer?.image_urls ?? []).length > 0 && (
+        // (commonOffer?.image_urls ?? []).length > 0 && (
           <div>
-            <ImageList images={commonOffer.image_urls || []} />
+            <ImageList images={commonOffer.image_urls || []} commonOffer={commonOffer} />
           </div>
-        )
+        // )
        }
 
-        {/* {commonOffer.insta_link && (
-          <InstaReelEmbeded
-            url={commonOffer.insta_link as string}
-            image={commonOffer.image_url}
-          />
-        )} */}
+        
       </main>
     </section>
   );
