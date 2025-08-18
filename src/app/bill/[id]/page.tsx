@@ -79,6 +79,14 @@ const PrintOrderPage = () => {
           throw new Error("Order not found");
         }
 
+        const image = await fetch(`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(
+          `https://www.google.com/maps/place/${orders_by_pk.delivery_location?.coordinates[1]},${orders_by_pk.delivery_location?.coordinates[0]}`
+        )}`);
+
+        //read as blob url not base64
+        const qrCodeBlob = await image.blob();
+        const qrCodeUrl = URL.createObjectURL(qrCodeBlob);
+
         const formattedOrder = {
           ...orders_by_pk,
           items: orders_by_pk.order_items.map((item: any) => ({
@@ -92,6 +100,7 @@ const PrintOrderPage = () => {
           tableName:
             orders_by_pk.qr_code?.table_name || orders_by_pk.table_name || null, // Ensure this matches your usage
           deliveryAddress: orders_by_pk.delivery_address, // Ensure this matches your usage
+          qrCode: qrCodeUrl,
         };
 
         setOrder(formattedOrder);
@@ -338,9 +347,7 @@ const PrintOrderPage = () => {
                       <img
                         alt="QR Code for Delivery Location"
                         className="w-16 h-16"
-                        src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(
-                          `https://www.google.com/maps/place/${order.delivery_location?.coordinates[1]},${order.delivery_location?.coordinates[0]}`
-                        )}`}
+                        src={order.qrCode}
                       />
                     </div>
                   </div>
