@@ -42,7 +42,7 @@ const page = async ({
               <span className="text-4xl mb-2">📢</span>
               <span className="text-xl font-bold mb-1">Create Promotion</span>
               <span className="text-sm opacity-80">
-                Promote a instagram reel
+                Promote your restaurant dishes
               </span>
             </a>
           </div>
