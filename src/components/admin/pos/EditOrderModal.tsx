@@ -69,7 +69,7 @@ export const EditOrderModal = () => {
   const [qrGroup, setQrGroup] = useState<any>(null);
   const [orderNote, setOrderNote] = useState<string>("");
   const [orderType, setOrderType] = useState<"dine_in" | "takeaway" | "delivery">("dine_in");
- 
+   const [selectedVariant, setSelectedVariant] = useState<{name: string, price: number} | null>(null);
 
   const currency = (userData as Partner)?.currency || "$";
   const gstPercentage = (userData as Partner)?.gst_percentage || 0;
@@ -254,44 +254,55 @@ export const EditOrderModal = () => {
     setTotalPrice(calculateTotal(updatedItems));
   };
 
-  const handleAddItem = () => {
-    if (!newItemId) return;
 
-    const menuItem = menuItems.find((item) => item.id === newItemId);
-    if (!menuItem) return;
 
-    const existingItemIndex = items.findIndex(
-      (item) => item.menu_id === newItemId
+const handleAddItem = () => {
+  if (!newItemId) return;
+
+  const menuItem = menuItems.find((item) => item.id === newItemId);
+  if (!menuItem) return;
+
+  // Use the original menu item ID, not a composite ID
+  const itemIdentifier = newItemId;
+
+  // Check if this exact item+variant combination already exists
+  const existingItemIndex = items.findIndex(
+    (item) => item.menu_id === itemIdentifier && 
+              (item as any).variant === (selectedVariant ? selectedVariant.name : null)
+  );
+
+  if (existingItemIndex >= 0) {
+    handleQuantityChange(
+      existingItemIndex,
+      items[existingItemIndex].quantity + 1
     );
+  } else {
+    const newItem = {
+      menu_id: itemIdentifier,
+      quantity: 1,
+      variant: selectedVariant ? selectedVariant.name : null,
+      menu: {
+        name: selectedVariant 
+          ? `${menuItem.name} (${selectedVariant.name})` 
+          : menuItem.name,
+        price: selectedVariant ? selectedVariant.price : menuItem.price,
+      },
+    };
+    const updatedItems = [...items, newItem];
+    setItems(updatedItems);
+    setTotalPrice(calculateTotal(updatedItems));
+  }
 
-    if (existingItemIndex >= 0) {
-      handleQuantityChange(
-        existingItemIndex,
-        items[existingItemIndex].quantity + 1
-      );
-    } else {
-      const newItem = {
-        menu_id: newItemId,
-        quantity: 1,
-        menu: {
-          name: menuItem.name,
-          price: menuItem.price,
-        },
-      };
-      const updatedItems = [...items, newItem];
-      setItems(updatedItems);
-      setTotalPrice(calculateTotal(updatedItems));
-    }
-
-    setNewItemId("");
-    // Scroll to ensure new item is visible
-    setTimeout(() => {
-      window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: 'smooth'
-      });
-    }, 100);
-  };
+  setNewItemId("");
+  setSelectedVariant(null);
+  // Scroll to ensure new item is visible
+  setTimeout(() => {
+    window.scrollTo({
+      top: document.body.scrollHeight,
+      behavior: 'smooth'
+    });
+  }, 100);
+};
 
   const handleAddExtraCharge = () => {
     if (!newExtraCharge.name || newExtraCharge.amount <= 0) {
@@ -370,18 +381,20 @@ export const EditOrderModal = () => {
 
       // Update order items
       await fetchFromHasura(updateOrderItemsMutation, {
-        orderId: order?.id,
-        items: items.map((item) => ({
-          order_id: order?.id,
-          menu_id: item.menu_id,
-          quantity: item.quantity,
-          item: {
-            id: item.menu_id,
-            name: item.menu.name,
-            price: item.menu.price,
-          },
-        })),
-      });
+  orderId: order?.id,
+  items: items.map((item) => ({
+    order_id: order?.id,
+    menu_id: item.menu_id,
+    quantity: item.quantity,
+    item: {
+      id: item.menu_id,
+      name: item.menu.name,
+      price: item.menu.price,
+      // Include variant information in the item JSON
+      variant: (item as any).variant || null
+    },
+  })),
+});
 
       // Update local state
       if (order) {
@@ -665,7 +678,7 @@ export const EditOrderModal = () => {
                       ) : (
                         <div className="divide-y">
                           {filteredMenuItems.map((item) => (
-                            <div
+                                                       <div
                               key={item.id}
                               className="p-3 flex justify-between items-center hover:bg-accent cursor-pointer"
                               onClick={() => {
@@ -679,10 +692,16 @@ export const EditOrderModal = () => {
                             >
                               <div>
                                 <div className="font-medium">{item.name}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {currency}
-                                  {item.price.toFixed(2)}
-                                </div>
+                                {!item.variants || item.variants.length === 0 ? (
+                                  <div className="text-sm text-muted-foreground">
+                                    {currency}
+                                    {item.price.toFixed(2)}
+                                  </div>
+                                ) : (
+                                  <div className="text-sm text-muted-foreground">
+                                    Has variants
+                                  </div>
+                                )}
                               </div>
                               <Plus className="h-4 w-4" />
                             </div>
@@ -692,18 +711,47 @@ export const EditOrderModal = () => {
                     </div>
                   )}
 
-                  {newItemId && (
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <div className="flex-1 border rounded-lg p-3">
-                        {menuItems.find((item) => item.id === newItemId)?.name} -{" "}
-                        {currency}
-                        {menuItems
-                          .find((item) => item.id === newItemId)
-                          ?.price.toFixed(2)}
-                      </div>
-                      <Button onClick={handleAddItem} className="sm:w-auto w-full">Add to Order</Button>
-                    </div>
-                  )}
+                      {newItemId && (
+    <div className="flex flex-col sm:flex-row gap-2">
+      <div className="flex-1 border rounded-lg p-3">
+        {menuItems.find((item) => item.id === newItemId)?.name}
+        {selectedVariant && (
+          <> - {currency}{selectedVariant.price.toFixed(2)}</>
+        )}
+        {!selectedVariant && !menuItems.find((item) => item.id === newItemId)?.variants?.length && (
+          <> - {currency}{menuItems.find((item) => item.id === newItemId)?.price.toFixed(2)}</>
+        )}
+      </div>
+
+      {/* Variant Selection */}
+      {menuItems.find((item) => item.id === newItemId)?.variants && menuItems.find((item) => item.id === newItemId)!.variants!.length > 0 && (
+        <div className="flex-1">
+          <Select 
+            value={selectedVariant ? selectedVariant.name : ""}
+            onValueChange={(value) => {
+              const menuItem = menuItems.find((item) => item.id === newItemId);
+              const variant = menuItem?.variants?.find(v => v.name === value) || null;
+              setSelectedVariant(variant);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select variant" />
+            </SelectTrigger>
+            <SelectContent>
+              {menuItems.find((item) => item.id === newItemId)?.variants?.map((variant) => (
+                <SelectItem key={variant.name} value={variant.name}>
+                  {variant.name} - {currency}{variant.price.toFixed(2)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <Button onClick={handleAddItem}>Add</Button>
+    </div>
+  )}
+                   
                 </div>
               </div>
 
