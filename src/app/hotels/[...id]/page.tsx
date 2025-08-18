@@ -32,6 +32,7 @@ export async function generateMetadata({
       try {
         const partnerData = await fetchFromHasura(getPartnerAndOffersQuery, {
           id,
+          offer_types: ["delivery" , "all"]
         });
 
         return {
@@ -48,7 +49,7 @@ export async function generateMetadata({
   );
 
   const hotel = await getHotelData(hotelId);
-  // console.log("partnerdata",hotel);
+  console.log("partnerdata",hotel);
 
   if (!hotel) {
     throw new Error("Hotel not found");
@@ -125,6 +126,7 @@ const HotelPage = async ({
       try {
         return fetchFromHasura(getPartnerAndOffersQuery, {
           id,
+          offer_types: ["delivery" , "all"]
         });
       } catch (error) {
         console.error("Error fetching hotel data:", error);
@@ -139,6 +141,18 @@ const HotelPage = async ({
     ? ((await getHotelData(hotelId))?.partners[0] as HotelData)
     : null;
   const offers = hoteldata?.offers;
+
+  // Cleanup expired custom menu items
+  if (hoteldata?.id) {
+    try {
+      const { cleanupExpiredCustomItems } = await import('@/api/offers');
+      await fetchFromHasura(cleanupExpiredCustomItems, {
+        partner_id: hoteldata.id
+      });
+    } catch (error) {
+      console.error("Error cleaning up expired custom items:", error);
+    }
+  }
 
   // Parse variant JSON for offers
   if (hoteldata?.offers) {

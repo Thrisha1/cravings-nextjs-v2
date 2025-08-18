@@ -76,6 +76,65 @@ export const createOrderItemsMutation = `
                   }
 `;
 
+export const createOrderWithItemsMutation = `
+  mutation CreateOrderWithItems(
+    $id: uuid,
+    $totalPrice: float8!,
+    $createdAt: timestamptz!,
+    $tableNumber: Int,
+    $qrId: uuid,
+    $partnerId: uuid!,
+    $userId: uuid,
+    $type: String!,
+    $delivery_address: String,
+    $phone: String,
+    $status: String,
+    $gst_included: numeric,
+    $extra_charges: jsonb,
+    $orderedby: String,
+    $delivery_location: geography,
+    $captain_id: uuid,
+    $notes: String,
+    $display_id: String,
+    $table_name: String,
+    $orderItems: [order_items_insert_input!]!
+  ) {
+    insert_orders_one(object: {
+      id: $id
+      total_price: $totalPrice
+      created_at: $createdAt
+      table_number: $tableNumber
+      qr_id: $qrId
+      partner_id: $partnerId
+      user_id: $userId
+      status: $status
+      type: $type
+      phone: $phone
+      delivery_address: $delivery_address
+      gst_included: $gst_included
+      extra_charges: $extra_charges
+      orderedby: $orderedby
+      delivery_location: $delivery_location
+      captain_id: $captain_id
+      notes: $notes
+      display_id: $display_id
+      table_name: $table_name
+
+      order_items: {
+        data: $orderItems
+      }
+    }) {
+      id
+      total_price
+      created_at
+      order_items {
+        id,
+        item
+      }
+    }
+  }
+`;
+
 export const updateOrderMutation = `
   mutation UpdateOrder(
     $id: uuid!,

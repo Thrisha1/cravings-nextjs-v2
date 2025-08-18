@@ -73,10 +73,19 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
   const formContainerRef = useRef<HTMLDivElement>(null);
   const [slectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [isOfferTypeGroup, setIsOfferGroup] = useState(false);
+  const [isCustomOffer, setIsCustomOffer] = useState(false);
   const [groupType, setGroupType] = useState<
     "category" | "all" | "select" | undefined
   >(undefined);
   const [itemSearch, setItemSearch] = useState(""); // Add search state
+  
+  // Custom menu item state
+  const [customMenuItem, setCustomMenuItem] = useState({
+    name: "",
+    description: "",
+    price: "",
+    image_url: "",
+  });
 
   const { userData } = useAuthStore();
 
@@ -206,9 +215,26 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
   };
 
   const validateSingleItemOffer = () => {
-    if (!newOffer.menuItemId) {
-      toast.error("Please select a menu item");
-      return false;
+    // Custom offer validation
+    if (isCustomOffer) {
+      if (!customMenuItem.name.trim()) {
+        toast.error("Please enter item name");
+        return false;
+      }
+      if (!customMenuItem.price || isNaN(parseFloat(customMenuItem.price))) {
+        toast.error("Please enter a valid original price");
+        return false;
+      }
+      if (parseFloat(customMenuItem.price) <= 0) {
+        toast.error("Original price must be greater than 0");
+        return false;
+      }
+    } else {
+      // Regular offer validation
+      if (!newOffer.menuItemId) {
+        toast.error("Please select a menu item");
+        return false;
+      }
     }
     
     // Check if selected item has variants and a variant is selected
@@ -221,6 +247,17 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     if (!newOffer.newPrice || isNaN(parseFloat(newOffer.newPrice))) {
       toast.error("Please enter a valid new price");
       return false;
+    }
+
+    // For custom offers, validate that offer price is less than original price
+    if (newOffer.offerType === "custom") {
+      const originalPrice = parseFloat(customMenuItem.price);
+      const offerPrice = parseFloat(newOffer.newPrice);
+      
+      if (offerPrice >= originalPrice) {
+        toast.error("Offer price must be less than original price");
+        return false;
+      }
     }
     if (!newOffer.itemsAvailable || isNaN(parseInt(newOffer.itemsAvailable))) {
       toast.error("Please enter a valid number of items available");
@@ -372,6 +409,45 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     }
   };
 
+  // Helper function to get or create custom category
+  const getOrCreateCustomCategory = async (): Promise<string> => {
+    // First, check if custom category already exists
+    const customCategory = categories.find(cat => cat.name.toLowerCase() === 'custom');
+    
+    if (customCategory) {
+      return customCategory.id;
+    }
+
+    // If not found, create it
+    const { fetchFromHasura } = await import('@/lib/hasuraClient');
+    const { addCategory } = await import('@/api/category');
+    
+    const categoryData = {
+      name: 'custom',
+      partner_id: userData?.id,
+      is_active: false, // Hidden category
+      priority: 999, // Low priority
+    };
+
+    const result = await fetchFromHasura(addCategory, {
+      category: [categoryData]
+    });
+
+    return result.insert_category.returning[0].id;
+  };
+
+  // Helper function to create custom menu item
+  const createCustomMenuItem = async (menuItemData: any) => {
+    const { fetchFromHasura } = await import('@/lib/hasuraClient');
+    const { addMenu } = await import('@/api/menu');
+
+    const result = await fetchFromHasura(addMenu, {
+      menu: [menuItemData]
+    });
+
+    return result.insert_menu.returning[0];
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -423,7 +499,38 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     console.log("Notification Message:", notificationMessage);
   
     try {
-      if (!isOfferTypeGroup) {
+      // Handle custom offer creation
+      if (newOffer.offerType === "custom" && !isOfferTypeGroup) {
+        // First, create the custom menu item
+        const customMenuItemData = {
+          name: customMenuItem.name,
+          description: customMenuItem.description,
+          price: parseFloat(customMenuItem.price),
+          image_url: customMenuItem.image_url || "",
+          partner_id: userData?.id,
+          category_id: await getOrCreateCustomCategory(),
+          is_available: true,
+          is_top: false,
+          is_price_as_per_size: false,
+          deletion_status: 0,
+        };
+
+        const createdMenuItem = await createCustomMenuItem(customMenuItemData);
+        
+        if (createdMenuItem) {
+          // Then create the offer for the new menu item
+          const offerData = {
+            menu_id: createdMenuItem.id,
+            offer_price: Math.round(parseFloat(newOffer.newPrice)),
+            items_available: parseInt(newOffer.itemsAvailable),
+            start_time: newOffer.fromTime,
+            end_time: newOffer.toTime,
+            offer_type: newOffer.offerType,
+          };
+          
+          await onSubmit(offerData, notificationMessage);
+        }
+      } else if (!isOfferTypeGroup) {
         const offerData = {
           menu_id: newOffer.menuItemId,
           offer_price: Math.round(parseFloat(newOffer.newPrice)),
@@ -534,9 +641,11 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
           <div className="space-y-2">
             <Label htmlFor="offerType">Offer Type</Label>
             <Select
-              value={isOfferTypeGroup ? "group" : "single"}
+              value={isCustomOffer ? "custom" : (isOfferTypeGroup ? "group" : "single")}
               onValueChange={(value) => {
                 setIsOfferGroup(value === "group");
+                setIsCustomOffer(value === "custom");
+                
                 if (value === "single") {
                   setNewOffer({
                     ...newOffer,
@@ -546,6 +655,25 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     fromTime: "",
                     toTime: "",
                     offerType: "all",
+                  });
+                  setSelectedItem(null);
+                  setSelectedVariant("");
+                } else if (value === "custom") {
+                  // Reset custom offer state
+                  setNewOffer({
+                    ...newOffer,
+                    menuItemId: "",
+                    newPrice: "",
+                    itemsAvailable: "",
+                    fromTime: "",
+                    toTime: "",
+                    offerType: "all",
+                  });
+                  setCustomMenuItem({
+                    name: "",
+                    description: "",
+                    price: "",
+                    image_url: "",
                   });
                   setSelectedItem(null);
                   setSelectedVariant("");
@@ -568,6 +696,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
               <SelectContent>
                 <SelectItem value="single">Single Item Offer</SelectItem>
                 <SelectItem value="group">Offer Group</SelectItem>
+                <SelectItem value="custom">Custom Offer</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -590,6 +719,59 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Custom Menu Item Form */}
+          {isCustomOffer && (
+            <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
+              <h3 className="text-lg font-semibold text-blue-800">Create New Menu Item</h3>
+              
+              <div className="space-y-2">
+                <Label htmlFor="customItemName">Item Name *</Label>
+                <Input
+                  id="customItemName"
+                  type="text"
+                  placeholder="Enter item name"
+                  value={customMenuItem.name}
+                  onChange={(e) => setCustomMenuItem({...customMenuItem, name: e.target.value})}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="customItemDescription">Description</Label>
+                <Input
+                  id="customItemDescription"
+                  type="text"
+                  placeholder="Enter item description"
+                  value={customMenuItem.description}
+                  onChange={(e) => setCustomMenuItem({...customMenuItem, description: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="customItemPrice">Original Price *</Label>
+                <Input
+                  id="customItemPrice"
+                  type="number"
+                  placeholder="Enter original price"
+                  value={customMenuItem.price}
+                  onChange={(e) => setCustomMenuItem({...customMenuItem, price: e.target.value})}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="customItemImage">Image URL (Optional)</Label>
+                <Input
+                  id="customItemImage"
+                  type="url"
+                  placeholder="Enter image URL"
+                  value={customMenuItem.image_url}
+                  onChange={(e) => setCustomMenuItem({...customMenuItem, image_url: e.target.value})}
+                />
+              </div>
+            </div>
+          )}
 
           {isOfferTypeGroup && (
             <>
@@ -900,7 +1082,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
             </>
           )}
 
-          {!isOfferTypeGroup && (
+          {!isOfferTypeGroup && !isCustomOffer && (
             <div>
               <div className="space-y-2">
                 <Label htmlFor="menuItem">Select Menu Item</Label>
@@ -1026,7 +1208,9 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="newPrice">New Price in ₹</Label>
+                <Label htmlFor="newPrice">
+                  {newOffer.offerType === "custom" ? "Offer Price in ₹" : "New Price in ₹"}
+                </Label>
                 <Input
                   ref={priceInputRef}
                   id="newPrice"

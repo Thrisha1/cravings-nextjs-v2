@@ -23,6 +23,7 @@ const page = async () => {
       try {
         return fetchFromHasura(getPartnerAndOffersQuery, {
           id: userId,
+          offer_types: ["delivery" , "all" , "dine_in"]
         });
       } catch (error) {
         console.error("Error fetching partner data:", error);

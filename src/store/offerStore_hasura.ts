@@ -29,6 +29,7 @@ interface Partner {
   location: string;
   id: string;
   store_name: string;
+  feature_flags: string;
 }
 
 interface MenuItem {
@@ -61,6 +62,7 @@ export interface Offer {
   items_available?: number;
   offer_price?: number;
   offer_type?: string;
+  image_urls?: string[];
   deletion_status?: number;
   offer_group?: OfferGroup;
   menu: MenuItem;
@@ -82,6 +84,7 @@ interface OfferState {
       start_time: string;
       end_time: string;
       offer_type?: string;
+      image_urls?: string[];
       offer_group?: OfferGroup;
       variant?: {
         name: string;
@@ -215,6 +218,7 @@ export const useOfferStore = create<OfferState>((set, get) => {
         end_time: string;
         offer_type?: string;
         offer_group?: OfferGroup;
+        image_urls?: string[];
         variant?: {
           name: string;
           price: number;
@@ -247,6 +251,7 @@ export const useOfferStore = create<OfferState>((set, get) => {
             offer_price: offer.offer_price ? Math.round(offer.offer_price) : undefined,
             offer_type: offer.offer_type || 'all',
             variant: offer.variant || null,
+            image_urls: offer.image_urls || [],
           };
         } else {
 

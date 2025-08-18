@@ -216,17 +216,17 @@ const PrintKOTPage = () => {
                 </span>
               </div>
               {item.notes && (
-                <div className="text-xs pl-4 mt-1 italic">- {item.notes}</div>
+                <div className="text-sm pl-4 mt-1 italic">- {item.notes}</div>
               )}
             </li>
           ))}
         </ul>
 
         {/* Footer */}
-        <div className="border-t border-black mt-4 pt-2 text-center text-xs">
+        <div className="border-t border-black mt-4 pt-2 text-center text-sm">
           <p>Generated at: {new Date().toLocaleTimeString()}</p>
           {(Number(order.display_id) ?? 0) > 0 && (
-            <h2 className="text-xs font-light text-center mt-1">
+            <h2 className="text-sm font-light text-center mt-1">
               ID: {order.id.slice(0, 8)}
             </h2>
           )}

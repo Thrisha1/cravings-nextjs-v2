@@ -10,6 +10,7 @@ mutation InsertCommonOffer(
   $likes: Int
   $district: String!
   $coordinates: geography!
+  $image_urls: jsonb = []
 ) {
   insert_common_offers_one(
     object: {
@@ -24,6 +25,7 @@ mutation InsertCommonOffer(
       district: $district
       created_at: "now()"
       coordinates: $coordinates
+      image_urls: $image_urls
     }
   ) {
     id
@@ -38,6 +40,7 @@ mutation InsertCommonOffer(
     district
     created_at
     coordinates
+    image_urls
   }
 }`;
 
@@ -172,6 +175,7 @@ export const getCommonOfferById = `
       description
       insta_link
       image_url
+      image_urls
       likes
       district
       created_at
@@ -183,6 +187,8 @@ export const deleteCommonOffer = `
   mutation DeleteCommonOffer($id: uuid!) {
     delete_common_offers_by_pk(id: $id) {
       id
+      image_url
+      image_urls
     }
 }`;
 
