@@ -470,7 +470,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         isCaptainOrder,
         createdAt,
         totalPrice: foodSubtotal,
-        type: "pos",
+        type: get().tableNumber ? "dineinPOS" : (get().deliveryAddress ? "deliveryPOS" : "takeawayPOS"),
         status: "completed" as "completed",
         tableNumber: get().tableNumber,
         extraCharges: allExtraCharges,
@@ -492,7 +492,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         qrId: null,
         partnerId,
         userId: null,
-        type: "pos",
+        type: get().tableNumber ? "dineinPOS" : (get().deliveryAddress ? "deliveryPOS" : "takeawayPOS"),
         status: "completed" as "completed",
         delivery_address: get().deliveryAddress || null,
         delivery_location: null,
@@ -582,7 +582,7 @@ export const usePOSStore = create<POSState>((set, get) => ({
         },
         gstIncluded: gstPercentage,
         extraCharges: allExtraCharges,
-        type: "pos",
+        type: get().tableNumber ? "dineinPOS" : (get().deliveryAddress ? "deliveryPOS" : "takeawayPOS"),
         deliveryAddress: get().deliveryAddress || undefined,
         phone: get().userPhone || "N/A",
         orderedby: isCaptainOrder ? "captain" : undefined,
@@ -737,9 +737,8 @@ export const usePOSStore = create<POSState>((set, get) => ({
   setOrderNote: (note: string) => set({ orderNote: note }),
 
   refreshOrdersAfterUpdate: () => {
-    // This function will be used to trigger order refresh in components
-    // Components can listen to this to refetch orders after updates
-    const event = new CustomEvent('orderUpdated', { detail: { timestamp: Date.now() } });
-    window.dispatchEvent(event);
+    // This function can be used to refresh orders after an update
+    // For now, we'll just refetch past bills
+    get().fetchPastBills();
   },
 }));

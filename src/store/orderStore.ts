@@ -73,7 +73,7 @@ export interface Order {
     name?: string;
     email?: string;
   };
-  type?: "table_order" | "delivery" | "pos";
+  type?: "table_order" | "delivery" | "pos" | "dineinPOS" | "deliveryPOS" | "takeawayPOS";
   deliveryAddress?: string | null;
   gstIncluded?: number;
   orderedby?: string;

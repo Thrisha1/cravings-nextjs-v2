@@ -74,7 +74,12 @@ const OrdersPage = () => {
     result = result.filter((order) => {
       if (activeTab === "delivery") return order.type === "delivery";
       if (activeTab === "table") return order.type === "table_order";
-      if (activeTab === "pos") return order.type === "pos";
+      if (activeTab === "pos") return (
+        order.type === "pos" ||
+        order.type === "dineinPOS" ||
+        order.type === "deliveryPOS" ||
+        order.type === "takeawayPOS"
+      );
       return false;
     });
 

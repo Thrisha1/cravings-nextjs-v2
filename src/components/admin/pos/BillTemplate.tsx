@@ -49,12 +49,39 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
 
     // Determine order type and display text
     const getOrderTypeText = () => {
-      if (
-        order.tableNumber === 0 ||
-        order.type === "delivery"
-      )
+      // Map admin POS types
+      if (order.type === "dineinPOS") {
+        return order.tableNumber ? `Table ${order.tableNumber}` : "Dine-in";
+      }
+      if (order.type === "deliveryPOS") {
         return "Delivery";
-      if (!order.tableNumber) return "Takeaway";
+      }
+      if (order.type === "takeawayPOS") {
+        return "Takeaway";
+      }
+      // Check the base types
+      if (order.type === "delivery") {
+        return "Delivery";
+      } else if (order.type === "table_order") {
+        return order.tableNumber ? `Table ${order.tableNumber}` : "Dine-in";
+      } else if (order.type === "pos") {
+        // For POS orders, determine based on table number and delivery address
+        if (order.tableNumber) {
+          return `Table ${order.tableNumber}`;
+        } else if (order.deliveryAddress) {
+          return "Delivery";
+        } else {
+          return "Takeaway";
+        }
+      }
+      
+      // Fallback logic for backward compatibility
+      if (order.tableNumber === 0 || order.type === "delivery") {
+        return "Delivery";
+      }
+      if (!order.tableNumber) {
+        return "Takeaway";
+      }
       return `Table ${order.tableNumber}`;
     };
 
@@ -106,7 +133,7 @@ const BillTemplate = React.forwardRef<HTMLDivElement, BillTemplateProps>(
         {/* Delivery Information */}
         {(order.tableNumber === 0 ||
           order.deliveryAddress !== "" ||
-          order.type == "delivery") && (
+          order.type == "delivery" || order.type == "deliveryPOS") && (
           <>
             <div className="border-t border-black my-2"></div>
             <div className="text-sm">

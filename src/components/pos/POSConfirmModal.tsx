@@ -50,6 +50,7 @@ export const POSConfirmModal = ({
     addToCart,
     qrGroup,
     setDeliveryMode,
+    setDeliveryAddress,
     setIsCaptainOrder,
     getPartnerTables,
     removeExtraCharge,
@@ -72,6 +73,8 @@ export const POSConfirmModal = ({
   const [qrCodes, setQrCodes] = useState<QrCode[]>([]);
   const [isLoadingTables, setIsLoadingTables] = useState(true);
   const [isDelivery, setIsDelivery] = useState(false);
+  const [isTakeaway, setIsTakeaway] = useState(false);
+  const [deliveryAddressInput, setDeliveryAddressInput] = useState("");
 
   // Sync store extra charges with local state
   useEffect(() => {
@@ -127,8 +130,8 @@ export const POSConfirmModal = ({
   );
   const grandTotal = foodSubtotal + gstAmount + extraChargesTotal;
 
-  // Check if table selection is made (only required for dine-in)
-  const isTableSelected = isDelivery || tableNumber !== null;
+  // Allow confirm if Delivery OR Takeaway selected OR a table chosen (dine-in)
+  const isTableSelected = isDelivery || isTakeaway || tableNumber !== null;
 
   const handleAddExtraCharge = () => {
     if (!newExtraCharge.name || newExtraCharge.amount <= 0) {
@@ -178,6 +181,13 @@ export const POSConfirmModal = ({
 
       setUserPhone(phoneInput || null);
 
+      // Persist delivery address for Delivery orders to ensure correct type mapping
+      if (isDelivery) {
+        setDeliveryAddress(deliveryAddressInput || "N/A");
+      } else {
+        setDeliveryAddress("");
+      }
+
       // Extra charges are already in the store, no need to add them again
 
       await checkout();
@@ -213,10 +223,12 @@ export const POSConfirmModal = ({
           <label className="block text-sm font-medium mb-2">Order Type</label>
           <div className="flex items-center space-x-4">
             <Button
-              variant={!isDelivery ? "default" : "outline"}
+              variant={!isDelivery && !isTakeaway ? "default" : "outline"}
               onClick={() => {
                 setIsDelivery(false);
+                setIsTakeaway(false);
                 setTableNumber(null);
+                setDeliveryMode(false);
               }}
               className="flex-1"
             >
@@ -226,17 +238,31 @@ export const POSConfirmModal = ({
               variant={isDelivery ? "default" : "outline"}
               onClick={() => {
                 setIsDelivery(true);
+                setIsTakeaway(false);
+                setTableNumber(null);
                 setDeliveryMode(true);
               }}
               className="flex-1"
             >
               Delivery
             </Button>
+            <Button
+              variant={isTakeaway ? "default" : "outline"}
+              onClick={() => {
+                setIsTakeaway(true);
+                setIsDelivery(false);
+                setTableNumber(null); // clears QR group and charges via store
+                setDeliveryMode(false);
+              }}
+              className="flex-1"
+            >
+              Takeaway
+            </Button>
           </div>
         </div>
 
-        {/* Table Selection - Only show for dine-in */}
-        {!isDelivery && (
+        {/* Table Selection - Only show for dine-in (not delivery and not takeaway) */}
+        {!isDelivery && !isTakeaway && (
           <div>
             <label className="block text-sm font-medium mb-2">Table's</label>
             {isLoadingTables ? (
@@ -269,11 +295,23 @@ export const POSConfirmModal = ({
                 </Button>
               </div>
             )}
-            {!isDelivery && !isTableSelected && (
+            {!isDelivery && !isTakeaway && !isTableSelected && (
               <p className="text-sm text-red-500 mt-1">
                 Please select a table or choose "No Table"
               </p>
             )}
+          </div>
+        )}
+
+        {/* Delivery Address - Only show for Delivery */}
+        {isDelivery && (
+          <div>
+            <label className="block text-sm font-medium mb-2">Delivery Address</label>
+            <Input
+              placeholder="Enter delivery address (optional)"
+              value={deliveryAddressInput}
+              onChange={(e) => setDeliveryAddressInput(e.target.value)}
+            />
           </div>
         )}
 

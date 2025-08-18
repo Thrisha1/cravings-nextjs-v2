@@ -224,7 +224,16 @@ const PrintOrderPage = () => {
   const grandTotal = subtotal + gstAmount;
 
   const getOrderTypeText = () => {
-    if (order.tableNumber === 0 || order.type === "delivery") return "Delivery";
+    if (order.type === "deliveryPOS" || order.type === "delivery") return "Delivery";
+    if (order.type === "takeawayPOS") return "Takeaway";
+    if (order.type === "dineinPOS" || order.type === "table_order") {
+      return ` ${
+        isParcel
+          ? `Parcel (Table ${order.tableName || order.tableNumber})`
+          : `Table ${order.tableName || order.tableNumber}`
+      }`;
+    }
+    if (order.tableNumber === 0) return "Delivery";
     if (!order.tableNumber) return "Takeaway";
     return ` ${
       isParcel

@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { Partner, useAuthStore } from "@/store/authStore";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import { getQrGroupForTable } from "@/lib/getQrGroupForTable";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ExtraCharge {
   id?: string;
@@ -37,6 +38,7 @@ export const EditOrderModal = () => {
     setOrder,
     editOrderModalOpen: isOpen,
     setEditOrderModalOpen,
+    refreshOrdersAfterUpdate,
   } = usePOSStore();
   const { fetchMenu, items: menuItems } = useMenuStore();
   const { userData } = useAuthStore();
@@ -66,6 +68,8 @@ export const EditOrderModal = () => {
   const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0 });
   const [qrGroup, setQrGroup] = useState<any>(null);
   const [orderNote, setOrderNote] = useState<string>("");
+  const [orderType, setOrderType] = useState<"dine_in" | "takeaway" | "delivery">("dine_in");
+ 
 
   const currency = (userData as Partner)?.currency || "$";
   const gstPercentage = (userData as Partner)?.gst_percentage || 0;
@@ -81,6 +85,7 @@ export const EditOrderModal = () => {
     setExtraCharges([]);
     setNewExtraCharge({ name: "", amount: 0 });
     setOrderNote("");
+    setOrderType("dine_in");
   };
 
   // Handle input focus to detect keyboard
@@ -90,6 +95,23 @@ export const EditOrderModal = () => {
 
   const handleInputBlur = () => {
     setKeyboardOpen(false);
+  };
+
+  // Handle order type change
+  const handleOrderTypeChange = (newType: "dine_in" | "takeaway" | "delivery") => {
+    const previousType = orderType;
+    setOrderType(newType);
+    
+    // If switching from dine-in to delivery/takeaway, clear table-related data
+    if (previousType === "dine_in" && (newType === "delivery" || newType === "takeaway")) {
+      setTableNumber(null);
+      setQrGroup(null);
+      // Remove table-related extra charges
+      setExtraCharges(prev => prev.filter(charge => !charge.id?.startsWith('qr-group-')));
+    }
+    
+    // If switching to dine-in, clear delivery address
+   
   };
 
   useEffect(() => {
@@ -128,6 +150,23 @@ export const EditOrderModal = () => {
         setTableNumber(orderData.table_number);
         setPhone(orderData.phone);
         
+        // Load order type based on the order type in database (admin POS-only mapping)
+        if (orderData.type === "dineinPOS") {
+          setOrderType("dine_in");
+        } else if (orderData.type === "deliveryPOS") {
+          setOrderType("delivery");
+        } else if (orderData.type === "takeawayPOS") {
+          setOrderType("takeaway");
+        } else if (orderData.type === "pos") {
+          // Backward compatibility
+          if (orderData.table_number) setOrderType("dine_in");
+          else if (orderData.delivery_address) setOrderType("delivery");
+          else setOrderType("takeaway");
+        } else {
+          setOrderType("dine_in"); // Default
+        }
+        
+   
         // Load extra charges if they exist
         if (orderData.extra_charges) {
           setExtraCharges(orderData.extra_charges);
@@ -163,8 +202,8 @@ export const EditOrderModal = () => {
     );
     const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
     
-    // Calculate QR group extra charges
-    const qrGroupCharges = qrGroup?.extra_charge
+    // Calculate QR group extra charges only for dine-in orders
+    const qrGroupCharges = (qrGroup?.extra_charge && orderType === "dine_in")
       ? getExtraCharge(
           items as any[],
           qrGroup.extra_charge,
@@ -294,16 +333,39 @@ export const EditOrderModal = () => {
         0
       );
       const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
+      
+      // Include QR group charges only for dine-in orders
+      const qrGroupCharges = (qrGroup?.extra_charge && orderType === "dine_in")
+        ? getExtraCharge(
+            items as any[],
+            qrGroup.extra_charge,
+            qrGroup.charge_type || "FLAT_FEE"
+          )
+        : 0;
+        
       const gstAmount = gstPercentage > 0 ? (subtotal * gstPercentage) / 100 : 0;
-      const finalTotal = subtotal + extraChargesTotal + gstAmount;
+      const finalTotal = subtotal + extraChargesTotal + qrGroupCharges + gstAmount;
+
+      // Determine the order type for database (admin POS-only types)
+      let dbOrderType: "dineinPOS" | "deliveryPOS" | "takeawayPOS" = "takeawayPOS";
+      if (orderType === "dine_in") {
+        dbOrderType = "dineinPOS";
+      } else if (orderType === "delivery") {
+        dbOrderType = "deliveryPOS";
+      } else {
+        dbOrderType = "takeawayPOS";
+      }
 
       // Update order
       await fetchFromHasura(updateOrderMutation, {
         id: order?.id,
         totalPrice: finalTotal,
         phone: phone || "",
+        tableNumber: orderType === "dine_in" ? tableNumber : null,
         extraCharges: extraCharges.length > 0 ? extraCharges : null,
         notes: orderNote || null,
+        type: dbOrderType,
+
       });
 
       // Update order items
@@ -313,6 +375,11 @@ export const EditOrderModal = () => {
           order_id: order?.id,
           menu_id: item.menu_id,
           quantity: item.quantity,
+          item: {
+            id: item.menu_id,
+            name: item.menu.name,
+            price: item.menu.price,
+          },
         })),
       });
 
@@ -321,9 +388,10 @@ export const EditOrderModal = () => {
         setOrder({
           ...order,
           totalPrice: finalTotal,
-          tableNumber: tableNumber || 0,
+          tableNumber: orderType === "dine_in" ? tableNumber : null,
           phone: phone || "",
           extraCharges: extraCharges,
+          type: dbOrderType,
           items: items.map((item) => ({
             id: item.menu_id,
             name: item.menu.name,
@@ -367,6 +435,7 @@ export const EditOrderModal = () => {
 
       toast.success("Order updated successfully");
       onClose();
+      refreshOrdersAfterUpdate();
     } catch (error) {
       console.error("Error updating order:", error);
       toast.error("Failed to update order");
@@ -385,7 +454,9 @@ export const EditOrderModal = () => {
         <FullModalHeader>
           <FullModalTitle>Edit Order #{order?.id?.split("-")[0]}</FullModalTitle>
           <FullModalDescription>
-            {tableNumber ? `Table ${tableNumber}` : ""}
+            {orderType === "dine_in" && tableNumber ? `Table ${tableNumber}` : 
+             orderType === "delivery" ? "Delivery" : 
+             orderType === "takeaway" ? "Takeaway" : "Order"}
           </FullModalDescription>
         </FullModalHeader>
 
@@ -402,31 +473,52 @@ export const EditOrderModal = () => {
                   <>
                     <div className="space-y-2">
                       <label className="block text-sm font-medium">
-                        Table Number
+                        Order Type
                       </label>
-                      <Input
-                        type="number"
-                        value={tableNumber || ""}
-                        onChange={(e) =>
-                          handleTableNumberChange(Number(e.target.value) || null)
-                        }
-                        placeholder="Table number"
-                        onFocus={handleInputFocus}
-                        onBlur={handleInputBlur}
-                      />
+                      <Select value={orderType} onValueChange={handleOrderTypeChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select order type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="dine_in">Dine-in</SelectItem>
+                          <SelectItem value="takeaway">Takeaway</SelectItem>
+                          <SelectItem value="delivery">Delivery</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium">Phone</label>
-                      <Input
-                        type="tel"
-                        value={phone || ""}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="Customer phone"
-                        onFocus={handleInputFocus}
-                        onBlur={handleInputBlur}
-                      />
-                    </div>
+                    {orderType === "dine_in" && (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium">
+                          Table Number
+                        </label>
+                        <Input
+                          type="number"
+                          value={tableNumber || ""}
+                          onChange={(e) =>
+                            handleTableNumberChange(Number(e.target.value) || null)
+                          }
+                          placeholder="Table number"
+                          onFocus={handleInputFocus}
+                          onBlur={handleInputBlur}
+                        />
+                      </div>
+                    )}
+
+                    {(orderType === "takeaway" || orderType === "delivery") && (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium">Phone</label>
+                        <Input
+                          type="tel"
+                          value={phone || ""}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="Customer phone"
+                          onFocus={handleInputFocus}
+                          onBlur={handleInputBlur}
+                        />
+                      </div>
+                    )}
+
                   </>
                 )}
 
@@ -439,6 +531,16 @@ export const EditOrderModal = () => {
                       <span className="text-xs text-muted-foreground ml-2">
                         (incl. {gstPercentage}% GST: {currency}
                         {((items.reduce((sum, item) => sum + item.menu.price * item.quantity, 0) * gstPercentage) / 100).toFixed(2)})
+                      </span>
+                    )}
+                    {qrGroup && orderType === "dine_in" && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        (incl. QR charges: {currency}
+                        {getExtraCharge(
+                          items as any[],
+                          qrGroup.extra_charge,
+                          qrGroup.charge_type || "FLAT_FEE"
+                        ).toFixed(2)})
                       </span>
                     )}
                   </div>
@@ -517,7 +619,7 @@ export const EditOrderModal = () => {
               </div>
 
               {/* QR Group Charges */}
-              {qrGroup && (
+              {qrGroup && orderType === "dine_in" && (
                 <div className="border rounded-lg p-4">
                   <h3 className="font-medium mb-3">QR Group Charges</h3>
                   <div className="space-y-2">
