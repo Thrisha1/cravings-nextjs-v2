@@ -476,6 +476,7 @@ const OrdersTab = () => {
                         gstPercentage={
                           (userData as Partner)?.gst_percentage || 0
                         }
+                        showDeliveryStatus={true}
                       />
                     ))}
                   </>
@@ -510,6 +511,7 @@ const OrdersTab = () => {
                         gstPercentage={
                           (userData as Partner)?.gst_percentage || 0
                         }
+                        showDeliveryStatus={true}
                       />
                     ))}
                   </>
@@ -553,6 +555,7 @@ const OrdersTab = () => {
                           gstPercentage={gstPercentage}
                           gstAmount={gstAmount}
                           grantTotal={grandTotal}
+                          showDeliveryStatus={false}
                         />
                       );
                     })}

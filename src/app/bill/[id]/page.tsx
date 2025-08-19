@@ -229,16 +229,16 @@ const PrintOrderPage = () => {
     if (order.type === "dineinPOS" || order.type === "table_order") {
       return ` ${
         isParcel
-          ? `Parcel (Table ${order.tableName || order.tableNumber})`
-          : `Table ${order.tableName || order.tableNumber}`
+          ? `Parcel (Table '${order.tableName || order.tableNumber}')`
+          : `Dine-in (Table '${order.tableName || order.tableNumber}')`
       }`;
     }
     if (order.tableNumber === 0) return "Delivery";
     if (!order.tableNumber) return "Takeaway";
     return ` ${
       isParcel
-        ? `Parcel (Table ${order.tableName || order.tableNumber})`
-        : `Table ${order.tableName || order.tableNumber}`
+        ? `Parcel (Table '${order.tableName || order.tableNumber}')`
+        : `Dine-in (Table '${order.tableName || order.tableNumber}')`
     }`;
   };
 
@@ -311,17 +311,15 @@ const PrintOrderPage = () => {
           </div>
         </div>
 
-        {/* Delivery Information */}
-        {(order.tableNumber === 0 ||
-          order.deliveryAddress !== "" ||
-          order.type == "delivery") && (
+        {/* Delivery Information - only show for delivery orders */}
+        {(order.type === "delivery" || order.type === "deliveryPOS") && (
           <>
             <div className="border-t border-black my-2"></div>
             <div className="text-sm">
               <div className="font-bold text-sm uppercase mb-1">
                 Order Details:
               </div>
-              {/* Takeaway Phone */}
+              {/* Customer Phone */}
               {(order.user?.phone || order.phone) && (
                 <>
                   <div className="text-sm flex gap-2 mb-1">
@@ -338,7 +336,7 @@ const PrintOrderPage = () => {
                   <div className="text-[12px]">{order.deliveryAddress}</div>
                 </div>
               )}
-              {!order.tableNumber && order.delivery_location && order.delivery_location?.coordinates[1] > 0 && order.delivery_location?.coordinates[0] > 0 && (
+              {order.delivery_location && order.delivery_location?.coordinates[1] > 0 && order.delivery_location?.coordinates[0] > 0 && (
                 <>
                   <div className="text-sm flex gap-2">
                     <div className="font-medium">Delivery Location:</div>

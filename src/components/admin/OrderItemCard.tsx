@@ -40,6 +40,7 @@ const OrderItemCard = ({
   setOrder,
   setEditOrderModalOpen,
   deleteOrder,
+  showDeliveryStatus = true,
 }: {
   order: Order;
   gstPercentage: number;
@@ -49,6 +50,7 @@ const OrderItemCard = ({
   setOrder: (order: Order) => void;
   setEditOrderModalOpen: (open: boolean) => void;
   deleteOrder: (orderId: string) => Promise<boolean>;
+  showDeliveryStatus?: boolean;
 }) => {
   const [localOrder, setLocalOrder] = useState<Order>(initialOrder);
   const { userData } = useAuthStore();
@@ -294,12 +296,11 @@ const OrderItemCard = ({
               <p className="text-sm">Customer: {localOrder.phone}</p>
             )
           ) : (
-            <p className="text-sm">
-              Customer:{" "}
-              {localOrder.user?.phone || localOrder.phone
-                ? `+91${localOrder.user?.phone || localOrder.phone}`
-                : "Unknown"}
-            </p>
+            (localOrder.user?.phone || localOrder.phone) && (
+              <p className="text-sm">
+                Customer: +91{localOrder.user?.phone || localOrder.phone}
+              </p>
+            )
           )}
           {localOrder.type === "delivery" && (
             <div className="flex flex-col gap-3 mt-2">
@@ -327,7 +328,7 @@ const OrderItemCard = ({
           )}
         </div>
 
-        {localOrder?.type !== "pos" && (
+        {!localOrder?.type?.includes("POS") && (
           <div className="mt-2 md:mt-0">
             <StatusHistoryTimeline
               status_history={
@@ -435,7 +436,7 @@ const OrderItemCard = ({
 
           {/* Right side buttons */}
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-            {localOrder.status === "pending" && (
+            {localOrder.status === "pending" && showDeliveryStatus && (
               <>
                 {!isAccepted && (
                   <Button
@@ -514,29 +515,19 @@ const OrderItemCard = ({
                     </Button>
                   </>
                 )}
-
-                <Button
-                  size="default"
-                  variant="destructive"
-                  className="w-full sm:w-auto text-base py-2"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Order
-                </Button>
               </>
             )}
-            {localOrder.status === "completed" && (
-              <Button
-                size="default"
-                variant="destructive"
-                className="w-full sm:w-auto text-base py-2"
-                onClick={() => setIsDeleteDialogOpen(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Order
-              </Button>
-            )}
+
+            {/* Delete button - always show for all order types */}
+            <Button
+              size="default"
+              variant="destructive"
+              className="w-full sm:w-auto text-base py-2"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Order
+            </Button>
           </div>
         </div>
       </div>

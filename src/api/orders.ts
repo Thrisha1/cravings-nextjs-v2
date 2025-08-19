@@ -218,6 +218,7 @@ export const getOrderByIdQuery = `
       order_items {
         id
         quantity
+        item
         menu {
           id
           name
