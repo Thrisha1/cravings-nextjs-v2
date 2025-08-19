@@ -49,7 +49,6 @@ export async function generateMetadata({
   );
 
   const hotel = await getHotelData(hotelId);
-  console.log("partnerdata",hotel);
 
   if (!hotel) {
     throw new Error("Hotel not found");
