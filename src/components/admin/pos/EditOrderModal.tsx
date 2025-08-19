@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { usePOSStore } from "@/store/posStore";
 import { Loader2, Plus, Minus, X } from "lucide-react";
 import { fetchFromHasura } from "@/lib/hasuraClient";
+import {GET_QR_CODES_WITH_GROUPS_BY_PARTNER} from "@/api/qrcodes";
 import {
   getOrderByIdQuery,
   updateOrderMutation,
@@ -23,13 +24,29 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Partner, useAuthStore } from "@/store/authStore";
 import { getExtraCharge } from "@/lib/getExtraCharge";
+import type { PricingRule } from "@/app/admin/qr-management/page";
 import { getQrGroupForTable } from "@/lib/getQrGroupForTable";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { QrCode } from "@/store/qrDataStore";
 
 interface ExtraCharge {
   id?: string;
   name: string;
   amount: number;
+}
+
+interface QRCodeWithGroup {
+  id: string;
+  qr_number: number;
+  table_number: number | null;
+  table_name: string | null;
+  no_of_scans: number;
+  qr_group?: {
+    id: string;
+    name: string;
+    extra_charge: number | PricingRule[];
+    charge_type: "FLAT_FEE" | "PER_ITEM";
+  };
 }
 
 export const EditOrderModal = () => {
@@ -39,6 +56,11 @@ export const EditOrderModal = () => {
     editOrderModalOpen: isOpen,
     setEditOrderModalOpen,
     refreshOrdersAfterUpdate,
+    qrGroup,
+    removedQrGroupCharges,
+    addQrGroupCharge,
+    removeQrGroupCharge,
+    setQrGroup,
   } = usePOSStore();
   const { fetchMenu, items: menuItems } = useMenuStore();
   const { userData } = useAuthStore();
@@ -66,13 +88,51 @@ export const EditOrderModal = () => {
   const [showExtraItems, setShowExtraItems] = useState(false);
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
   const [newExtraCharge, setNewExtraCharge] = useState<ExtraCharge>({ name: "", amount: 0 });
-  const [qrGroup, setQrGroup] = useState<any>(null);
   const [orderNote, setOrderNote] = useState<string>("");
   const [orderType, setOrderType] = useState<"dine_in" | "takeaway" | "delivery">("dine_in");
-   const [selectedVariant, setSelectedVariant] = useState<{name: string, price: number} | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<{name: string, price: number} | null>(null);
+  const [tableNumbers, setTableNumbers] = useState<number[]>([]);
+  const [qrCodes, setQrCodes] = useState<QRCodeWithGroup[]>([]);
+  const [isLoadingTables, setIsLoadingTables] = useState(true);
+  const [currentQrGroup, setCurrentQrGroup] = useState<QRCodeWithGroup['qr_group'] | null>(null);
 
   const currency = (userData as Partner)?.currency || "$";
   const gstPercentage = (userData as Partner)?.gst_percentage || 0;
+  const partnerData = (userData as Partner);
+
+  // Helper: map local items to the shape expected by getExtraCharge (price, quantity)
+  const toChargeItems = (arr: typeof items) =>
+    arr.map((it) => ({ price: it.menu.price, quantity: it.quantity }));
+
+  // Debug helper
+  const debugCharge = (
+    label: string,
+    arr: typeof items,
+    extra: QRCodeWithGroup['qr_group'] extends infer T ? T extends { extra_charge: any } ? T['extra_charge'] : any : any,
+    type: "FLAT_FEE" | "PER_ITEM"
+  ) => {
+    try {
+      const mapped = toChargeItems(arr);
+      const subtotal = mapped.reduce((s, i) => s + i.price * i.quantity, 0);
+      const qty = mapped.reduce((s, i) => s + i.quantity, 0);
+      const amount = getExtraCharge(mapped as any, extra as any, type);
+      // eslint-disable-next-line no-console
+      console.log("[QR Charge Debug]", {
+        label,
+        charge_type: type,
+        subtotal,
+        total_qty: qty,
+        items_mapped: mapped,
+        extra_charge_rules: extra,
+        computed_amount: amount,
+      });
+      return amount;
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("[QR Charge Debug Error]", label, e);
+      return 0;
+    }
+  };
 
   const onClose = () => {
     setEditOrderModalOpen(false);
@@ -86,6 +146,7 @@ export const EditOrderModal = () => {
     setNewExtraCharge({ name: "", amount: 0 });
     setOrderNote("");
     setOrderType("dine_in");
+    setCurrentQrGroup(null);
   };
 
   // Handle input focus to detect keyboard
@@ -105,13 +166,10 @@ export const EditOrderModal = () => {
     // If switching from dine-in to delivery/takeaway, clear table-related data
     if (previousType === "dine_in" && (newType === "delivery" || newType === "takeaway")) {
       setTableNumber(null);
-      setQrGroup(null);
-      // Remove table-related extra charges
+      setCurrentQrGroup(null);
+      // Remove QR group-related extra charges
       setExtraCharges(prev => prev.filter(charge => !charge.id?.startsWith('qr-group-')));
     }
-    
-    // If switching to dine-in, clear delivery address
-   
   };
 
   useEffect(() => {
@@ -125,6 +183,38 @@ export const EditOrderModal = () => {
       fetchMenu(order?.partnerId);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const fetchTableNumbers = async () => {
+      if (!partnerData?.id) return;
+
+      try {
+        setIsLoadingTables(true);
+        const response = await fetchFromHasura(GET_QR_CODES_WITH_GROUPS_BY_PARTNER, {
+          partner_id: partnerData.id,
+        });
+
+        setQrCodes(response.qr_codes || []);
+
+        if (response?.qr_codes) {
+          // Filter out null table numbers and sort them
+          const tables = response.qr_codes
+            .map((qr: QRCodeWithGroup) => qr.table_number)
+            .filter((num: number | null): num is number => num !== null)
+            .sort((a: number, b: number) => a - b);
+
+          setTableNumbers(tables);
+        }
+      } catch (error) {
+        console.error("Error fetching table numbers:", error);
+        toast.error("Failed to load table numbers");
+      } finally {
+        setIsLoadingTables(false);
+      }
+    };
+
+    fetchTableNumbers();
+  }, [partnerData?.id]);
 
   const fetchOrderDetails = async () => {
     try {
@@ -166,7 +256,6 @@ export const EditOrderModal = () => {
           setOrderType("dine_in"); // Default
         }
         
-   
         // Load extra charges if they exist
         if (orderData.extra_charges) {
           setExtraCharges(orderData.extra_charges);
@@ -175,6 +264,14 @@ export const EditOrderModal = () => {
         // Load order note if it exists
         if (orderData.notes) {
           setOrderNote(orderData.notes);
+        }
+
+        // Load QR group for the current table after QR codes are loaded
+        if (orderData.table_number && orderData.type === "dineinPOS") {
+          // Wait for QR codes to be loaded first
+          setTimeout(() => {
+            handleTableNumberChange(orderData.table_number);
+          }, 100);
         }
       }
     } catch (error) {
@@ -203,40 +300,77 @@ export const EditOrderModal = () => {
     const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
     
     // Calculate QR group extra charges only for dine-in orders
-    const qrGroupCharges = (qrGroup?.extra_charge && orderType === "dine_in")
-      ? getExtraCharge(
-          items as any[],
-          qrGroup.extra_charge,
-          qrGroup.charge_type || "FLAT_FEE"
-        )
+    const qrGroupCharges = (currentQrGroup?.extra_charge && orderType === "dine_in")
+      ? debugCharge("calculateTotal", items, currentQrGroup.extra_charge, currentQrGroup.charge_type || "FLAT_FEE")
       : 0;
       
     const gstAmount = gstPercentage > 0 ? (subtotal * gstPercentage) / 100 : 0;
     return subtotal + extraChargesTotal + qrGroupCharges + gstAmount;
   };
 
-  // Fetch QR group when table number changes
-  const fetchQrGroupForTable = async (tableNum: number | null) => {
-    if (tableNum === null) {
-      setQrGroup(null);
-      return;
-    }
-    
-    try {
-      const partnerId = (userData as Partner)?.id;
-      if (!partnerId) return;
-      
-      const qrGroupData = await getQrGroupForTable(partnerId, tableNum);
-      setQrGroup(qrGroupData);
-    } catch (error) {
-      console.error("Error fetching QR group for table:", error);
-    }
-  };
-
+  // Handle table number change and load QR group
   const handleTableNumberChange = (newTableNumber: number | null) => {
     setTableNumber(newTableNumber);
-    fetchQrGroupForTable(newTableNumber);
+    
+    if (newTableNumber === null || newTableNumber === 0) {
+      // Clear QR group and its charges
+      setCurrentQrGroup(null);
+      setExtraCharges(prev => prev.filter(charge => !charge.id?.startsWith("qr-group-")));
+      return;
+    }
+
+    // Find the QR code with the matching table number
+    const selectedQrCode = qrCodes.find(qr => qr.table_number === newTableNumber);
+    
+    if (selectedQrCode?.qr_group) {
+      const qrGroupData = selectedQrCode.qr_group;
+      setCurrentQrGroup(qrGroupData);
+      // Keep store in sync so any components relying on store.qrGroup work
+      setQrGroup(qrGroupData as any);
+
+      // Remove existing QR group charges first
+      setExtraCharges(prev => prev.filter(charge => !charge.id?.startsWith("qr-group-")));
+
+      // Add new QR group charge if it exists
+      if (qrGroupData.extra_charge) {
+        const finalChargeAmount = debugCharge("handleTableNumberChange", items, qrGroupData.extra_charge, qrGroupData.charge_type || "FLAT_FEE");
+
+        const qrCharge: ExtraCharge = {
+          id: `qr-group-${qrGroupData.id}`,
+          name: qrGroupData.name,
+          amount: finalChargeAmount,
+        };
+
+        setExtraCharges(prev => [...prev, qrCharge]);
+      }
+    } else {
+      setCurrentQrGroup(null);
+      setExtraCharges(prev => prev.filter(charge => !charge.id?.startsWith("qr-group-")));
+    }
+    
+    // Recalculate total
+    setTotalPrice(calculateTotal(items));
   };
+
+  // Update total when items or extra charges change
+  useEffect(() => {
+    setTotalPrice(calculateTotal(items));
+  }, [items, extraCharges, currentQrGroup, orderType]);
+
+  // When QR codes and tableNumber are ready, recompute QR group selection and charges
+  useEffect(() => {
+    if (orderType === "dine_in" && tableNumber && qrCodes.length > 0) {
+      handleTableNumberChange(tableNumber);
+    }
+  }, [qrCodes, tableNumber, orderType]);
+
+  // Debug: log extraCharges whenever they change
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line no-console
+      console.log("[ExtraCharges Debug]", extraCharges);
+    } catch {}
+  }, [extraCharges]);
 
   const handleQuantityChange = (index: number, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -244,65 +378,93 @@ export const EditOrderModal = () => {
     const updatedItems = [...items];
     updatedItems[index].quantity = newQuantity;
     setItems(updatedItems);
-    setTotalPrice(calculateTotal(updatedItems));
+    
+    // Update QR group charges if they exist and it's a per-item charge
+    if (currentQrGroup && currentQrGroup.charge_type === "PER_ITEM" && orderType === "dine_in") {
+      updateQrGroupCharges(updatedItems);
+    }
   };
 
   const handleRemoveItem = (index: number) => {
     const updatedItems = [...items];
     updatedItems.splice(index, 1);
     setItems(updatedItems);
-    setTotalPrice(calculateTotal(updatedItems));
+    
+    // Update QR group charges if they exist and it's a per-item charge
+    if (currentQrGroup && currentQrGroup.charge_type === "PER_ITEM" && orderType === "dine_in") {
+      updateQrGroupCharges(updatedItems);
+    }
   };
 
+  const updateQrGroupCharges = (updatedItems: typeof items) => {
+    if (!currentQrGroup?.extra_charge) return;
 
+    // Remove existing QR group charge
+    setExtraCharges(prev => prev.filter(charge => !charge.id?.startsWith("qr-group-")));
 
-const handleAddItem = () => {
-  if (!newItemId) return;
+    // Recalculate and add new QR group charge
+    const finalChargeAmount = debugCharge("updateQrGroupCharges", updatedItems, currentQrGroup.extra_charge, currentQrGroup.charge_type || "FLAT_FEE");
 
-  const menuItem = menuItems.find((item) => item.id === newItemId);
-  if (!menuItem) return;
-
-  // Use the original menu item ID, not a composite ID
-  const itemIdentifier = newItemId;
-
-  // Check if this exact item+variant combination already exists
-  const existingItemIndex = items.findIndex(
-    (item) => item.menu_id === itemIdentifier && 
-              (item as any).variant === (selectedVariant ? selectedVariant.name : null)
-  );
-
-  if (existingItemIndex >= 0) {
-    handleQuantityChange(
-      existingItemIndex,
-      items[existingItemIndex].quantity + 1
-    );
-  } else {
-    const newItem = {
-      menu_id: itemIdentifier,
-      quantity: 1,
-      variant: selectedVariant ? selectedVariant.name : null,
-      menu: {
-        name: selectedVariant 
-          ? `${menuItem.name} (${selectedVariant.name})` 
-          : menuItem.name,
-        price: selectedVariant ? selectedVariant.price : menuItem.price,
-      },
+    const qrCharge: ExtraCharge = {
+      id: `qr-group-${currentQrGroup.id}`,
+      name: currentQrGroup.name,
+      amount: finalChargeAmount,
     };
-    const updatedItems = [...items, newItem];
-    setItems(updatedItems);
-    setTotalPrice(calculateTotal(updatedItems));
-  }
 
-  setNewItemId("");
-  setSelectedVariant(null);
-  // Scroll to ensure new item is visible
-  setTimeout(() => {
-    window.scrollTo({
-      top: document.body.scrollHeight,
-      behavior: 'smooth'
-    });
-  }, 100);
-};
+    setExtraCharges(prev => [...prev, qrCharge]);
+  };
+
+  const handleAddItem = () => {
+    if (!newItemId) return;
+
+    const menuItem = menuItems.find((item) => item.id === newItemId);
+    if (!menuItem) return;
+
+    // Use the original menu item ID, not a composite ID
+    const itemIdentifier = newItemId;
+
+    // Check if this exact item+variant combination already exists
+    const existingItemIndex = items.findIndex(
+      (item) => item.menu_id === itemIdentifier && 
+                (item as any).variant === (selectedVariant ? selectedVariant.name : null)
+    );
+
+    if (existingItemIndex >= 0) {
+      handleQuantityChange(
+        existingItemIndex,
+        items[existingItemIndex].quantity + 1
+      );
+    } else {
+      const newItem = {
+        menu_id: itemIdentifier,
+        quantity: 1,
+        variant: selectedVariant ? selectedVariant.name : null,
+        menu: {
+          name: selectedVariant 
+            ? `${menuItem.name} (${selectedVariant.name})` 
+            : menuItem.name,
+          price: selectedVariant ? selectedVariant.price : menuItem.price,
+        },
+      };
+      const updatedItems = [...items, newItem];
+      setItems(updatedItems);
+      
+      // Update QR group charges if they exist and it's a per-item charge
+      if (currentQrGroup && currentQrGroup.charge_type === "PER_ITEM" && orderType === "dine_in") {
+        updateQrGroupCharges(updatedItems);
+      }
+    }
+
+    setNewItemId("");
+    setSelectedVariant(null);
+    // Scroll to ensure new item is visible
+    setTimeout(() => {
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 100);
+  };
 
   const handleAddExtraCharge = () => {
     if (!newExtraCharge.name || newExtraCharge.amount <= 0) {
@@ -318,17 +480,71 @@ const handleAddItem = () => {
 
     setExtraCharges([...extraCharges, charge]);
     setNewExtraCharge({ name: "", amount: 0 });
-    setTotalPrice(calculateTotal(items));
   };
 
   const handleRemoveExtraCharge = (index: number) => {
+    const chargeToRemove = extraCharges[index];
+
+    // If this was a QR group charge, also clear the current QR group
+    if (chargeToRemove.id?.startsWith("qr-group-")) {
+      const qrGroupId = chargeToRemove.id.replace("qr-group-", "");
+      // Update store removed list similar to POSConfirmModal
+      try {
+        removeQrGroupCharge(qrGroupId);
+      } catch (e) {
+        // no-op
+      }
+    }
+    
     const updatedCharges = [...extraCharges];
     updatedCharges.splice(index, 1);
     setExtraCharges(updatedCharges);
-    setTotalPrice(calculateTotal(items));
+  };
+
+  // Add back QR Group charge (updates both local state and store state)
+  const handleAddQrGroupCharge = () => {
+    if (!qrGroup || orderType !== "dine_in") return;
+
+    // Calculate charge amount using current items and qrGroup rules
+    const amount = debugCharge(
+      "handleAddQrGroupCharge",
+      items,
+      qrGroup.extra_charge,
+      qrGroup.charge_type || "FLAT_FEE"
+    );
+
+    if (amount <= 0) return;
+
+    // Avoid duplicate addition
+    const exists = extraCharges.some((c) => c.id === `qr-group-${qrGroup.id}`);
+    if (!exists) {
+      const charge: ExtraCharge = {
+        id: `qr-group-${qrGroup.id}`,
+        name: qrGroup.name,
+        amount,
+      };
+      setExtraCharges((prev) => [...prev, charge]);
+    }
+
+    // Update store removed list and store.extraCharges for consistency
+    try {
+      addQrGroupCharge(qrGroup.id);
+    } catch (e) {
+      // no-op; store is secondary for this admin edit modal
+    }
   };
 
   const handleUpdateOrder = async () => {
+    if (orderType === "dine_in" && !tableNumber) {
+      toast.error("Please select a table number for dine-in orders");
+      return;
+    }
+    
+    if (orderType === "dine_in" && tableNumber === 0) {
+      toast.error("Please select a valid table number for dine-in orders");
+      return;
+    }
+    
     try {
       // Prevent updating if there are no items
       if (!items || items.length === 0) {
@@ -346,12 +562,8 @@ const handleAddItem = () => {
       const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
       
       // Include QR group charges only for dine-in orders
-      const qrGroupCharges = (qrGroup?.extra_charge && orderType === "dine_in")
-        ? getExtraCharge(
-            items as any[],
-            qrGroup.extra_charge,
-            qrGroup.charge_type || "FLAT_FEE"
-          )
+      const qrGroupCharges = (currentQrGroup?.extra_charge && orderType === "dine_in")
+        ? debugCharge("handleUpdateOrder", items, currentQrGroup.extra_charge, currentQrGroup.charge_type || "FLAT_FEE")
         : 0;
         
       const gstAmount = gstPercentage > 0 ? (subtotal * gstPercentage) / 100 : 0;
@@ -376,25 +588,24 @@ const handleAddItem = () => {
         extraCharges: extraCharges.length > 0 ? extraCharges : null,
         notes: orderNote || null,
         type: dbOrderType,
-
       });
 
       // Update order items
       await fetchFromHasura(updateOrderItemsMutation, {
-  orderId: order?.id,
-  items: items.map((item) => ({
-    order_id: order?.id,
-    menu_id: item.menu_id,
-    quantity: item.quantity,
-    item: {
-      id: item.menu_id,
-      name: item.menu.name,
-      price: item.menu.price,
-      // Include variant information in the item JSON
-      variant: (item as any).variant || null
-    },
-  })),
-});
+        orderId: order?.id,
+        items: items.map((item) => ({
+          order_id: order?.id,
+          menu_id: item.menu_id,
+          quantity: item.quantity,
+          item: {
+            id: item.menu_id,
+            name: item.menu.name,
+            price: item.menu.price,
+            // Include variant information in the item JSON
+            variant: (item as any).variant || null
+          },
+        })),
+      });
 
       // Update local state
       if (order) {
@@ -505,16 +716,38 @@ const handleAddItem = () => {
                         <label className="block text-sm font-medium">
                           Table Number
                         </label>
-                        <Input
-                          type="number"
-                          value={tableNumber || ""}
-                          onChange={(e) =>
-                            handleTableNumberChange(Number(e.target.value) || null)
-                          }
-                          placeholder="Table number"
-                          onFocus={handleInputFocus}
-                          onBlur={handleInputBlur}
-                        />
+                        {isLoadingTables ? (
+                          <div className="flex items-center justify-center py-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          </div>
+                        ) : (
+                          <Select
+                            value={tableNumber?.toString() || ""}
+                            onValueChange={(value) =>
+                              handleTableNumberChange(Number(value) || null)
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select table number" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {qrCodes.map((qr) => (
+                                <SelectItem
+                                  key={qr.id}
+                                  value={qr.table_number?.toString() || ""}
+                                >
+                                  Table {qr.table_name || qr.table_number}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="0">No Table</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {orderType === "dine_in" && !tableNumber && (
+                          <p className="text-sm text-red-500 mt-1">
+                            Please select a table for dine-in orders
+                          </p>
+                        )}
                       </div>
                     )}
 
@@ -546,19 +779,46 @@ const handleAddItem = () => {
                         {((items.reduce((sum, item) => sum + item.menu.price * item.quantity, 0) * gstPercentage) / 100).toFixed(2)})
                       </span>
                     )}
-                    {qrGroup && orderType === "dine_in" && (
+                    {currentQrGroup && orderType === "dine_in" && (
                       <span className="text-xs text-muted-foreground ml-2">
                         (incl. QR charges: {currency}
-                        {getExtraCharge(
-                          items as any[],
-                          qrGroup.extra_charge,
-                          qrGroup.charge_type || "FLAT_FEE"
+                        {debugCharge(
+                          "incl-qr-charges-top",
+                          items,
+                          currentQrGroup.extra_charge,
+                          currentQrGroup.charge_type || "FLAT_FEE"
                         ).toFixed(2)})
                       </span>
                     )}
                   </div>
                 </div>
               </div>
+
+              {/* QR Group Charges Display */}
+              {currentQrGroup && orderType === "dine_in" && (
+                <div className="border rounded-lg p-4 bg-blue-50">
+                  <h3 className="font-medium mb-3 text-blue-800">Table Charges</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="font-medium text-blue-900">{currentQrGroup.name}</div>
+                        <div className="text-sm text-blue-700">
+                          {currentQrGroup.charge_type === "PER_ITEM" ? "Per item charge" : "Fixed charge"}
+                        </div>
+                      </div>
+                      <div className="font-medium text-blue-900">
+                        {currency}
+                        {debugCharge(
+                          "table-charges-card",
+                          items,
+                          currentQrGroup.extra_charge,
+                          currentQrGroup.charge_type || "FLAT_FEE"
+                        ).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Extra Charges */}
               <div className="border rounded-lg p-4">
@@ -612,6 +872,23 @@ const handleAddItem = () => {
                       </div>
                     </div>
                   )}
+
+                  {/* Show "Add back" message for removed QR group charges */}
+                  {/* {(orderType === "dine_in" && (
+                    // Show if store says it was removed OR local extraCharges doesn't have it
+                    (qrGroup && removedQrGroupCharges.includes(qrGroup.id)) ||
+                    (currentQrGroup && !extraCharges.some(c => c.id === `qr-group-${currentQrGroup.id}`))
+                  )) && (
+                    <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded border">
+                      <span>Add extra {(qrGroup?.name || currentQrGroup?.name) } charge? </span>
+                      <button
+                        onClick={handleAddQrGroupCharge}
+                        className="text-blue-700 underline hover:text-blue-800"
+                      >
+                        Click here to add back
+                      </button>
+                    </div>
+                  )} */}
                 </div>
               </div>
 
@@ -632,7 +909,7 @@ const handleAddItem = () => {
               </div>
 
               {/* QR Group Charges */}
-              {qrGroup && orderType === "dine_in" && (
+              {/* {qrGroup && orderType === "dine_in" && (
                 <div className="border rounded-lg p-4">
                   <h3 className="font-medium mb-3">QR Group Charges</h3>
                   <div className="space-y-2">
@@ -645,8 +922,9 @@ const handleAddItem = () => {
                       </div>
                       <div className="font-medium">
                         {currency}
-                        {getExtraCharge(
-                          items as any[],
+                        {debugCharge(
+                          "qr-group-charges-section",
+                          items,
                           qrGroup.extra_charge,
                           qrGroup.charge_type || "FLAT_FEE"
                         ).toFixed(2)}
@@ -654,7 +932,7 @@ const handleAddItem = () => {
                     </div>
                   </div>
                 </div>
-              )}
+              )} */}
 
               {/* Add New Item */}
               <div className="border rounded-lg p-4">
