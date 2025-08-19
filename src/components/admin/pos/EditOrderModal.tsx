@@ -372,6 +372,44 @@ export const EditOrderModal = () => {
     } catch {}
   }, [extraCharges]);
 
+  // Reconcile existing QR/table extra charge when editing an order
+  // Ensures any legacy or zeroed entry is replaced with the correct computed amount
+  useEffect(() => {
+    if (orderType !== "dine_in") return;
+    if (!currentQrGroup?.extra_charge) return;
+
+    const computed = debugCharge(
+      "reconcile-existing-qr-charge",
+      items,
+      currentQrGroup.extra_charge,
+      currentQrGroup.charge_type || "FLAT_FEE"
+    );
+
+    setExtraCharges((prev) => {
+      // Remove any prior QR-group charge by id prefix OR by matching name (legacy)
+      const filtered = prev.filter(
+        (c) =>
+          !(c.id?.startsWith("qr-group-")) &&
+          c.name !== currentQrGroup.name
+      );
+
+      // If a matching correct entry already exists with same amount, keep as-is
+      const exists = filtered.some(
+        (c) => c.id === `qr-group-${currentQrGroup.id}` && c.amount === computed
+      );
+      if (exists) return filtered;
+
+      return [
+        ...filtered,
+        {
+          id: `qr-group-${currentQrGroup.id}`,
+          name: currentQrGroup.name,
+          amount: computed,
+        },
+      ];
+    });
+  }, [currentQrGroup, items, orderType]);
+
   const handleQuantityChange = (index: number, newQuantity: number) => {
     if (newQuantity < 1) return;
 
@@ -856,7 +894,22 @@ export const EditOrderModal = () => {
                             <div>
                               <div className="font-medium">{charge.name}</div>
                               <div className="text-sm text-muted-foreground">
-                                {currency}{charge.amount.toFixed(2)}
+                                {currency}
+                                {(
+                                  orderType === "dine_in" &&
+                                  currentQrGroup &&
+                                  (
+                                    charge.id?.startsWith("qr-group-") ||
+                                    charge.name === currentQrGroup.name
+                                  )
+                                    ? debugCharge(
+                                        "extra-charges-row",
+                                        items,
+                                        currentQrGroup.extra_charge,
+                                        currentQrGroup.charge_type || "FLAT_FEE"
+                                      )
+                                    : (charge.amount || 0)
+                                ).toFixed(2)}
                               </div>
                             </div>
                             <Button
