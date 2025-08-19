@@ -226,15 +226,29 @@ export const EditOrderModal = () => {
       const orderData = response.orders_by_pk;
       if (orderData) {
         setItems(
-          orderData.order_items.map((item: any) => ({
-            id: item.id,
-            menu_id: item.menu.id,
-            quantity: item.quantity,
-            menu: {
-              name: item.menu.name,
-              price: item.menu.price,
-            },
-          }))
+          orderData.order_items.map((item: any) => {
+            // Persist variant from stored item JSON if present
+            const variantName = item?.item?.variant ?? null;
+            // Prefer stored item.price (variant-aware) falling back to menu.price
+            const effectivePrice = variantName
+              ? (item?.item?.price ?? item.menu.price)
+              : item.menu.price;
+            const displayName = variantName
+              ? `${item.menu.name} (${variantName})`
+              : item.menu.name;
+
+            return {
+              id: item.id,
+              menu_id: item.menu.id,
+              quantity: item.quantity,
+              // keep variant for later edits
+              variant: variantName,
+              menu: {
+                name: displayName,
+                price: effectivePrice,
+              },
+            } as any;
+          })
         );
         setTotalPrice(orderData.total_price);
         setTableNumber(orderData.table_number);
