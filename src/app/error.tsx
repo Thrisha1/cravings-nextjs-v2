@@ -18,8 +18,10 @@ export default function GlobalError({
       <UtensilsCrossed className="text-orange-600 h-40 w-40 justify-self-center" />
       <h1 className="text-center mt-2 font-bold text-xl text-orange-600">
         Something went wrong!
-        
       </h1>
+      <p className="text-center mt-2 text-sm text-gray-600">
+        {JSON.stringify(error)}
+      </p>
     </div>
   );
 }
