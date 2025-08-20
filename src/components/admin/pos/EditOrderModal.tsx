@@ -225,17 +225,31 @@ export const EditOrderModal = () => {
 
       const orderData = response.orders_by_pk;
       if (orderData) {
+        try {
+          // eslint-disable-next-line no-console
+          console.log("[FetchOrderDetails Debug] raw order_items", orderData.order_items);
+        } catch {}
+
+        const parseVariantFromName = (name?: string | null) => {
+          if (!name) return null;
+          const match = name.match(/\(([^)]+)\)\s*$/);
+          return match ? match[1] : null;
+        };
+
         setItems(
           orderData.order_items.map((item: any) => {
-            // Persist variant from stored item JSON if present
-            const variantName = item?.item?.variant ?? null;
+            // Persist variant from stored item JSON if present; otherwise infer from name pattern
+            const itemJson = item?.item;
+            const variantName = (itemJson?.variant ?? parseVariantFromName(itemJson?.name) ?? parseVariantFromName(item?.menu?.name)) || null;
             // Prefer stored item.price (variant-aware) falling back to menu.price
             const effectivePrice = variantName
-              ? (item?.item?.price ?? item.menu.price)
+              ? (itemJson?.price ?? item.menu.price)
               : item.menu.price;
+            const baseName = itemJson?.name || item.menu.name;
+            const cleanBaseName = baseName.replace(/\s*\([^)]+\)\s*$/, "").trim();
             const displayName = variantName
-              ? `${item.menu.name} (${variantName})`
-              : item.menu.name;
+              ? `${cleanBaseName} (${variantName})`
+              : cleanBaseName;
 
             return {
               id: item.id,
@@ -385,6 +399,14 @@ export const EditOrderModal = () => {
       console.log("[ExtraCharges Debug]", extraCharges);
     } catch {}
   }, [extraCharges]);
+
+  // Debug: log items whenever they change (to inspect names, variants, and prices)
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line no-console
+      console.log("[Items Debug]", items);
+    } catch {}
+  }, [items]);
 
   // Reconcile existing QR/table extra charge when editing an order
   // Ensures any legacy or zeroed entry is replaced with the correct computed amount
