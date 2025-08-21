@@ -81,6 +81,13 @@ export const POSConfirmModal = ({
     setExtraCharges(storeExtraCharges);
   }, [storeExtraCharges]);
 
+  // Auto-close modal when cart is cleared (e.g., Clear Cart pressed elsewhere)
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      onClose();
+    }
+  }, [cartItems.length, onClose]);
+
   useEffect(() => {
     const fetchTableNumbers = async () => {
       if (!partnerData?.id) return;

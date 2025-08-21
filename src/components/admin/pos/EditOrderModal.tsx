@@ -104,6 +104,12 @@ export const EditOrderModal = () => {
   const toChargeItems = (arr: typeof items) =>
     arr.map((it) => ({ price: it.menu.price, quantity: it.quantity }));
 
+  // Helper: normalize charge type from backend to strict union
+  const normalizeChargeType = (val?: string | null): "PER_ITEM" | "FLAT_FEE" => {
+    const t = (val || "FLAT_FEE").toString().trim().toUpperCase();
+    return t === "PER_ITEM" ? "PER_ITEM" : "FLAT_FEE";
+  };
+
   // Debug helper
   const debugCharge = (
     label: string,
@@ -294,12 +300,45 @@ export const EditOrderModal = () => {
           setOrderNote(orderData.notes);
         }
 
-        // Load QR group for the current table after QR codes are loaded
+        // Load QR group for the current table immediately (no need to wait for qrCodes)
         if (orderData.table_number && orderData.type === "dineinPOS") {
-          // Wait for QR codes to be loaded first
-          setTimeout(() => {
-            handleTableNumberChange(orderData.table_number);
-          }, 100);
+          (async () => {
+            try {
+              const partnerId = (userData as Partner)?.id;
+              if (!partnerId) return;
+
+              const group = await getQrGroupForTable(partnerId, orderData.table_number!);
+              if (group) {
+                setCurrentQrGroup({
+                  id: group.id,
+                  name: group.name,
+                  extra_charge: group.extra_charge,
+                  charge_type: normalizeChargeType(group.charge_type),
+                });
+                setQrGroup(group as any);
+
+                // Remove existing QR entries and add the computed one
+                setExtraCharges((prev) => {
+                  const filtered = prev.filter((c) => !c.id?.startsWith("qr-group-"));
+                  const amount = getExtraCharge(
+                    toChargeItems(orderData.order_items.map((it: any) => ({
+                      menu: { price: (it?.item?.price ?? it?.menu?.price) },
+                      quantity: it.quantity,
+                    }))) as any,
+                    group.extra_charge as any,
+                    normalizeChargeType(group.charge_type) as any
+                  );
+                  if (amount > 0) {
+                    return [
+                      ...filtered,
+                      { id: `qr-group-${group.id}`, name: group.name, amount },
+                    ];
+                  }
+                  return filtered;
+                });
+              }
+            } catch {}
+          })();
         }
       }
     } catch (error) {
@@ -327,13 +366,8 @@ export const EditOrderModal = () => {
     );
     const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
     
-    // Calculate QR group extra charges only for dine-in orders
-    const qrGroupCharges = (currentQrGroup?.extra_charge && orderType === "dine_in")
-      ? debugCharge("calculateTotal", items, currentQrGroup.extra_charge, currentQrGroup.charge_type || "FLAT_FEE")
-      : 0;
-      
     const gstAmount = gstPercentage > 0 ? (subtotal * gstPercentage) / 100 : 0;
-    return subtotal + extraChargesTotal + qrGroupCharges + gstAmount;
+    return subtotal + extraChargesTotal + gstAmount;
   };
 
   // Handle table number change and load QR group
@@ -347,33 +381,51 @@ export const EditOrderModal = () => {
       return;
     }
 
-    // Find the QR code with the matching table number
+    // Prefer existing qrCodes, else fetch directly via getQrGroupForTable
     const selectedQrCode = qrCodes.find(qr => qr.table_number === newTableNumber);
-    
-    if (selectedQrCode?.qr_group) {
-      const qrGroupData = selectedQrCode.qr_group;
-      setCurrentQrGroup(qrGroupData);
-      // Keep store in sync so any components relying on store.qrGroup work
-      setQrGroup(qrGroupData as any);
-
-      // Remove existing QR group charges first
+    const applyGroup = (qrGroupData: { id: string; name: string; extra_charge: any; charge_type: any }) => {
+      const normType = normalizeChargeType(qrGroupData.charge_type);
+      setCurrentQrGroup({ ...qrGroupData, charge_type: normType } as any);
+      setQrGroup({ ...qrGroupData, charge_type: normType } as any);
       setExtraCharges(prev => prev.filter(charge => !charge.id?.startsWith("qr-group-")));
-
-      // Add new QR group charge if it exists
       if (qrGroupData.extra_charge) {
-        const finalChargeAmount = debugCharge("handleTableNumberChange", items, qrGroupData.extra_charge, qrGroupData.charge_type || "FLAT_FEE");
-
-        const qrCharge: ExtraCharge = {
-          id: `qr-group-${qrGroupData.id}`,
-          name: qrGroupData.name,
-          amount: finalChargeAmount,
-        };
-
-        setExtraCharges(prev => [...prev, qrCharge]);
+        const finalChargeAmount = getExtraCharge(
+          toChargeItems(items) as any,
+          qrGroupData.extra_charge as any,
+          normType
+        );
+        if (finalChargeAmount > 0) {
+          const qrCharge: ExtraCharge = {
+            id: `qr-group-${qrGroupData.id}`,
+            name: qrGroupData.name,
+            amount: finalChargeAmount,
+          };
+          setExtraCharges(prev => [...prev, qrCharge]);
+        }
       }
+    };
+
+    if (selectedQrCode?.qr_group) {
+      applyGroup(selectedQrCode.qr_group);
     } else {
-      setCurrentQrGroup(null);
-      setExtraCharges(prev => prev.filter(charge => !charge.id?.startsWith("qr-group-")));
+      (async () => {
+        try {
+          const partnerId = (userData as Partner)?.id;
+          if (!partnerId) return;
+          const group = await getQrGroupForTable(partnerId, newTableNumber);
+          if (group) {
+            applyGroup({
+              id: group.id,
+              name: group.name,
+              extra_charge: group.extra_charge,
+              charge_type: normalizeChargeType(group.charge_type),
+            });
+          } else {
+            setCurrentQrGroup(null);
+            setExtraCharges(prev => prev.filter(charge => !charge.id?.startsWith("qr-group-")));
+          }
+        } catch {}
+      })();
     }
     
     // Recalculate total
@@ -418,7 +470,7 @@ export const EditOrderModal = () => {
       "reconcile-existing-qr-charge",
       items,
       currentQrGroup.extra_charge,
-      currentQrGroup.charge_type || "FLAT_FEE"
+      normalizeChargeType(currentQrGroup.charge_type as any)
     );
 
     setExtraCharges((prev) => {
@@ -454,7 +506,7 @@ export const EditOrderModal = () => {
     setItems(updatedItems);
     
     // Update QR group charges if they exist and it's a per-item charge
-    if (currentQrGroup && currentQrGroup.charge_type === "PER_ITEM" && orderType === "dine_in") {
+    if (currentQrGroup && normalizeChargeType(currentQrGroup.charge_type as any) === "PER_ITEM" && orderType === "dine_in") {
       updateQrGroupCharges(updatedItems);
     }
   };
@@ -465,7 +517,7 @@ export const EditOrderModal = () => {
     setItems(updatedItems);
     
     // Update QR group charges if they exist and it's a per-item charge
-    if (currentQrGroup && currentQrGroup.charge_type === "PER_ITEM" && orderType === "dine_in") {
+    if (currentQrGroup && normalizeChargeType(currentQrGroup.charge_type as any) === "PER_ITEM" && orderType === "dine_in") {
       updateQrGroupCharges(updatedItems);
     }
   };
@@ -477,7 +529,7 @@ export const EditOrderModal = () => {
     setExtraCharges(prev => prev.filter(charge => !charge.id?.startsWith("qr-group-")));
 
     // Recalculate and add new QR group charge
-    const finalChargeAmount = debugCharge("updateQrGroupCharges", updatedItems, currentQrGroup.extra_charge, currentQrGroup.charge_type || "FLAT_FEE");
+    const finalChargeAmount = debugCharge("updateQrGroupCharges", updatedItems, currentQrGroup.extra_charge, normalizeChargeType(currentQrGroup.charge_type as any));
 
     const qrCharge: ExtraCharge = {
       id: `qr-group-${currentQrGroup.id}`,
@@ -524,7 +576,7 @@ export const EditOrderModal = () => {
       setItems(updatedItems);
       
       // Update QR group charges if they exist and it's a per-item charge
-      if (currentQrGroup && currentQrGroup.charge_type === "PER_ITEM" && orderType === "dine_in") {
+      if (currentQrGroup && normalizeChargeType(currentQrGroup.charge_type as any) === "PER_ITEM" && orderType === "dine_in") {
         updateQrGroupCharges(updatedItems);
       }
     }
@@ -584,7 +636,7 @@ export const EditOrderModal = () => {
       "handleAddQrGroupCharge",
       items,
       qrGroup.extra_charge,
-      qrGroup.charge_type || "FLAT_FEE"
+      normalizeChargeType(qrGroup.charge_type as any)
     );
 
     if (amount <= 0) return;
@@ -635,13 +687,8 @@ export const EditOrderModal = () => {
       );
       const extraChargesTotal = extraCharges.reduce((sum, charge) => sum + charge.amount, 0);
       
-      // Include QR group charges only for dine-in orders
-      const qrGroupCharges = (currentQrGroup?.extra_charge && orderType === "dine_in")
-        ? debugCharge("handleUpdateOrder", items, currentQrGroup.extra_charge, currentQrGroup.charge_type || "FLAT_FEE")
-        : 0;
-        
       const gstAmount = gstPercentage > 0 ? (subtotal * gstPercentage) / 100 : 0;
-      const finalTotal = subtotal + extraChargesTotal + qrGroupCharges + gstAmount;
+      const finalTotal = subtotal + extraChargesTotal + gstAmount;
 
       // Determine the order type for database (admin POS-only types)
       let dbOrderType: "dineinPOS" | "deliveryPOS" | "takeawayPOS" = "takeawayPOS";
@@ -855,13 +902,13 @@ export const EditOrderModal = () => {
                     )}
                     {currentQrGroup && orderType === "dine_in" && (
                       <span className="text-xs text-muted-foreground ml-2">
-                        (incl. QR charges: {currency}
-                        {debugCharge(
-                          "incl-qr-charges-top",
-                          items,
-                          currentQrGroup.extra_charge,
-                          currentQrGroup.charge_type || "FLAT_FEE"
-                        ).toFixed(2)})
+                        {(() => {
+                          const qrEntry = extraCharges.find(
+                            (c) => c.id === `qr-group-${currentQrGroup.id}` || c.name === currentQrGroup.name
+                          );
+                          const amt = qrEntry?.amount || 0;
+                          return `(incl. QR charges: ${currency}${amt.toFixed(2)})`;
+                        })()}
                       </span>
                     )}
                   </div>
@@ -882,12 +929,12 @@ export const EditOrderModal = () => {
                       </div>
                       <div className="font-medium text-blue-900">
                         {currency}
-                        {debugCharge(
-                          "table-charges-card",
-                          items,
-                          currentQrGroup.extra_charge,
-                          currentQrGroup.charge_type || "FLAT_FEE"
-                        ).toFixed(2)}
+                        {(() => {
+                          const qrEntry = extraCharges.find(
+                            (c) => c.id === `qr-group-${currentQrGroup.id}` || c.name === currentQrGroup.name
+                          );
+                          return (qrEntry?.amount || 0).toFixed(2);
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -931,21 +978,7 @@ export const EditOrderModal = () => {
                               <div className="font-medium">{charge.name}</div>
                               <div className="text-sm text-muted-foreground">
                                 {currency}
-                                {(
-                                  orderType === "dine_in" &&
-                                  currentQrGroup &&
-                                  (
-                                    charge.id?.startsWith("qr-group-") ||
-                                    charge.name === currentQrGroup.name
-                                  )
-                                    ? debugCharge(
-                                        "extra-charges-row",
-                                        items,
-                                        currentQrGroup.extra_charge,
-                                        currentQrGroup.charge_type || "FLAT_FEE"
-                                      )
-                                    : (charge.amount || 0)
-                                ).toFixed(2)}
+                                {(charge.amount || 0).toFixed(2)}
                               </div>
                             </div>
                             <Button
