@@ -6,10 +6,11 @@ import LocationSelection from "@/components/LocationSelection";
 import NoOffersFound from "@/components/NoOffersFound";
 import OfferCardsLoading from "@/components/OfferCardsLoading";
 import SearchBox from "@/components/SearchBox";
+import OffersReelView from "@/components/explore/OffersReelView";
 import { CommonOffer } from "@/components/superAdmin/OfferUploadSuperAdmin";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { saveUserLocation } from "@/lib/saveUserLocLocal";
-import { MapPin, Navigation, RefreshCw } from "lucide-react";
+import { MapPin, Navigation, RefreshCw, Video } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
@@ -35,6 +36,7 @@ const Explore = ({
   const [currentDistrict] = useState(initialDistrict);
   const [currentSearchQuery] = useState(initialSearchQuery);
   const [isRefreshingLocation, setIsRefreshingLocation] = useState(false);
+  const [showReelView, setShowReelView] = useState(false);
   const { ref, inView } = useInView();
   const searchParams = useSearchParams();
 
@@ -127,10 +129,18 @@ const Explore = ({
     }
   };
 
+  const openReelView = () => {
+    if (offers.length === 0) {
+      toast.error("No offers available to view");
+      return;
+    }
+    setShowReelView(true);
+  };
+
   return (
     <div className="min-h-[100dvh] w-full bg-orange-50 px-3 py-3 relative pb-24">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-start">
+        <div className="flex justify-between items-center">
           <button
             onClick={refreshLocation}
             disabled={isRefreshingLocation}
@@ -143,7 +153,16 @@ const Explore = ({
             />
             <span>Refresh Location</span>
           </button>
+          
+          <button
+            onClick={openReelView}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs bg-white border border-orange-300 rounded-full hover:bg-orange-50 transition-colors"
+          >
+            <Video className="w-4 h-4" />
+            <span>Reel View</span>
+          </button>
         </div>
+        
         <div className="flex justify-between items-start md:items-center gap-3 my-4">
           <div className="flex flex-col">
             <h1 className="text-xl md:text-3xl font-bold text-gray-900">
@@ -177,6 +196,14 @@ const Explore = ({
           )}
         </section>
       </div>
+
+      {/* Reel View Modal */}
+      {showReelView && (
+        <OffersReelView
+          offers={offers}
+          onClose={() => setShowReelView(false)}
+        />
+      )}
     </div>
   );
 };

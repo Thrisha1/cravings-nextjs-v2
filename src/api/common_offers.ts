@@ -45,8 +45,7 @@ mutation InsertCommonOffer(
 }`;
 
 export const getAllCommonOffers = (location?: { lat: number; lng: number }) => {
-  // if (location) {
-    return `
+  return `
   query GetAllCommonOffers(
     $user_lat: float8,
     $user_lng: float8,
@@ -73,6 +72,10 @@ export const getAllCommonOffers = (location?: { lat: number; lng: number }) => {
       item_name
       price
       image_url
+      insta_link
+      likes
+      location
+      description
       district
       created_at
       coordinates
@@ -92,26 +95,6 @@ export const getAllCommonOffers = (location?: { lat: number; lng: number }) => {
     }
   }
   `;
-//   } else {
-//     return `
-//    query GetAllCommonOffers($limit_count: Int, $offset_count: Int, $district: String = "", $search_query: String = "") {
-//     common_offers: common_offers(order_by: {created_at: desc}, limit: $limit_count, offset: $offset_count, where: {district: {_ilike: $district}, _or: [{partner_name: {_ilike: $search_query}}, {item_name: {_ilike: $search_query}}]}) {
-//       id
-//       partner_name
-//       item_name
-//       price
-//       image_url
-//       district
-//       created_at
-//     }
-//     common_offers_aggregate: common_offers_aggregate(where: {district: {_eq: $district}, _or: [{partner_name: {_ilike: $search_query}}, {item_name: {_ilike: $search_query}}]}) {
-//       aggregate {
-//         count
-//       }
-//     }
-//   }
-// `;
-//   }
 };
 
 export const getCommonOffersWithDistance = `
