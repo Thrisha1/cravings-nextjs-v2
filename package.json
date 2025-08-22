@@ -55,6 +55,7 @@
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.5.2",
     "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
     "firebase": "^11.1.0",
     "fuse.js": "^7.1.0",
     "googleapis": "^144.0.0",
@@ -97,6 +98,7 @@
     "uuid": "^11.0.5",
     "vaul": "^1.1.2",
     "vite-plugin-pwa": "^0.21.1",
+    "xlsx": "^0.18.5",
     "xlsx-js-style": "^1.2.0",
     "zod": "^3.23.8",
     "zustand": "^5.0.2"
@@ -105,6 +107,7 @@
     "@eslint/eslintrc": "^3",
     "@eslint/js": "^9.11.1",
     "@types/crypto-js": "^4.2.2",
+    "@types/file-saver": "^2.0.7",
     "@types/howler": "^2.2.12",
     "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^20",

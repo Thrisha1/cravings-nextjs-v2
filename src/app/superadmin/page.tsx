@@ -13,6 +13,7 @@ import Link from "next/link";
 import React from "react";
 import SubscriptionManagement from "@/components/superAdmin/SubscriptionManagement";
 import QrManagement_v2 from "@/components/superAdmin/QrManagement_v2";
+import WhatsappGrpQrCodes from "@/components/superAdmin/WhatsappGrpQrCodes";
 
 type SearchParams = Promise<{ [key: string]: string | undefined }>;
 
@@ -92,6 +93,11 @@ const page = async (props: { searchParams: SearchParams }) => {
       component: <SubscriptionManagement />,
       id: "subscription-management",
     },
+    {
+      name: "WhatsappGrp QrCodes",
+      component: <WhatsappGrpQrCodes />,
+      id: "whatsapp-qr-codes",
+    }
   ];
 
   if (page) {
