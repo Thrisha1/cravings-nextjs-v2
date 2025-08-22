@@ -3,7 +3,14 @@ import useOrderStore, { OrderItem } from "@/store/orderStore";
 import React, { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, MapPin, LocateFixed, X } from "lucide-react";
+import {
+  Loader2,
+  ArrowLeft,
+  MapPin,
+  LocateFixed,
+  X,
+  CheckCircle2,
+} from "lucide-react";
 import { useLocationStore } from "@/store/geolocationStore";
 import mapboxgl, { LngLatLike, IControl } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -19,6 +26,7 @@ import { getExtraCharge } from "@/lib/getExtraCharge";
 import { getFeatures } from "@/lib/getFeatures";
 import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
 import { useQrDataStore } from "@/store/qrDataStore";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Add type for deliveryInfo
 interface DeliveryInfo {
@@ -26,6 +34,7 @@ interface DeliveryInfo {
   cost: number;
   ratePerKm: number;
   isOutOfRange: boolean;
+  minimumOrderAmount: number;
 }
 
 // Add type for MapboxGeocoder
@@ -37,6 +46,113 @@ type MapboxGeocoder = IControl & {
     }) => void
   ) => void;
 };
+
+// =================================================================
+// New Order Status Dialog Component
+// =================================================================
+
+const OrderStatusDialog = ({
+  status,
+  onClose,
+}: {
+  status: "idle" | "loading" | "success";
+  onClose: () => void;
+}) => {
+  const [loadingText, setLoadingText] = useState("Getting your items...");
+
+  useEffect(() => {
+    if (status === "loading") {
+      setLoadingText("Getting your items..."); // Reset on open
+      const texts = ["Preparing your order...", "Finalizing your order..."];
+      let currentIndex = 0;
+      const interval = setInterval(() => {
+        if (currentIndex < texts.length) {
+          setLoadingText(texts[currentIndex]);
+          currentIndex++;
+        } else {
+          clearInterval(interval);
+        }
+      }, 2000); // Change text every 2 seconds
+      return () => clearInterval(interval);
+    }
+  }, [status]);
+
+  return (
+    <AnimatePresence>
+      {status !== "idle" && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[7000] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm"
+        >
+          {status === "loading" && (
+            <motion.div
+              key="loading"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="text-center text-white"
+            >
+              <Loader2 className="w-16 h-16 animate-spin mx-auto text-white" />
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={loadingText}
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -20, opacity: 0 }}
+                  className="mt-6 text-2xl font-semibold"
+                >
+                  {loadingText}
+                </motion.p>
+              </AnimatePresence>
+            </motion.div>
+          )}
+
+          {status === "success" && (
+            <motion.div
+              key="success"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="text-center text-white p-8 bg-black/30 rounded-2xl shadow-lg flex flex-col items-center"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{
+                  delay: 0.2,
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 15,
+                }}
+              >
+                <CheckCircle2 className="w-24 h-24 text-green-400 mx-auto" />
+              </motion.div>
+              <h2 className="mt-6 text-3xl font-bold">
+                Order Placed Successfully!
+              </h2>
+              <p className="mt-2 text-gray-300">
+                Your order is confirmed and is being prepared.
+              </p>
+              <Button
+                onClick={onClose}
+                className="mt-8 bg-white text-black hover:bg-gray-200"
+              >
+                Close
+              </Button>
+            </motion.div>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// =================================================================
+// Unchanged Components (OrderTypeCard, MultiWhatsappCard, etc.)
+// =================================================================
 
 // Order Type Card Component
 const OrderTypeCard = ({
@@ -251,10 +367,6 @@ const ItemsCard = ({
               <p className="text-xs text-gray-500">{item.category.name}</p>
             </div>
             <div className="flex items-center gap-3">
-              {/* <span className="font-medium">
-                {currency}
-                {item.price.toFixed(2)}
-              </span> */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -312,18 +424,6 @@ const TableNumberCard = ({
           <span className="text-lg font-semibold"> {tableName}</span>
         </div>
       )}
-    </div>
-  );
-};
-
-const TableNameCard = ({ tableName }: { tableName: string }) => {
-  return (
-    <div className="bg-white rounded-lg shadow p-4 mb-4">
-      <h3 className="font-bold text-lg mb-3">Table Information</h3>
-      <div className="flex items-center gap-2">
-        <span className="font-medium">Table Name:</span>
-        <span className="text-lg font-bold">{tableName}</span>
-      </div>
     </div>
   );
 };
@@ -427,7 +527,6 @@ const AddressCard = ({
         )}
       </div>
 
-      {/* Location Permission Dialog (custom, not Dialog) */}
       {showPermissionDialog && (
         <div className="fixed inset-0 z-[62] flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg p-6 w-[90vw] max-w-md shadow-lg">
@@ -718,8 +817,9 @@ const MapModal = ({
     });
 
     try {
-      // Import MapboxGeocoder dynamically to avoid require() style import
-      const { MapboxGeocoder } = await import("@mapbox/mapbox-gl-geocoder");
+      const { default: MapboxGeocoder } = await import(
+        "@mapbox/mapbox-gl-geocoder"
+      );
       const geocoderInstance = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl: mapboxgl,
@@ -875,6 +975,10 @@ const MapModal = ({
   );
 };
 
+// =================================================================
+// Main PlaceOrderModal Component (Updated Logic)
+// =================================================================
+
 const PlaceOrderModal = ({
   hotelData,
   tableNumber,
@@ -920,19 +1024,20 @@ const PlaceOrderModal = ({
 
   const [showMapModal, setShowMapModal] = useState(false);
   const [showLoginDrawer, setShowLoginDrawer] = useState(false);
-  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
 
-  // Debug: Log orderId and other key values
-  console.log("PlaceOrderModal state:", {
-    orderId,
-    itemsLength: items?.length,
-    user: !!user,
-    selectedLocation,
-    hasMultiWhatsapp: getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp
-      ?.enabled,
-  });
+  // ** NEW **: State for the order status dialog
+  const [orderStatus, setOrderStatus] = useState<"idle" | "loading" | "success">(
+    "idle"
+  );
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined") {
+      setIsAndroid(/Android/i.test(navigator.userAgent));
+    }
+  }, []);
 
   const isDelivery =
     tableNumber === 0 ? orderType === "delivery" : !tableNumber;
@@ -947,21 +1052,17 @@ const PlaceOrderModal = ({
     }
   }, [open_place_order_modal, items]);
 
-  // Set default order type to delivery when modal opens
   useEffect(() => {
     if (open_place_order_modal && tableNumber === 0 && !orderType) {
       setOrderType("delivery");
     }
   }, [open_place_order_modal, tableNumber, orderType, setOrderType]);
 
-  // Keyboard detection
   useEffect(() => {
     const handleResize = () => {
       if (window.visualViewport) {
         const currentHeight = window.visualViewport.height;
         const windowHeight = window.innerHeight;
-
-        // If visual viewport is significantly smaller than window height, keyboard is probably open
         if (windowHeight - currentHeight > 150) {
           setKeyboardOpen(true);
         } else {
@@ -969,13 +1070,9 @@ const PlaceOrderModal = ({
         }
       }
     };
-
-    // Add the event listener
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", handleResize);
     }
-
-    // Clean up
     return () => {
       if (window.visualViewport) {
         window.visualViewport.removeEventListener("resize", handleResize);
@@ -983,87 +1080,51 @@ const PlaceOrderModal = ({
     };
   }, []);
 
-  // Check if multi-whatsapp feature is enabled
-
   const hasMultiWhatsapp =
     getFeatures(hotelData?.feature_flags || "")?.multiwhatsapp?.enabled &&
     hotelData?.whatsapp_numbers?.length > 0;
 
   useEffect(() => {
-    console.log("Location useEffect triggered:", {
-      selectedLocation,
-      hotelId: hotelData.id,
-      whatsappNumbers: hotelData.whatsapp_numbers?.length,
-    });
-
-    // If we already have a valid selected location, don't change it
     if (
       selectedLocation &&
       hotelData.whatsapp_numbers?.some((item) => item.area === selectedLocation)
     ) {
-      console.log("Valid selected location already set:", selectedLocation);
       return;
     }
-
-    // Try to restore location from localStorage?
     const savedArea = localStorage?.getItem(
       `hotel-${hotelData.id}-selected-area`
     );
-    console.log("Checking saved area from localStorage?:", savedArea);
-
     if (
       savedArea &&
       hotelData.whatsapp_numbers?.some((item) => item.area === savedArea)
     ) {
-      console.log("Restoring location from localStorage?:", savedArea);
       setSelectedLocation(savedArea);
       return;
     }
-
-    // Get the selected location from localStorage?
     const selectedPhone = localStorage?.getItem(
       `hotel-${hotelData.id}-whatsapp-area`
     );
-
-    console.log("Checking selected phone from localStorage?:", selectedPhone);
-
     if (selectedPhone) {
-      // Find the area name by phone number
-      const selectedLocation = hotelData.whatsapp_numbers?.find(
+      const location = hotelData.whatsapp_numbers?.find(
         (item) => item.number === selectedPhone
       );
-
-      if (selectedLocation) {
-        console.log("Found location by phone number:", selectedLocation.area);
-        setSelectedLocation(selectedLocation.area);
+      if (location) {
+        setSelectedLocation(location.area);
       }
     } else {
-      // If no saved location, try to find by area name (for backward compatibility)
-      console.log("No saved location found, setting empty");
       setSelectedLocation("");
     }
   }, [hotelData.id, hotelData.whatsapp_numbers, selectedLocation]);
 
-  // Watch for user login state changes and restore location
   useEffect(() => {
-    console.log("User state changed:", {
-      user: !!user,
-      selectedLocation,
-      // hasLoggedIn // This line is removed
-    });
-
-    // If user just logged in and we have a saved location, restore it
     if (user && !selectedLocation) {
       const savedArea = localStorage?.getItem(
         `hotel-${hotelData.id}-selected-area`
       );
-      console.log("User logged in, checking for saved location:", savedArea);
-
       if (
         savedArea &&
         hotelData.whatsapp_numbers?.some((item) => item.area === savedArea)
       ) {
-        console.log("Restoring location after user login:", savedArea);
         setSelectedLocation(savedArea);
       }
     }
@@ -1071,29 +1132,15 @@ const PlaceOrderModal = ({
 
   const handleSelectHotelLocation = (location: string | null) => {
     setSelectedLocation(location || "");
-
-    // Save both the area name and phone number for persistence
     if (location) {
       const phoneNumber = hotelData.whatsapp_numbers?.find(
         (item) => item.area === location
       )?.number;
-
       localStorage?.setItem(
         `hotel-${hotelData.id}-whatsapp-area`,
         phoneNumber || ""
       );
       localStorage?.setItem(`hotel-${hotelData.id}-selected-area`, location);
-
-      // Force a small delay to ensure localStorage? is updated
-      setTimeout(() => {
-        console.log("Location saved to localStorage?:", {
-          location,
-          phoneNumber,
-          savedArea: localStorage?.getItem(
-            `hotel-${hotelData.id}-selected-area`
-          ),
-        });
-      }, 100);
     } else {
       localStorage?.removeItem(`hotel-${hotelData.id}-whatsapp-area`);
       localStorage?.removeItem(`hotel-${hotelData.id}-selected-area`);
@@ -1106,7 +1153,6 @@ const PlaceOrderModal = ({
         const permissionStatus = await navigator.permissions.query({
           name: "geolocation",
         });
-
         if (permissionStatus.state === "denied") {
           useLocationStore.setState({
             error:
@@ -1118,7 +1164,6 @@ const PlaceOrderModal = ({
         console.error("Error checking geolocation permission:", error);
       }
     };
-
     checkGeolocationPermission();
   }, []);
 
@@ -1134,7 +1179,7 @@ const PlaceOrderModal = ({
     }
   }, [selectedCoords, isDelivery, hasDelivery, isQrScan, orderType]);
 
-  const handlePlaceOrder = async () => {
+  const handlePlaceOrder = async (onSuccessCallback?: () => void) => {
     if (tableNumber === 0 && !orderType) {
       toast.error("Please select an order type");
       return;
@@ -1145,12 +1190,10 @@ const PlaceOrderModal = ({
         toast.error("Please enter your delivery address");
         return;
       }
-
       if (isDelivery && hasDelivery && !selectedCoords && !isQrScan) {
         toast.error("Please select your location");
         return;
       }
-
       if (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan) {
         toast.error("Delivery is not available to your location");
         return;
@@ -1162,12 +1205,13 @@ const PlaceOrderModal = ({
       return;
     }
 
-    // Blur any focused inputs to dismiss keyboard
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
 
-    setIsPlacingOrder(true);
+    // ** MODIFIED **: Start the loading dialog
+    setOrderStatus("loading");
+
     try {
       const subtotal =
         items?.reduce((acc, item) => acc + item.price * item.quantity, 0) || 0;
@@ -1175,7 +1219,6 @@ const PlaceOrderModal = ({
         subtotal,
         hotelData?.gst_percentage as number
       );
-
       const extraCharges = [];
 
       if (isQrScan && qrGroup && qrGroup.name) {
@@ -1184,7 +1227,6 @@ const PlaceOrderModal = ({
           qrGroup.extra_charge,
           qrGroup.charge_type || "FLAT_FEE"
         );
-
         if (qrChargeAmount > 0) {
           extraCharges.push({
             name: qrGroup.name,
@@ -1194,7 +1236,6 @@ const PlaceOrderModal = ({
         }
       }
 
-      // Add table 0 extra charges for delivery orders (when tableNumber is 0 and qrGroup exists)
       if (
         !isQrScan &&
         tableNumber === 0 &&
@@ -1207,7 +1248,6 @@ const PlaceOrderModal = ({
           qrGroup.extra_charge,
           qrGroup.charge_type || "FLAT_FEE"
         );
-
         if (table0ChargeAmount > 0) {
           extraCharges.push({
             name: qrGroup.name,
@@ -1236,47 +1276,50 @@ const PlaceOrderModal = ({
         qrId as string,
         gstAmount,
         extraCharges.length > 0 ? extraCharges : null,
-        undefined, // deliveryCharge
-        orderNote || "" // pass the note, always a string
+        undefined,
+        orderNote || ""
       );
 
       if (result) {
-        toast.success("Order placed successfully!");
-        clearOrder();
+        // ** MODIFIED **:
+        // Execute callback first (for Android), then show success screen.
+        if (onSuccessCallback) {
+          onSuccessCallback();
+        }
+        setOrderStatus("success");
+        // We will clear the order and close the modal in `handleCloseSuccessDialog`
       } else {
         toast.error("Failed to place order. Please try again.");
+        setOrderStatus("idle"); // Reset on failure
       }
-      setOpenPlaceOrderModal(false);
     } catch (error) {
       console.error("Error placing order:", error);
       toast.error("Failed to place order. Please try again.");
-    } finally {
-      setIsPlacingOrder(false);
+      setOrderStatus("idle"); // Reset on error
     }
   };
 
   const handleLoginSuccess = () => {
-    console.log("Login success - checking location preservation");
     const savedArea = localStorage?.getItem(
       `hotel-${hotelData.id}-selected-area`
     );
-    console.log("Saved area after login:", savedArea);
-
-    // Ensure location is preserved after login
     if (savedArea && !selectedLocation) {
-      console.log("Restoring location after login:", savedArea);
       setSelectedLocation(savedArea);
     }
-
     setShowLoginDrawer(false);
   };
-
-  // Determine if place order button should be disabled
+  
+  // ** NEW **: Handler for the success dialog's close button
+  const handleCloseSuccessDialog = () => {
+    clearOrder();
+    setOpenPlaceOrderModal(false);
+    setOrderStatus('idle');
+  };
 
   const minimumOrderAmount = deliveryInfo?.minimumOrderAmount || 0;
 
   const isPlaceOrderDisabled =
-    isPlacingOrder ||
+    orderStatus === "loading" || // ** MODIFIED **
     (tableNumber === 0 && !orderType) ||
     (isDelivery && hasDelivery && !selectedCoords && !isQrScan) ||
     (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan) ||
@@ -1291,8 +1334,7 @@ const PlaceOrderModal = ({
           open_place_order_modal ? "block" : "hidden"
         }`}
       >
-        {/* Header */}
-        <div className="sticky top-0  bg-white border-b">
+        <div className="sticky top-0  bg-white border-b">
           <div className="flex items-center gap-4 p-4">
             <button
               onClick={() => {
@@ -1307,11 +1349,9 @@ const PlaceOrderModal = ({
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="p-4 pb-32">
           {(items?.length ?? 0) > 0 && (
             <div className="space-y-4 max-w-2xl mx-auto">
-              {/* Items Card */}
               <ItemsCard
                 items={items || []}
                 increaseQuantity={increaseQuantity}
@@ -1320,7 +1360,6 @@ const PlaceOrderModal = ({
                 currency={hotelData?.currency || "₹"}
               />
 
-              {/* Order Type Card - Show only when tableNumber is 0 */}
               {tableNumber === 0 && (
                 <OrderTypeCard
                   orderType={orderType}
@@ -1328,19 +1367,16 @@ const PlaceOrderModal = ({
                 />
               )}
 
-              {/* Add spacing between dropdowns */}
               {tableNumber === 0 && hasMultiWhatsapp && (
                 <div className="h-2"></div>
               )}
 
-              {/* Multi WhatsApp Card - Show when multi-whatsapp is enabled */}
               <MultiWhatsappCard
                 hotelData={hotelData}
                 selectedLocation={selectedLocation}
                 setSelectedLocation={handleSelectHotelLocation}
               />
 
-              {/* Show table number for QR scan or address for delivery */}
               {isQrScan ? (
                 <>
                   <TableNumberCard
@@ -1363,7 +1399,6 @@ const PlaceOrderModal = ({
                 />
               ) : null}
 
-              {/* Bill Card */}
               <BillCard
                 items={items || []}
                 currency={hotelData?.currency || "₹"}
@@ -1373,7 +1408,6 @@ const PlaceOrderModal = ({
                 qrGroup={qrGroup}
               />
 
-              {/* Note Input */}
               <div className="border rounded-lg p-4 bg-white">
                 <h3 className="font-medium mb-3">Order Note</h3>
                 <textarea
@@ -1389,7 +1423,6 @@ const PlaceOrderModal = ({
                 </div>
               </div>
 
-              {/* Login Card (if not logged in) */}
               {!user && <LoginCard setShowLoginDrawer={setShowLoginDrawer} />}
 
               {isDelivery &&
@@ -1401,7 +1434,6 @@ const PlaceOrderModal = ({
                   </div>
                 )}
 
-              {/* minimum amount msg  */}
               {(items?.length === 0 ||
                 (isDelivery &&
                   orderType === "delivery" &&
@@ -1413,75 +1445,86 @@ const PlaceOrderModal = ({
                 </div>
               )}
 
-              {/* Place Order and Back Buttons */}
               <div className="flex flex-col gap-3 mt-6">
-                {/* Debug: Test getWhatsappLink call */}
-                {(() => {
-                  console.log("Testing getWhatsappLink call...");
-                  try {
-                    // Add a small delay to ensure state updates are processed
-                    setTimeout(() => {
-                      const testLink = getWhatsappLink(orderId as string);
-                      console.log("getWhatsappLink result:", testLink);
-                    }, 50);
-                  } catch (error) {
-                    console.error("Error calling getWhatsappLink:", error);
-                  }
-                  return null;
-                })()}
-
-                {user?.role !== "partner"
-                  ? (() => {
-                      // Debug: Check current location before generating link
-                      const currentSelectedArea = localStorage?.getItem(
-                        `hotel-${hotelData.id}-selected-area`
-                      );
-                      console.log(
-                        "Current selected area before Link:",
-                        currentSelectedArea
-                      );
-                      return (
-                        <Link
-                          href={getWhatsappLink(orderId as string)}
-                          target="_blank"
-                          onClick={(e) => {
-                            console.log("Link clicked, orderId:", orderId);
-                            console.log(
-                              "getWhatsappLink function:",
-                              typeof getWhatsappLink
+                {user?.role !== "partner" ? (
+                  <>
+                    {isAndroid ? (
+                      <Button
+                        onClick={() =>
+                          handlePlaceOrder(() => {
+                            const whatsappLink = getWhatsappLink(
+                              orderId as string
                             );
-                            if (isPlaceOrderDisabled) {
-                              e.preventDefault();
-                            }
-                          }}
+                            window.open(whatsappLink, "_blank");
+                          })
+                        }
+                        disabled={
+                          isPlaceOrderDisabled ||
+                          !user ||
+                          items?.length === 0 ||
+                          (isDelivery &&
+                            orderType === "delivery" &&
+                            (totalPrice ?? 0) < minimumOrderAmount)
+                        }
+                        className="w-full"
+                      >
+                        {orderStatus === "loading" ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Placing Order...
+                          </>
+                        ) : (
+                          "Place Order"
+                        )}
+                      </Button>
+                    ) : (
+                      <Link
+                        href={getWhatsappLink(orderId as string)}
+                        target="_blank"
+                        onClick={(e) => {
+                          const isDisabled =
+                            isPlaceOrderDisabled ||
+                            !user ||
+                            items?.length === 0 ||
+                            (isDelivery &&
+                              orderType === "delivery" &&
+                              (totalPrice ?? 0) < minimumOrderAmount);
+
+                          if (isDisabled) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        <Button
+                          onClick={() => handlePlaceOrder()}
+                          disabled={
+                            isPlaceOrderDisabled ||
+                            !user ||
+                            items?.length === 0 ||
+                            (isDelivery &&
+                              orderType === "delivery" &&
+                              (totalPrice ?? 0) < minimumOrderAmount)
+                          }
+                          className="w-full"
                         >
-                          <Button
-                            onClick={handlePlaceOrder}
-                            disabled={
-                              isPlaceOrderDisabled ||
-                              !user ||
-                              items?.length === 0 ||
-                              (isDelivery &&
-                                orderType === "delivery" &&
-                                (totalPrice ?? 0) < minimumOrderAmount)
-                            }
-                            className="w-full"
-                          >
-                            {isPlacingOrder ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Placing Order...
-                              </>
-                            ) : (
-                              "Place Order"
-                            )}
-                          </Button>
-                        </Link>
-                      );
-                    })()
-                  : (
-                    <div className="text-red-500 text-center text-sm bg-red-50 py-2 rounded-sm"> Login as user to place orders </div>
-                  )}
+                          {orderStatus === "loading" ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Placing Order...
+                            </>
+                          ) : (
+                            "Place Order"
+                          )}
+                        </Button>
+                      </Link>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-red-500 text-center text-sm bg-red-50 py-2 rounded-sm">
+                    {" "}
+                    Login as user to place orders{" "}
+                  </div>
+                )}
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1497,7 +1540,6 @@ const PlaceOrderModal = ({
           )}
         </div>
 
-        {/* Fixed Footer - Empty now, just for spacing */}
         <div
           className="fixed bottom-0 left-0 right-0 bg-white border-t h-4 "
           style={{
@@ -1507,7 +1549,6 @@ const PlaceOrderModal = ({
           }}
         />
 
-        {/* Login Drawer */}
         <LoginDrawer
           showLoginDrawer={showLoginDrawer}
           setShowLoginDrawer={setShowLoginDrawer}
@@ -1515,7 +1556,7 @@ const PlaceOrderModal = ({
           onLoginSuccess={handleLoginSuccess}
         />
       </div>
-      {/* Map Modal */}
+
       {!isQrScan && (
         <MapModal
           showMapModal={showMapModal}
@@ -1526,6 +1567,9 @@ const PlaceOrderModal = ({
           setOpenPlaceOrderModal={setOpenPlaceOrderModal}
         />
       )}
+      
+      {/* ** NEW **: Render the Order Status Dialog */}
+      <OrderStatusDialog status={orderStatus} onClose={handleCloseSuccessDialog} />
     </>
   );
 };
