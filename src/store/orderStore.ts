@@ -1044,7 +1044,6 @@ const useOrderStore = create(
             totalPrice: 0,
           }));
 
-          toast.success("Order placed successfully!");
           await Notification.partner.sendOrderNotification(newOrder);
           return newOrder;
         } catch (error) {
