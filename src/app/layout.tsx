@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 };
 
 const petrazFilter = "PETRAZ";
-const bottomNavFilter = ["PETRAZ" , "HENZU"];
+const bottomNavFilter = ["PETRAZ" , "HENZU" , "DOWNTREE"];
 
 export default async function RootLayout({
   children,
