@@ -158,8 +158,7 @@ const BottomNav = ({ userData }: { userData: any }) => {
   }, [lastScrollY]);
 
   // Don't show on /captain* routes, otherwise show if items exist
-  const shouldShow = items.length > 0 && !pathname.startsWith("/captain") && !pathname.startsWith("/kot") && !pathname.startsWith("/bill");
-
+  const shouldShow = items.length > 0 && !pathname.startsWith("/captain") && !pathname.startsWith("/kot") && !pathname.startsWith("/bill") && !pathname.startsWith("/whatsappQr");
 
   if (!shouldShow) return null;
 

@@ -26,7 +26,10 @@ const HIDDEN_PATHS = [
   "/hotels/[id]/menu/[mId]/reviews",
   "/captain",
   "/bill/[id]",
-  "/kot/[id]"
+  "/kot/[id]",
+  "/qrScan/DOWNTREE/[id]",
+  "/hotels/DOWNTREE/4ba747b0-827c-48de-b148-70e7a573564a",
+  "/whatsappQr/[id]",
 ];
 
 export function Navbar({ userData }: { userData: any }) {
