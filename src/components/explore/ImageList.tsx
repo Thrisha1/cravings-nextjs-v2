@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import ImageReel from "./ImageReel";
 import { CommonOffer } from "../superAdmin/OfferUploadSuperAdmin";
 import InstaReelEmbeded from "@/components/InstaReelEmbeded";
@@ -16,8 +16,11 @@ const ImageList = ({
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
     null
   );
+  const [isAndroid, setIsAndroid] = useState(false);
 
-  const isAndroid = /Android/i.test(navigator.userAgent);
+  useEffect(() => {
+    setIsAndroid(/Android/i.test(navigator.userAgent));
+  }, []);
 
   const openReel = (index: number) => {
     setSelectedImageIndex(index);
