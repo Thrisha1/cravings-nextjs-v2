@@ -9,6 +9,7 @@ export const userLoginQuery = `
     phone
     crave_coins
     location
+    addresses
   }
 }`;
 
@@ -118,6 +119,7 @@ export const getUserByIdQuery = `
       phone
       crave_coins
       location
+      addresses
     }
   }
 `;
@@ -133,8 +135,19 @@ export const userLoginMutation = `
     phone
     crave_coins
     location
+    addresses
   }
 }`;
+
+// Update user addresses JSON
+export const updateUserAddressesMutation = `
+  mutation UpdateUserAddresses($id: uuid!, $addresses: jsonb) {
+    update_users_by_pk(pk_columns: { id: $id }, _set: { addresses: $addresses }) {
+      id
+      addresses
+    }
+  }
+`;
 
 export const partnerMutation = `
   mutation InsertPartner($object: partners_insert_input!) {
