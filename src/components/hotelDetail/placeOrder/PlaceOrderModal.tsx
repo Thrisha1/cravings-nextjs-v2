@@ -27,6 +27,20 @@ import { getFeatures } from "@/lib/getFeatures";
 import DescriptionWithTextBreak from "@/components/DescriptionWithTextBreak";
 import { useQrDataStore } from "@/store/qrDataStore";
 import { motion, AnimatePresence } from "framer-motion";
+import { fetchFromHasura } from "@/lib/hasuraClient";
+import { updateUserAddressesMutation } from "@/api/auth";
+
+// Local types for user addresses (stored in users.addresses jsonb)
+type SavedAddress = {
+  id: string;
+  label: string; // Home/Work/Other
+  house_no?: string;
+  street?: string;
+  landmark?: string;
+  city?: string;
+  address?: string; // full address text
+  isDefault?: boolean;
+};
 
 // Add type for deliveryInfo
 interface DeliveryInfo {
@@ -178,6 +192,8 @@ const OrderTypeCard = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  
 
   const options = [
     { value: "takeaway", label: "Takeaway" },
@@ -975,6 +991,110 @@ const MapModal = ({
   );
 };
 
+// (moved helpers into component)
+
+// Modal to add a new saved address
+const AddAddressModal = ({
+  open,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSaved: (addr: SavedAddress) => void;
+}) => {
+  const [label, setLabel] = useState<string>("Home");
+  const [houseNo, setHouseNo] = useState<string>("");
+  const [street, setStreet] = useState<string>("");
+  const [landmark, setLandmark] = useState<string>("");
+  const [city, setCity] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+
+  const buildFullAddress = () =>
+    [houseNo, street, landmark, city].filter(Boolean).join(", ");
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[6200] flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-lg p-6 w-[90vw] max-w-md shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xl font-bold">Add New Address</h2>
+          <button className="text-gray-500" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="grid gap-3">
+          <div>
+            <Label>Label</Label>
+            <div className="flex gap-2 mt-1">
+              {(["Home", "Work", "Other"] as const).map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  className={`px-3 py-1 rounded border ${label === opt ? "bg-black text-white" : "bg-white"}`}
+                  onClick={() => setLabel(opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <Label>House / Apartment No.</Label>
+            <Input value={houseNo} onChange={(e) => setHouseNo(e.target.value)} placeholder="e.g., 12B, Apt 304" />
+          </div>
+          <div>
+            <Label>Street / Road Name</Label>
+            <Input value={street} onChange={(e) => setStreet(e.target.value)} placeholder="e.g., MG Road" />
+          </div>
+          <div>
+            <Label>Landmark</Label>
+            <Input value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder="e.g., Near City Mall" />
+          </div>
+          <div>
+            <Label>City</Label>
+            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g., Bengaluru" />
+          </div>
+          <div className="text-xs text-gray-500">Full Address: {buildFullAddress() || "—"}</div>
+          <div className="flex gap-2 justify-end mt-2">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!houseNo && !street && !landmark && !city) {
+                  toast.error("Please fill at least one address field");
+                  return;
+                }
+                setSaving(true);
+                const addr: SavedAddress = {
+                  id: `${Date.now()}`,
+                  label,
+                  house_no: houseNo || undefined,
+                  street: street || undefined,
+                  landmark: landmark || undefined,
+                  city: city || undefined,
+                  address: buildFullAddress(),
+                };
+                onSaved(addr);
+                setSaving(false);
+              }}
+              disabled={saving}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                </>
+              ) : (
+                "Save Address"
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // =================================================================
 // Main PlaceOrderModal Component (Updated Logic)
 // =================================================================
@@ -1016,6 +1136,7 @@ const PlaceOrderModal = ({
   } = useOrderStore();
 
   const { userData: user } = useAuthStore();
+  const setAuthPartial = useAuthStore((s) => s.setState);
   const {
     error: geoError,
     getLocation,
@@ -1027,6 +1148,56 @@ const PlaceOrderModal = ({
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
+  const [showAddAddressModal, setShowAddAddressModal] = useState(false);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null);
+  // Which address text to use for bill/Whatsapp
+  const [addressSource, setAddressSource] = useState<"saved" | "map">("map");
+  const [mapAddressText, setMapAddressText] = useState<string>("");
+
+  // Map address setter that respects the selected source
+  const handleMapAddressChange = (text: string) => {
+    setMapAddressText(text);
+    if (addressSource === "map") {
+      setAddress(text);
+    }
+  };
+
+  // Persist saved addresses to user profile
+  const saveAddressesForUser = async (addresses: SavedAddress[]) => {
+    try {
+      if (!user || (user as any).role !== "user") {
+        toast.error("Login to save addresses");
+        return false;
+      }
+      await fetchFromHasura(updateUserAddressesMutation, {
+        id: (user as any).id,
+        addresses,
+      });
+      // update auth store so UI refreshes
+      setAuthPartial({ addresses } as any);
+      return true;
+    } catch (e) {
+      console.error("Failed to save addresses", e);
+      toast.error("Failed to save address");
+      return false;
+    }
+  };
+
+  const handleAddAddress = async (addr: SavedAddress) => {
+    const existing: SavedAddress[] = (((user as any)?.addresses) || []) as SavedAddress[];
+    const updated = [...existing, addr];
+    const ok = await saveAddressesForUser(updated);
+    if (ok) {
+      toast.success("Address added");
+      setShowAddAddressModal(false);
+      // if no address filled, auto use the new one
+      if (!address) {
+        setAddress(addr.address || "");
+        setSelectedSavedAddressId(addr.id);
+        setAddressSource("saved");
+      }
+    }
+  };
 
   // ** NEW **: State for the order status dialog
   const [orderStatus, setOrderStatus] = useState<"idle" | "loading" | "success">(
@@ -1041,6 +1212,7 @@ const PlaceOrderModal = ({
 
   const isDelivery =
     tableNumber === 0 ? orderType === "delivery" : !tableNumber;
+
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
   const isQrScan = qrId !== null && tableNumber !== 0;
   const hasLocation = !!selectedCoords || !!address;
@@ -1308,7 +1480,7 @@ const PlaceOrderModal = ({
     }
     setShowLoginDrawer(false);
   };
-  
+
   // ** NEW **: Handler for the success dialog's close button
   const handleCloseSuccessDialog = () => {
     clearOrder();
@@ -1399,6 +1571,83 @@ const PlaceOrderModal = ({
                 />
               ) : null}
 
+              {isDelivery && orderType === "delivery" && user && (
+                <div className="bg-white rounded-lg shadow p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-bold text-lg">Saved Addresses</h3>
+                    <Button variant="outline" onClick={() => setShowAddAddressModal(true)}>Add New</Button>
+                  </div>
+                  {/* Address source selector */}
+                  <div className="flex items-center gap-6 mb-3">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name="address-source"
+                        checked={addressSource === "map"}
+                        onChange={() => {
+                          setAddressSource("map");
+                          if (mapAddressText) {
+                            setAddress(mapAddressText);
+                          }
+                        }}
+                      />
+                      Use Map Address
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name="address-source"
+                        checked={addressSource === "saved"}
+                        onChange={() => {
+                          const list = ((((user as any).addresses || []) as SavedAddress[]));
+                          setAddressSource("saved");
+                          const sel = list.find((x) => x.id === selectedSavedAddressId) || list[0];
+                          if (sel) {
+                            const txt = sel.address || [sel.house_no, sel.street, sel.landmark, sel.city].filter(Boolean).join(", ");
+                            setSelectedSavedAddressId(sel.id);
+                            setAddress(txt);
+                          }
+                        }}
+                        disabled={(((user as any).addresses || []) as SavedAddress[]).length === 0}
+                      />
+                      Use Saved Address
+                    </label>
+                  </div>
+                  {(((user as any).addresses || []) as SavedAddress[]).length > 0 ? (
+                    <div className="space-y-2">
+                      {(((user as any).addresses || []) as SavedAddress[]).map((a) => (
+                        <label key={a.id} className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50">
+                          <input
+                            type="radio"
+                            name="saved-address"
+                            checked={selectedSavedAddressId === a.id}
+                            onChange={() => {
+                              setSelectedSavedAddressId(a.id);
+                              const txt = a.address || [a.house_no, a.street, a.landmark, a.city].filter(Boolean).join(", ");
+                              setAddress(txt);
+                              setAddressSource("saved");
+                            }}
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold">{a.label || "Address"}</span>
+                              {a.isDefault ? (
+                                <span className="text-xs text-white bg-black px-2 py-0.5 rounded">Default</span>
+                              ) : null}
+                            </div>
+                            <div className="text-sm text-gray-700">
+                              {a.address || [a.house_no, a.street, a.landmark, a.city].filter(Boolean).join(", ")}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500">No saved addresses. Add one to use later.</div>
+                  )}
+                </div>
+              )}
               <BillCard
                 items={items || []}
                 currency={hotelData?.currency || "₹"}
@@ -1562,12 +1811,16 @@ const PlaceOrderModal = ({
           showMapModal={showMapModal}
           setShowMapModal={setShowMapModal}
           setSelectedLocation={setSelectedCoords}
-          setAddress={setAddress}
+          setAddress={handleMapAddressChange}
           hotelData={hotelData}
           setOpenPlaceOrderModal={setOpenPlaceOrderModal}
         />
       )}
-      
+      <AddAddressModal
+        open={showAddAddressModal}
+        onClose={() => setShowAddAddressModal(false)}
+        onSaved={handleAddAddress}
+      />
       {/* ** NEW **: Render the Order Status Dialog */}
       <OrderStatusDialog status={orderStatus} onClose={handleCloseSuccessDialog} />
     </>
