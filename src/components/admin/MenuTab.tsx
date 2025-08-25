@@ -54,7 +54,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-
 export function MenuTab() {
   const {
     items: menu,
@@ -245,7 +244,9 @@ export function MenuTab() {
     // Keep the category open during update
     setOpenCategories((prev) => ({
       ...prev,
-      [typeof item.category === "object" && item.category !== null && (item.category as { name: string }).name !== undefined
+      [typeof item.category === "object" &&
+      item.category !== null &&
+      (item.category as { name: string }).name !== undefined
         ? (item.category as { name: string }).name
         : item.category]: true,
     }));
@@ -283,7 +284,11 @@ export function MenuTab() {
     // Ensure the category is open when editing an item
     setOpenCategories((prev) => ({
       ...prev,
-      [typeof item.category === "object" && item.category !== null && "name" in item.category ? item.category.name : item.category]: true,
+      [typeof item.category === "object" &&
+      item.category !== null &&
+      "name" in item.category
+        ? item.category.name
+        : item.category]: true,
     }));
 
     setEditingItem({
@@ -293,7 +298,9 @@ export function MenuTab() {
       image: item.image,
       description: item.description || "",
       category:
-        typeof item.category === "object" && item.category !== null && "name" in item.category
+        typeof item.category === "object" &&
+        item.category !== null &&
+        "name" in item.category
           ? item.category.name
           : item.category,
       variants: item.variants || [],
@@ -329,5 +336,521 @@ export function MenuTab() {
     }
   };
 
- return (<div>Hello world</div>)
+  return (
+    <div className="">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold">Menu Items</h2>
+        <div className="flex gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopyMenu}
+                  disabled={!menu || menu.length === 0}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>
+                  {menu && menu.length > 0
+                    ? "Copy menu for bulk upload"
+                    : "No menu items to copy"}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <Link href="/admin/bulk-menu-upload">
+            <Button variant="outline" size="icon">
+              <Upload className="h-4 w-4" />
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsAddModalOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {isAddModalOpen ? (
+        // <AddMenuItemForm
+        //   onSubmit={(item) => {
+        //     handleAddItem(item);
+        //     setIsAddModalOpen(false);
+        //   }}
+        //   onCancel={() => setIsAddModalOpen(false)}
+        // />
+        <div>hello world</div>
+      ) : isEditModalOpen && editingItem ? (
+        // <EditMenuItemForm
+        //   item={editingItem}
+        //   onSubmit={async (item) => {
+        //     try {
+        //       await handleEditItem(item);
+        //       setIsEditModalOpen(false);
+        //     } catch (error) {
+        //       console.error("Failed to update item:", error);
+        //       toast.error("Failed to update item");
+        //     }
+        //   }}
+        //   onCancel={() => setIsEditModalOpen(false)}
+        // />
+        <div>hello world</div>
+
+      ) : isCategoryEditing ? (
+        // <CategoryManagementForm
+        //   categories={Object.entries(groupedItems).map(([category, items]) => ({
+        //     id: items[0].category.id,
+        //     name: category,
+        //     priority: items[0].category.priority || 0,
+        //     is_active: items[0].category.is_active !== false ? true : false,
+        //   }))}
+        //   onSubmit={async (updatedCategories) => {
+        //     try {
+        //       await updateCategoriesAsBatch(updatedCategories);
+        //       setIsCategoryEditing(false);
+        //       fetchMenu();
+        //     } catch (error) {
+        //       console.error("Failed to update categories:", error);
+        //       toast.error("Failed to update categories");
+        //     }
+        //   }}
+        //   onCancel={() => setIsCategoryEditing(false)}
+        // />
+        <div>hello world</div>
+
+      ) : isInlineItemOrdering ? (
+        // <div className="mb-6 border rounded-lg shadow-sm">
+        //   <ItemOrderingForm
+        //     categories={Object.entries(groupedItems).map(
+        //       ([category, items]) => ({
+        //         id: items[0].category.id,
+        //         name: category,
+        //         priority: items[0].category.priority || 0,
+        //       })
+        //     )}
+        //     items={Object.values(groupedItems).flat()}
+        //     onSubmit={async (updatedItems) => {
+        //       try {
+        //         const updates = updatedItems
+        //           .filter(
+        //             (item) => typeof item.id === "string" && item.id.length > 0
+        //           )
+        //           .map((item) => ({
+        //             id: item.id as string,
+        //             priority: item.priority ?? 0, // Ensure number
+        //           }));
+
+        //         await updateItemsAsBatch(updates);
+        //         setIsInlineItemOrdering(false);
+        //         fetchMenu();
+        //         toast.success("Item order updated successfully");
+        //       } catch (error) {
+        //         console.error("Failed to update item order:", error);
+        //         toast.error("Failed to update item order");
+        //       }
+        //     }}
+        //     onCancel={() => setIsInlineItemOrdering(false)}
+        //   />
+        // </div>
+        <div>hello world</div>
+      ) : (
+        <>
+          <div className="flex justify-end gap-2 mb-4">
+            <Button
+              onClick={() => setIsInlineItemOrdering(true)}
+              variant="outline"
+              className="flex gap-2 text-xs sm:text-sm"
+            >
+              <ListOrdered className="h-4 w-4" />
+              <span>Edit Item Order</span>
+            </Button>
+            <Button
+              onClick={() => setIsCategoryEditing(true)}
+              variant="outline"
+              className="flex gap-2 text-xs sm:text-sm"
+            >
+              <Pen className="h-4 w-4" />
+              <span>Category Update</span>
+            </Button>
+          </div>
+
+          <div className="relative mb-6">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <Input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {isCategoryEditing && (
+            <CategoryManagementModal
+              open={isCategoryEditing}
+              categories={Object.entries(groupedItems).map(
+                ([category, items]) => ({
+                  id: items[0].category.id,
+                  name: category,
+                  priority: items[0].category.priority,
+                })
+              )}
+              onOpenChange={setIsCategoryEditing}
+            />
+          )}
+
+          <>
+            {Object.entries(tempItems).length > 0 ? (
+              <DragDropContext onDragEnd={onDragEnd}>
+                <Accordion
+                  type="multiple"
+                  className="grid gap-4"
+                  value={Object.entries(openCategories)
+                    .filter(([category, isOpen]) => isOpen)
+                    .map(([category]) => category)}
+                  onValueChange={(values: string[]) => {
+                    const newOpenCategories = { ...openCategories };
+                    Object.keys(newOpenCategories).forEach((category) => {
+                      newOpenCategories[category] = values.includes(category);
+                    });
+                    setOpenCategories(newOpenCategories);
+                  }}
+                >
+                  {Object.entries(tempItems)
+                    .sort(([categoryA], [categoryB]) => {
+                      const priorityA = getCategoryPriority(categoryA);
+                      const priorityB = getCategoryPriority(categoryB);
+                      return priorityA - priorityB;
+                    })
+                    .map(([category, items], index) => (
+                      <AccordionItem value={category} key={category + index}>
+                        <AccordionTrigger className="flex items-center gap-2 group max-w-fit">
+                          <h1 className="text-xl lg:text-3xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent flex items-center gap-2">
+                            <div className="left-marker">▶</div>{" "}
+                            {formatDisplayName(category)}
+                          </h1>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <Droppable droppableId={category}>
+                            {(provided) => (
+                              <div
+                                {...provided.droppableProps}
+                                ref={provided.innerRef}
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                              >
+                                {items
+                                  .sort(
+                                    (a, b) =>
+                                      (a.priority ?? 0) - (b.priority ?? 0)
+                                  )
+                                  .map((item, itemIndex) => (
+                                    <Draggable
+                                      key={item.id}
+                                      draggableId={item.id as string}
+                                      index={itemIndex}
+                                    >
+                                      {(provided) => (
+                                        <Card
+                                          {...provided.draggableProps}
+                                          ref={provided.innerRef}
+                                          className={`rounded-xl overflow-hidden grid`}
+                                        >
+                                          <CardHeader className="flex flex-row justify-between gap-4 relative">
+                                            {!item.is_available && (
+                                              <div className="absolute saturate-200 top-0 text-xl px-2 rounded-br-xl py-3 z-[40] left-0 bg-red-500 text-white font-bold">
+                                                Unavailable
+                                              </div>
+                                            )}
+                                            <div>
+                                              {item.image_url.length > 0 && (
+                                                <div className="relative w-32 h-32 overflow-hidden">
+                                                  <Img
+                                                    src={item.image_url}
+                                                    alt={item.name}
+                                                    className={`w-full h-full object-cover rounded-lg ${
+                                                      item.is_available
+                                                        ? ""
+                                                        : " saturate-0"
+                                                    }`}
+                                                  />
+                                                </div>
+                                              )}
+                                            </div>
+                                            <CardTitle className="flex items-center justify-between w-full">
+                                              {item.name}
+                                            </CardTitle>
+                                          </CardHeader>
+                                          <CardContent className="relative">
+                                            {/* Price Display - Shows default price or "From" price if variants exist */}
+                                            <div className="flex items-baseline gap-2">
+                                              {item.is_price_as_per_size ? (
+                                                <div className="text-sm font-normal">
+                                                  {" "}
+                                                  {`(Price as per size)`}{" "}
+                                                </div>
+                                              ) : (
+                                                <p className="text-2xl font-bold">
+                                                  {(item.variants?.length ??
+                                                    0) > 0 ? (
+                                                    <>
+                                                      <span className="text-xs">
+                                                        From{" "}
+                                                      </span>
+                                                      {(userData as Partner)
+                                                        ?.currency || "₹"}
+                                                      {userData?.id ===
+                                                      "767da2a8-746d-42b6-9539-528b6b96ae09"
+                                                        ? Math.min(
+                                                            ...(
+                                                              item?.variants ??
+                                                              []
+                                                            ).map(
+                                                              (v) => v.price
+                                                            )
+                                                          ).toFixed(3)
+                                                        : Math.min(
+                                                            ...(
+                                                              item?.variants ??
+                                                              []
+                                                            ).map(
+                                                              (v) => v.price
+                                                            )
+                                                          )}
+                                                    </>
+                                                  ) : userData?.id ===
+                                                    "767da2a8-746d-42b6-9539-528b6b96ae09" ? (
+                                                    <>
+                                                      {(userData as Partner)
+                                                        ?.currency || "₹"}
+                                                      {item.price.toFixed(3)}
+                                                    </>
+                                                  ) : (
+                                                    <>
+                                                      {(userData as Partner)
+                                                        ?.currency || "₹"}
+                                                      {item.price}
+                                                    </>
+                                                  )}
+                                                </p>
+                                              )}
+
+                                              {(item.variants?.length ?? 0) >
+                                                0 && (
+                                                <span className="text-sm text-gray-500">
+                                                  (
+                                                  {(item.variants ?? []).length}{" "}
+                                                  options)
+                                                </span>
+                                              )}
+                                            </div>
+
+                                            {/* Variants Display */}
+                                            {(item.variants?.length ?? 0) >
+                                              0 && (
+                                              <div className="mt-2 space-y-1 bg-gray-50 p-2 rounded-lg">
+                                                <p className="text-sm font-medium text-gray-600">
+                                                  Options:
+                                                </p>
+                                                <div className="max-h-32 overflow-y-auto pr-2">
+                                                  {(item.variants ?? []).map(
+                                                    (variant, index) => (
+                                                      <div
+                                                        key={index}
+                                                        className="flex justify-between text-sm py-1 border-b border-gray-100"
+                                                      >
+                                                        <span className="text-gray-700">
+                                                          {variant.name}
+                                                        </span>
+                                                        <span className="font-medium">
+                                                          {(userData as Partner)
+                                                            ?.currency || "₹"}
+                                                          {userData?.id ===
+                                                          "767da2a8-746d-42b6-9539-528b6b96ae09"
+                                                            ? variant.price.toFixed(
+                                                                3
+                                                              )
+                                                            : variant.price}
+                                                        </span>
+                                                      </div>
+                                                    )
+                                                  )}
+                                                </div>
+                                              </div>
+                                            )}
+
+                                            {item.description && (
+                                              <p className="text-gray-600 mt-4">
+                                                Description : {item.description}
+                                              </p>
+                                            )}
+
+                                            {/* Toggles */}
+                                            <div className="flex items-center mt-2">
+                                              <label className="mr-2">
+                                                Mark as Popular:
+                                              </label>
+                                              <Switch
+                                                checked={item.is_top}
+                                                onCheckedChange={async () => {
+                                                  try {
+                                                    if (item.is_top) {
+                                                      await updateItem(
+                                                        item.id as string,
+                                                        { is_top: false }
+                                                      );
+                                                    } else {
+                                                      await updateItem(
+                                                        item.id as string,
+                                                        { is_top: true }
+                                                      );
+                                                    }
+                                                  } catch (error) {
+                                                    toast.error(
+                                                      "Failed to update item status"
+                                                    );
+                                                    console.error(error);
+                                                  }
+                                                }}
+                                              />
+                                            </div>
+                                            <div className="flex items-center mt-3">
+                                              <label className="mr-2">
+                                                Is Available:
+                                              </label>
+                                              <Switch
+                                                checked={item.is_available}
+                                                onCheckedChange={async () => {
+                                                  try {
+                                                    await updateItem(
+                                                      item.id as string,
+                                                      {
+                                                        is_available:
+                                                          !item.is_available,
+                                                      }
+                                                    );
+                                                  } catch (error) {
+                                                    toast.error(
+                                                      "Failed to mark item as " +
+                                                        (item.is_available
+                                                          ? "Unavailable"
+                                                          : "Available")
+                                                    );
+                                                    console.error(error);
+                                                  }
+                                                }}
+                                              />
+                                            </div>
+
+                                            <div className="flex items-center mt-3">
+                                              <label className="mr-2">
+                                                Is Price as per Size:
+                                              </label>
+                                              <Switch
+                                                checked={
+                                                  item.is_price_as_per_size ===
+                                                  true
+                                                }
+                                                onCheckedChange={async () => {
+                                                  console.log(
+                                                    item.is_price_as_per_size
+                                                  );
+
+                                                  try {
+                                                    await updateItem(
+                                                      item.id as string,
+                                                      {
+                                                        is_price_as_per_size:
+                                                          !item.is_price_as_per_size,
+                                                      }
+                                                    );
+                                                  } catch (error) {
+                                                    toast.error(
+                                                      "Failed to mark item as " +
+                                                        (item.is_price_as_per_size
+                                                          ? "Price Fixed"
+                                                          : "Price as per Size")
+                                                    );
+                                                    console.error(error);
+                                                  }
+                                                }}
+                                              />
+                                            </div>
+                                          </CardContent>
+                                          <CardFooter className="flex justify-end space-x-2">
+                                            <Button
+                                              variant="outline"
+                                              onClick={() =>
+                                                openEditModal({
+                                                  id: item.id as string,
+                                                  name: item.name,
+                                                  price: item.price,
+                                                  image: item.image_url,
+                                                  description:
+                                                    item.description || "",
+                                                  category: item.category.name,
+                                                  variants: item.variants,
+                                                })
+                                              }
+                                            >
+                                              Edit
+                                            </Button>
+                                            <Button
+                                              variant="destructive"
+                                              onClick={async (e) => {
+                                                e.currentTarget.disabled = true;
+                                                e.currentTarget.innerText =
+                                                  "Deleting...";
+                                                const isOfferActive =
+                                                  adminOffers.some(
+                                                    (offer) =>
+                                                      offer.menuItemId ===
+                                                      item.id
+                                                  );
+                                                if (isOfferActive) {
+                                                  alert(
+                                                    `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
+                                                  );
+                                                  return;
+                                                }
+                                                await deleteItem(
+                                                  item.id as string
+                                                );
+                                                if (item.image_url)
+                                                  await deleteFileFromS3(
+                                                    item.image_url
+                                                  );
+                                              }}
+                                            >
+                                              Delete
+                                            </Button>
+                                          </CardFooter>
+                                        </Card>
+                                      )}
+                                    </Draggable>
+                                  ))}
+                                {provided.placeholder}
+                              </div>
+                            )}
+                          </Droppable>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                </Accordion>
+              </DragDropContext>
+            ) : (
+              <div className="text-center py-10">
+                <p className="text-muted-foreground">No menu items found</p>
+              </div>
+            )}
+          </>
+        </>
+      )}
+    </div>
+  );
 }
