@@ -73,7 +73,7 @@ interface CategoryManagementFormProps {
   onCancel: () => void;
 }
 
-export default function CategoryManagementForm({
+export function CategoryManagementForm({
   categories: initialCategories,
   onSubmit,
   onCancel,
@@ -592,7 +592,7 @@ interface CategoryManagementModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function CategoryManagementModal({
+export function CategoryManagementModal({
   categories: initialCategories,
   open,
   onOpenChange,

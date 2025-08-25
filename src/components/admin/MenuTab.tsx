@@ -1,17 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Pen,
-  Plus,
-  Search,
-  Upload,
-  Save,
-  X,
-  Menu,
-  ListOrdered,
-  Copy,
-} from "lucide-react";
+import dynamic from "next/dynamic";
+import { Pen, Plus, Search, Upload, Copy, ListOrdered } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,10 +15,6 @@ import { Input } from "@/components/ui/input";
 import { useAdminOfferStore } from "@/store/useAdminOfferStore";
 import { Partner, useAuthStore } from "@/store/authStore";
 import Link from "next/link";
-import { AddMenuItemForm } from "../bulkMenuUpload/AddMenuItemModal";
-import { EditMenuItemForm, EditMenuItemModal } from "./EditMenuItemModal";
-import CategoryManagementForm from "./CategoryManagementModal";
-import { ItemOrderingModal } from "./ItemOrderingModal";
 import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
 import { toast } from "sonner";
@@ -43,13 +30,31 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import { formatDisplayName } from "@/store/categoryStore_hasura";
-import { ItemOrderingForm } from "./ItemOrderingModal";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+// Dynamically import components that are conditionally rendered
+const AddMenuItemForm = dynamic(() =>
+  import("../bulkMenuUpload/AddMenuItemModal").then(
+    (mod) => mod.AddMenuItemForm
+  )
+);
+const EditMenuItemForm = dynamic(() =>
+  import("./EditMenuItemModal").then((mod) => mod.EditMenuItemForm)
+);
+const CategoryManagementForm = dynamic(() =>
+  import("./CategoryManagementModal").then((mod) => mod.CategoryManagementForm)
+);
+const ItemOrderingForm = dynamic(() =>
+  import("./ItemOrderingModal").then((mod) => mod.ItemOrderingForm)
+);
+const CategoryManagementModal = dynamic(() =>
+  import("./CategoryManagementModal").then((mod) => mod.CategoryManagementModal)
+);
 
 export function MenuTab() {
   const {
@@ -94,8 +99,8 @@ export function MenuTab() {
   );
 
   useEffect(() => {
-    if (userData?.id) {
-      fetchAdminOffers(userData?.id);
+    if (userData && userData.id) {
+      fetchAdminOffers(userData.id);
       fetchMenu();
     }
   }, [userData, fetchAdminOffers, fetchMenu]);
@@ -120,7 +125,8 @@ export function MenuTab() {
       if (filteredCategoryItems.length > 0) {
         filtered[category] = filteredCategoryItems;
         // Preserve existing open state or default to false
-        newOpenCategories[category] = openCategories[category] ?? false;
+        newOpenCategories[category] =
+          openCategories[category] != null ? openCategories[category] : false;
       }
     });
 
@@ -307,7 +313,7 @@ export function MenuTab() {
 
   const getCategoryPriority = (category: string) => {
     const categoryItem = menu.find((item) => item.category.name === category);
-    return categoryItem?.category.priority || 0;
+    return (categoryItem && categoryItem.category.priority) || 0;
   };
 
   const onDragEnd = (result: DropResult) => {
@@ -397,29 +403,28 @@ export function MenuTab() {
           onCancel={() => setIsEditModalOpen(false)}
         />
       ) : isCategoryEditing ? (
-        // <CategoryManagementForm
-        //   categories={Object.entries(groupedItems).map(([category, items]) => ({
-        //     id: items[0].category.id,
-        //     name: category,
-        //     priority: items[0].category.priority || 0,
-        //     is_active: items[0].category.is_active !== false ? true : false,
-        //   }))}
-        //   onSubmit={async (updatedCategories) => {
-        //     try {
-        //       await updateCategoriesAsBatch(updatedCategories);
-        //       setIsCategoryEditing(false);
-        //       fetchMenu();
-        //     } catch (error) {
-        //       console.error("Failed to update categories:", error);
-        //       toast.error("Failed to update categories");
-        //     }
-        //   }}
-        //   onCancel={() => setIsCategoryEditing(false)}
-        // />
-        <div>asdfasdf</div>
+        <CategoryManagementForm
+          categories={Object.entries(groupedItems).map(([category, items]) => ({
+            id: items[0].category.id,
+            name: category,
+            priority: items[0].category.priority || 0,
+            is_active: items[0].category.is_active !== false ? true : false,
+          }))}
+          onSubmit={async (updatedCategories) => {
+            try {
+              await updateCategoriesAsBatch(updatedCategories);
+              setIsCategoryEditing(false);
+              fetchMenu();
+            } catch (error) {
+              console.error("Failed to update categories:", error);
+              toast.error("Failed to update categories");
+            }
+          }}
+          onCancel={() => setIsCategoryEditing(false)}
+        />
       ) : isInlineItemOrdering ? (
         <div className="mb-6 border rounded-lg shadow-sm">
-          {/* <ItemOrderingForm
+          <ItemOrderingForm
             categories={Object.entries(groupedItems).map(
               ([category, items]) => ({
                 id: items[0].category.id,
@@ -436,7 +441,7 @@ export function MenuTab() {
                   )
                   .map((item) => ({
                     id: item.id as string,
-                    priority: item.priority ?? 0, // Ensure number
+                    priority: item.priority != null ? item.priority : 0, // Ensure number
                   }));
 
                 await updateItemsAsBatch(updates);
@@ -450,8 +455,6 @@ export function MenuTab() {
             }}
             onCancel={() => setIsInlineItemOrdering(false)}
           />
-        </div> */}
-        hello
         </div>
       ) : (
         <>
@@ -485,7 +488,7 @@ export function MenuTab() {
             />
           </div>
 
-          {/* {isCategoryEditing && (
+          {isCategoryEditing && (
             <CategoryManagementModal
               open={isCategoryEditing}
               categories={Object.entries(groupedItems).map(
@@ -497,347 +500,350 @@ export function MenuTab() {
               )}
               onOpenChange={setIsCategoryEditing}
             />
-          )} */}
+          )}
 
           <>
             {Object.entries(tempItems).length > 0 ? (
-              // <DragDropContext onDragEnd={onDragEnd}>
-              //   <Accordion
-              //     type="multiple"
-              //     className="grid gap-4"
-              //     value={Object.entries(openCategories)
-              //       .filter(([category, isOpen]) => isOpen)
-              //       .map(([category]) => category)}
-              //     onValueChange={(values: string[]) => {
-              //       const newOpenCategories = { ...openCategories };
-              //       Object.keys(newOpenCategories).forEach((category) => {
-              //         newOpenCategories[category] = values.includes(category);
-              //       });
-              //       setOpenCategories(newOpenCategories);
-              //     }}
-              //   >
-              //     {Object.entries(tempItems)
-              //       .sort(([categoryA], [categoryB]) => {
-              //         const priorityA = getCategoryPriority(categoryA);
-              //         const priorityB = getCategoryPriority(categoryB);
-              //         return priorityA - priorityB;
-              //       })
-              //       .map(([category, items], index) => (
-              //         <AccordionItem value={category} key={category + index}>
-              //           <AccordionTrigger className="flex items-center gap-2 group max-w-fit">
-              //             <h1 className="text-xl lg:text-3xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent flex items-center gap-2">
-              //               <div className="left-marker">▶</div>{" "}
-              //               {formatDisplayName(category)}
-              //             </h1>
-              //           </AccordionTrigger>
-              //           <AccordionContent>
-              //             <Droppable droppableId={category}>
-              //               {(provided) => (
-              //                 <div
-              //                   {...provided.droppableProps}
-              //                   ref={provided.innerRef}
-              //                   className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-              //                 >
-              //                   {items
-              //                     .sort(
-              //                       (a, b) =>
-              //                         (a.priority ?? 0) - (b.priority ?? 0)
-              //                     )
-              //                     .map((item, itemIndex) => (
-              //                       <Draggable
-              //                         key={item.id}
-              //                         draggableId={item.id as string}
-              //                         index={itemIndex}
-              //                       >
-              //                         {(provided) => (
-              //                           <Card
-              //                             {...provided.draggableProps}
-              //                             ref={provided.innerRef}
-              //                             className={`rounded-xl overflow-hidden grid`}
-              //                           >
-              //                             <CardHeader className="flex flex-row justify-between gap-4 relative">
-              //                               {!item.is_available && (
-              //                                 <div className="absolute saturate-200 top-0 text-xl px-2 rounded-br-xl py-3 z-[40] left-0 bg-red-500 text-white font-bold">
-              //                                   Unavailable
-              //                                 </div>
-              //                               )}
-              //                               <div>
-              //                                 {item.image_url.length > 0 && (
-              //                                   <div className="relative w-32 h-32 overflow-hidden">
-              //                                     <Img
-              //                                       src={item.image_url}
-              //                                       alt={item.name}
-              //                                       className={`w-full h-full object-cover rounded-lg ${
-              //                                         item.is_available
-              //                                           ? ""
-              //                                           : " saturate-0"
-              //                                       }`}
-              //                                     />
-              //                                   </div>
-              //                                 )}
-              //                               </div>
-              //                               <CardTitle className="flex items-center justify-between w-full">
-              //                                 {item.name}
-              //                               </CardTitle>
-              //                             </CardHeader>
-              //                             <CardContent className="relative">
-              //                               {/* Price Display - Shows default price or "From" price if variants exist */}
-              //                               <div className="flex items-baseline gap-2">
-              //                                 {item.is_price_as_per_size ? (
-              //                                   <div className="text-sm font-normal">
-              //                                     {" "}
-              //                                     {`(Price as per size)`}{" "}
-              //                                   </div>
-              //                                 ) : (
-              //                                   <p className="text-2xl font-bold">
-              //                                     {(item.variants?.length ??
-              //                                       0) > 0 ? (
-              //                                       <>
-              //                                         <span className="text-xs">
-              //                                           From{" "}
-              //                                         </span>
-              //                                         {(userData as Partner)
-              //                                           ?.currency || "₹"}
-              //                                         {userData?.id ===
-              //                                         "767da2a8-746d-42b6-9539-528b6b96ae09"
-              //                                           ? Math.min(
-              //                                               ...(
-              //                                                 item?.variants ??
-              //                                                 []
-              //                                               ).map(
-              //                                                 (v) => v.price
-              //                                               )
-              //                                             ).toFixed(3)
-              //                                           : Math.min(
-              //                                               ...(
-              //                                                 item?.variants ??
-              //                                                 []
-              //                                               ).map(
-              //                                                 (v) => v.price
-              //                                               )
-              //                                             )}
-              //                                       </>
-              //                                     ) : userData?.id ===
-              //                                       "767da2a8-746d-42b6-9539-528b6b96ae09" ? (
-              //                                       <>
-              //                                         {(userData as Partner)
-              //                                           ?.currency || "₹"}
-              //                                         {item.price.toFixed(3)}
-              //                                       </>
-              //                                     ) : (
-              //                                       <>
-              //                                         {(userData as Partner)
-              //                                           ?.currency || "₹"}
-              //                                         {item.price}
-              //                                       </>
-              //                                     )}
-              //                                   </p>
-              //                                 )}
+              <DragDropContext onDragEnd={onDragEnd}>
+                <Accordion
+                  type="multiple"
+                  className="grid gap-4"
+                  value={Object.entries(openCategories)
+                    .filter(([category, isOpen]) => isOpen)
+                    .map(([category]) => category)}
+                  onValueChange={(values: string[]) => {
+                    const newOpenCategories = { ...openCategories };
+                    Object.keys(newOpenCategories).forEach((category) => {
+                      newOpenCategories[category] = values.includes(category);
+                    });
+                    setOpenCategories(newOpenCategories);
+                  }}
+                >
+                  {Object.entries(tempItems)
+                    .sort(([categoryA], [categoryB]) => {
+                      const priorityA = getCategoryPriority(categoryA);
+                      const priorityB = getCategoryPriority(categoryB);
+                      return priorityA - priorityB;
+                    })
+                    .map(([category, items], index) => (
+                      <AccordionItem value={category} key={category + index}>
+                        <AccordionTrigger className="flex items-center gap-2 group max-w-fit">
+                          <h1 className="text-xl lg:text-3xl font-bold my-2 lg:my-5 capitalize w-100 bg-transparent flex items-center gap-2">
+                            <div className="left-marker">▶</div>{" "}
+                            {formatDisplayName(category)}
+                          </h1>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <Droppable droppableId={category}>
+                            {(provided) => (
+                              <div
+                                {...provided.droppableProps}
+                                ref={provided.innerRef}
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                              >
+                                {items
+                                  .sort(
+                                    (a, b) =>
+                                      (a.priority != null ? a.priority : 0) -
+                                      (b.priority != null ? b.priority : 0)
+                                  )
+                                  .map((item, itemIndex) => (
+                                    <Draggable
+                                      key={item.id}
+                                      draggableId={item.id as string}
+                                      index={itemIndex}
+                                    >
+                                      {(provided) => (
+                                        <Card
+                                          {...provided.draggableProps}
+                                          ref={provided.innerRef}
+                                          className={`rounded-xl overflow-hidden grid`}
+                                        >
+                                          <CardHeader className="flex flex-row justify-between gap-4 relative">
+                                            {!item.is_available && (
+                                              <div className="absolute saturate-200 top-0 text-xl px-2 rounded-br-xl py-3 z-[40] left-0 bg-red-500 text-white font-bold">
+                                                Unavailable
+                                              </div>
+                                            )}
+                                            <div>
+                                              {item.image_url.length > 0 && (
+                                                <div className="relative w-32 h-32 overflow-hidden">
+                                                  <Img
+                                                    src={item.image_url}
+                                                    alt={item.name}
+                                                    className={`w-full h-full object-cover rounded-lg ${
+                                                      item.is_available
+                                                        ? ""
+                                                        : " saturate-0"
+                                                    }`}
+                                                  />
+                                                </div>
+                                              )}
+                                            </div>
+                                            <CardTitle className="flex items-center justify-between w-full">
+                                              {item.name}
+                                            </CardTitle>
+                                          </CardHeader>
+                                          <CardContent className="relative">
+                                            {/* Price Display */}
+                                            <div className="flex items-baseline gap-2">
+                                              {item.is_price_as_per_size ? (
+                                                <div className="text-sm font-normal">
+                                                  {" "}
+                                                  {`(Price as per size)`}{" "}
+                                                </div>
+                                              ) : (
+                                                <p className="text-2xl font-bold">
+                                                  {item.variants &&
+                                                  item.variants.length > 0 ? (
+                                                    <>
+                                                      <span className="text-xs">
+                                                        From{" "}
+                                                      </span>
+                                                      {(userData &&
+                                                        (userData as Partner)
+                                                          .currency) ||
+                                                        "₹"}
+                                                      {userData &&
+                                                      userData.id ===
+                                                        "767da2a8-746d-42b6-9539-528b6b96ae09"
+                                                        ? Math.min(
+                                                            ...(
+                                                              item.variants ||
+                                                              []
+                                                            ).map(
+                                                              (v) => v.price
+                                                            )
+                                                          ).toFixed(3)
+                                                        : Math.min(
+                                                            ...(
+                                                              item.variants ||
+                                                              []
+                                                            ).map(
+                                                              (v) => v.price
+                                                            )
+                                                          )}
+                                                    </>
+                                                  ) : userData &&
+                                                    userData.id ===
+                                                      "767da2a8-746d-42b6-9539-528b6b96ae09" ? (
+                                                    <>
+                                                      {(userData &&
+                                                        (userData as Partner)
+                                                          .currency) ||
+                                                        "₹"}
+                                                      {item.price.toFixed(3)}
+                                                    </>
+                                                  ) : (
+                                                    <>
+                                                      {(userData &&
+                                                        (userData as Partner)
+                                                          .currency) ||
+                                                        "₹"}
+                                                      {item.price}
+                                                    </>
+                                                  )}
+                                                </p>
+                                              )}
 
-              //                                 {(item.variants?.length ?? 0) >
-              //                                   0 && (
-              //                                   <span className="text-sm text-gray-500">
-              //                                     (
-              //                                     {(item.variants ?? []).length}{" "}
-              //                                     options)
-              //                                   </span>
-              //                                 )}
-              //                               </div>
+                                              {item.variants &&
+                                                item.variants.length > 0 && (
+                                                  <span className="text-sm text-gray-500">
+                                                    (
+                                                    {
+                                                      (item.variants || [])
+                                                        .length
+                                                    }{" "}
+                                                    options)
+                                                  </span>
+                                                )}
+                                            </div>
 
-              //                               {/* Variants Display */}
-              //                               {(item.variants?.length ?? 0) >
-              //                                 0 && (
-              //                                 <div className="mt-2 space-y-1 bg-gray-50 p-2 rounded-lg">
-              //                                   <p className="text-sm font-medium text-gray-600">
-              //                                     Options:
-              //                                   </p>
-              //                                   <div className="max-h-32 overflow-y-auto pr-2">
-              //                                     {(item.variants ?? []).map(
-              //                                       (variant, index) => (
-              //                                         <div
-              //                                           key={index}
-              //                                           className="flex justify-between text-sm py-1 border-b border-gray-100"
-              //                                         >
-              //                                           <span className="text-gray-700">
-              //                                             {variant.name}
-              //                                           </span>
-              //                                           <span className="font-medium">
-              //                                             {(userData as Partner)
-              //                                               ?.currency || "₹"}
-              //                                             {userData?.id ===
-              //                                             "767da2a8-746d-42b6-9539-528b6b96ae09"
-              //                                               ? variant.price.toFixed(
-              //                                                   3
-              //                                                 )
-              //                                               : variant.price}
-              //                                           </span>
-              //                                         </div>
-              //                                       )
-              //                                     )}
-              //                                   </div>
-              //                                 </div>
-              //                               )}
+                                            {/* Variants Display */}
+                                            {item.variants &&
+                                              item.variants.length > 0 && (
+                                                <div className="mt-2 space-y-1 bg-gray-50 p-2 rounded-lg">
+                                                  <p className="text-sm font-medium text-gray-600">
+                                                    Options:
+                                                  </p>
+                                                  <div className="max-h-32 overflow-y-auto pr-2">
+                                                    {(item.variants || []).map(
+                                                      (variant, index) => (
+                                                        <div
+                                                          key={index}
+                                                          className="flex justify-between text-sm py-1 border-b border-gray-100"
+                                                        >
+                                                          <span className="text-gray-700">
+                                                            {variant.name}
+                                                          </span>
+                                                          <span className="font-medium">
+                                                            {(userData &&
+                                                              (
+                                                                userData as Partner
+                                                              ).currency) ||
+                                                              "₹"}
+                                                            {userData &&
+                                                            userData.id ===
+                                                              "767da2a8-746d-42b6-9539-528b6b96ae09"
+                                                              ? variant.price.toFixed(
+                                                                  3
+                                                                )
+                                                              : variant.price}
+                                                          </span>
+                                                        </div>
+                                                      )
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              )}
 
-              //                               {item.description && (
-              //                                 <p className="text-gray-600 mt-4">
-              //                                   Description : {item.description}
-              //                                 </p>
-              //                               )}
+                                            {item.description && (
+                                              <p className="text-gray-600 mt-4">
+                                                Description : {item.description}
+                                              </p>
+                                            )}
 
-              //                               {/* Toggles */}
-              //                               <div className="flex items-center mt-2">
-              //                                 <label className="mr-2">
-              //                                   Mark as Popular:
-              //                                 </label>
-              //                                 <Switch
-              //                                   checked={item.is_top}
-              //                                   onCheckedChange={async () => {
-              //                                     try {
-              //                                       if (item.is_top) {
-              //                                         await updateItem(
-              //                                           item.id as string,
-              //                                           { is_top: false }
-              //                                         );
-              //                                       } else {
-              //                                         await updateItem(
-              //                                           item.id as string,
-              //                                           { is_top: true }
-              //                                         );
-              //                                       }
-              //                                     } catch (error) {
-              //                                       toast.error(
-              //                                         "Failed to update item status"
-              //                                       );
-              //                                       console.error(error);
-              //                                     }
-              //                                   }}
-              //                                 />
-              //                               </div>
-              //                               <div className="flex items-center mt-3">
-              //                                 <label className="mr-2">
-              //                                   Is Available:
-              //                                 </label>
-              //                                 <Switch
-              //                                   checked={item.is_available}
-              //                                   onCheckedChange={async () => {
-              //                                     try {
-              //                                       await updateItem(
-              //                                         item.id as string,
-              //                                         {
-              //                                           is_available:
-              //                                             !item.is_available,
-              //                                         }
-              //                                       );
-              //                                     } catch (error) {
-              //                                       toast.error(
-              //                                         "Failed to mark item as " +
-              //                                           (item.is_available
-              //                                             ? "Unavailable"
-              //                                             : "Available")
-              //                                       );
-              //                                       console.error(error);
-              //                                     }
-              //                                   }}
-              //                                 />
-              //                               </div>
-
-              //                               <div className="flex items-center mt-3">
-              //                                 <label className="mr-2">
-              //                                   Is Price as per Size:
-              //                                 </label>
-              //                                 <Switch
-              //                                   checked={
-              //                                     item.is_price_as_per_size ===
-              //                                     true
-              //                                   }
-              //                                   onCheckedChange={async () => {
-              //                                     console.log(
-              //                                       item.is_price_as_per_size
-              //                                     );
-
-              //                                     try {
-              //                                       await updateItem(
-              //                                         item.id as string,
-              //                                         {
-              //                                           is_price_as_per_size:
-              //                                             !item.is_price_as_per_size,
-              //                                         }
-              //                                       );
-              //                                     } catch (error) {
-              //                                       toast.error(
-              //                                         "Failed to mark item as " +
-              //                                           (item.is_price_as_per_size
-              //                                             ? "Price Fixed"
-              //                                             : "Price as per Size")
-              //                                       );
-              //                                       console.error(error);
-              //                                     }
-              //                                   }}
-              //                                 />
-              //                               </div>
-              //                             </CardContent>
-              //                             <CardFooter className="flex justify-end space-x-2">
-              //                               <Button
-              //                                 variant="outline"
-              //                                 onClick={() =>
-              //                                   openEditModal({
-              //                                     id: item.id as string,
-              //                                     name: item.name,
-              //                                     price: item.price,
-              //                                     image: item.image_url,
-              //                                     description:
-              //                                       item.description || "",
-              //                                     category: item.category.name,
-              //                                     variants: item.variants,
-              //                                   })
-              //                                 }
-              //                               >
-              //                                 Edit
-              //                               </Button>
-              //                               <Button
-              //                                 variant="destructive"
-              //                                 onClick={async (e) => {
-              //                                   e.currentTarget.disabled = true;
-              //                                   e.currentTarget.innerText =
-              //                                     "Deleting...";
-              //                                   const isOfferActive =
-              //                                     adminOffers.some(
-              //                                       (offer) =>
-              //                                         offer.menuItemId ===
-              //                                         item.id
-              //                                     );
-              //                                   if (isOfferActive) {
-              //                                     alert(
-              //                                       `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
-              //                                     );
-              //                                     return;
-              //                                   }
-              //                                   await deleteItem(
-              //                                     item.id as string
-              //                                   );
-              //                                   if (item.image_url)
-              //                                     await deleteFileFromS3(
-              //                                       item.image_url
-              //                                     );
-              //                                 }}
-              //                               >
-              //                                 Delete
-              //                               </Button>
-              //                             </CardFooter>
-              //                           </Card>
-              //                         )}
-              //                       </Draggable>
-              //                     ))}
-              //                   {provided.placeholder}
-              //                 </div>
-              //               )}
-              //             </Droppable>
-              //           </AccordionContent>
-              //         </AccordionItem>
-              //       ))}
-              //   </Accordion>
-              // </DragDropContext>
-              <div>hello world</div>
+                                            {/* Toggles */}
+                                            <div className="flex items-center mt-2">
+                                              <label className="mr-2">
+                                                Mark as Popular:
+                                              </label>
+                                              <Switch
+                                                checked={item.is_top}
+                                                onCheckedChange={async () => {
+                                                  try {
+                                                    await updateItem(
+                                                      item.id as string,
+                                                      { is_top: !item.is_top }
+                                                    );
+                                                  } catch (error) {
+                                                    toast.error(
+                                                      "Failed to update item status"
+                                                    );
+                                                    console.error(error);
+                                                  }
+                                                }}
+                                              />
+                                            </div>
+                                            <div className="flex items-center mt-3">
+                                              <label className="mr-2">
+                                                Is Available:
+                                              </label>
+                                              <Switch
+                                                checked={item.is_available}
+                                                onCheckedChange={async () => {
+                                                  try {
+                                                    await updateItem(
+                                                      item.id as string,
+                                                      {
+                                                        is_available:
+                                                          !item.is_available,
+                                                      }
+                                                    );
+                                                  } catch (error) {
+                                                    toast.error(
+                                                      "Failed to mark item as " +
+                                                        (item.is_available
+                                                          ? "Unavailable"
+                                                          : "Available")
+                                                    );
+                                                    console.error(error);
+                                                  }
+                                                }}
+                                              />
+                                            </div>
+                                            <div className="flex items-center mt-3">
+                                              <label className="mr-2">
+                                                Is Price as per Size:
+                                              </label>
+                                              <Switch
+                                                checked={
+                                                  item.is_price_as_per_size ===
+                                                  true
+                                                }
+                                                onCheckedChange={async () => {
+                                                  try {
+                                                    await updateItem(
+                                                      item.id as string,
+                                                      {
+                                                        is_price_as_per_size:
+                                                          !item.is_price_as_per_size,
+                                                      }
+                                                    );
+                                                  } catch (error) {
+                                                    toast.error(
+                                                      "Failed to mark item as " +
+                                                        (item.is_price_as_per_size
+                                                          ? "Price Fixed"
+                                                          : "Price as per Size")
+                                                    );
+                                                    console.error(error);
+                                                  }
+                                                }}
+                                              />
+                                            </div>
+                                          </CardContent>
+                                          <CardFooter className="flex justify-end space-x-2">
+                                            <Button
+                                              variant="outline"
+                                              onClick={() =>
+                                                openEditModal({
+                                                  id: item.id as string,
+                                                  name: item.name,
+                                                  price: item.price,
+                                                  image: item.image_url,
+                                                  description:
+                                                    item.description || "",
+                                                  category: item.category.name,
+                                                  variants: item.variants,
+                                                })
+                                              }
+                                            >
+                                              Edit
+                                            </Button>
+                                            <Button
+                                              variant="destructive"
+                                              onClick={async (e) => {
+                                                e.currentTarget.disabled = true;
+                                                e.currentTarget.innerText =
+                                                  "Deleting...";
+                                                const isOfferActive =
+                                                  adminOffers.some(
+                                                    (offer) =>
+                                                      offer.menuItemId ===
+                                                      item.id
+                                                  );
+                                                if (isOfferActive) {
+                                                  alert(
+                                                    `Cannot delete the menu item "${item.name}" because it has an active offer. Please delete the offer first.`
+                                                  );
+                                                  return;
+                                                }
+                                                await deleteItem(
+                                                  item.id as string
+                                                );
+                                                if (item.image_url)
+                                                  await deleteFileFromS3(
+                                                    item.image_url
+                                                  );
+                                              }}
+                                            >
+                                              Delete
+                                            </Button>
+                                          </CardFooter>
+                                        </Card>
+                                      )}
+                                    </Draggable>
+                                  ))}
+                                {provided.placeholder}
+                              </div>
+                            )}
+                          </Droppable>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                </Accordion>
+              </DragDropContext>
             ) : (
               <div className="text-center py-10">
                 <p className="text-muted-foreground">No menu items found</p>
