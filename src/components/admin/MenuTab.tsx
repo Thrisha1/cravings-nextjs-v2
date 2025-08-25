@@ -417,39 +417,40 @@ export function MenuTab() {
           onCancel={() => setIsCategoryEditing(false)}
         />
       ) : isInlineItemOrdering ? (
-        <div className="mb-6 border rounded-lg shadow-sm">
-          <ItemOrderingForm
-            categories={Object.entries(groupedItems).map(
-              ([category, items]) => ({
-                id: items[0].category.id,
-                name: category,
-                priority: items[0].category.priority || 0,
-              })
-            )}
-            items={Object.values(groupedItems).flat()}
-            onSubmit={async (updatedItems) => {
-              try {
-                const updates = updatedItems
-                  .filter(
-                    (item) => typeof item.id === "string" && item.id.length > 0
-                  )
-                  .map((item) => ({
-                    id: item.id as string,
-                    priority: item.priority ?? 0, // Ensure number
-                  }));
+        // <div className="mb-6 border rounded-lg shadow-sm">
+        //   <ItemOrderingForm
+        //     categories={Object.entries(groupedItems).map(
+        //       ([category, items]) => ({
+        //         id: items[0].category.id,
+        //         name: category,
+        //         priority: items[0].category.priority || 0,
+        //       })
+        //     )}
+        //     items={Object.values(groupedItems).flat()}
+        //     onSubmit={async (updatedItems) => {
+        //       try {
+        //         const updates = updatedItems
+        //           .filter(
+        //             (item) => typeof item.id === "string" && item.id.length > 0
+        //           )
+        //           .map((item) => ({
+        //             id: item.id as string,
+        //             priority: item.priority ?? 0, // Ensure number
+        //           }));
 
-                await updateItemsAsBatch(updates);
-                setIsInlineItemOrdering(false);
-                fetchMenu();
-                toast.success("Item order updated successfully");
-              } catch (error) {
-                console.error("Failed to update item order:", error);
-                toast.error("Failed to update item order");
-              }
-            }}
-            onCancel={() => setIsInlineItemOrdering(false)}
-          />
-        </div>
+        //         await updateItemsAsBatch(updates);
+        //         setIsInlineItemOrdering(false);
+        //         fetchMenu();
+        //         toast.success("Item order updated successfully");
+        //       } catch (error) {
+        //         console.error("Failed to update item order:", error);
+        //         toast.error("Failed to update item order");
+        //       }
+        //     }}
+        //     onCancel={() => setIsInlineItemOrdering(false)}
+        //   />
+        // </div>
+        <div>asdfasdf</div>
       ) : (
         <>
           <div className="flex justify-end gap-2 mb-4">
