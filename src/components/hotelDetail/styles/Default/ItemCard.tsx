@@ -374,10 +374,13 @@ const ItemCard = ({
                       ?.map((o) => o.variant)
                       ?.filter(Boolean) || [];
                     return offerVariants;
-                  } else if (isOfferCategory && isOfferItem && offerPrice && oldPrice && !hasMultipleVariantsOnOffer) {
-                    // In Offer category: Show only the offer variant for single variant offers
-                    const offer = hotelData?.offers?.find((o) => o.menu && o.menu.id === item.id);
-                    return offer?.variant ? [offer.variant] : item.variants || [];
+                  } else if (isOfferCategory && isOfferItem && !hasMultipleVariantsOnOffer) {
+                    // In Offer category: Show only variants that have offers
+                    const offerVariants = hotelData?.offers
+                      ?.filter((o) => o.menu && o.menu.id === item.id && o.variant)
+                      ?.map((o) => o.variant)
+                      ?.filter(Boolean) || [];
+                    return offerVariants.length > 0 ? offerVariants : item.variants || [];
                   } else {
                     // In All category or other categories: Show all variants
                     return item.variants || [];
@@ -490,7 +493,7 @@ const ItemCard = ({
                   >
                     {itemQuantity > 0
                       ? `Added (${itemQuantity})`
-                      : "Choose Options"}
+                      : "See Options"}
                   </div>
                 </div>
               ) : hasMultipleVariantsOnOffer ? (

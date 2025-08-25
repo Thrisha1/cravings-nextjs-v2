@@ -67,7 +67,17 @@ const Default = ({
 
   // Helper function to check if a menu item has an active offer
   const hasActiveOffer = (menuItemId: string) => {
-    return offers.some((offer) => offer.menu && offer.menu.id === menuItemId);
+    return offers.some((offer) => {
+      // Check for direct item offer
+      if (offer.menu && offer.menu.id === menuItemId) {
+        return true;
+      }
+      // Check for variant-specific offers for this item
+      if (offer.menu && offer.menu.id === menuItemId && offer.variant) {
+        return true;
+      }
+      return false;
+    });
   };
 
   // getCategoryItems logic (updated to match HotelMenuPage_v2)
@@ -106,6 +116,19 @@ const Default = ({
         (item.category.is_active === undefined ||
           item.category.is_active === true)
     );
+    
+    console.log(`🔍 DEFAULT COMPONENT: Category "${selectedCategory}" filtering:`, {
+      totalMenus: hoteldata?.menus?.length || 0,
+      filteredCount: filteredItems?.length || 0,
+      filteredItems: filteredItems?.map(item => ({
+        name: item.name,
+        id: item.id,
+        hasVariants: !!(item.variants && item.variants.length > 0),
+        variantCount: Array.isArray(item.variants) ? item.variants.length : 0,
+        hasVariantOffers: !!(item as any).hasVariantOffers
+      }))
+    });
+    
     const sortedItems = [...filteredItems].sort((a, b) => {
       if (a.image_url.length && !b.image_url.length) return -1;
       if (!a.image_url.length && b.image_url.length) return 1;

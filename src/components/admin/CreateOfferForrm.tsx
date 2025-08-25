@@ -66,6 +66,7 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
     categoryId: "",
     description: "",
     percentage: "",
+    itemsAvailable: "",
     menuItemIds: [] as string[],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -302,6 +303,11 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
 
     if (newOfferGroup.menuItemIds.length === 0) {
       toast.error("Please select at least one menu item for the offer group");
+      return false;
+    }
+
+    if (!newOfferGroup.itemsAvailable || isNaN(parseInt(newOfferGroup.itemsAvailable))) {
+      toast.error("Please enter a valid number of items available for the offer group");
       return false;
     }
 
@@ -559,10 +565,8 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
             const variant = item?.variants?.find(v => v.name === variantName);
             
             if (item && variant) {
-              // Use the menu item's available quantity if present, otherwise fallback to 1
-              const items_available = item.stocks && item.stocks[0] && typeof item.stocks[0].stock_quantity === 'number'
-                ? item.stocks[0].stock_quantity
-                : 1;
+              // Use the offer group's items available setting
+              const items_available = parseInt(newOfferGroup.itemsAvailable);
               // Calculate offer price based on variant price
               const offer_price = Math.round(variant.price * (1 - percentage / 100));
               
@@ -586,10 +590,8 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
             // This is a regular item ID
             const item = items.find(item => item.id === selectedId);
             if (item) {
-              // Use the menu item's available quantity if present, otherwise fallback to 1
-              const items_available = item.stocks && item.stocks[0] && typeof item.stocks[0].stock_quantity === 'number'
-                ? item.stocks[0].stock_quantity
-                : 1;
+              // Use the offer group's items available setting
+              const items_available = parseInt(newOfferGroup.itemsAvailable);
               // Calculate offer price as a float with two decimals
               const offer_price = Math.round(item.price * (1 - percentage / 100));
               
@@ -675,15 +677,13 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     price: "",
                     image_url: "",
                   });
-                  setSelectedItem(null);
-                  setSelectedVariant("");
                 } else {
-                  // Reset group offer state
                   setNewOfferGroup({
                     name: "",
                     categoryId: "",
                     description: "",
                     percentage: "",
+                    itemsAvailable: "",
                     menuItemIds: [],
                   });
                   setGroupType(undefined);
@@ -783,12 +783,27 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     setGroupType(value as "category" | "all" | "select");
                     if (value === "all") {
                       const allItems = getAllItems();
+                      const allItemIds: string[] = [];
+                      
+                      allItems.forEach((item) => {
+                        if (item.id) {
+                          // Check if item has variants
+                          if (item.variants && item.variants.length > 0) {
+                            // Add variant IDs in format: itemId|variantName
+                            item.variants.forEach((variant) => {
+                              allItemIds.push(`${item.id}|${variant.name}`);
+                            });
+                          } else {
+                            // Add regular item ID for items without variants
+                            allItemIds.push(item.id);
+                          }
+                        }
+                      });
+                      
                       setNewOfferGroup({
                         ...newOfferGroup,
                         categoryId: "",
-                        menuItemIds: allItems
-                          .map((item) => item.id)
-                          .filter((id): id is string => id !== undefined),
+                        menuItemIds: allItemIds,
                       });
                     } else if (value === "category") {
                       setNewOfferGroup({
@@ -823,12 +838,27 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     value={newOfferGroup.categoryId}
                     onValueChange={(value) => {
                       const categoryItems = getItemsByCategory(value);
+                      const allItemIds: string[] = [];
+                      
+                      categoryItems.forEach((item) => {
+                        if (item.id) {
+                          // Check if item has variants
+                          if (item.variants && item.variants.length > 0) {
+                            // Add variant IDs in format: itemId|variantName
+                            item.variants.forEach((variant) => {
+                              allItemIds.push(`${item.id}|${variant.name}`);
+                            });
+                          } else {
+                            // Add regular item ID for items without variants
+                            allItemIds.push(item.id);
+                          }
+                        }
+                      });
+                      
                       setNewOfferGroup({
                         ...newOfferGroup,
                         categoryId: value,
-                        menuItemIds: categoryItems
-                          .map((item) => item.id)
-                          .filter((id): id is string => id !== undefined),
+                        menuItemIds: allItemIds,
                       });
                     }}
                   >
@@ -1040,6 +1070,25 @@ export function CreateOfferForm({ onSubmit, onCancel }: CreateOfferFormProps) {
                     setNewOfferGroup({
                       ...newOfferGroup,
                       percentage: e.target.value,
+                    })
+                  }
+                  onFocus={handleInputFocus}
+                  onBlur={handleInputBlur}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="offerGroupItemsAvailable">Items Available</Label>
+                <Input
+                  id="offerGroupItemsAvailable"
+                  type="number"
+                  min="1"
+                  placeholder="Enter number of items available"
+                  value={newOfferGroup.itemsAvailable}
+                  onChange={(e) =>
+                    setNewOfferGroup({
+                      ...newOfferGroup,
+                      itemsAvailable: e.target.value,
                     })
                   }
                   onFocus={handleInputFocus}

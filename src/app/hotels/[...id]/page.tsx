@@ -1,6 +1,6 @@
 import {
   getPartnerAndOffersQuery,
-  getPartnerSubscriptionQuery,
+  getPartnerSubscriptionQuery,  
 } from "@/api/partners";
 import { GET_QR_CODES_WITH_GROUPS_BY_PARTNER } from "@/api/qrcodes";
 import { fetchFromHasura } from "@/lib/hasuraClient";
@@ -181,7 +181,7 @@ const HotelPage = async ({
   let filteredOffers: Offer[] = [];
   if (offers) {
     const today = new Date().setHours(0, 0, 0, 0);
-    filteredOffers = search
+    let baseOffers = search
       ? offers
           .filter(
             (offer) => new Date(offer.end_time).setHours(0, 0, 0, 0) < today
@@ -195,8 +195,50 @@ const HotelPage = async ({
           (offer) => new Date(offer.end_time).setHours(0, 0, 0, 0) >= today
         );
     
+    // Expand offers for display in offers section - create variant-specific offers for items with variants
+    const expandedOffers: any[] = [];
+    baseOffers.forEach((offer: any) => {
+      // If offer is for an item with variants and no specific variant is selected
+      if (offer.menu && offer.menu.variants && !offer.variant) {
+        try {
+          const variants = typeof offer.menu.variants === 'string' 
+            ? JSON.parse(offer.menu.variants) 
+            : offer.menu.variants;
+          
+          if (Array.isArray(variants) && variants.length > 0) {
+            // Create an offer for each variant for display in offers section
+            variants.forEach((variant: any) => {
+              // Calculate offer price for this variant
+              const variantOfferPrice = offer.offer_price || variant.price;
+              
+              expandedOffers.push({
+                ...offer,
+                variant: variant,
+                id: `${offer.id}_variant_${variant.name}`, // Create unique ID for variant offer
+                offer_price: variantOfferPrice,
+                menu: {
+                  ...offer.menu,
+                  // For items with variants, show "from" lowest price instead of base price (0)
+                  price: variants.length > 1 ? Math.min(...variants.map((v: any) => v.price)) : variant.price,
+                  displayPrice: `from ₹${Math.min(...variants.map((v: any) => v.price))}`,
+                  hasVariants: true
+                }
+              });
+            });
+          } else {
+            expandedOffers.push(offer);
+          }
+        } catch (error) {
+          console.error("Error parsing menu variants for offers display:", error);
+          expandedOffers.push(offer);
+        }
+      } else {
+        expandedOffers.push(offer);
+      }
+    });
+    
     // Filter offers based on offer_type for hotels page
-    filteredOffers = filterOffersByType(filteredOffers, 'hotels');
+    filteredOffers = filterOffersByType(expandedOffers, 'hotels');
   }
 
   // Use the store to fetch UPI data
@@ -253,9 +295,98 @@ const HotelPage = async ({
   }
 
   const menuItemWithOfferPrice = hoteldata?.menus?.map((item) => {
+    // Find offers that apply to this item (either directly or through category)
+    const applicableOffers = hoteldata?.offers?.filter((offer: any) => {
+      // Direct item offer - exact match
+      if (offer.menu?.id === item.id) {
+        return true;
+      }
+      // Category-based offer - check if offer is for an item in the same category
+      // This handles cases where offers are created for each item in a category
+      if (offer.menu?.category?.name === item.category.name) {
+        return true;
+      }
+      return false;
+    }) || [];
+
+    // For items with variants, we need to handle variant-specific offers differently
+    if (item.variants && item.variants.length > 0) {
+      try {
+        const variants = typeof item.variants === 'string' 
+          ? JSON.parse(item.variants) 
+          : item.variants;
+        
+        if (Array.isArray(variants) && variants.length > 0) {
+          console.log(`Processing item with variants: ${item.name}`, {
+            variantCount: variants.length,
+            applicableOffersCount: applicableOffers.length,
+            category: item.category.name
+          });
+          // Process variants to apply offers to specific variants
+          const processedVariants = variants.map((variant: any) => {
+            // Find offers specifically for this variant
+            const variantOffers = applicableOffers.filter((offer: any) => {
+              // Check if offer is for this specific variant
+              if (offer.variant && offer.variant.name === variant.name) {
+                return true;
+              }
+              // Check if offer is for the item without variant specification (applies to all variants)
+              if (!offer.variant && offer.menu?.id === item.id) {
+                return true;
+              }
+              return false;
+            });
+            
+            // Apply offer price to variant if available
+            const variantOfferPrice = variantOffers.length > 0 ? variantOffers[0].offer_price : null;
+            
+            return {
+              ...variant,
+              price: variantOfferPrice || variant.price,
+              originalPrice: variant.price,
+              hasOffer: !!variantOfferPrice,
+              offers: variantOffers
+            };
+          });
+          
+          // Return item with processed variants - item will always be shown in category
+          const processedItem = {
+            ...item,
+            variants: processedVariants,
+            // Keep original price for base item
+            price: item.price,
+            // Mark if any variant has offers
+            hasVariantOffers: processedVariants.some((v: any) => v.hasOffer),
+            offers: applicableOffers.length > 0 ? applicableOffers.map(offer => ({ offer_price: offer.offer_price || 0 })) : item.offers,
+          };
+          
+          console.log(`✅ HOTEL PAGE: Processed item with variants: ${item.name}`, {
+            itemId: item.id,
+            category: item.category.name,
+            originalVariantCount: variants.length,
+            processedVariantCount: processedVariants.length,
+            hasVariantOffers: processedItem.hasVariantOffers,
+            variantsWithOffers: processedVariants.filter((v: any) => v.hasOffer).length,
+            allVariantNames: processedVariants.map((v: any) => v.name),
+            offeredVariantNames: processedVariants.filter((v: any) => v.hasOffer).map((v: any) => v.name)
+          });
+          
+          return processedItem;
+        }
+      } catch (error) {
+        console.error("Error processing variants for item:", item.name, error);
+      }
+    }
+
+    // For items without variants, apply offers normally
+    const offerPrice = applicableOffers.length > 0 ? applicableOffers[0].offer_price : null;
+    
     return {
       ...item,
-      price: item.offers?.[0]?.offer_price || item.price,
+      price: offerPrice || item.price,
+      originalPrice: item.price,
+      hasOffer: !!offerPrice,
+      offers: applicableOffers.length > 0 && offerPrice ? [{ offer_price: offerPrice }] : item.offers,
     };
   });
 
@@ -331,6 +462,18 @@ const HotelPage = async ({
       const filteredItems = (hotelMenus ?? []).filter(
         (item) => item.category.name === cat
       );
+      
+      // Debug logging for category filtering
+      console.log(`Filtering for category: ${cat}`);
+      console.log(`Total items in hotelMenus: ${hotelMenus.length}`);
+      console.log(`Items after category filter: ${filteredItems.length}`);
+      console.log('Filtered items:', filteredItems.map(item => ({
+        name: item.name,
+        category: item.category.name,
+        hasVariants: !!(item.variants && item.variants.length > 0),
+        hasVariantOffers: !!(item as any).hasVariantOffers,
+        offers: item.offers?.length || 0
+      })));
       const sortedItems = [...filteredItems].sort((a, b) => {
         if (a.image_url.length && !b.image_url.length) return -1;
         if (!a.image_url.length && b.image_url.length) return 1;

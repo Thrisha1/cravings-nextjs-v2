@@ -100,8 +100,16 @@ const MenuItemsList = ({
 
             // In offer category, prioritize upcoming offers first, then sort by start time
             if (selectedCat === "Offer" || selectedCat === "offers") {
-              const aOffers = hotelData.offers?.filter((o) => o.menu && o.menu.id === a.id) || [];
-              const bOffers = hotelData.offers?.filter((o) => o.menu && o.menu.id === b.id) || [];
+              const aOffers = hotelData.offers?.filter((o) => {
+                if (o.menu && o.menu.id === a.id) return true;
+                if (o.menu && o.menu.id === a.id && o.variant) return true;
+                return false;
+              }) || [];
+              const bOffers = hotelData.offers?.filter((o) => {
+                if (o.menu && o.menu.id === b.id) return true;
+                if (o.menu && o.menu.id === b.id && o.variant) return true;
+                return false;
+              }) || [];
 
               const now = new Date();
               const aHasUpcoming = aOffers.some(offer => new Date(offer.start_time) > now);
@@ -140,10 +148,22 @@ const MenuItemsList = ({
             let upcomingOffers: Offer[] = [];
 
             // Always check for offers for this item, regardless of category
-            const itemOffers = hotelData.offers?.filter((o) => o.menu && o.menu.id === item.id) || [];
+            // Include both direct item offers and variant-specific offers for this item
+            const itemOffers = hotelData.offers?.filter((o) => {
+              // Direct item offer
+              if (o.menu && o.menu.id === item.id) {
+                return true;
+              }
+              // Variant-specific offer for this item
+              if (o.menu && o.menu.id === item.id && o.variant) {
+                return true;
+              }
+              return false;
+            }) || [];
 
             if (itemOffers.length > 0) {
-              isOfferItem = true;
+              // Only mark as offer item if we're in the offer category
+              isOfferItem = isOfferCategory;
 
               // Check for upcoming offers (start_time > current time)
               const now = new Date();

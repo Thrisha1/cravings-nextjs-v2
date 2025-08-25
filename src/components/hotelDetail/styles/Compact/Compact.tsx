@@ -332,10 +332,18 @@ const Compact = ({
                   </h2>
                   <div className="grid grid-cols-1 gap-4 divide-y-2 divide-gray-200">
                     {itemsToDisplay.map((item) => {
-                      // Find all offers for this item
-                      const itemOffers = offers?.filter(
-                        (offer) => offer.menu.id === item.id
-                      ) || [];
+                      // Find all offers for this item (including variant-specific offers)
+                      const itemOffers = offers?.filter((offer) => {
+                        // Direct item offer
+                        if (offer.menu && offer.menu.id === item.id) {
+                          return true;
+                        }
+                        // Variant-specific offer for this item
+                        if (offer.menu && offer.menu.id === item.id && offer.variant) {
+                          return true;
+                        }
+                        return false;
+                      }) || [];
                       
                       let offerData = undefined;
                       let hasMultipleVariantsOnOffer = false;
@@ -409,15 +417,15 @@ const Compact = ({
                           feature_flags={hoteldata?.feature_flags}
                           hoteldata={hoteldata}
                           item={item}
-                          offerData={offerData}
+                          offerData={category.id === "offers" ? offerData : undefined}
                           styles={styles}
                           key={item.id}
-                          hasMultipleVariantsOnOffer={hasMultipleVariantsOnOffer}
-                          allItemOffers={hasMultipleVariantsOnOffer ? itemOffers : undefined}
+                          hasMultipleVariantsOnOffer={category.id === "offers" ? hasMultipleVariantsOnOffer : false}
+                          allItemOffers={category.id === "offers" && hasMultipleVariantsOnOffer ? itemOffers : undefined}
                           currentCategory={category.id}
                           isOfferCategory={category.id === "offers"}
-                          isUpcomingOffer={isUpcomingOffer}
-                          activeOffers={isUpcomingOffer ? upcomingOffers : activeOffers}
+                          isUpcomingOffer={category.id === "offers" ? isUpcomingOffer : false}
+                          activeOffers={category.id === "offers" ? (isUpcomingOffer ? upcomingOffers : activeOffers) : []}
                         />
                       );
                     })}

@@ -283,7 +283,7 @@ const ItemCard = ({
                   >
                     View offer
                   </div>
-                ) : (hasVariants && !offerData) || hasMultipleVariantsOnOffer ? (
+                ) : (hasVariants && !isOfferCategory) || hasMultipleVariantsOnOffer ? (
                   <div
                     onClick={() => setShowVariants(!showVariants)}
                     style={{ backgroundColor: styles.accent, color: "white" }}
