@@ -419,7 +419,7 @@ export function MenuTab() {
         <div>asdfasdf</div>
       ) : isInlineItemOrdering ? (
         <div className="mb-6 border rounded-lg shadow-sm">
-          <ItemOrderingForm
+          {/* <ItemOrderingForm
             categories={Object.entries(groupedItems).map(
               ([category, items]) => ({
                 id: items[0].category.id,
@@ -450,6 +450,8 @@ export function MenuTab() {
             }}
             onCancel={() => setIsInlineItemOrdering(false)}
           />
+        </div> */}
+        hello
         </div>
       ) : (
         <>
