@@ -22,12 +22,12 @@ const MenuDisplay = () => {
   
 
   const fetchMenus = async () => {
-    const cookies = await getAuthCookie();
+    // const cookies = await getAuthCookie();
 
-    if (!cookies) {
-      console.log("No auth cookie found.");
-      return;
-    }
+    // if (!cookies) {
+    //   console.log("No auth cookie found.");
+    //   return;
+    // }
 
     // await fetchMenu(cookies?.id as string, true);
   };
