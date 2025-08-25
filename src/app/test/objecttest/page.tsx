@@ -2,16 +2,29 @@
 
 import React, { useEffect } from 'react';
 import { useMenuStore } from '@/store/menuStore_hasura'; // Assuming this is your store path
+import { getAuthCookie } from '@/app/auth/actions';
 
 const MenuDisplay = () => {
   // 1. Get the state and the fetch function from your Zustand store
   const { groupedItems, fetchMenu } = useMenuStore();
 
+
+  const fetchMenus = async () => {
+    const cookies = await getAuthCookie();
+
+    if(!cookies){
+        console.log("No auth cookie found.");
+        return;
+    }
+
+    await fetchMenu(cookies?.id as string , true);
+  };
+
   // 2. Use useEffect to fetch data when the component mounts
   useEffect(() => {
     // This function will be called once after the initial render
-    fetchMenu();
-  }, [fetchMenu]); // Dependency array ensures this runs only when fetchMenu changes (typically only once)
+    fetchMenus();
+  }, []); // Dependency array ensures this runs only when fetchMenus changes (typically only once)
 
   // 3. Add a loading state for when data is not yet available
   if (!groupedItems) {
