@@ -29,7 +29,7 @@ const MenuDisplay = () => {
       return;
     }
 
-    await fetchMenu(cookies?.id as string, true);
+    // await fetchMenu(cookies?.id as string, true);
   };
 
   // 2. Use useEffect to fetch data when the component mounts
