@@ -49,6 +49,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
+    "core-js": "^3.45.1",
     "crypto-js": "^4.2.0",
     "date-fns": "^3.6.0",
     "dayjs": "^1.11.13",

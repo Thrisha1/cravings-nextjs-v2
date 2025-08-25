@@ -17,6 +17,9 @@ import { cookies, headers } from "next/headers";
 // import SyncUserOfferCoupons from "@/components/SyncUserOfferCoupons";
 // import LocationAccess from "@/components/LocationAccess";
 // import { Suspense } from "react";
+import 'core-js/stable'; // <-- ADD THIS LINE AT THE VERY TOP
+import 'regenerator-runtime/runtime'; // <-- ALSO ADD THIS FOR ASYNC/AWAIT
+
 
 export const metadata: Metadata = {
   title: "Cravings",
