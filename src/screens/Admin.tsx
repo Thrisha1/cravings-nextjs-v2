@@ -23,8 +23,7 @@ export default function Admin({ userData }: { userData: Partner }) {
             <TabsTrigger value="offers">Offers</TabsTrigger>
           </TabsList>
           <TabsContent value="menu">
-            {/* <MenuTab /> */}
-            <div>hello</div>
+            <MenuTab />
           </TabsContent>
           <TabsContent value="offers">
             <OffersTab />
