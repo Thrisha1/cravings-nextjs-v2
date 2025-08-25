@@ -18,6 +18,10 @@ import { usePartnerStore } from "@/store/usePartnerStore";
 import { filterOffersByType } from "@/lib/offerFilters";
 // import getTimestampWithTimezone from "@/lib/getTimeStampWithTimezon";
 
+// Force dynamic rendering and disable caching to avoid stale offers
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function generateMetadata({
   params,
 }: {
@@ -120,25 +124,20 @@ const HotelPage = async ({
 
   const hotelId = isUUID(id?.[0] || "") ? id?.[0] : id?.[1];
 
-  const getHotelData = unstable_cache(
-    async (id: string) => {
-      try {
-        return fetchFromHasura(getPartnerAndOffersQuery, {
-          id,
-          offer_types: ["delivery" , "all"]
-        });
-      } catch (error) {
-        console.error("Error fetching hotel data:", error);
-        return null;
-      }
-    },
-    [hotelId as string, "hotel-data"],
-    { tags: [hotelId as string, "hotel-data"] }
-  );
-
-  let hoteldata = hotelId
-    ? ((await getHotelData(hotelId))?.partners[0] as HotelData)
-    : null;
+  // Fetch fresh data without caching to avoid stale offers on page render
+  let hoteldata = null as unknown as HotelData | null;
+  if (hotelId) {
+    try {
+      const result = await fetchFromHasura(getPartnerAndOffersQuery, {
+        id: hotelId,
+        offer_types: ["delivery" , "all"]
+      });
+      hoteldata = result?.partners?.[0] as HotelData;
+    } catch (error) {
+      console.error("Error fetching hotel data:", error);
+      hoteldata = null;
+    }
+  }
   const offers = hoteldata?.offers;
 
   // Cleanup expired custom menu items
@@ -180,23 +179,24 @@ const HotelPage = async ({
 
   let filteredOffers: Offer[] = [];
   if (offers) {
-    const today = new Date().setHours(0, 0, 0, 0);
-    filteredOffers = search
-      ? offers
-          .filter(
-            (offer) => new Date(offer.end_time).setHours(0, 0, 0, 0) < today
+    const now = new Date();
+    // Active offers: start_time <= now < end_time
+    const activeOffers = offers.filter((offer) => {
+      const start = new Date(offer.start_time);
+      const end = new Date(offer.end_time);
+      return start <= now && end > now;
+    });
+
+    const searched = search
+      ? activeOffers.filter((offer) =>
+          Object.values(offer).some((value) =>
+            String(value).toLowerCase().includes(search.trim().toLowerCase())
           )
-          .filter((offer) =>
-            Object.values(offer).some((value) =>
-              String(value).toLowerCase().includes(search.trim().toLowerCase())
-            )
-          )
-      : offers.filter(
-          (offer) => new Date(offer.end_time).setHours(0, 0, 0, 0) >= today
-        );
-    
+        )
+      : activeOffers;
+
     // Filter offers based on offer_type for hotels page
-    filteredOffers = filterOffersByType(filteredOffers, 'hotels');
+    filteredOffers = filterOffersByType(searched, 'hotels');
   }
 
   // Use the store to fetch UPI data
@@ -252,10 +252,20 @@ const HotelPage = async ({
     console.error("Error fetching QR codes:", error);
   }
 
+  // Compute menu item price based on currently active offers only
+  const nowForMenu = new Date();
   const menuItemWithOfferPrice = hoteldata?.menus?.map((item) => {
+    const activeItemOffers = (hoteldata?.offers || []).filter((offer) => {
+      const start = new Date(offer.start_time);
+      const end = new Date(offer.end_time);
+      return offer.menu?.id === item.id && start <= nowForMenu && end > nowForMenu;
+    });
+    const bestOfferPrice = activeItemOffers.length
+      ? Math.min(...activeItemOffers.map((o) => o.offer_price || Number.MAX_SAFE_INTEGER))
+      : null;
     return {
       ...item,
-      price: item.offers?.[0]?.offer_price || item.price,
+      price: typeof bestOfferPrice === 'number' && isFinite(bestOfferPrice) ? bestOfferPrice : item.price,
     };
   });
 
