@@ -496,7 +496,7 @@ export function MenuTab() {
             />
           )} */}
 
-          <>
+          {/* <>
             {Object.entries(tempItems).length > 0 ? (
               <div>hello world</div>
             ) : (
@@ -504,7 +504,7 @@ export function MenuTab() {
                 <p className="text-muted-foreground">No menu items found</p>
               </div>
             )}
-          </>
+          </> */}
         </>
       )}
     </div>
