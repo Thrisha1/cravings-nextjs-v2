@@ -397,25 +397,26 @@ export function MenuTab() {
           onCancel={() => setIsEditModalOpen(false)}
         />
       ) : isCategoryEditing ? (
-        <CategoryManagementForm
-          categories={Object.entries(groupedItems).map(([category, items]) => ({
-            id: items[0].category.id,
-            name: category,
-            priority: items[0].category.priority || 0,
-            is_active: items[0].category.is_active !== false ? true : false,
-          }))}
-          onSubmit={async (updatedCategories) => {
-            try {
-              await updateCategoriesAsBatch(updatedCategories);
-              setIsCategoryEditing(false);
-              fetchMenu();
-            } catch (error) {
-              console.error("Failed to update categories:", error);
-              toast.error("Failed to update categories");
-            }
-          }}
-          onCancel={() => setIsCategoryEditing(false)}
-        />
+        // <CategoryManagementForm
+        //   categories={Object.entries(groupedItems).map(([category, items]) => ({
+        //     id: items[0].category.id,
+        //     name: category,
+        //     priority: items[0].category.priority || 0,
+        //     is_active: items[0].category.is_active !== false ? true : false,
+        //   }))}
+        //   onSubmit={async (updatedCategories) => {
+        //     try {
+        //       await updateCategoriesAsBatch(updatedCategories);
+        //       setIsCategoryEditing(false);
+        //       fetchMenu();
+        //     } catch (error) {
+        //       console.error("Failed to update categories:", error);
+        //       toast.error("Failed to update categories");
+        //     }
+        //   }}
+        //   onCancel={() => setIsCategoryEditing(false)}
+        // />
+        <div>asdfasdf</div>
       ) : isInlineItemOrdering ? (
         // <div className="mb-6 border rounded-lg shadow-sm">
         //   <ItemOrderingForm
