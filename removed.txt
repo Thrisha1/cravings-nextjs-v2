@@ -1,169 +1,4 @@
- return (
-    <div className="">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Menu Items</h2>
-        <div className="flex gap-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleCopyMenu}
-                  disabled={!menu || menu.length === 0}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>
-                  {menu && menu.length > 0
-                    ? "Copy menu for bulk upload"
-                    : "No menu items to copy"}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <Link href="/admin/bulk-menu-upload">
-            <Button variant="outline" size="icon">
-              <Upload className="h-4 w-4" />
-            </Button>
-          </Link>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {isAddModalOpen ? (
-        <AddMenuItemForm
-          onSubmit={(item) => {
-            handleAddItem(item);
-            setIsAddModalOpen(false);
-          }}
-          onCancel={() => setIsAddModalOpen(false)}
-        />
-      ) : isEditModalOpen && editingItem ? (
-        <EditMenuItemForm
-          item={editingItem}
-          onSubmit={async (item) => {
-            try {
-              await handleEditItem(item);
-              setIsEditModalOpen(false);
-            } catch (error) {
-              console.error("Failed to update item:", error);
-              toast.error("Failed to update item");
-            }
-          }}
-          onCancel={() => setIsEditModalOpen(false)}
-        />
-      ) : isCategoryEditing ? (
-        <CategoryManagementForm
-          categories={Object.entries(groupedItems).map(([category, items]) => ({
-            id: items[0].category.id,
-            name: category,
-            priority: items[0].category.priority || 0,
-            is_active: items[0].category.is_active !== false ? true : false,
-          }))}
-          onSubmit={async (updatedCategories) => {
-            try {
-              await updateCategoriesAsBatch(updatedCategories);
-              setIsCategoryEditing(false);
-              fetchMenu();
-            } catch (error) {
-              console.error("Failed to update categories:", error);
-              toast.error("Failed to update categories");
-            }
-          }}
-          onCancel={() => setIsCategoryEditing(false)}
-        />
-      ) : isInlineItemOrdering ? (
-        <div className="mb-6 border rounded-lg shadow-sm">
-          <ItemOrderingForm
-            categories={Object.entries(groupedItems).map(
-              ([category, items]) => ({
-                id: items[0].category.id,
-                name: category,
-                priority: items[0].category.priority || 0,
-              })
-            )}
-            items={Object.values(groupedItems).flat()}
-            onSubmit={async (updatedItems) => {
-              try {
-                const updates = updatedItems
-                  .filter(
-                    (item) => typeof item.id === "string" && item.id.length > 0
-                  )
-                  .map((item) => ({
-                    id: item.id as string,
-                    priority: item.priority ?? 0, // Ensure number
-                  }));
-
-                await updateItemsAsBatch(updates);
-                setIsInlineItemOrdering(false);
-                fetchMenu();
-                toast.success("Item order updated successfully");
-              } catch (error) {
-                console.error("Failed to update item order:", error);
-                toast.error("Failed to update item order");
-              }
-            }}
-            onCancel={() => setIsInlineItemOrdering(false)}
-          />
-        </div>
-      ) : (
-        <>
-          <div className="flex justify-end gap-2 mb-4">
-            <Button
-              onClick={() => setIsInlineItemOrdering(true)}
-              variant="outline"
-              className="flex gap-2 text-xs sm:text-sm"
-            >
-              <ListOrdered className="h-4 w-4" />
-              <span>Edit Item Order</span>
-            </Button>
-            <Button
-              onClick={() => setIsCategoryEditing(true)}
-              variant="outline"
-              className="flex gap-2 text-xs sm:text-sm"
-            >
-              <Pen className="h-4 w-4" />
-              <span>Category Update</span>
-            </Button>
-          </div>
-
-          <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <Input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          {isCategoryEditing && (
-            <CategoryManagementModal
-              open={isCategoryEditing}
-              categories={Object.entries(groupedItems).map(
-                ([category, items]) => ({
-                  id: items[0].category.id,
-                  name: category,
-                  priority: items[0].category.priority,
-                })
-              )}
-              onOpenChange={setIsCategoryEditing}
-            />
-          )}
-
-          <>
-            {Object.entries(tempItems).length > 0 ? (
-              <DragDropContext onDragEnd={onDragEnd}>
+ <DragDropContext onDragEnd={onDragEnd}>
                 <Accordion
                   type="multiple"
                   className="grid gap-4"
@@ -201,7 +36,10 @@
                                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
                               >
                                 {items
-                                  .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
+                                  .sort(
+                                    (a, b) =>
+                                      (a.priority ?? 0) - (b.priority ?? 0)
+                                  )
                                   .map((item, itemIndex) => (
                                     <Draggable
                                       key={item.id}
@@ -496,15 +334,6 @@
                     ))}
                 </Accordion>
               </DragDropContext>
-            ) : (
-              <div className="text-center py-10">
-                <p className="text-muted-foreground">No menu items found</p>
-              </div>
-            )}
-          </>
-        </>
-      )}
-    </div>
-  );
 
-  332
+
+              510
