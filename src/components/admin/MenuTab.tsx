@@ -338,7 +338,7 @@ export function MenuTab() {
 
   return (
     <div className="">
-      <div className="flex justify-between items-center mb-6">
+      {/* <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Menu Items</h2>
         <div className="flex gap-2">
           <TooltipProvider>
@@ -375,7 +375,7 @@ export function MenuTab() {
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-      </div>
+      </div> */}
 
       {isAddModalOpen ? (
         // <AddMenuItemForm
@@ -491,7 +491,7 @@ export function MenuTab() {
             />
           </div>
 
-          {isCategoryEditing && (
+          {/* {isCategoryEditing && (
             <CategoryManagementModal
               open={isCategoryEditing}
               categories={Object.entries(groupedItems).map(
@@ -503,7 +503,7 @@ export function MenuTab() {
               )}
               onOpenChange={setIsCategoryEditing}
             />
-          )}
+          )} */}
 
           <>
             {Object.entries(tempItems).length > 0 ? (
