@@ -7,7 +7,11 @@ import { Partner } from "@/store/authStore";
 import { useEffect } from "react";
 import { Notification } from "@/app/actions/notification";
 
+
 export default function Admin({ userData }: { userData: Partner }) {
+  useEffect(() => {
+    require('@/lib/polyfills');
+  }, []);
 
   // Main dashboard for active partners
   return (

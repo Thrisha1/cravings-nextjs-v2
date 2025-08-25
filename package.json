@@ -9,6 +9,12 @@
     "lint": "next lint",
     "codegen": "graphql-codegen"
   },
+  "browserslist": [
+    "defaults",
+    "not IE 11",
+    "Android >= 9",
+    "ChromeAndroid >= 80"
+  ],
   "dependencies": {
     "@aws-sdk/client-s3": "^3.717.0",
     "@aws-sdk/lib-storage": "^3.758.0",
