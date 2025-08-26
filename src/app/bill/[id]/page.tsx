@@ -120,7 +120,7 @@ const PrintOrderPage = () => {
             orders_by_pk.qr_code?.table_name || orders_by_pk.table_name || null, // Ensure this matches your usage
           deliveryAddress: orders_by_pk.delivery_address, // Ensure this matches your usage
           qrCode: qrCodeUrl,
-          address: geoData || null,
+          address: geoData?.name || geoData?.display_name || geoData?.address?.state_district || null,
         };
 
         setOrder(formattedOrder);
@@ -185,7 +185,7 @@ const PrintOrderPage = () => {
               },
               currency: formattedOrder.partner?.currency || "$",
               gst_no: formattedOrder.partner?.gst_no,
-              address: geoData || null,
+              address: geoData?.name || geoData?.display_name || geoData?.address?.state_district || null,
             },
             null,
             2
