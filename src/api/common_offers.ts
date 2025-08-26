@@ -165,7 +165,7 @@ export const getAllCommonOffersAllFields = `
 `;
 
 export const getCommonOfferById = `
-  query GetCommonOfferById($id: uuid!) {
+  query GetCommonOfferById($id: uuid!, $user_id: String) {
     common_offers_by_pk(id: $id) {
       id
       partner_name
@@ -173,12 +173,17 @@ export const getCommonOfferById = `
       price
       location
       description
+      coordinates
       insta_link
       image_url
+      view_count
       image_urls
-      likes
+      no_of_likes
       district
       created_at
+      common_offers_liked_bies(where: {user_id: {_eq: $user_id}}) {
+        user_id
+      }
     }
   }
 `;

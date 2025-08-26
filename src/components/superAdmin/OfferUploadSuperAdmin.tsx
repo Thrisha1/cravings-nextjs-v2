@@ -30,10 +30,12 @@ export interface CommonOffer {
   location: string | null;
   description: string | null;
   insta_link: string | null;
-  likes: number;
+  likes: number; //this is not using now
+  no_of_likes?: number;
   image_url: string;
   image_urls?: string[];
   id: string;
+  view_count?: number;
   distance_meters?: number;
   district: string;
   coordinates?: {
@@ -41,6 +43,10 @@ export interface CommonOffer {
     coordinates: number[];
   };
   created_at?: string;
+  common_offer_liked_bies?: {
+    user_id: string;
+  }[];
+  geoData? : any;
 }
 
 export const KERALA_DISTRICTS = [
