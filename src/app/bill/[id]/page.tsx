@@ -34,6 +34,7 @@ query GetOrder($id: uuid!) {
     partner_id
     partner {
       gst_percentage
+      geo_location
       currency
       store_name
       district
@@ -79,13 +80,31 @@ const PrintOrderPage = () => {
           throw new Error("Order not found");
         }
 
-        const image = await fetch(`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(
-          `https://www.google.com/maps/place/${orders_by_pk.delivery_location?.coordinates[1]},${orders_by_pk.delivery_location?.coordinates[0]}`
-        )}`);
+        const image = await fetch(
+          `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(
+            `https://www.google.com/maps/place/${orders_by_pk.delivery_location?.coordinates[1]},${orders_by_pk.delivery_location?.coordinates[0]}`
+          )}`
+        );
 
         //read as blob url not base64
         const qrCodeBlob = await image.blob();
         const qrCodeUrl = URL.createObjectURL(qrCodeBlob);
+        let geoData = null;
+
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${orders_by_pk.partner?.geo_location?.coordinates[1]}&lon=${orders_by_pk.partner?.geo_location?.coordinates[0]}`,
+            {
+              headers: {
+                "User-Agent": "Cravings/1.0 (https://cravings.live)",
+              },
+            }
+          );
+          geoData = await response.json();
+        } catch (err) {
+          console.error("Error fetching geo data:", err);
+          geoData = null;
+        }
 
         const formattedOrder = {
           ...orders_by_pk,
@@ -101,6 +120,7 @@ const PrintOrderPage = () => {
             orders_by_pk.qr_code?.table_name || orders_by_pk.table_name || null, // Ensure this matches your usage
           deliveryAddress: orders_by_pk.delivery_address, // Ensure this matches your usage
           qrCode: qrCodeUrl,
+          address: geoData || null,
         };
 
         setOrder(formattedOrder);
@@ -165,6 +185,7 @@ const PrintOrderPage = () => {
               },
               currency: formattedOrder.partner?.currency || "$",
               gst_no: formattedOrder.partner?.gst_no,
+              address: geoData || null,
             },
             null,
             2
@@ -338,21 +359,24 @@ const PrintOrderPage = () => {
                   <div className="text-[12px]">{order.deliveryAddress}</div>
                 </div>
               )}
-              {!order.tableNumber && order.delivery_location && order.delivery_location?.coordinates[1] > 0 && order.delivery_location?.coordinates[0] > 0 && (
-                <>
-                  <div className="text-sm flex gap-2">
-                    <div className="font-medium">Delivery Location:</div>
-                    <br />
-                    <div className="text-sm">
-                      <img
-                        alt="QR Code for Delivery Location"
-                        className="w-16 h-16"
-                        src={order.qrCode}
-                      />
+              {!order.tableNumber &&
+                order.delivery_location &&
+                order.delivery_location?.coordinates[1] > 0 &&
+                order.delivery_location?.coordinates[0] > 0 && (
+                  <>
+                    <div className="text-sm flex gap-2">
+                      <div className="font-medium">Delivery Location:</div>
+                      <br />
+                      <div className="text-sm">
+                        <img
+                          alt="QR Code for Delivery Location"
+                          className="w-16 h-16"
+                          src={order.qrCode}
+                        />
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
             </div>
           </>
         )}
