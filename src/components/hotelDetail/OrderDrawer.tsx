@@ -206,6 +206,8 @@ const OrderDrawer = ({
   };
 
   const getWhatsappLink = (orderId?: string) => {
+    // First try to get order ID from function parameter, then from localStorage, then from order store
+    const finalOrderId = orderId || localStorage?.getItem('last-order-id') || useOrderStore.getState().orderId;
     const savedAddress = userAddress || "N/A";
     const selectedWhatsAppNumber = localStorage?.getItem(
       `hotel-${hotelData.id}-whatsapp-area`
@@ -216,12 +218,15 @@ const OrderDrawer = ({
 
     const currentSelectedArea = selectedArea || "";
 
+    // Get location from localStorage or from the order store
     let locationLink = "";
-    const userLocationData = localStorage?.getItem("user-location-store");
+    const userLocationData = localStorage?.getItem("user-location-store") || 
+      JSON.stringify({ state: { coords: useOrderStore.getState().coordinates } });
+    
     if (userLocationData) {
       try {
         const location = JSON.parse(userLocationData);
-        if (location.state?.coords) {
+        if (location?.state?.coords) {
           const { lat, lng } = location.state.coords;
           locationLink = `\n*📍 Location:* https://www.google.com/maps?q=${lat},${lng}`;
         }
@@ -262,7 +267,7 @@ const OrderDrawer = ({
     const whatsappMsg = `
     *🍽️ Order Details 🍽️*
     
-    *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
+    *Order ID:* ${finalOrderId ? finalOrderId.slice(0, 8) : 'N/A'}
     ${
       (tableNumber ?? 0) > 0
         ? `*Table:* ${qrData?.table_name || tableNumber}`
@@ -274,10 +279,8 @@ const OrderDrawer = ({
         : ""
     }
     ${
-      (tableNumber ?? 0) > 0
-        ? ""
-        : orderType === "delivery"
-        ? `*Delivery Address:* ${savedAddress}${locationLink}`
+      orderType === "delivery"
+        ? `\n*Delivery Address:* ${savedAddress}${locationLink}`
         : ""
     }
     *Time:* ${new Date().toLocaleTimeString()}
@@ -340,6 +343,7 @@ const OrderDrawer = ({
     if (!user) {
       // Show full-screen login modal
       setShowLoginModal(true);
+      setOpenDrawerBottom(false);
     } else {
       // User is logged in → proceed
       setOpenPlaceOrderModal(true);
@@ -464,7 +468,11 @@ const OrderDrawer = ({
         <div className="fixed inset-0 z-[70] bg-white flex flex-col">
           <div className="flex items-center justify-between p-4 border-b">
             <button
-              onClick={() => setShowLoginModal(false)}
+              onClick={() => {
+                setShowLoginModal(false);
+                // setOpenOrderDrawer(true);
+                // setOpenDrawerBottom(false);
+              }}
               className="p-2 rounded-full hover:bg-gray-100"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

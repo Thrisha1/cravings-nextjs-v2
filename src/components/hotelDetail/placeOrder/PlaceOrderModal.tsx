@@ -647,18 +647,41 @@ const UnifiedAddressSection = ({
 
   const handleAddressSelect = (addr: SavedAddress) => {
     setSelectedAddressId(addr.id);
+  
     const fullAddress = addr.address || [
       addr.flat_no,
-      addr.house_no, 
+      addr.house_no,
       addr.road_no,
       addr.street,
       addr.area,
       addr.district,
       addr.landmark,
       addr.city,
-      addr.pincode
+      addr.pincode,
     ].filter(Boolean).join(", ");
     setAddress(fullAddress);
+    
+    // Store coordinates in localStorage for WhatsApp location link
+    if (addr.latitude && addr.longitude) {
+      const locationData = {
+        state: {
+          coords: {
+            lat: addr.latitude,
+            lng: addr.longitude
+          }
+        }
+      };
+      localStorage?.setItem('user-location-store', JSON.stringify(locationData));
+    }
+  
+    // ✅ Set coordinates in global store
+    if (addr.latitude && addr.longitude) {
+      useOrderStore.getState().setUserCoordinates({
+        lat: addr.latitude,
+        lng: addr.longitude,
+      });
+    }
+  
     setShowDropdown(false);
   };
 
@@ -2173,18 +2196,23 @@ const PlaceOrderModal = ({
       return;
     }
 
-    if (hotelData?.delivery_rules?.needDeliveryLocation ?? true) {
-      if (isDelivery && !address && !isQrScan) {
-        toast.error("Please enter your delivery address");
-        return;
-      }
-      if (isDelivery && hasDelivery && !selectedCoords && !isQrScan) {
-        toast.error("Please select your location");
-        return;
-      }
-      if (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan) {
-        toast.error("Delivery is not available to your location");
-        return;
+    // Enhanced delivery address validation
+    if (isDelivery) {
+      if (hotelData?.delivery_rules?.needDeliveryLocation ?? true) {
+        if (!address?.trim()) {
+          toast.error("Please enter your delivery address");
+          return;
+        }
+        
+        if (hasDelivery && !selectedCoords) {
+          toast.error("Please select your location on the map");
+          return;
+        }
+        
+        if (deliveryInfo?.isOutOfRange) {
+          toast.error("Delivery is not available to your location");
+          return;
+        }
       }
     }
 
@@ -2269,7 +2297,11 @@ const PlaceOrderModal = ({
       );
 
       if (result) {
-        // ** MODIFIED **:
+        // Store order ID in localStorage for WhatsApp message
+        if (result.id) {
+          localStorage?.setItem('last-order-id', result.id);
+        }
+        
         // Execute callback first (for Android), then show success screen.
         if (onSuccessCallback) {
           onSuccessCallback();
