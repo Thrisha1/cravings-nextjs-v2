@@ -152,6 +152,17 @@ const Page = () => {
     }
   };
 
+  function isInstagramReelUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    if (!host.includes("instagram.com")) return false;
+    return /\/reel\/|\/p\//.test(u.pathname);
+  } catch (e) {
+    return false;
+  }
+}
+
   const checkDuplicateUrl = (url: string) => {
     const normalizedUrl = url.trim().toLowerCase();
     return reels.some(
@@ -172,7 +183,7 @@ const Page = () => {
     }
 
     const trimmedUrl = reelUrl.trim();
-    if (!trimmedUrl || !trimmedUrl.includes("instagram.com/reel/")) {
+    if (!trimmedUrl || !isInstagramReelUrl(trimmedUrl)) {
       toast.error("Please enter a valid Instagram reel URL");
       return;
     }
