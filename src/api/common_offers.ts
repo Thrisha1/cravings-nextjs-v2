@@ -46,7 +46,7 @@ mutation InsertCommonOffer(
 
 export const getAllCommonOffers = (location?: { lat: number; lng: number }) => {
   // if (location) {
-    return `
+  return `
   query GetAllCommonOffers(
     $user_lat: float8,
     $user_lng: float8,
@@ -74,6 +74,7 @@ export const getAllCommonOffers = (location?: { lat: number; lng: number }) => {
       price
       image_url
       district
+      partner_id
       created_at
       coordinates
     }
@@ -92,26 +93,26 @@ export const getAllCommonOffers = (location?: { lat: number; lng: number }) => {
     }
   }
   `;
-//   } else {
-//     return `
-//    query GetAllCommonOffers($limit_count: Int, $offset_count: Int, $district: String = "", $search_query: String = "") {
-//     common_offers: common_offers(order_by: {created_at: desc}, limit: $limit_count, offset: $offset_count, where: {district: {_ilike: $district}, _or: [{partner_name: {_ilike: $search_query}}, {item_name: {_ilike: $search_query}}]}) {
-//       id
-//       partner_name
-//       item_name
-//       price
-//       image_url
-//       district
-//       created_at
-//     }
-//     common_offers_aggregate: common_offers_aggregate(where: {district: {_eq: $district}, _or: [{partner_name: {_ilike: $search_query}}, {item_name: {_ilike: $search_query}}]}) {
-//       aggregate {
-//         count
-//       }
-//     }
-//   }
-// `;
-//   }
+  //   } else {
+  //     return `
+  //    query GetAllCommonOffers($limit_count: Int, $offset_count: Int, $district: String = "", $search_query: String = "") {
+  //     common_offers: common_offers(order_by: {created_at: desc}, limit: $limit_count, offset: $offset_count, where: {district: {_ilike: $district}, _or: [{partner_name: {_ilike: $search_query}}, {item_name: {_ilike: $search_query}}]}) {
+  //       id
+  //       partner_name
+  //       item_name
+  //       price
+  //       image_url
+  //       district
+  //       created_at
+  //     }
+  //     common_offers_aggregate: common_offers_aggregate(where: {district: {_eq: $district}, _or: [{partner_name: {_ilike: $search_query}}, {item_name: {_ilike: $search_query}}]}) {
+  //       aggregate {
+  //         count
+  //       }
+  //     }
+  //   }
+  // `;
+  //   }
 };
 
 export const getCommonOffersWithDistance = `
@@ -165,27 +166,56 @@ export const getAllCommonOffersAllFields = `
 `;
 
 export const getCommonOfferById = `
-  query GetCommonOfferById($id: uuid!, $user_id: String) {
-    common_offers_by_pk(id: $id) {
-      id
-      partner_name
-      item_name
-      price
-      location
-      description
-      coordinates
-      insta_link
-      image_url
-      view_count
-      image_urls
-      no_of_likes
+query GetCommonOfferById($id: uuid!, $user_id: String) {
+  common_offers_by_pk(id: $id) {
+    id
+    partner_name
+    item_name
+    price
+    location
+    description
+    coordinates
+    insta_link
+    image_url
+    view_count
+    image_urls
+    partner_id
+    no_of_likes
+    district
+    created_at
+    common_offers_liked_bies(where: {user_id: {_eq: $user_id}}) {
+      user_id
+    }
+    partner {
+      store_name
       district
-      created_at
-      common_offers_liked_bies(where: {user_id: {_eq: $user_id}}) {
-        user_id
+      whatsapp_numbers
+      phone
+      country_code
+      location
+      common_offers(where: {id: {_neq: $id}}) {
+        id
+        partner_name
+        item_name
+        price
+        location
+        description
+        coordinates
+        insta_link
+        image_url
+        view_count
+        image_urls
+        partner_id
+        no_of_likes
+        district
+        created_at
+        common_offers_liked_bies(where: {user_id: {_eq: $user_id}}) {
+          user_id
+        }
       }
     }
   }
+}
 `;
 
 export const deleteCommonOffer = `

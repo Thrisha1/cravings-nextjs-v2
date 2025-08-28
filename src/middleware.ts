@@ -60,13 +60,13 @@ export async function middleware(request: NextRequest) {
     "/demo",
   ];
 
-  if (
-    pathname.startsWith("/qrScan/") ||
-    pathname.startsWith("/hotels/") ||
-    pathname.startsWith("/business/")
-  ) {
-    await cookieStore.set("last_hotel", pathname.split("/").pop() || "");
-  }
+  // if (
+  //   pathname.startsWith("/qrScan/") ||
+  //   pathname.startsWith("/hotels/") ||
+  //   pathname.startsWith("/business/")
+  // ) {
+  //   await cookieStore.set("last_hotel", pathname.split("/").pop() || "");
+  // }
 
   // Check if current route is public
   const isPublicRoute = publicRoutes.some(
@@ -118,18 +118,18 @@ export async function middleware(request: NextRequest) {
         }
       }
 
-      const lastHotel = cookieStore.get("last_hotel")?.value;
+      // const lastHotel = cookieStore.get("last_hotel")?.value;
 
-      if (
-        decrypted?.role !== "partner" &&
-        decrypted?.role !== "superadmin" &&
-        lastHotel &&
-        !isInternalNavigation
-      ) {
-        return NextResponse.redirect(
-          new URL(`/hotels/${lastHotel}`, request.url)
-        );
-      }
+      // if (
+      //   decrypted?.role !== "partner" &&
+      //   decrypted?.role !== "superadmin" &&
+      //   lastHotel &&
+      //   !isInternalNavigation
+      // ) {
+      //   return NextResponse.redirect(
+      //     new URL(`/hotels/${lastHotel}`, request.url)
+      //   );
+      // }
 
       // Regular users stay on home page
       return NextResponse.next();

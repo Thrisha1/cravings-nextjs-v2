@@ -1,7 +1,7 @@
 "use client";
 
 import { Heart, Share2 } from "lucide-react";
-import React, { useRef } from "react"; // ✨ Import useRef
+import React, { useEffect, useRef } from "react"; // ✨ Import useRef
 import { CommonOffer } from "../superAdmin/OfferUploadSuperAdmin";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { toast } from "sonner";
@@ -14,11 +14,22 @@ const SideActionButtons = ({
   commonOffer: CommonOffer;
   user: { id: string; role: string } | null;
 }) => {
+
+  console.log(commonOffer)
+
   const [isLiked, setIsLiked] = React.useState(
-    commonOffer?.common_offer_liked_bies?.some(
+    commonOffer?.common_offers_liked_bies?.some(
       (like) => like.user_id === (user?.id || "")
     ) || false
   );
+
+  useEffect(() => {
+    setIsLiked(
+      commonOffer?.common_offers_liked_bies?.some(
+        (like) => like.user_id === (user?.id || "")
+      ) || false
+    );
+  }, [commonOffer, user]);
 
   // ✨ Ref to store the timestamps of recent clicks
   const likeClickTimestamps = useRef<number[]>([]);
@@ -102,7 +113,7 @@ const SideActionButtons = ({
       try {
         await navigator.share({
           title: "Check out this offer!",
-          url: window.location.href,
+          url: `https://cravings.live/explore/${commonOffer.id}`,
         });
       } catch (error) {
         console.error("Error sharing:", error);

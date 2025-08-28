@@ -23,6 +23,7 @@ import { DeliveryRules } from "./orderStore";
 import { Notification } from "@/app/actions/notification";
 import { addAccount, getAccounts, getAllAccounts } from "@/lib/addAccount";
 import { transferTempDataToUserAccount } from "@/lib/transferTempDataToUserAccount";
+import { CommonOffer } from "@/components/superAdmin/OfferUploadSuperAdmin";
 
 interface BaseUser {
   id: string;
@@ -86,6 +87,7 @@ export interface Partner extends BaseUser {
   country?: string;
   country_code?: string;
   distance_meters?: number;
+  common_offers?: CommonOffer[];
 }
 
 export interface SuperAdmin extends BaseUser {
