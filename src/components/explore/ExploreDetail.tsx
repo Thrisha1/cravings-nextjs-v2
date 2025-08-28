@@ -61,8 +61,8 @@ const ExploreDetail = ({
             <div className="space-y-4">
               {commonOffer.partner && (
                 <div className="inline-flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-full text-xs font-medium">
-                  <Star className="w-4 h-4 fill-current" />
-                  Featured Offer
+                  <Verified className="w-4 h-4 t" />
+                  Verified
                 </div>
               )}
 
@@ -111,16 +111,13 @@ const ExploreDetail = ({
                     <Hotel className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 capitalize ">
+                    <h3 className="font-bold text-gray-900 capitalize flex gap-2 items-center">
                       {commonOffer.partner?.store_name?.toLowerCase() ||
                         commonOffer.partner_name.toLowerCase()}
-                    </h3>
-                    {commonOffer?.partner?.store_name && (
-                      <span className="text-xs font-medium text-orange-500 bg-gray-50 rounded-full items-center flex gap-1 py-1 px-2 w-fit">
+                      {commonOffer?.partner?.store_name && (
                         <Verified className="w-4 h-4 inline text-orange-500" />
-                        Verified
-                      </span>
-                    )}
+                      )}
+                    </h3>
                   </div>
                 </div>
 
@@ -147,7 +144,7 @@ const ExploreDetail = ({
                   </Link>
                 )}
 
-                {commonOffer?.partner?.whatsapp_numbers?.length && (
+                {(commonOffer?.partner?.whatsapp_numbers?.length ?? 0) > 0 && (
                   <Link
                     href={`https://wa.me/${commonOffer.partner?.country_code}${commonOffer.partner?.whatsapp_numbers?.[0].number}`}
                     target="_blank"

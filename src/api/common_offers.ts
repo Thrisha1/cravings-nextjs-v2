@@ -75,6 +75,9 @@ export const getAllCommonOffers = (location?: { lat: number; lng: number }) => {
       image_url
       district
       partner_id
+      partner {
+        id
+      }
       created_at
       coordinates
     }

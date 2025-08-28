@@ -40,7 +40,6 @@ const ReelSection = ({
   setCurrentIndex: React.Dispatch<React.SetStateAction<number>>;
   currentIndex: number;
 }) => {
-    
   const currentOffer = allOfferReels[currentIndex];
 
   const nextReel = () => {
@@ -67,12 +66,23 @@ const ReelSection = ({
                 className="flex h-full transition-transform duration-500 ease-in-out"
                 style={{ transform: `translateX(-${currentIndex * 100}%)` }}
               >
-                {allOfferReels.map((offer) => (
+                {allOfferReels.map((offer, index) => (
                   <div key={offer.id} className="w-full h-full flex-shrink-0">
-                    <InstaReelEmbed
-                      image={offer.image_url}
-                      url={offer.insta_link as string}
-                    />
+                    {index === currentIndex ? (
+                      <InstaReelEmbed
+                        // By adding a key, React will re-mount the component on change,
+                        // making it 'autoplay-ready' for the user to tap.
+                        key={offer.id} 
+                        image={offer.image_url}
+                        url={offer.insta_link as string}
+                      />
+                    ) : (
+                      <img
+                        src={offer.image_url}
+                        alt="Reel thumbnail"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
                   </div>
                 ))}
               </div>
