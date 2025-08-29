@@ -14,6 +14,7 @@ interface CommonOffer {
   created_at: string;
   coordinates: any;
   distance_meters: number;
+  partner_id?: string | null;
 }
 
 interface CommonOffersResponse {
@@ -71,10 +72,24 @@ const page = async ({
     await getCommonOffers();
 
 
+  const filteredOffers = get_offers_near_location.filter(
+  (offer: CommonOffer, index: number, self: CommonOffer[]) => {
+    // Condition 1: If the offer has no partner_id, always keep it.
+    if (!offer.partner_id) {
+      return true;
+    }
+    
+    // Condition 2: If it has a partner_id, only keep it if it's the first
+    // occurrence of that partner_id in the entire array.
+    return index === self.findIndex((o) => o.partner_id === offer.partner_id);
+  }
+);
+
+
   return (
     <Explore
       hasUserLocation={!!location}
-      commonOffers={get_offers_near_location}
+      commonOffers={filteredOffers}
       limit={limit}
       totalOffers={get_offers_near_location_aggregate.aggregate.count}
       initialDistrict={district}

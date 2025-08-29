@@ -113,6 +113,7 @@ interface CaptainOrder {
 }
 
 import { countryCodes } from "@/utils/countryCodes";
+import { FaInstagram } from "react-icons/fa";
 
 const Currencies = [
   { label: "INR", value: "₹" },
@@ -124,7 +125,7 @@ const Currencies = [
   { label: "KWD", value: "د.ك" },
   { label: "BHD", value: "د.ب" },
   { label: "QAR", value: "ر.ق" },
-  {label: "OMR", value: "ر.ع."},
+  { label: "OMR", value: "ر.ع." },
   { label: "None", value: " " },
 ];
 
@@ -277,7 +278,6 @@ export default function ProfilePage() {
       });
       setIsShopOpen(userData.is_shop_open);
 
-
       setDeliveryRules({
         delivery_radius: userData.delivery_rules?.delivery_radius || 5,
         first_km_range: {
@@ -287,9 +287,11 @@ export default function ProfilePage() {
         is_fixed_rate: userData.delivery_rules?.is_fixed_rate || false,
         minimum_order_amount:
           userData.delivery_rules?.minimum_order_amount || 0,
-        delivery_time_allowed: userData.delivery_rules?.delivery_time_allowed || null,
+        delivery_time_allowed:
+          userData.delivery_rules?.delivery_time_allowed || null,
         isDeliveryActive: userData.delivery_rules?.isDeliveryActive ?? true,
-        needDeliveryLocation: userData.delivery_rules?.needDeliveryLocation ?? true,
+        needDeliveryLocation:
+          userData.delivery_rules?.needDeliveryLocation ?? true,
       });
       setGeoLocation({
         latitude: userData?.geo_location?.coordinates?.[1] || 0,
@@ -1666,6 +1668,15 @@ export default function ProfilePage() {
                 </>
               )}
             </div>
+            {userData?.role === "partner" && (
+              <Link 
+                href={`/admin/reel-upload`}
+                className="text-sm flex items-center gap-2 p-3 mt-2 bg-gradient-to-r from-pink-500 to-orange-400 text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
+              >
+                <FaInstagram className="w-5 h-5" /> 
+                <span>Promote your Instagram Reel✨</span>
+              </Link>
+            )}
           </CardContent>
         </Card>
 

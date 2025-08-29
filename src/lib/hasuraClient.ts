@@ -4,8 +4,8 @@ export const client = new GraphQLClient(
   process.env.NEXT_PUBLIC_HASURA_GRAPHQL_ENDPOINT as string,
   {
     headers: {
-      "x-hasura-admin-secret":
-        process.env.NEXT_PUBLIC_HASURA_GRAPHQL_ADMIN_SECRET as string,
+      "x-hasura-admin-secret": process.env
+        .NEXT_PUBLIC_HASURA_GRAPHQL_ADMIN_SECRET as string,
     },
   }
 );
@@ -22,9 +22,12 @@ export function fetchFromHasura(
   query: string,
   variables?: Record<string, unknown>
 ): Promise<any> {
-  return client.request(query, variables)
+  return client
+    .request(query, variables)
     .then((result) => {
-      // console.log("Hasura response: ", result); 
+      if (process.env.NEXT_PUBLIC_ENV === "dev") {
+        console.log("Hasura response: ", result);
+      }
       return result;
     })
     .catch((error: any) => {

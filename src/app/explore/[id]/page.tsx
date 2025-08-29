@@ -1,19 +1,40 @@
 import { getCommonOfferById } from "@/api/common_offers";
+import { getAuthCookie } from "@/app/auth/actions";
 import DeleteExploreOfferBtn from "@/components/explore/DeleteExploreOfferBtn";
+import ExploreDetail from "@/components/explore/ExploreDetail";
+// import GeoAddress from "@/components/explore/geoAddress";
 import ImageList from "@/components/explore/ImageList";
 import ResendOfferMsgBtn from "@/components/explore/ResendOfferMsgBtn";
+import ScrollDownIndicator from "@/components/explore/ScrollDownIndicator";
 import ShareExploreItemBtn from "@/components/explore/ShareExploreItemBtn";
-import InstaReelEmbeded from "@/components/InstaReelEmbeded";
+import SideActionButtons from "@/components/explore/SideActionButtons";
+import VideoStats from "@/components/explore/VideoStats";
+import InstaReelEmbed from "@/components/InstaReelEmbeded";
 import ReportReelModal from "@/components/ReportReelModal";
 import { CommonOffer } from "@/components/superAdmin/OfferUploadSuperAdmin";
 import { decryptText } from "@/lib/encrtption";
 import { fetchFromHasura } from "@/lib/hasuraClient";
 import { InstagramLogoIcon } from "@radix-ui/react-icons";
-import { Hotel, Map, MapPin, UtensilsCrossed } from "lucide-react";
+import {
+  Hotel,
+  Map,
+  MapPin,
+  UtensilsCrossed,
+  Star,
+  Clock,
+  Heart,
+  Share2,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Phone,
+} from "lucide-react";
 import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import React from "react";
+import { FaWhatsapp } from "react-icons/fa";
 
 export async function generateMetadata({
   params,
@@ -21,6 +42,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const cookies = await getAuthCookie();
 
   const getOffer = unstable_cache(
     async (id: string) => {
@@ -30,6 +52,7 @@ export async function generateMetadata({
 
       const offers = await fetchFromHasura(getCommonOfferById, {
         id: id,
+        user_id: cookies?.id || "",
       });
 
       if (offers.common_offers_by_pk === null) {
@@ -51,7 +74,7 @@ export async function generateMetadata({
   return {
     title: commonOffer.item_name,
     icons: [commonOffer.image_url],
-    description: `*KIDILAN FOOD SPOT ALERT* �\n\n🎉 *${
+    description: `*KIDILAN FOOD SPOT ALERT* 🚨\n\n🎉 *${
       commonOffer.partner_name
     }* is offering *${commonOffer.item_name}* at *₹${
       commonOffer.price
@@ -63,7 +86,7 @@ export async function generateMetadata({
     openGraph: {
       images: [commonOffer.image_url],
       title: commonOffer.item_name,
-      description: `*KIDILAN FOOD SPOT ALERT* �\n\n🎉 *${
+      description: `*KIDILAN FOOD SPOT ALERT* 🚨\n\n🎉 *${
         commonOffer.partner_name
       }* is offering *${commonOffer.item_name}* at *₹${
         commonOffer.price
@@ -81,6 +104,7 @@ export async function generateMetadata({
 const page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const authToken = (await cookies()).get("new_auth_token")?.value;
+  let geoData: any = null;
 
   let decrypted = authToken
     ? (decryptText(authToken) as { id: string; role: string })
@@ -92,6 +116,7 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
     async () => {
       return fetchFromHasura(getCommonOfferById, {
         id: id,
+        user_id: decrypted?.id || "",
       });
     },
     ["common-offers", id],
@@ -106,98 +131,7 @@ const page = async ({ params }: { params: Promise<{ id: string }> }) => {
     common_offers_by_pk: CommonOffer;
   } = await getCommonOffer();
 
-  return (
-    <section className=" overflow-hidden min-h-screen bg-gradient-to-b from-orange-50 to-orange-100">
-      <main className="pt-5 pb-14 px-[8%] lg:py-40 grid gap-10 lg:grid-cols-2 lg:place-items-center relative">
-        {/* report button  */}
-        <div className="absolute top-5 right-5 grid gap-5">
-          {role === "superadmin" ? (
-            <>
-              <DeleteExploreOfferBtn
-                id={commonOffer.id}
-                image_url={commonOffer.image_url}
-              />
-              <ResendOfferMsgBtn id={commonOffer.id} />
-            </>
-          ) : (
-            <ReportReelModal />
-          )}
-        </div>
-
-        <div className="text-start grid gap-2">
-          <h1 className="text-2xl font-extrabold text-orange-500 mt-5 capitalize">
-            {" "}
-            <UtensilsCrossed size={50} /> {commonOffer.item_name.toLowerCase()}
-          </h1>
-          {commonOffer?.price > 0 ? (
-            <p className="text-3xl text-orange-500 font-extrabold">
-              {" "}
-              <span className="text-lg font-medium">At Just</span> ₹
-              {commonOffer.price}
-            </p>
-          ) : (
-            <p className="text-3xl font-bold text-orange-600"></p>
-          )}
-          <p className=" mt-3 font-medium gap-1 flex items-start capitalize ">
-            {" "}
-            <Hotel size={25} />{" "}
-            <span className="flex-1">
-              {commonOffer.partner_name.toLowerCase()}
-            </span>
-          </p>
-          {commonOffer?.district && (
-            <p className=" flex items-end gap-1 capitalize">
-              <Map size={25} /> {commonOffer.district.toLowerCase()}
-            </p>
-          )}
-
-          {commonOffer.location && (
-            <Link
-              href={commonOffer.location}
-              className="  text-orange-500 flex items-end gap-1"
-            >
-              <MapPin size={25} />
-              View Location
-            </Link>
-          )}
-          {commonOffer.insta_link && (
-            <Link
-              className="  text-orange-500 flex items-end gap-1"
-              href={commonOffer?.insta_link as string}
-            >
-              <InstagramLogoIcon width={25} height={25} />
-              View On Instagram
-            </Link>
-          )}
-
-          {/* share button  */}
-          <ShareExploreItemBtn offer={commonOffer} />
-
-          {commonOffer?.description && (
-            <p className=" gap-1 text-black/80 mt-3">
-              <span className="text-lg font-medium">More Details:</span>{" "}
-              {commonOffer.description}
-            </p>
-          )}
-        </div>
-
-       {
-        (commonOffer?.image_urls ?? []).length > 0 && (
-          <div>
-            <ImageList images={commonOffer.image_urls || []} />
-          </div>
-        )
-       }
-
-        {/* {commonOffer.insta_link && (
-          <InstaReelEmbeded
-            url={commonOffer.insta_link as string}
-            image={commonOffer.image_url}
-          />
-        )} */}
-      </main>
-    </section>
-  );
+  return <ExploreDetail commonOffer={commonOffer} decrypted={decrypted} />;
 };
 
 export default page;

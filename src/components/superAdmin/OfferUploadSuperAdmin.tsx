@@ -22,6 +22,7 @@ import {
 import { revalidateTag } from "@/app/actions/revalidate";
 import { sendCommonOfferWhatsAppMsg } from "@/app/actions/sendWhatsappMsgs";
 import convertLocToCoord from "@/app/actions/convertLocToCoord";
+import { Partner } from "@/store/authStore";
 
 export interface CommonOffer {
   partner_name: string;
@@ -30,10 +31,12 @@ export interface CommonOffer {
   location: string | null;
   description: string | null;
   insta_link: string | null;
-  likes: number;
+  likes: number; //this is not using now
+  no_of_likes?: number;
   image_url: string;
   image_urls?: string[];
   id: string;
+  view_count?: number;
   distance_meters?: number;
   district: string;
   coordinates?: {
@@ -41,6 +44,12 @@ export interface CommonOffer {
     coordinates: number[];
   };
   created_at?: string;
+  common_offers_liked_bies?: {
+    user_id: string;
+  }[];
+  geoData? : any;
+  partner_id?: string | null;
+  partner?: Partner | null;
 }
 
 export const KERALA_DISTRICTS = [

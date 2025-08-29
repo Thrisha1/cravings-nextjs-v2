@@ -72,7 +72,22 @@ const Explore = ({
       );
 
       if (response?.get_offers_near_location?.length) {
-        setOffers((prev) => [...prev, ...response.get_offers_near_location]);
+        const filteredOffers = response?.get_offers_near_location.filter(
+          (offer: CommonOffer, index: number, self: CommonOffer[]) => {
+            // Condition 1: If the offer has no partner_id, always keep it.
+            if (!offer.partner_id) {
+              return true;
+            }
+
+            // Condition 2: If it has a partner_id, only keep it if it's the first
+            // occurrence of that partner_id in the entire array.
+            return (
+              index === self.findIndex((o) => o.partner_id === offer.partner_id)
+            );
+          }
+        );
+
+        setOffers((prev) => [...prev, ...filteredOffers]);
       }
     } catch (error) {
       console.error("Error loading more offers:", error);
@@ -89,7 +104,6 @@ const Explore = ({
   useEffect(() => {
     setOffers(commonOffers);
   }, [commonOffers]);
-
 
   const refreshLocation = () => {
     setIsRefreshingLocation(true);
