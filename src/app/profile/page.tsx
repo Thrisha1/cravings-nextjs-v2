@@ -11,6 +11,7 @@ import {
   X,
   // Loader2,
   Share2,
+  Printer,
 } from "lucide-react";
 import {
   AuthUser,
@@ -237,10 +238,15 @@ export default function ProfilePage() {
   const [showPricing, setShowPricing] = useState(true);
   const [phone, setPhone] = useState("");
   const [locationDetails, setLocationDetails] = useState<string | null>(null);
+  const [isApp, setIsApp] = useState(false);
 
   const isLoading = authLoading;
 
   useEffect(() => {
+    const isThisApp = window?.localStorage?.getItem("isApp") === "true";
+
+    setIsApp(isThisApp);
+
     if (userData?.role === "partner") {
       setBannerImage(userData.store_banner || null);
       setUpiId(userData.upi_id || "");
@@ -277,16 +283,22 @@ export default function ProfilePage() {
       setIsShopOpen(userData.is_shop_open);
 
       // Determine delivery mode based on existing data
-      const hasAdvancedRules = userData.delivery_rules?.delivery_ranges && userData.delivery_rules.delivery_ranges.length > 0;
+      const hasAdvancedRules =
+        userData.delivery_rules?.delivery_ranges &&
+        userData.delivery_rules.delivery_ranges.length > 0;
       const hasLegacyRules = userData.delivery_rules?.first_km_range;
-      const deliveryMode = userData.delivery_rules?.delivery_mode || 
+      const deliveryMode =
+        userData.delivery_rules?.delivery_mode ||
         (hasAdvancedRules ? "advanced" : "basic");
 
       setDeliveryRules({
         delivery_radius: userData.delivery_rules?.delivery_radius || 5,
         delivery_ranges: userData.delivery_rules?.delivery_ranges || [],
-        first_km_range: userData.delivery_rules?.first_km_range || 
-          (deliveryMode === "basic" && !hasLegacyRules ? { km: 1, rate: 0 } : undefined),
+        first_km_range:
+          userData.delivery_rules?.first_km_range ||
+          (deliveryMode === "basic" && !hasLegacyRules
+            ? { km: 1, rate: 0 }
+            : undefined),
         delivery_mode: deliveryMode,
         is_fixed_rate: userData.delivery_rules?.is_fixed_rate || false,
         minimum_order_amount:
@@ -1213,7 +1225,10 @@ export default function ProfilePage() {
         cleanedRules.delivery_ranges = deliveryRules?.delivery_ranges || [];
         // Don't include first_km_range for advanced mode
       } else {
-        cleanedRules.first_km_range = deliveryRules?.first_km_range || { km: 1, rate: 0 };
+        cleanedRules.first_km_range = deliveryRules?.first_km_range || {
+          km: 1,
+          rate: 0,
+        };
         // Don't include delivery_ranges for basic mode
       }
 
@@ -1682,13 +1697,37 @@ export default function ProfilePage() {
               )}
             </div>
             {userData?.role === "partner" && (
-              <Link 
+              <Link
                 href={`/admin/reel-upload`}
                 className="text-sm flex items-center gap-2 p-3 mt-2 bg-gradient-to-r from-pink-500 to-orange-400 text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
               >
-                <FaInstagram className="w-5 h-5" /> 
+                <FaInstagram className="w-5 h-5" />
                 <span>Promote your Instagram Reel✨</span>
               </Link>
+            )}
+            {userData?.role === "partner" && isApp && (
+              <Button
+                onClick={()=>{
+                  console.log("PRINTER SETTINGS OPEN")
+                }}
+                className="
+        inline-flex items-center gap-2 
+        px-4 py-2.5 
+        bg-white border border-gray-200 
+        text-gray-700 text-sm font-medium
+        rounded-lg shadow-sm
+        hover:bg-gray-50 hover:border-gray-300 
+        hover:shadow-md hover:text-gray-900
+        active:bg-gray-100 active:scale-95
+        transition-all duration-200 ease-in-out
+        w-full justify-center
+      "
+                type="button"
+                aria-label="Configure printer settings"
+              >
+                <Printer className="size-4 text-gray-600" />
+                <span>Printer Settings</span>
+              </Button>
             )}
           </CardContent>
         </Card>
