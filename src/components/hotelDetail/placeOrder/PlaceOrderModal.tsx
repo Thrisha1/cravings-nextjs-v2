@@ -2342,18 +2342,16 @@ const PlaceOrderModal = ({
   };
 
   // ** NEW **: Handler for the success dialog's close button
-  const handleCloseSuccessDialog = () => {
-    // Reset address related states
-    setAddress('');
-    setSelectedSavedAddressId(null);
-    setAddressSource('map');
-    setMapAddressText('');
-    
-    // Clear the order and close modal
-    clearOrder();
-    setOpenPlaceOrderModal(false);
-    setOrderStatus('idle');
-  };
+// ** NEW **: Handler for the success dialog's close button
+const handleCloseSuccessDialog = () => {
+  // Reset address and order note in the global store
+  setAddress('');
+  setOrderNote('');
+  // Clear the order and close modal
+  clearOrder();
+  setOpenPlaceOrderModal(false);
+  setOrderStatus('idle');
+};
 
   const minimumOrderAmount = deliveryInfo?.minimumOrderAmount || 0;
 
@@ -2486,23 +2484,22 @@ const PlaceOrderModal = ({
               <div className="flex flex-col gap-3 mt-6">
                 {user?.role !== "partner" ? (
                   <>
-                    {isAndroid ? (
+                    { 
+                      <>
                       <Button
-                        onClick={() =>
-                          handlePlaceOrder(() => {
-                            const whatsappLink = getWhatsappLink(
-                              orderId as string
-                            );
-                            window.open(whatsappLink, "_blank");
-                          })
-                        }
+                        onClick={() => {
+                          if (isAndroid) {
+                            handlePlaceOrder(() => {
+                              const whatsappLink = getWhatsappLink(orderId as string);
+                              window.open(whatsappLink, "_blank");
+                            });
+                          } else {
+                            handlePlaceOrder();
+                          }
+                        }}
                         disabled={
                           isPlaceOrderDisabled ||
-                          !user ||
-                          items?.length === 0 ||
-                          (isDelivery &&
-                            orderType === "delivery" &&
-                            (totalPrice ?? 0) < minimumOrderAmount)
+                          (isDelivery && orderType === "delivery" && (totalPrice ?? 0) < minimumOrderAmount)
                         }
                         className="w-full"
                       >
@@ -2515,47 +2512,15 @@ const PlaceOrderModal = ({
                           "Place Order"
                         )}
                       </Button>
-                    ) : (
-                      <Link
-                        href={getWhatsappLink(orderId as string)}
-                        target="_blank"
-                        onClick={(e) => {
-                          const isDisabled =
-                            isPlaceOrderDisabled ||
-                            !user ||
-                            items?.length === 0 ||
-                            (isDelivery &&
-                              orderType === "delivery" &&
-                              (totalPrice ?? 0) < minimumOrderAmount);
-
-                          if (isDisabled) {
-                            e.preventDefault();
-                          }
-                        }}
-                      >
-                        <Button
-                          onClick={() => handlePlaceOrder()}
-                          disabled={
-                            isPlaceOrderDisabled ||
-                            !user ||
-                            items?.length === 0 ||
-                            (isDelivery &&
-                              orderType === "delivery" &&
-                              (totalPrice ?? 0) < minimumOrderAmount)
-                          }
-                          className="w-full"
-                        >
-                          {orderStatus === "loading" ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Placing Order...
-                            </>
-                          ) : (
-                            "Place Order"
-                          )}
-                        </Button>
-                      </Link>
-                    )}
+                      {!isAndroid && (
+                        <Link
+                          href={getWhatsappLink(orderId as string)}
+                          target="_blank"
+                          className="pointer-events-none opacity-0 absolute inset-0"
+                        />
+                      )}
+                    </>
+                    }
                   </>
                 ) : (
                   <div className="text-red-500 text-center text-sm bg-red-50 py-2 rounded-sm">
