@@ -34,12 +34,26 @@ export interface OrderItem extends HotelDataMenus {
   quantity: number;
 }
 
+export interface DeliveryRange {
+  from_km: number;
+  to_km: number;
+  rate: number;
+}
+
+// Legacy format for backward compatibility
+export interface LegacyFirstKmRange {
+  km: number;
+  rate: number;
+}
+
 export interface DeliveryRules {
   delivery_radius: number;
-  first_km_range: {
-    km: number;
-    rate: number;
-  };
+  // New format
+  delivery_ranges?: DeliveryRange[];
+  // Legacy format
+  first_km_range?: LegacyFirstKmRange;
+  // Mode indicator
+  delivery_mode?: "basic" | "advanced";
   is_fixed_rate: boolean;
   minimum_order_amount: number;
   delivery_time_allowed: {

@@ -191,10 +191,8 @@ export default function ProfilePage() {
   const [description, setDescription] = useState("");
   const [deliveryRules, setDeliveryRules] = useState<DeliveryRules>({
     delivery_radius: 5,
-    first_km_range: {
-      km: 0,
-      rate: 0,
-    },
+    delivery_ranges: [],
+    delivery_mode: "basic", // Default to basic mode
     is_fixed_rate: false,
     minimum_order_amount: 0,
     delivery_time_allowed: null,
@@ -278,12 +276,18 @@ export default function ProfilePage() {
       });
       setIsShopOpen(userData.is_shop_open);
 
+      // Determine delivery mode based on existing data
+      const hasAdvancedRules = userData.delivery_rules?.delivery_ranges && userData.delivery_rules.delivery_ranges.length > 0;
+      const hasLegacyRules = userData.delivery_rules?.first_km_range;
+      const deliveryMode = userData.delivery_rules?.delivery_mode || 
+        (hasAdvancedRules ? "advanced" : "basic");
+
       setDeliveryRules({
         delivery_radius: userData.delivery_rules?.delivery_radius || 5,
-        first_km_range: {
-          km: userData.delivery_rules?.first_km_range?.km || 0,
-          rate: userData.delivery_rules?.first_km_range?.rate || 0,
-        },
+        delivery_ranges: userData.delivery_rules?.delivery_ranges || [],
+        first_km_range: userData.delivery_rules?.first_km_range || 
+          (deliveryMode === "basic" && !hasLegacyRules ? { km: 1, rate: 0 } : undefined),
+        delivery_mode: deliveryMode,
         is_fixed_rate: userData.delivery_rules?.is_fixed_rate || false,
         minimum_order_amount:
           userData.delivery_rules?.minimum_order_amount || 0,
@@ -1193,18 +1197,27 @@ export default function ProfilePage() {
         return;
       }
 
-      const rules = {
+      // Clean up the rules based on delivery mode to avoid storing conflicting data
+      const cleanedRules: any = {
         delivery_radius: deliveryRules?.delivery_radius || 5,
-        first_km_range: {
-          km: deliveryRules?.first_km_range?.km || 0,
-          rate: deliveryRules?.first_km_range?.rate || 0,
-        },
+        delivery_mode: deliveryRules?.delivery_mode || "basic",
         is_fixed_rate: deliveryRules?.is_fixed_rate || false,
         minimum_order_amount: deliveryRules?.minimum_order_amount || 0,
         delivery_time_allowed: deliveryRules?.delivery_time_allowed || null,
         isDeliveryActive: deliveryRules?.isDeliveryActive ?? true,
         needDeliveryLocation: deliveryRules?.needDeliveryLocation ?? true,
-      } as DeliveryRules;
+      };
+
+      // Only include the relevant fields based on mode
+      if (deliveryRules?.delivery_mode === "advanced") {
+        cleanedRules.delivery_ranges = deliveryRules?.delivery_ranges || [];
+        // Don't include first_km_range for advanced mode
+      } else {
+        cleanedRules.first_km_range = deliveryRules?.first_km_range || { km: 1, rate: 0 };
+        // Don't include delivery_ranges for basic mode
+      }
+
+      const rules = cleanedRules as DeliveryRules;
 
       await fetchFromHasura(updatePartnerMutation, {
         id: userData?.id,
