@@ -647,6 +647,9 @@ const BillCard = ({
           <div className="flex justify-between">
             <div>
               <span>Delivery Charge</span>
+              <p className="text-xs text-gray-500">
+                Distance: {deliveryInfo.distance} km
+              </p>
             </div>
             <span>
               {currency}
