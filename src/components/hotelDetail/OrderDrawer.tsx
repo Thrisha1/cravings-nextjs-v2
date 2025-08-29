@@ -64,6 +64,8 @@ export const calculateDeliveryDistanceAndCost = async (
     const {
       delivery_radius,
       delivery_ranges,
+      first_km_range,
+      delivery_mode,
       is_fixed_rate,
       minimum_order_amount,
     } = hotelData?.delivery_rules || {};
@@ -83,8 +85,8 @@ export const calculateDeliveryDistanceAndCost = async (
 
     if (is_fixed_rate) {
       calculatedCost = deliveryRate;
-    } else if (delivery_ranges && delivery_ranges.length > 0) {
-      // Find the appropriate range for the distance
+    } else if (delivery_mode === "advanced" && delivery_ranges && delivery_ranges.length > 0) {
+      // Advanced mode: Range-based pricing
       const applicableRange = delivery_ranges.find(
         (range) => distanceInKm >= range.from_km && distanceInKm <= range.to_km
       );
@@ -102,7 +104,16 @@ export const calculateDeliveryDistanceAndCost = async (
           calculatedCost = 0;
         }
       }
+    } else if ((delivery_mode === "basic" || !delivery_mode) && first_km_range && first_km_range.km > 0) {
+      // Basic mode or legacy format: First KM + per km pricing
+      if (distanceInKm <= first_km_range.km) {
+        calculatedCost = first_km_range.rate;
+      } else {
+        const remainingDistance = distanceInKm - first_km_range.km;
+        calculatedCost = first_km_range.rate + remainingDistance * deliveryRate;
+      }
     } else {
+      // Fallback: Simple per km pricing
       calculatedCost = distanceInKm * deliveryRate;
     }
 
