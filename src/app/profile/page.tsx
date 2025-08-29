@@ -191,10 +191,7 @@ export default function ProfilePage() {
   const [description, setDescription] = useState("");
   const [deliveryRules, setDeliveryRules] = useState<DeliveryRules>({
     delivery_radius: 5,
-    first_km_range: {
-      km: 0,
-      rate: 0,
-    },
+    delivery_ranges: [],
     is_fixed_rate: false,
     minimum_order_amount: 0,
     delivery_time_allowed: null,
@@ -280,10 +277,7 @@ export default function ProfilePage() {
 
       setDeliveryRules({
         delivery_radius: userData.delivery_rules?.delivery_radius || 5,
-        first_km_range: {
-          km: userData.delivery_rules?.first_km_range?.km || 0,
-          rate: userData.delivery_rules?.first_km_range?.rate || 0,
-        },
+        delivery_ranges: userData.delivery_rules?.delivery_ranges || [],
         is_fixed_rate: userData.delivery_rules?.is_fixed_rate || false,
         minimum_order_amount:
           userData.delivery_rules?.minimum_order_amount || 0,
@@ -1195,10 +1189,7 @@ export default function ProfilePage() {
 
       const rules = {
         delivery_radius: deliveryRules?.delivery_radius || 5,
-        first_km_range: {
-          km: deliveryRules?.first_km_range?.km || 0,
-          rate: deliveryRules?.first_km_range?.rate || 0,
-        },
+        delivery_ranges: deliveryRules?.delivery_ranges || [],
         is_fixed_rate: deliveryRules?.is_fixed_rate || false,
         minimum_order_amount: deliveryRules?.minimum_order_amount || 0,
         delivery_time_allowed: deliveryRules?.delivery_time_allowed || null,

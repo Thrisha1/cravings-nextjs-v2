@@ -57,19 +57,20 @@ export const calculateDeliveryDistanceAndCost = async (
     if (!data.routes || data.routes.length === 0) return;
 
     const exactDistance = data.routes[0].distance / 1000;
-    const distanceInKm = Math.ceil(exactDistance);
+    // Use exact distance for better precision
+    const distanceInKm = exactDistance;
     const deliveryRate = hotelData?.delivery_rate || 0;
 
     const {
       delivery_radius,
-      first_km_range,
+      delivery_ranges,
       is_fixed_rate,
       minimum_order_amount,
     } = hotelData?.delivery_rules || {};
 
     if (delivery_radius && distanceInKm > delivery_radius) {
       setDeliveryInfo({
-        distance: distanceInKm,
+        distance: Math.ceil(distanceInKm), // Round up for display
         cost: 0,
         ratePerKm: deliveryRate,
         isOutOfRange: true,
@@ -82,12 +83,24 @@ export const calculateDeliveryDistanceAndCost = async (
 
     if (is_fixed_rate) {
       calculatedCost = deliveryRate;
-    } else if (first_km_range?.km > 0) {
-      if (distanceInKm <= first_km_range.km) {
-        calculatedCost = first_km_range.rate;
+    } else if (delivery_ranges && delivery_ranges.length > 0) {
+      // Find the appropriate range for the distance
+      const applicableRange = delivery_ranges.find(
+        (range) => distanceInKm >= range.from_km && distanceInKm <= range.to_km
+      );
+      
+      if (applicableRange) {
+        calculatedCost = applicableRange.rate;
       } else {
-        const remainingDistance = distanceInKm - first_km_range.km;
-        calculatedCost = first_km_range.rate + remainingDistance * deliveryRate;
+        // If no range matches, find the highest range and apply its rate
+        const sortedRanges = [...delivery_ranges].sort((a, b) => b.to_km - a.to_km);
+        if (sortedRanges.length > 0 && distanceInKm > sortedRanges[0].to_km) {
+          // Beyond all ranges, use the default delivery rate per km
+          calculatedCost = distanceInKm * deliveryRate;
+        } else {
+          // Below all ranges, use free delivery
+          calculatedCost = 0;
+        }
       }
     } else {
       calculatedCost = distanceInKm * deliveryRate;
@@ -96,7 +109,7 @@ export const calculateDeliveryDistanceAndCost = async (
     calculatedCost = Math.max(0, calculatedCost);
 
     setDeliveryInfo({
-      distance: distanceInKm,
+      distance: Math.ceil(distanceInKm), // Round up for display
       cost: calculatedCost,
       ratePerKm: deliveryRate,
       isOutOfRange: false,

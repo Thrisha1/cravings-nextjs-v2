@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { DeliveryRules } from "@/store/orderStore";
+import { DeliveryRules, DeliveryRange } from "@/store/orderStore";
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
@@ -377,57 +377,129 @@ export function DeliveryAndGeoLocationSettings({
               </div>
 
               {!deliveryRules.is_fixed_rate && (
-                <div className="grid grid-cols-2 gap-4 w-full md:col-span-2">
-                  <div className="space-y-2">
-                    <Label>First KM Range</Label>
-                    {isEditingDelivery ? (
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={deliveryRules.first_km_range.km}
-                        onChange={(e) =>
+                <div className="space-y-4 w-full md:col-span-2">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-base font-semibold">Delivery Ranges</Label>
+                    {isEditingDelivery && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newRange: DeliveryRange = {
+                            from_km: 0,
+                            to_km: 1,
+                            rate: 0,
+                          };
                           setDeliveryRules({
                             ...deliveryRules,
-                            first_km_range: {
-                              ...deliveryRules.first_km_range,
-                              km: Number(e.target.value),
-                            },
-                          })
-                        }
-                        placeholder="Enter KM range"
-                      />
-                    ) : (
-                      <div className="p-3 rounded-md border bg-muted/50">
-                        {deliveryRules.first_km_range.km} km
-                      </div>
+                            delivery_ranges: [...deliveryRules.delivery_ranges, newRange],
+                          });
+                        }}
+                      >
+                        + Add Range
+                      </Button>
                     )}
                   </div>
-                  <div className="space-y-2">
-                    <Label>Amount ({currency?.value})</Label>
-                    {isEditingDelivery ? (
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={deliveryRules.first_km_range.rate}
-                        onChange={(e) =>
-                          setDeliveryRules({
-                            ...deliveryRules,
-                            first_km_range: {
-                              ...deliveryRules.first_km_range,
-                              rate: Number(e.target.value),
-                            },
-                          })
-                        }
-                        placeholder="Enter amount"
-                      />
-                    ) : (
-                      <div className="p-3 rounded-md border bg-muted/50">
-                        {deliveryRules.first_km_range.rate.toFixed(2)}
-                      </div>
-                    )}
-                  </div>
+                  
+                  {isEditingDelivery ? (
+                    <div className="space-y-3">
+                      {deliveryRules.delivery_ranges.map((range, index) => (
+                        <div key={index} className="grid grid-cols-4 gap-2 items-end">
+                          <div>
+                            <Label className="text-xs">From (km)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={range.from_km}
+                              onChange={(e) => {
+                                const updatedRanges = [...deliveryRules.delivery_ranges];
+                                updatedRanges[index].from_km = Number(e.target.value);
+                                setDeliveryRules({
+                                  ...deliveryRules,
+                                  delivery_ranges: updatedRanges,
+                                });
+                              }}
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">To (km)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              value={range.to_km}
+                              onChange={(e) => {
+                                const updatedRanges = [...deliveryRules.delivery_ranges];
+                                updatedRanges[index].to_km = Number(e.target.value);
+                                setDeliveryRules({
+                                  ...deliveryRules,
+                                  delivery_ranges: updatedRanges,
+                                });
+                              }}
+                              placeholder="1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Rate ({currency?.value})</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={range.rate}
+                              onChange={(e) => {
+                                const updatedRanges = [...deliveryRules.delivery_ranges];
+                                updatedRanges[index].rate = Number(e.target.value);
+                                setDeliveryRules({
+                                  ...deliveryRules,
+                                  delivery_ranges: updatedRanges,
+                                });
+                              }}
+                              placeholder="0"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              const updatedRanges = deliveryRules.delivery_ranges.filter(
+                                (_, i) => i !== index
+                              );
+                              setDeliveryRules({
+                                ...deliveryRules,
+                                delivery_ranges: updatedRanges,
+                              });
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                      {deliveryRules.delivery_ranges.length === 0 && (
+                        <div className="text-center py-4 text-muted-foreground">
+                          No delivery ranges set. Click &quot;Add Range&quot; to add pricing tiers.
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {deliveryRules.delivery_ranges.length > 0 ? (
+                        deliveryRules.delivery_ranges.map((range, index) => (
+                          <div key={index} className="p-3 rounded-md border bg-muted/50">
+                            {range.from_km} km - {range.to_km} km: {currency?.value}{range.rate.toFixed(2)}
+                            {range.rate === 0 && " (Free)"}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-3 rounded-md border bg-muted/50 text-muted-foreground">
+                          No delivery ranges configured
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -440,23 +512,9 @@ export function DeliveryAndGeoLocationSettings({
                     )} will be applied for deliveries within ${
                       deliveryRules.delivery_radius
                     } km`
-                  : deliveryRules.first_km_range.km > 0
-                  ? `First ${
-                      deliveryRules.first_km_range.km
-                    } km will be charged at ${
-                      currency?.value
-                    }${deliveryRules.first_km_range.rate.toFixed(
-                      2
-                    )}, then ${currency?.value}${deliveryRate.toFixed(
-                      2
-                    )} per km for deliveries within ${
-                      deliveryRules.delivery_radius
-                    } km`
-                  : `${currency?.value}${deliveryRate.toFixed(
-                      2
-                    )} per km will be applied for deliveries within ${
-                      deliveryRules.delivery_radius
-                    } km`}
+                  : deliveryRules.delivery_ranges.length > 0
+                  ? `Range-based pricing configured with ${deliveryRules.delivery_ranges.length} tier(s) for deliveries within ${deliveryRules.delivery_radius} km`
+                  : `No delivery ranges configured yet`}
               </p>
             )}
           </>
