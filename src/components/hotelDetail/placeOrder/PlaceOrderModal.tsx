@@ -258,9 +258,15 @@ const AddressManagementModal = ({
       const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1&zoom=18&countrycodes=in&accept-language=en`;
       const res = await fetch(url, {
         headers: {
-          // Nominatim usage policy recommends setting a valid Referer/User-Agent
           'Accept': 'application/json',
+          'Origin': window.location.origin,
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'User-Agent': 'CravingsApp/1.0 (your-email@example.com)'
         },
+        mode: 'cors',
+        credentials: 'same-origin'
       });
       if (!res.ok) {
         console.error('Nominatim response not ok', res.status, res.statusText);
@@ -2193,6 +2199,12 @@ const PlaceOrderModal = ({
   const handlePlaceOrder = async (onSuccessCallback?: () => void) => {
     if (tableNumber === 0 && !orderType) {
       toast.error("Please select an order type");
+      return;
+    }
+
+    // Check if address is selected for delivery orders
+    if (orderType === 'delivery' && !address?.trim()) {
+      toast.error("Please select a delivery address");
       return;
     }
 
