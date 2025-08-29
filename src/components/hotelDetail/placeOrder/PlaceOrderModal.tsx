@@ -1,6 +1,6 @@
 "use client";
 import useOrderStore, { OrderItem } from "@/store/orderStore";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 import {
@@ -82,11 +82,13 @@ const AddressManagementModal = ({
   onClose,
   onSaved,
   editAddress = null,
+  hotelData, 
 }: {
   open: boolean;
   onClose: () => void;
   onSaved: (addr: SavedAddress) => void;
   editAddress?: SavedAddress | null;
+  hotelData: HotelData; 
 }) => {
   const [label, setLabel] = useState<string>("Home");
   const [customLabel, setCustomLabel] = useState<string>("");
@@ -146,7 +148,6 @@ const AddressManagementModal = ({
         (position) => {
           const { latitude, longitude } = position.coords;
           setCoordinates({ lat: latitude, lng: longitude });
-          // Reverse geocode to auto-fill fields
           reverseGeocodeNominatim(latitude, longitude);
           toast.success("Location Displayed successfully");
         },
@@ -158,7 +159,6 @@ const AddressManagementModal = ({
     }
   };
 
-  // Ensure pincode (and other fields) auto-fill whenever coordinates are set
   useEffect(() => {
     if (coordinates && !pincode) {
       reverseGeocodeNominatim(coordinates.lat, coordinates.lng);
@@ -169,7 +169,6 @@ const AddressManagementModal = ({
   const initializeMap = () => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    // Ensure Mapbox access token is available at runtime
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     if (!token) {
       toast.error("Mapbox token missing. Please set NEXT_PUBLIC_MAPBOX_TOKEN environment variable");
@@ -180,17 +179,29 @@ const AddressManagementModal = ({
     mapInstanceRef.current = new mapboxgl.Map({
       container: mapRef.current,
       style: 'mapbox://styles/mapbox/streets-v11',
-      center: coordinates ? [coordinates.lng, coordinates.lat] : [76.322455, 10.050525], // Default to Delhi
+      center: coordinates ? [coordinates.lng, coordinates.lat] : [76.322455, 10.050525],
       zoom: 10,
       accessToken: token,
+    });
+
+    mapInstanceRef.current.on('load', () => {
+      if (hotelData?.geo_location?.coordinates) {
+        const [lng, lat] = hotelData.geo_location.coordinates;
+        const el = document.createElement('div');
+        el.className = 'w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-lg';
+        el.style.backgroundImage = `url(${hotelData.store_banner})`;
+        el.style.backgroundSize = 'cover';
+
+        new mapboxgl.Marker(el)
+          .setLngLat([lng, lat])
+          .addTo(mapInstanceRef.current!);
+      }
     });
 
     mapInstanceRef.current.on('click', (e) => {
       const { lng, lat } = e.lngLat;
       setCoordinates({ lat, lng });
-      setShowMap(false);
       
-      // Update marker
       if (markerRef.current) {
         markerRef.current.remove();
       }
@@ -198,11 +209,9 @@ const AddressManagementModal = ({
         .setLngLat([lng, lat])
         .addTo(mapInstanceRef.current!);
 
-      // Reverse geocode with Nominatim to auto-fill pincode and district
       reverseGeocodeNominatim(lat, lng);
     });
 
-    // Add initial marker if coordinates exist
     if (coordinates) {
       markerRef.current = new mapboxgl.Marker()
         .setLngLat([coordinates.lng, coordinates.lat])
@@ -225,6 +234,7 @@ const AddressManagementModal = ({
         markerRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showMap, open]);
 
   const isFormValid = () => {
@@ -239,20 +249,16 @@ const AddressManagementModal = ({
     );
   };
 
-  // Reset selected location and allow re-selection on the map
+  // ✅ CHANGE 1: This function now resets to the choice screen
   const resetLocationSelection = () => {
-    // Clear coordinates so the UI shows the selection options again
     setCoordinates(null);
-    // Open the map so user can pick a new location
-    setShowMap(false);
-    // Remove any existing marker from map
+    setShowMap(false); // Set to false to show the choice screen
     if (markerRef.current) {
       markerRef.current.remove();
       markerRef.current = null;
     }
   };
 
-  // Reverse geocode using OpenStreetMap Nominatim to auto-fill pincode, district, and city
   const reverseGeocodeNominatim = async (lat: number, lng: number) => {
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&addressdetails=1&zoom=18&countrycodes=in&accept-language=en`;
@@ -260,23 +266,16 @@ const AddressManagementModal = ({
         headers: {
           'Accept': 'application/json',
           'Origin': window.location.origin,
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
           'User-Agent': 'CravingsApp/1.0 (your-email@example.com)'
         },
         mode: 'cors',
-        credentials: 'same-origin'
       });
       if (!res.ok) {
         console.error('Nominatim response not ok', res.status, res.statusText);
         return;
       }
       const data = await res.json();
-      console.log('Nominatim reverse geocode result', data);
       const addr = data?.address || {};
-
-      // Determine district and city separately
       const districtVal = addr.state_district || addr.district || addr.county || "";
       const cityVal = addr.city || addr.town || addr.village || "";
       const postcode = addr.postcode || "";
@@ -287,16 +286,13 @@ const AddressManagementModal = ({
       if (postcode) {
         setPincode(postcode);
       } else {
-        // Fallback: try Mapbox geocoding for postcode if token exists
         const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
         if (token) {
           try {
             const mapboxUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?types=postcode,address,place&language=en&access_token=${token}`;
             const mbRes = await fetch(mapboxUrl);
             const mbData = await mbRes.json();
-            console.log('Mapbox fallback result', mbData);
             const features = mbData?.features || [];
-            // Find a feature that has a postcode in context or as text
             let mbPostcode = "";
             for (const f of features) {
               if (f.place_type?.includes('postcode')) {
@@ -342,13 +338,11 @@ const AddressManagementModal = ({
         .filter(Boolean)
         .join(", ");
 
-      // If label is "Other", persist customLabel as the main label
       const normalizedLabel = label === "Other" ? customLabel.trim() : label;
 
       const addr: SavedAddress = {
         id: editAddress?.id || `${Date.now()}`,
         label: normalizedLabel,
-        // We no longer store customLabel when label is "Other"; save only the normalized label
         customLabel: undefined,
         flat_no: flatNo || undefined,
         house_no: houseNo || undefined,
@@ -397,7 +391,8 @@ const AddressManagementModal = ({
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6 max-h-[calc(100vh-140px)]">
         {/* Location Selection */}
-        {!coordinates ? (
+        {/* This block shows the choice buttons */}
+        {!coordinates && !showMap ? (
           <div className="space-y-3">
             <Button
               onClick={getCurrentLocation}
@@ -415,7 +410,7 @@ const AddressManagementModal = ({
             </div>
 
             <Button
-              onClick={() => setShowMap(!showMap)}
+              onClick={() => setShowMap(true)}
               className="w-full"
               variant="outline"
             >
@@ -423,7 +418,7 @@ const AddressManagementModal = ({
               Select Location on Map
             </Button>
           </div>
-        ) : (
+        ) : !showMap ? ( // This block shows the "Change location" button when coordinates are set
           <div className="space-y-3">
             <div className="p-3 rounded-md bg-green-50 text-green-700 border border-green-200">
               Location selected successfully
@@ -437,21 +432,33 @@ const AddressManagementModal = ({
               Change location
             </Button>
           </div>
-        )}
+        ) : null}
 
         {/* Map */}
-        {showMap && !coordinates && (
-          <div className="h-80 rounded-lg overflow-hidden border">
-            <div ref={mapRef} className="w-full h-full" />
+        {showMap && (
+           <div className="space-y-3">
+            <div className="h-80 rounded-lg overflow-hidden border">
+              <div ref={mapRef} className="w-full h-full" />
+            </div>
+             {/* ✅ CHANGE 2: Add a Cancel button next to the Confirm button */}
+            <div className="flex gap-2">
+                <Button 
+                    variant="outline"
+                    onClick={() => setShowMap(false)} 
+                    className="w-full"
+                >
+                    Cancel
+                </Button>
+                <Button 
+                    onClick={() => setShowMap(false)} 
+                    className="w-full"
+                    disabled={!coordinates}
+                >
+                    Confirm Location
+                </Button>
+            </div>
           </div>
         )}
-
-        {/* Coordinates Display */}
-        {/* {coordinates && (
-          <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded-lg">
-            <strong>Selected Location:</strong> {coordinates.lat.toFixed(6)}, {coordinates.lng.toFixed(6)}
-          </div>
-        )} */}
 
         {/* Address Form */}
         <div className="space-y-4">
@@ -588,21 +595,13 @@ const AddressManagementModal = ({
 const UnifiedAddressSection = ({
   address,
   setAddress,
-  hasLocation,
-  isGeoLoading,
-  geoError,
   deliveryInfo,
-  getLocation,
-  setShowMapModal,
+  hotelData, // <-- MODIFICATION: Added hotelData prop
 }: {
   address: string;
   setAddress: (addr: string) => void;
-  hasLocation: boolean;
-  isGeoLoading: boolean;
-  geoError: string | null;
   deliveryInfo: DeliveryInfo | null;
-  getLocation: () => void;
-  setShowMapModal: (show: boolean) => void;
+  hotelData: HotelData; // <-- MODIFICATION: Added hotelData prop type
 }) => {
   const { userData: user } = useAuthStore();
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
@@ -809,11 +808,6 @@ const UnifiedAddressSection = ({
                   selectedAddress.pincode
                 ].filter(Boolean).join(", ")}
               </div>
-              {/* {selectedAddress.latitude && selectedAddress.longitude && (
-                <div className="text-xs text-gray-500 mt-2">
-                  📍 {selectedAddress.latitude.toFixed(6)}, {selectedAddress.longitude.toFixed(6)}
-                </div>
-              )} */}
             </div>
             <div className="flex gap-2 ml-3">
               <Button
@@ -838,58 +832,6 @@ const UnifiedAddressSection = ({
         </div>
       )}
 
-
-      {/* Location Buttons */}
-      {/* <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          <MapPin className="h-4 w-4" />
-          Locat
-        </Label>
-
-        <Button
-          type="button"
-          onClick={getLocation}
-          className="w-full"
-          variant="outline"
-          disabled={isGeoLoading}
-          style={!hasLocation ? { borderColor: "#ef4444", color: "#ef4444" } : {}}
-        >
-          {isGeoLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Getting Location...
-            </>
-          ) : (
-            <>
-              <LocateFixed className="mr-2 h-4 w-4" />
-              Use My Current Location
-            </>
-          )}
-        </Button>
-
-        <Button
-          type="button"
-          onClick={() => setShowMapModal(true)}
-          className="w-full"
-          variant="outline"
-        >
-          <MapPin className="mr-2 h-4 w-4" />
-          Select Location on Map
-        </Button>
-
-        {geoError && (
-          <div className="text-sm text-red-600 p-2 bg-red-50 rounded">
-            {geoError}
-          </div>
-        )}
-
-        {deliveryInfo?.isOutOfRange && (
-          <div className="text-sm text-red-600 p-2 bg-red-50 rounded">
-            Delivery is not available to your location. Please try a different address.
-          </div>
-        )}
-      </div> */}
-
       {/* Address Management Modal */}
       <AddressManagementModal
         open={showAddressModal}
@@ -899,6 +841,7 @@ const UnifiedAddressSection = ({
         }}
         onSaved={handleAddressSaved}
         editAddress={editingAddress}
+        hotelData={hotelData} // <-- MODIFICATION: Pass hotelData down
       />
     </div>
   );
@@ -1035,8 +978,6 @@ const OrderTypeCard = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  
 
   const options = [
     { value: "takeaway", label: "Takeaway" },
@@ -1287,142 +1228,6 @@ const TableNumberCard = ({
   );
 };
 
-interface AddressCardProps {
-  address: string | null;
-  setAddress: (address: string) => void;
-  setShowMapModal: (show: boolean) => void;
-  getLocation: () => void;
-  isGeoLoading: boolean;
-  geoError: string | null;
-  deliveryInfo: DeliveryInfo | null;
-  hasLocation: boolean;
-}
-
-const AddressCard = ({
-  address,
-  setShowMapModal,
-  setAddress,
-  getLocation,
-  isGeoLoading,
-  geoError,
-  deliveryInfo,
-  hasLocation,
-}: AddressCardProps) => {
-  mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
-  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
-
-  const handleGetLocation = () => {
-    setShowPermissionDialog(true);
-  };
-
-  const handleConfirmPermission = () => {
-    setShowPermissionDialog(false);
-    getLocation();
-  };
-
-  return (
-    <div className="bg-white rounded-lg shadow p-4 mb-4">
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="font-bold text-lg">Delivery Address</h3>
-      </div>
-
-      <Textarea
-        disabled
-        value={address || ""}
-        onChange={(e) => setAddress(e.target.value)}
-        className="min-h-[100px] mb-3"
-        placeholder="Delivery address"
-      />
-
-      <div className="space-y-2">
-        <Label className="flex items-center gap-2">
-          <MapPin className="h-4 w-4" />
-          Location
-        </Label>
-
-        <Button
-          type="button"
-          onClick={handleGetLocation}
-          className="w-full"
-          variant="outline"
-          disabled={isGeoLoading}
-          style={
-            !hasLocation ? { borderColor: "#ef4444", color: "#ef4444" } : {}
-          }
-        >
-          {isGeoLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Getting Location...
-            </>
-          ) : (
-            <>
-              <LocateFixed className="mr-2 h-4 w-4" />
-              Use My Current Location
-            </>
-          )}
-        </Button>
-
-        <Button
-          type="button"
-          onClick={() => setShowMapModal(true)}
-          className="w-full"
-          variant="outline"
-        >
-          Select Location on Map
-        </Button>
-
-        {geoError && (
-          <div className="text-sm text-red-600 p-2 bg-red-50 rounded">
-            {geoError}
-          </div>
-        )}
-
-        {deliveryInfo?.isOutOfRange && (
-          <div className="text-sm text-red-600 p-2 bg-red-50 rounded">
-            Delivery is not available to your location. Please try a different
-            address.
-          </div>
-        )}
-      </div>
-
-      {showPermissionDialog && (
-        <div className="fixed inset-0 z-[62] flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg p-6 w-[90vw] max-w-md shadow-lg">
-            <h1 className="text-xl font-semibold mb-2">
-              Location Permission Required
-            </h1>
-            <p className="mb-2">
-              To provide accurate delivery estimates, we need access to your
-              location.
-            </p>
-            <ul className="list-disc pl-5 space-y-2 mb-2">
-              <li>Please don&apos;t deny the location permission</li>
-              <li>
-                This helps us calculate accurate{" "}
-                <span className="font-medium">delivery charges</span>
-              </li>
-              <li>Your location is only used for this order</li>
-            </ul>
-            <p className="font-medium mb-4">
-              Click &quot;Allow&quot; when your browser asks for permission.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setShowPermissionDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleConfirmPermission}>Continue</Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 interface BillCardProps {
   items: OrderItem[];
   currency: string;
@@ -1632,317 +1437,6 @@ const LoginDrawer = ({
   );
 };
 
-const MapModal = ({
-  showMapModal,
-  setShowMapModal,
-  setSelectedLocation,
-  setAddress,
-  hotelData,
-  setOpenPlaceOrderModal,
-}: {
-  showMapModal: boolean;
-  setShowMapModal: (show: boolean) => void;
-  setSelectedLocation: (coords: { lng: number; lat: number }) => void;
-  setAddress: (address: string) => void;
-  hotelData: HotelData;
-  setOpenPlaceOrderModal: (open: boolean) => void;
-}) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const marker = useRef<mapboxgl.Marker | null>(null);
-  const geocoder = useRef<MapboxGeocoder | null>(null);
-
-  const initializeMap = async () => {
-    if (!mapContainer.current || map.current) return;
-
-    const defaultCenter = [77.5946, 12.9716];
-    let initialCenter = defaultCenter;
-
-    try {
-      if ("geolocation" in navigator) {
-        const position = await new Promise<GeolocationPosition>(
-          (resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject);
-          }
-        );
-        initialCenter = [position.coords.longitude, position.coords.latitude];
-      }
-    } catch (err) {
-      console.warn("Could not get user location:", err);
-    }
-
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current!,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: initialCenter as LngLatLike,
-      zoom: 12,
-    });
-
-    try {
-      const { default: MapboxGeocoder } = await import(
-        "@mapbox/mapbox-gl-geocoder"
-      );
-      const geocoderInstance = new MapboxGeocoder({
-        accessToken: mapboxgl.accessToken,
-        mapboxgl: mapboxgl,
-        marker: false,
-        placeholder: "Search for places...",
-      }) as MapboxGeocoder;
-
-      geocoder.current = geocoderInstance;
-      map.current.addControl(geocoderInstance);
-
-      geocoderInstance.on("result", (e) => {
-        const [lng, lat] = e.result.center;
-        setSelectedLocation({ lng, lat });
-        updateMarker(lng, lat);
-        setAddress(e.result.place_name);
-      });
-    } catch (err) {
-      console.warn("Could not initialize geocoder:", err);
-    }
-
-    map.current.on("load", () => {
-      map.current!.on("click", (e) => {
-        const { lng, lat } = e.lngLat;
-        setSelectedLocation({ lng, lat });
-        updateMarker(lng, lat);
-        reverseGeocode(lng, lat);
-
-        const setCoords = useLocationStore.getState().setCoords;
-        setCoords({ lat, lng });
-      });
-
-      if (hotelData?.geo_location) {
-        const hotelMarker = new mapboxgl.Marker({
-          color: "#FF0000",
-          scale: 1.5,
-        })
-          .setLngLat([
-            hotelData.geo_location?.coordinates[0],
-            hotelData.geo_location?.coordinates[1],
-          ])
-          .setPopup(
-            new mapboxgl.Popup({
-              offset: 0,
-              closeButton: false,
-              closeOnClick: false,
-              closeOnMove: false,
-              altitude: 100,
-            }).setHTML(
-              `<div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden;">
-                <img src="${hotelData?.store_banner}" />
-              </div>`
-            )
-          )
-          .addTo(map.current!);
-        hotelMarker.togglePopup();
-        hotelMarker.getElement().style.cursor = "pointer";
-        hotelMarker.getElement().style.pointerEvents = "none";
-      }
-
-      map.current!.addControl(
-        new mapboxgl.GeolocateControl({
-          positionOptions: {
-            enableHighAccuracy: true,
-          },
-          trackUserLocation: true,
-          showUserLocation: true,
-        })
-      );
-
-      map.current!.addControl(new mapboxgl.NavigationControl());
-    });
-  };
-
-  
-
-  useEffect(() => {
-    if (showMapModal) {
-      initializeMap();
-    }
-
-    if (showMapModal) {
-      document.body.style.overflowY = "hidden !important";
-      document.body.style.maxHeight = "100vh";
-    } else {
-      document.body.style.overflowY = "auto";
-      document.body.style.maxHeight = "auto";
-      setOpenPlaceOrderModal(true);
-    }
-  }, [showMapModal]);
-
-  const updateMarker = (lng: number, lat: number) => {
-    if (marker.current) marker.current.remove();
-
-    marker.current = new mapboxgl.Marker()
-      .setLngLat([lng, lat])
-      .addTo(map.current!);
-
-    map.current?.flyTo({
-      center: [lng, lat],
-      zoom: 14,
-    });
-  };
-
-  const reverseGeocode = async (lng: number, lat: number) => {
-    try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${mapboxgl.accessToken}`
-      );
-      const data = await response.json();
-
-      if (data.features && data.features.length > 0) {
-        setAddress(data.features[0].place_name);
-      }
-    } catch (error) {
-      console.error("Reverse geocoding error:", error);
-    }
-  };
-
-  return (
-    <div
-      className={`fixed top-0 left-0 z-[5000] h-screen w-screen ${
-        showMapModal ? "overflow-hidden" : "hidden"
-      }`}
-    >
-      <div className="flex items-center justify-center min-h-screen w-screen">
-        <div
-          className="relative z-[5000] bg-white rounded-lg w-screen h-[100dvh] flex flex-col overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex justify-between items-center p-4 border-b">
-            <h2 className="text-xl font-bold">Select Your Location</h2>
-            <button
-              onClick={() => setShowMapModal(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="relative flex-1 overflow-hidden">
-            <div ref={mapContainer} className="h-full w-full" />
-          </div>
-
-          <div className="p-4 border-t">
-            <button
-              onClick={() => setShowMapModal(false)}
-              className="w-full bg-black rounded-lg text-white py-2 px-4"
-            >
-              Confirm Location
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// (moved helpers into component)
-
-// Modal to add a new saved address
-const AddAddressModal = ({
-  open,
-  onClose,
-  onSaved,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSaved: (addr: SavedAddress) => void;
-}) => {
-  const [label, setLabel] = useState<string>("Home");
-  const [houseNo, setHouseNo] = useState<string>("");
-  const [street, setStreet] = useState<string>("");
-  const [landmark, setLandmark] = useState<string>("");
-  const [city, setCity] = useState<string>("");
-  const [saving, setSaving] = useState(false);
-
-  const buildFullAddress = () =>
-    [houseNo, street, landmark, city].filter(Boolean).join(", ");
-
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-[6200] flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-lg p-6 w-[90vw] max-w-md shadow-lg" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-bold">Add New Address</h2>
-          <button className="text-gray-500" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <div className="grid gap-3">
-          <div>
-            <Label>Label</Label>
-            <div className="flex gap-2 mt-1">
-              {(["Home", "Work", "Other"] as const).map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  className={`px-3 py-1 rounded border ${label === opt ? "bg-black text-white" : "bg-white"}`}
-                  onClick={() => setLabel(opt)}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <Label>House / Apartment No.</Label>
-            <Input value={houseNo} onChange={(e) => setHouseNo(e.target.value)} placeholder="e.g., 12B, Apt 304" />
-          </div>
-          <div>
-            <Label>Street / Road Name</Label>
-            <Input value={street} onChange={(e) => setStreet(e.target.value)} placeholder="e.g., MG Road" />
-          </div>
-          <div>
-            <Label>Landmark</Label>
-            <Input value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder="e.g., Near City Mall" />
-          </div>
-          <div>
-            <Label>City</Label>
-            <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="e.g., Bengaluru" />
-          </div>
-          <div className="text-xs text-gray-500">Full Address: {buildFullAddress() || "—"}</div>
-          <div className="flex gap-2 justify-end mt-2">
-            <Button variant="outline" onClick={onClose}>Cancel</Button>
-            <Button
-              onClick={async () => {
-                if (!label || !houseNo || !street || !city) {
-                  toast.error("Please fill all required fields");
-                  return;
-                }
-                setSaving(true);
-                const addr: SavedAddress = {
-                  id: `${Date.now()}`,
-                  label,
-                  house_no: houseNo || undefined,
-                  street: street || undefined,
-                  landmark: landmark || undefined,
-                  city: city || undefined,
-                  address: buildFullAddress(),
-                };
-                onSaved(addr);
-                setSaving(false);
-              }}
-              disabled={saving}
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
-                </>
-              ) : (
-                "Save Address"
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // =================================================================
 // Main PlaceOrderModal Component (Updated Logic)
 // =================================================================
@@ -1972,9 +1466,8 @@ const PlaceOrderModal = ({
     decreaseQuantity,
     removeItem,
     coordinates: selectedCoords,
-    setUserCoordinates: setSelectedCoords,
-    setUserAddress: setAddress,
     userAddress: address,
+    setUserAddress: setAddress,
     clearOrder,
     deliveryInfo,
     orderNote,
@@ -1984,70 +1477,12 @@ const PlaceOrderModal = ({
   } = useOrderStore();
 
   const { userData: user } = useAuthStore();
-  const setAuthPartial = useAuthStore((s) => s.setState);
-  const {
-    error: geoError,
-    getLocation,
-    isLoading: isGeoLoading,
-  } = useLocationStore();
-
-  const [showMapModal, setShowMapModal] = useState(false);
+  
   const [showLoginDrawer, setShowLoginDrawer] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
-  const [showAddAddressModal, setShowAddAddressModal] = useState(false);
-  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null);
-  // Which address text to use for bill/Whatsapp
-  const [addressSource, setAddressSource] = useState<"saved" | "map">("map");
-  const [mapAddressText, setMapAddressText] = useState<string>("");
-
-  // Map address setter that respects the selected source
-  const handleMapAddressChange = (text: string) => {
-    setMapAddressText(text);
-    if (addressSource === "map") {
-      setAddress(text);
-    }
-  };
-
-  // Persist saved addresses to user profile
-  const saveAddressesForUser = async (addresses: SavedAddress[]) => {
-    try {
-      if (!user || (user as any).role !== "user") {
-        toast.error("Login to save addresses");
-        return false;
-      }
-      await fetchFromHasura(updateUserAddressesMutation, {
-        id: (user as any).id,
-        addresses,
-      });
-      // update auth store so UI refreshes
-      setAuthPartial({ addresses } as any);
-      return true;
-    } catch (e) {
-      console.error("Failed to save addresses", e);
-      toast.error("Failed to save address");
-      return false;
-    }
-  };
-
-  const handleAddAddress = async (addr: SavedAddress) => {
-    const existing: SavedAddress[] = (((user as any)?.addresses) || []) as SavedAddress[];
-    const updated = [...existing, addr];
-    const ok = await saveAddressesForUser(updated);
-    if (ok) {
-      toast.success("Address added");
-      setShowAddAddressModal(false);
-      // if no address filled, auto use the new one
-      if (!address) {
-        setAddress(addr.address || "");
-        setSelectedSavedAddressId(addr.id);
-        setAddressSource("saved");
-      }
-    }
-  };
-
-  // ** NEW **: State for the order status dialog
+  
   const [orderStatus, setOrderStatus] = useState<"idle" | "loading" | "success">(
     "idle"
   );
@@ -2063,14 +1498,13 @@ const PlaceOrderModal = ({
 
   const hasDelivery = hotelData?.geo_location && hotelData?.delivery_rate > 0;
   const isQrScan = qrId !== null && tableNumber !== 0;
-  const hasLocation = !!selectedCoords || !!address;
 
   useEffect(() => {
     if (open_place_order_modal && items?.length === 0) {
       setOpenPlaceOrderModal(false);
       setOpenDrawerBottom(true);
     }
-  }, [open_place_order_modal, items]);
+  }, [open_place_order_modal, items, setOpenDrawerBottom, setOpenPlaceOrderModal]);
 
   useEffect(() => {
     if (open_place_order_modal && tableNumber === 0 && !orderType) {
@@ -2170,15 +1604,17 @@ const PlaceOrderModal = ({
   useEffect(() => {
     const checkGeolocationPermission = async () => {
       try {
-        const permissionStatus = await navigator.permissions.query({
-          name: "geolocation",
-        });
-        if (permissionStatus.state === "denied") {
-          useLocationStore.setState({
-            error:
-              "Location permission is denied. Please enable it in your browser settings.",
-            isLoading: false,
+        if (navigator.permissions) {
+          const permissionStatus = await navigator.permissions.query({
+            name: "geolocation",
           });
+          if (permissionStatus.state === "denied") {
+            useLocationStore.setState({
+              error:
+                "Location permission is denied. Please enable it in your browser settings.",
+              isLoading: false,
+            });
+          }
         }
       } catch (error) {
         console.error("Error checking geolocation permission:", error);
@@ -2197,7 +1633,7 @@ const PlaceOrderModal = ({
     ) {
       calculateDeliveryDistanceAndCost(hotelData as HotelData);
     }
-  }, [selectedCoords, isDelivery, hasDelivery, isQrScan, orderType]);
+  }, [selectedCoords, isDelivery, hasDelivery, isQrScan, orderType, hotelData]);
 
   const handlePlaceOrder = async (onSuccessCallback?: () => void) => {
     if (tableNumber === 0 && !orderType) {
@@ -2240,7 +1676,6 @@ const PlaceOrderModal = ({
       document.activeElement.blur();
     }
 
-    // ** MODIFIED **: Start the loading dialog
     setOrderStatus("loading");
 
     try {
@@ -2322,7 +1757,6 @@ const PlaceOrderModal = ({
           onSuccessCallback();
         }
         setOrderStatus("success");
-        // We will clear the order and close the modal in `handleCloseSuccessDialog`
       } else {
         toast.error("Failed to place order. Please try again.");
         setOrderStatus("idle"); // Reset on failure
@@ -2344,22 +1778,18 @@ const PlaceOrderModal = ({
     setShowLoginDrawer(false);
   };
 
-  // ** NEW **: Handler for the success dialog's close button
-// ** NEW **: Handler for the success dialog's close button
-const handleCloseSuccessDialog = () => {
-  // Reset address and order note in the global store
-  setAddress('');
-  setOrderNote('');
-  // Clear the order and close modal
-  clearOrder();
-  setOpenPlaceOrderModal(false);
-  setOrderStatus('idle');
-};
+  const handleCloseSuccessDialog = () => {
+    setAddress('');
+    setOrderNote('');
+    clearOrder();
+    setOpenPlaceOrderModal(false);
+    setOrderStatus('idle');
+  };
 
   const minimumOrderAmount = deliveryInfo?.minimumOrderAmount || 0;
 
   const isPlaceOrderDisabled =
-    orderStatus === "loading" || // ** MODIFIED **
+    orderStatus === "loading" || 
     (tableNumber === 0 && !orderType) ||
     (isDelivery && hasDelivery && !selectedCoords && !isQrScan) ||
     (isDelivery && deliveryInfo?.isOutOfRange && !isQrScan) ||
@@ -2374,7 +1804,7 @@ const handleCloseSuccessDialog = () => {
           open_place_order_modal ? "block" : "hidden"
         }`}
       >
-        <div className="sticky top-0  bg-white border-b">
+        <div className="sticky top-0 bg-white border-b">
           <div className="flex items-center gap-4 p-4">
             <button
               onClick={() => {
@@ -2430,12 +1860,8 @@ const handleCloseSuccessDialog = () => {
                 <UnifiedAddressSection
                   address={address || ""}
                   setAddress={setAddress}
-                  hasLocation={!!selectedCoords}
-                  isGeoLoading={isGeoLoading}
-                  geoError={geoError}
                   deliveryInfo={deliveryInfo}
-                  getLocation={getLocation}
-                  setShowMapModal={setShowMapModal}
+                  hotelData={hotelData} // <-- MODIFICATION: Pass hotelData down
                 />
               ) : null}
               <BillCard
@@ -2487,22 +1913,21 @@ const handleCloseSuccessDialog = () => {
               <div className="flex flex-col gap-3 mt-6">
                 {user?.role !== "partner" ? (
                   <>
-                    { 
-                      <>
+                    {isAndroid ? (
                       <Button
-                        onClick={() => {
-                          if (isAndroid) {
-                            handlePlaceOrder(() => {
-                              const whatsappLink = getWhatsappLink(orderId as string);
-                              window.open(whatsappLink, "_blank");
-                            });
-                          } else {
-                            handlePlaceOrder();
-                          }
-                        }}
+                        onClick={() =>
+                          handlePlaceOrder(() => {
+                            const whatsappLink = getWhatsappLink(orderId as string);
+                            window.open(whatsappLink, "_blank");
+                          })
+                        }
                         disabled={
                           isPlaceOrderDisabled ||
-                          (isDelivery && orderType === "delivery" && (totalPrice ?? 0) < minimumOrderAmount)
+                          !user ||
+                          items?.length === 0 ||
+                          (isDelivery &&
+                            orderType === "delivery" &&
+                            (totalPrice ?? 0) < minimumOrderAmount)
                         }
                         className="w-full"
                       >
@@ -2515,15 +1940,47 @@ const handleCloseSuccessDialog = () => {
                           "Place Order"
                         )}
                       </Button>
-                      {!isAndroid && (
-                        <Link
-                          href={getWhatsappLink(orderId as string)}
-                          target="_blank"
-                          className="pointer-events-none opacity-0 absolute inset-0"
-                        />
-                      )}
-                    </>
-                    }
+                    ) : (
+                      <Link
+                        href={getWhatsappLink(orderId as string)}
+                        target="_blank"
+                        onClick={(e) => {
+                          const isDisabled =
+                            isPlaceOrderDisabled ||
+                            !user ||
+                            items?.length === 0 ||
+                            (isDelivery &&
+                              orderType === "delivery" &&
+                              (totalPrice ?? 0) < minimumOrderAmount);
+
+                          if (isDisabled) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        <Button
+                          onClick={() => handlePlaceOrder()}
+                          disabled={
+                            isPlaceOrderDisabled ||
+                            !user ||
+                            items?.length === 0 ||
+                            (isDelivery &&
+                              orderType === "delivery" &&
+                              (totalPrice ?? 0) < minimumOrderAmount)
+                          }
+                          className="w-full"
+                        >
+                          {orderStatus === "loading" ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Placing Order...
+                            </>
+                          ) : (
+                            "Place Order"
+                          )}
+                        </Button>
+                      </Link>
+                    )}
                   </>
                 ) : (
                   <div className="text-red-500 text-center text-sm bg-red-50 py-2 rounded-sm">
@@ -2563,22 +2020,6 @@ const handleCloseSuccessDialog = () => {
         />
       </div>
 
-      {!isQrScan && (
-        <MapModal
-          showMapModal={showMapModal}
-          setShowMapModal={setShowMapModal}
-          setSelectedLocation={setSelectedCoords}
-          setAddress={handleMapAddressChange}
-          hotelData={hotelData}
-          setOpenPlaceOrderModal={setOpenPlaceOrderModal}
-        />
-      )}
-      <AddAddressModal
-        open={showAddAddressModal}
-        onClose={() => setShowAddAddressModal(false)}
-        onSaved={handleAddAddress}
-      />
-      {/* ** NEW **: Render the Order Status Dialog */}
       <OrderStatusDialog status={orderStatus} onClose={handleCloseSuccessDialog} />
     </>
   );
