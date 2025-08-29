@@ -2343,6 +2343,13 @@ const PlaceOrderModal = ({
 
   // ** NEW **: Handler for the success dialog's close button
   const handleCloseSuccessDialog = () => {
+    // Reset address related states
+    setAddress('');
+    setSelectedSavedAddressId(null);
+    setAddressSource('map');
+    setMapAddressText('');
+    
+    // Clear the order and close modal
     clearOrder();
     setOpenPlaceOrderModal(false);
     setOrderStatus('idle');
