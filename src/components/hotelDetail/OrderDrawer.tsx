@@ -11,6 +11,11 @@ import PlaceOrderModal from "./placeOrder/PlaceOrderModal";
 import { getExtraCharge } from "@/lib/getExtraCharge";
 import path from "path/win32";
 import { useQrDataStore } from "@/store/qrDataStore";
+import { useAuthStore } from "@/store/authStore"; // <-- Added
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 
 const bottomNavFilter = ["PETRAZ", "HENZU"];
 
@@ -159,6 +164,7 @@ const OrderDrawer = ({
     orderType,
   } = useOrderStore();
   const { qrData } = useQrDataStore();
+  const { userData: user, signInWithPhone } = useAuthStore(); // Get user and login function
 
   const pathname = usePathname();
   const [isQrScan, setIsQrScan] = useState(false);
@@ -168,6 +174,11 @@ const OrderDrawer = ({
   const isBottomNavHidden = bottomNavFilter.some((filter) =>
     pathname.includes(filter)
   );
+
+  // Login modal state
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setIsQrScan(pathname.includes("qrScan") && !!qrId && !(tableNumber === 0));
@@ -219,6 +230,8 @@ const OrderDrawer = ({
   };
 
   const getWhatsappLink = (orderId?: string) => {
+    // First try to get order ID from function parameter, then from localStorage, then from order store
+    const finalOrderId = orderId || localStorage?.getItem('last-order-id') || useOrderStore.getState().orderId;
     const savedAddress = userAddress || "N/A";
     const selectedWhatsAppNumber = localStorage?.getItem(
       `hotel-${hotelData.id}-whatsapp-area`
@@ -227,15 +240,17 @@ const OrderDrawer = ({
       `hotel-${hotelData.id}-selected-area`
     );
 
-    // Also check if there's a more recent selection in the current session
     const currentSelectedArea = selectedArea || "";
 
+    // Get location from localStorage or from the order store
     let locationLink = "";
-    const userLocationData = localStorage?.getItem("user-location-store");
+    const userLocationData = localStorage?.getItem("user-location-store") || 
+      JSON.stringify({ state: { coords: useOrderStore.getState().coordinates } });
+    
     if (userLocationData) {
       try {
         const location = JSON.parse(userLocationData);
-        if (location.state?.coords) {
+        if (location?.state?.coords) {
           const { lat, lng } = location.state.coords;
           locationLink = `\n*📍 Location:* https://www.google.com/maps?q=${lat},${lng}`;
         }
@@ -265,7 +280,6 @@ const OrderDrawer = ({
         : 0;
     const grandTotal = baseTotal + gstAmount + qrCharge + deliveryCharge;
 
-    // Check if multi-whatsapp is enabled and we have a selected area
     const hasMultiWhatsapp = getFeatures(hotelData?.feature_flags || "")
       ?.multiwhatsapp?.enabled;
     const hasMultipleWhatsappNumbers = hotelData?.whatsapp_numbers?.length > 1;
@@ -277,7 +291,7 @@ const OrderDrawer = ({
     const whatsappMsg = `
     *🍽️ Order Details 🍽️*
     
-    *Order ID:* ${orderId?.slice(0, 8) || "N/A"}
+    *Order ID:* ${finalOrderId ? finalOrderId.slice(0, 8) : 'N/A'}
     ${
       (tableNumber ?? 0) > 0
         ? `*Table:* ${qrData?.table_name || tableNumber}`
@@ -289,10 +303,8 @@ const OrderDrawer = ({
         : ""
     }
     ${
-      (tableNumber ?? 0) > 0
-        ? ""
-        : orderType === "delivery"
-        ? `*Delivery Address:* ${savedAddress}${locationLink}`
+      orderType === "delivery"
+        ? `\n*Delivery Address:* ${savedAddress}${locationLink}`
         : ""
     }
     *Time:* ${new Date().toLocaleTimeString()}
@@ -350,14 +362,47 @@ const OrderDrawer = ({
     }${number}&text=${encodeURIComponent(whatsappMsg)}`;
   };
 
+  // Modified: Intercept "View Order" click
   const handlePlaceOrder = async () => {
-    try {
+    if (!user) {
+      // Show full-screen login modal
+      setShowLoginModal(true);
+      setOpenDrawerBottom(false);
+    } else {
+      // User is logged in → proceed
       setOpenPlaceOrderModal(true);
       setOpenOrderDrawer(false);
       setOpenDrawerBottom(false);
+    }
+  };
+
+  // Handle login and proceed
+  const handleLoginAndProceed = async () => {
+    if (!phoneNumber || phoneNumber.length < 10) {
+      toast.error("Please enter a valid 10-digit phone number");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const success = await signInWithPhone(phoneNumber, hotelData.id);
+      if (success) {
+        toast.success("Logged in successfully!");
+        setShowLoginModal(false);
+        setPhoneNumber("");
+
+        // Now open the PlaceOrderModal
+        setOpenPlaceOrderModal(true);
+        setOpenOrderDrawer(false);
+        setOpenDrawerBottom(false);
+      } else {
+        toast.error("Login failed. Please try again.");
+      }
     } catch (error) {
-      console.error("Error placing order:", error);
-      toast.error("Failed to place order. Please try again.");
+      toast.error("Something went wrong. Please try again.");
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -366,15 +411,12 @@ const OrderDrawer = ({
       const currentScrollY = window.scrollY;
 
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        // Scrolling down - move drrawer down
         if ((items?.length ?? 0) > 0 && isBottomNavHidden) {
           setMoveUp(true);
         } else {
           setMoveUp(false);
         }
       } else if (currentScrollY < lastScrollY) {
-        // Scrolling up -  move drawer up
-
         setMoveUp(true);
       }
 
@@ -387,6 +429,7 @@ const OrderDrawer = ({
 
   return (
     <>
+      {/* Render PlaceOrderModal (controlled by store) */}
       <PlaceOrderModal
         qrGroup={qrGroup || null}
         qrId={qrId || null}
@@ -395,6 +438,7 @@ const OrderDrawer = ({
         tableNumber={tableNumber || 0}
       />
 
+      {/* Bottom Drawer */}
       <div
         style={{ ...styles.border }}
         className={`fixed ${
@@ -413,7 +457,7 @@ const OrderDrawer = ({
       >
         <div>
           <div className="flex gap-2 items-center font-black text-xl">
-            <div>PRICE : </div>
+            <div>PRICE :</div>
             <div style={{ color: styles.accent }}>
               {hotelData.currency}
               {items?.reduce((acc, item) => {
@@ -442,6 +486,70 @@ const OrderDrawer = ({
           View Order
         </div>
       </div>
+
+      {/* Full-Screen Login Modal (only shown when user is not logged in) */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-[70] bg-white flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b">
+            <button
+              onClick={() => {
+                setShowLoginModal(false);
+                // setOpenOrderDrawer(true);
+                // setOpenDrawerBottom(false);
+              }}
+              className="p-2 rounded-full hover:bg-gray-100"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <h2 className="text-lg font-semibold">Login to Continue</h2>
+            <div className="w-10" />
+          </div>
+
+          <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+            <div>
+              <h3 className="text-xl font-bold">Welcome Back</h3>
+              <p className="text-gray-600 mt-1">
+                Please enter your phone number to review your order.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="Enter your 10-digit phone number"
+                value={phoneNumber}
+                onChange={(e) =>
+                  setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))
+                }
+                autoFocus
+              />
+            </div>
+
+            <Button
+              className="w-full bg-black text-white"
+              disabled={isSubmitting}
+              onClick={handleLoginAndProceed}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logging In...
+                </>
+              ) : (
+                "Continue"
+              )}
+            </Button>
+
+            <div className="text-sm text-gray-500 mt-4">
+              By continuing, you agree to our Terms of Service and Privacy Policy.
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

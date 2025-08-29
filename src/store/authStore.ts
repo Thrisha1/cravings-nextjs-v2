@@ -41,12 +41,20 @@ export interface GeoLocation {
   };
 }
 
+interface Address {
+  id: string;
+  label: string; // e.g., "Home", "Office"
+  address: string; // full address string
+  isDefault?: boolean;
+}
+
 export interface User extends BaseUser {
   role: "user";
   password: string;
   full_name: string;
   phone: string;
   crave_coins: number;
+  addresses?: Address[];
   location: {
     type: "Point";
     coordinates: [number, number];
@@ -180,6 +188,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               phone: user.phone,
               crave_coins: user.crave_coins,
               location: user.location,
+              addresses: user.addresses,
               password: "",
               role: "user",
             } as User,
