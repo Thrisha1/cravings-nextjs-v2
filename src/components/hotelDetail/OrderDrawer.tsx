@@ -57,8 +57,8 @@ export const calculateDeliveryDistanceAndCost = async (
     if (!data.routes || data.routes.length === 0) return;
 
     const exactDistance = data.routes[0].distance / 1000;
-    // Use exact distance for better precision
-    const distanceInKm = exactDistance;
+    // Ceil the distance for whole kilometer charging
+    const distanceInKm = Math.ceil(exactDistance);
     const deliveryRate = hotelData?.delivery_rate || 0;
 
     const {
@@ -72,7 +72,7 @@ export const calculateDeliveryDistanceAndCost = async (
 
     if (delivery_radius && distanceInKm > delivery_radius) {
       setDeliveryInfo({
-        distance: Math.ceil(distanceInKm), // Round up for display
+        distance: distanceInKm, // Already ceiled
         cost: 0,
         ratePerKm: deliveryRate,
         isOutOfRange: true,
@@ -120,7 +120,7 @@ export const calculateDeliveryDistanceAndCost = async (
     calculatedCost = Math.max(0, calculatedCost);
 
     setDeliveryInfo({
-      distance: Math.ceil(distanceInKm), // Round up for display
+      distance: distanceInKm, // Already ceiled
       cost: calculatedCost,
       ratePerKm: deliveryRate,
       isOutOfRange: false,
