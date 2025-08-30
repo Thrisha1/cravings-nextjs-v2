@@ -71,7 +71,7 @@ const PrintOrderPage = () => {
   const silentPrint = searchParams.get("print") === "false";
   const printWidth = searchParams.get("w") || "72mm";
 
-  const getOrderTypeText = () => {
+  const getOrderTypeText = (order : any) => {
     if (order?.tableNumber === 0 || order?.type === "delivery") return "Delivery";
     if (!order?.tableNumber) return "Takeaway";
     return ` ${
@@ -189,7 +189,7 @@ const PrintOrderPage = () => {
               district: formattedOrder.partner?.district,
               phone: formattedOrder.partner?.phone,
               table_number: formattedOrder?.tableNumber,
-              type: getOrderTypeText(),
+              type: getOrderTypeText(formattedOrder),
               delivery_address: formattedOrder.deliveryAddress,
               delivery_location: formattedOrder.delivery_location
                 ? {
@@ -348,7 +348,7 @@ const PrintOrderPage = () => {
           </div>
           <div>
             <span className="font-medium">Type:</span>
-            <span> {getOrderTypeText()}</span>
+            <span> {getOrderTypeText(order)}</span>
           </div>
           <div className="text-right">
             <span className="font-medium">Time:</span>
