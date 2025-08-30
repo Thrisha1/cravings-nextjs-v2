@@ -206,7 +206,7 @@ const PrintOrderPage = () => {
                         order?.items || [],
                         charge.amount || 0,
                         charge.charge_type as QrGroup["charge_type"]
-                      ).toFixed(2),
+                      ),
                     }))
                   : [],
               customer_phone: formattedOrder.phone,
