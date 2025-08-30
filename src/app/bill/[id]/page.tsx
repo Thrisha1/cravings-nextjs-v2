@@ -71,6 +71,16 @@ const PrintOrderPage = () => {
   const silentPrint = searchParams.get("print") === "false";
   const printWidth = searchParams.get("w") || "72mm";
 
+  const getOrderTypeText = () => {
+    if (order?.tableNumber === 0 || order?.type === "delivery") return "Delivery";
+    if (!order?.tableNumber) return "Takeaway";
+    return ` ${
+      isParcel
+        ? `Parcel (Table ${order?.tableName || order?.tableNumber})`
+        : `Table ${order?.tableName || order?.tableNumber}`
+    }`;
+  };
+
   useEffect(() => {
     const fetchOrder = async () => {
       try {
@@ -120,7 +130,11 @@ const PrintOrderPage = () => {
             orders_by_pk.qr_code?.table_name || orders_by_pk.table_name || null, // Ensure this matches your usage
           deliveryAddress: orders_by_pk.delivery_address, // Ensure this matches your usage
           qrCode: qrCodeUrl,
-          address: geoData?.name || geoData?.display_name || geoData?.address?.state_district || null,
+          address:
+            geoData?.name ||
+            geoData?.display_name ||
+            geoData?.address?.state_district ||
+            null,
         };
 
         setOrder(formattedOrder);
@@ -158,12 +172,24 @@ const PrintOrderPage = () => {
           JSON.stringify(
             {
               id: formattedOrder.id,
-              created_at: formattedOrder.created_at,
+              display_id:
+                (Number(formattedOrder.display_id) ?? 0) > 0
+                  ? `${formattedOrder.display_id}-${getDateOnly(
+                      formattedOrder.created_at
+                    )}`
+                  : formattedOrder.id.slice(0, 8),
+              created_at: new Date(
+                formattedOrder.created_at
+              ).toLocaleDateString("en-GB"),
+              time: new Date(formattedOrder.created_at).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
               store_name: formattedOrder.partner?.store_name,
               district: formattedOrder.partner?.district,
               phone: formattedOrder.partner?.phone,
-              table_number: formattedOrder.tableNumber,
-              type: formattedOrder.type,
+              table_number: formattedOrder?.tableNumber,
+              type: getOrderTypeText(),
               delivery_address: formattedOrder.deliveryAddress,
               delivery_location: formattedOrder.delivery_location
                 ? {
@@ -172,7 +198,17 @@ const PrintOrderPage = () => {
                   }
                 : null,
               order_items: formattedOrder.items,
-              extra_charges: formattedOrder.extra_charges,
+              extra_charges:
+                formattedOrder.extra_charges?.length > 0
+                  ? formattedOrder.extra_charges.map((charge: any) => ({
+                      name: charge.name,
+                      price: getExtraCharge(
+                        order?.items || [],
+                        charge.amount || 0,
+                        charge.charge_type as QrGroup["charge_type"]
+                      ).toFixed(2),
+                    }))
+                  : [],
               customer_phone: formattedOrder.phone,
               customer_name: formattedOrder.user?.full_name,
               calculations: {
@@ -185,7 +221,11 @@ const PrintOrderPage = () => {
               },
               currency: formattedOrder.partner?.currency || "$",
               gst_no: formattedOrder.partner?.gst_no,
-              address: geoData?.name || geoData?.display_name || geoData?.address?.state_district || null,
+              address:
+                geoData?.name ||
+                geoData?.display_name ||
+                geoData?.address?.state_district ||
+                null,
             },
             null,
             2
@@ -252,16 +292,6 @@ const PrintOrderPage = () => {
   const subtotal = foodSubtotal + chargesSubtotal;
   const gstAmount = (foodSubtotal * gstPercentage) / 100;
   const grandTotal = subtotal + gstAmount;
-
-  const getOrderTypeText = () => {
-    if (order.tableNumber === 0 || order.type === "delivery") return "Delivery";
-    if (!order.tableNumber) return "Takeaway";
-    return ` ${
-      isParcel
-        ? `Parcel (Table ${order.tableName || order.tableNumber})`
-        : `Table ${order.tableName || order.tableNumber}`
-    }`;
-  };
 
   return (
     <div className="">
@@ -333,7 +363,7 @@ const PrintOrderPage = () => {
         </div>
 
         {/* Delivery Information */}
-        {(order.tableNumber === 0 ||
+        {(order?.tableNumber === 0 ||
           order.deliveryAddress !== "" ||
           order.type == "delivery") && (
           <>
