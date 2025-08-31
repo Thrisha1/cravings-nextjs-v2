@@ -55,6 +55,17 @@ query GetOrder($id: uuid!) {
       id
       quantity
       item
+       menu {
+        id
+        name
+        price
+        category {
+          id
+          name
+          priority
+        }
+        description
+      }
     }
   }
 }
@@ -71,8 +82,9 @@ const PrintOrderPage = () => {
   const silentPrint = searchParams.get("print") === "false";
   const printWidth = searchParams.get("w") || "72mm";
 
-  const getOrderTypeText = (order : any) => {
-    if (order?.tableNumber === 0 || order?.type === "delivery") return "Delivery";
+  const getOrderTypeText = (order: any) => {
+    if (order?.tableNumber === 0 || order?.type === "delivery")
+      return "Delivery";
     if (!order?.tableNumber) return "Takeaway";
     return ` ${
       isParcel
@@ -118,11 +130,16 @@ const PrintOrderPage = () => {
 
         const formattedOrder = {
           ...orders_by_pk,
-          items: orders_by_pk.order_items.map((item: any) => ({
-            id: item.id,
-            quantity: item.quantity,
-            name: item.item.name,
-            price: item.item.price,
+          items: orders_by_pk?.order_items?.map((item: any) => ({
+            id: item.menu?.id || "",
+            name: item.item?.name || item.menu?.name || "",
+            price: item.item?.price || item.menu?.price || 0,
+            quantity: item.quantity || 0,
+            category: item.menu?.category?.name || "",
+            image_url: item.menu?.image_url || "",
+            description: item.menu?.description || "",
+            is_top: item.menu?.is_top || false,
+            is_available: item.menu?.is_available || true,
           })),
           extra_charges: orders_by_pk.extra_charges || [],
           tableNumber: orders_by_pk.table_number, // Ensure this matches your usage
@@ -203,7 +220,7 @@ const PrintOrderPage = () => {
                   ? formattedOrder.extra_charges.map((charge: any) => ({
                       name: charge.name,
                       price: getExtraCharge(
-                        order?.items || [],
+                        formattedOrder?.items || [],
                         charge.amount || 0,
                         charge.charge_type as QrGroup["charge_type"]
                       ),

@@ -7,6 +7,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
 import "./print-css.css"; // Import the CSS for printing
+import { Order } from "@/store/orderStore";
 
 const GET_ORDER_QUERY = `
 query GetOrder($id: uuid!) {
@@ -26,6 +27,10 @@ query GetOrder($id: uuid!) {
       id
       quantity
       item
+      menu {
+        id
+        name
+      }
     }
   }
 }
@@ -42,6 +47,16 @@ const PrintKOTPage = () => {
   const silentPrint = searchParams.get("print") === "false";
   const printWidth = searchParams.get("w") || "72mm";
 
+    const getOrderTypeText = (order: Order) => {
+    if (order.tableNumber === 0 || order.type === "delivery") return "Delivery";
+    if (!order.tableNumber) return "Takeaway";
+    return ` ${
+      isParcel
+        ? `Parcel (Table ${order.tableName || order.tableNumber})`
+        : `Table ${order.tableName || order.tableNumber}`
+    }`;
+  };
+
   useEffect(() => {
     const fetchOrder = async () => {
       try {
@@ -56,7 +71,7 @@ const PrintKOTPage = () => {
           items: (orders_by_pk.order_items ?? []).map((item: any) => ({
             id: item.id,
             quantity: item.quantity,
-            name: item.item.name,
+            name: item.item.name || item.menu.name || "N/A",
             notes: item.item.kot_notes,
           })),
           tableNumber: orders_by_pk.table_number,
@@ -84,11 +99,24 @@ const PrintKOTPage = () => {
           JSON.stringify(
             {
               id: formattedOrder.id,
-              created_at: formattedOrder.created_at,
+              display_id:
+                (Number(formattedOrder.display_id) ?? 0) > 0
+                  ? `${formattedOrder.display_id}-${getDateOnly(
+                      formattedOrder.created_at
+                    )}`
+                  : formattedOrder.id.slice(0, 8),
+              created_at: new Date(
+                formattedOrder.created_at
+              ).toLocaleDateString("en-GB"),
+              time: new Date(formattedOrder.created_at).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
               table_number: formattedOrder.tableNumber,
-              type: formattedOrder.type,
+              type: getOrderTypeText(formattedOrder),
               notes: formattedOrder.notes,
               items: formattedOrder.items,
+              generated_at: new Date().toLocaleString("en-GB"),
             },
             null,
             2
@@ -124,15 +152,7 @@ const PrintKOTPage = () => {
   if (error) return <div>{error}</div>;
   if (!order) return <div>Order not found</div>;
 
-  const getOrderTypeText = () => {
-    if (order.tableNumber === 0 || order.type === "delivery") return "Delivery";
-    if (!order.tableNumber) return "Takeaway";
-    return ` ${
-      isParcel
-        ? `Parcel (Table ${order.tableName || order.tableNumber})`
-        : `Table ${order.tableName || order.tableNumber}`
-    }`;
-  };
+
 
   return (
     <div className="">
@@ -174,7 +194,7 @@ const PrintKOTPage = () => {
           </div>
           <div className="text-right">
             <span className="font-medium">Type:</span>
-            <span> {getOrderTypeText()}</span>
+            <span> {getOrderTypeText(order)}</span>
           </div>
           <div>
             <span className="font-medium">Date:</span>
