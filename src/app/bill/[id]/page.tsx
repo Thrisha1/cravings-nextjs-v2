@@ -228,7 +228,7 @@ const PrintOrderPage = () => {
                       ),
                     }))
                   : [],
-              customer_phone: formattedOrder.phone,
+              customer_phone: formattedOrder.phone || formattedOrder.user?.phone,
               customer_name: formattedOrder.user?.full_name,
               calculations: {
                 food_subtotal: foodSubtotal,
