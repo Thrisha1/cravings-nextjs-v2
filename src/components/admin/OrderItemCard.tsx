@@ -302,27 +302,32 @@ const OrderItemCard = ({
             </p>
           )}
           {localOrder.type === "delivery" && (
-            <div className="flex flex-col gap-3 mt-2">
-              <p className="text-sm">
-                Delivery Address: {localOrder.deliveryAddress || "Unknown"}
-              </p>
-              {deliveryLocation && (
-                <a
-                  href={`${deliveryLocation}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm hover:underline py-2 px-3 bg-orange-500 text-white rounded-md w-max"
-                >
-                  View Location
-                </a>
-              )}
-              <AddNoteComponent setOrder={setLocalOrder} order={localOrder} />
-              {localOrder.notes && (
-                <p className="text-sm mt-2">
-                  <span className="font-medium text-orange-500">Note: </span>
-                  {localOrder.notes}
+            <>
+              <div className="flex flex-col gap-3 mt-2">
+                <p className="text-sm">
+                  Delivery Address: {localOrder.deliveryAddress || "Unknown"}
                 </p>
-              )}
+                {deliveryLocation && (
+                  <a
+                    href={`${deliveryLocation}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm hover:underline py-2 px-3 bg-orange-500 text-white rounded-md w-max"
+                  >
+                    View Location
+                  </a>
+                )}
+              </div>
+            </>
+          )}
+
+          {localOrder.notes && (
+            <div className="mt-2">
+              <AddNoteComponent setOrder={setLocalOrder} order={localOrder} />
+              <p className="text-sm mt-2">
+                <span className="font-medium text-orange-500">Note: </span>
+                {localOrder.notes}
+              </p>
             </div>
           )}
         </div>

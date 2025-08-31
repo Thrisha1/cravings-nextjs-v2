@@ -147,6 +147,7 @@ const PrintOrderPage = () => {
             orders_by_pk.qr_code?.table_name || orders_by_pk.table_name || null, // Ensure this matches your usage
           deliveryAddress: orders_by_pk.delivery_address, // Ensure this matches your usage
           qrCode: qrCodeUrl,
+          notes: orders_by_pk.notes || "",
           address:
             geoData?.name ||
             geoData?.display_name ||
@@ -207,6 +208,7 @@ const PrintOrderPage = () => {
               phone: formattedOrder.partner?.phone,
               table_number: formattedOrder?.tableNumber,
               type: getOrderTypeText(formattedOrder),
+              notes: formattedOrder.notes,
               delivery_address: formattedOrder.deliveryAddress,
               delivery_location: formattedOrder.delivery_location
                 ? {
@@ -424,6 +426,17 @@ const PrintOrderPage = () => {
                     </div>
                   </>
                 )}
+
+              {order.notes && (
+                <>
+                  <div className="font-bold text-sm uppercase mb-1">
+                    Order Notes:
+                  </div>
+                  <div className="text-sm mb-1 whitespace-pre-wrap">
+                    {order.notes || "N/A"}
+                  </div>
+                </>
+              )}
             </div>
           </>
         )}
