@@ -1,24 +1,73 @@
 "use client";
 
-import type { QrType } from "@/app/whatsappQr/[id]/page"
-import { useState, useEffect } from "react"
-import { MapPin, ArrowRight, Sparkles, Utensils, Clock, Zap } from "lucide-react"
+import type { QrType } from "@/app/whatsappQr/[id]/page";
+import { useState, useEffect } from "react";
+import {
+  MapPin,
+  ArrowRight,
+  Sparkles,
+  Utensils,
+  Clock,
+  Zap,
+} from "lucide-react";
+import { fetchFromHasura } from "@/lib/hasuraClient";
 
-const MainPage = ({ QR, thisHotelName }: { QR: QrType; thisHotelName: string }) => {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
-  const [isHovered, setIsHovered] = useState(false)
-  const [isMounted, setIsMounted] = useState(false)
+const MainPage = ({
+  QR,
+  thisHotelName,
+}: {
+  QR: QrType;
+  thisHotelName: string;
+}) => {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true)
-    
+    setIsMounted(true);
+
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY })
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  const updateQrScanCount = async () => {
+    try {
+
+      await fetchFromHasura(
+  `
+  mutation IncrementQrScan($id: uuid!) {
+    update_whatsapp_qr_codes_by_pk(pk_columns: {id: $id}, _inc: {no_of_scans: 1}) {
+      no_of_scans
     }
-    
-    window.addEventListener("mousemove", handleMouseMove)
-    return () => window.removeEventListener("mousemove", handleMouseMove)
-  }, [])
+  }
+`,
+  {
+    id: QR.id,
+  }
+);
+
+      console.log('QR scan count updated successfully')
+
+      const whatsappQrsScanned = JSON.parse(localStorage.getItem(`whatsapp_qrs_scanned`) || "[]");
+      localStorage.setItem(`whatsapp_qrs_scanned`, JSON.stringify([...whatsappQrsScanned, QR.id]))
+
+    } catch (err) {
+      console.error("Failed to update QR scan count:", err);
+    }
+  };
+
+  useEffect(() => {
+    const whatsappQrsScanned = JSON.parse(localStorage.getItem(`whatsapp_qrs_scanned`) || "[]");
+    const isScanned = whatsappQrsScanned.includes(QR.id);
+
+    if (!isScanned) {
+      updateQrScanCount();
+    }
+  }, []);
 
   return (
     <main className="h-screen max-h-[100dvh] bg-slate-950 relative overflow-hidden flex items-center justify-center p-3 sm:p-4">
@@ -28,18 +77,19 @@ const MainPage = ({ QR, thisHotelName }: { QR: QrType; thisHotelName: string }) 
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-teal-400/5 rounded-full blur-2xl animate-bounce delay-500"></div>
 
         {/* Floating particles - only render after mount */}
-        {isMounted && [...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-emerald-400/30 rounded-full animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 2}s`,
-            }}
-          />
-        ))}
+        {isMounted &&
+          [...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 bg-emerald-400/30 rounded-full animate-pulse"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 3}s`,
+                animationDuration: `${2 + Math.random() * 2}s`,
+              }}
+            />
+          ))}
       </div>
 
       {/* Mouse follower - only show after we have mouse position */}
@@ -81,13 +131,17 @@ const MainPage = ({ QR, thisHotelName }: { QR: QrType; thisHotelName: string }) 
           <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
             <div className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 bg-slate-800/50 backdrop-blur-sm rounded-full border border-emerald-500/20">
               <Utensils className="w-3 h-3 sm:w-4 sm:h-4 mr-2 text-emerald-400" />
-              <span className="text-emerald-400 text-xs sm:text-sm font-medium">Food Deals Hub</span>
+              <span className="text-emerald-400 text-xs sm:text-sm font-medium">
+                Food Deals Hub
+              </span>
               <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 ml-2 text-emerald-400 animate-pulse" />
             </div>
             <p className="text-gray-300 text-sm sm:text-base font-medium">
               Get instant food offers & deals from {thisHotelName}
             </p>
-            <p className="text-gray-400 text-xs sm:text-sm">Join now for exclusive restaurant discounts</p>
+            <p className="text-gray-400 text-xs sm:text-sm">
+              Join now for exclusive restaurant discounts
+            </p>
           </div>
         </div>
 
@@ -129,7 +183,9 @@ const MainPage = ({ QR, thisHotelName }: { QR: QrType; thisHotelName: string }) 
                     <div className="flex items-center justify-center mb-1 sm:mb-2 p-2 sm:p-3 bg-slate-800/50 rounded-full group-hover:bg-emerald-500/20 transition-all duration-300">
                       <Utensils className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 group-hover:scale-110 transition-transform" />
                     </div>
-                    <p className="text-xs text-gray-400 group-hover:text-emerald-400 transition-colors">Food Offers</p>
+                    <p className="text-xs text-gray-400 group-hover:text-emerald-400 transition-colors">
+                      Food Offers
+                    </p>
                   </div>
                 </div>
 
@@ -150,7 +206,9 @@ const MainPage = ({ QR, thisHotelName }: { QR: QrType; thisHotelName: string }) 
                       <div className="relative flex items-center justify-center">
                         Join for Food Deals
                         <ArrowRight
-                          className={`w-5 h-5 sm:w-6 sm:h-6 ml-2 sm:ml-3 transition-all duration-300 ${isHovered ? "translate-x-2 scale-110" : ""}`}
+                          className={`w-5 h-5 sm:w-6 sm:h-6 ml-2 sm:ml-3 transition-all duration-300 ${
+                            isHovered ? "translate-x-2 scale-110" : ""
+                          }`}
                         />
                       </div>
                       {isHovered && (
@@ -161,7 +219,9 @@ const MainPage = ({ QR, thisHotelName }: { QR: QrType; thisHotelName: string }) 
                 </div>
 
                 <div className="pt-3 sm:pt-4 border-t border-slate-700/50">
-                  <p className="text-xs text-gray-500">Get exclusive restaurant discounts instantly</p>
+                  <p className="text-xs text-gray-500">
+                    Get exclusive restaurant discounts instantly
+                  </p>
                 </div>
               </div>
             </div>
@@ -170,12 +230,13 @@ const MainPage = ({ QR, thisHotelName }: { QR: QrType; thisHotelName: string }) 
 
         <div className="text-center mt-3 sm:mt-4">
           <p className="text-xs text-gray-400">
-            Powered by <span className="font-semibold text-emerald-400">Cravings</span>
+            Powered by{" "}
+            <span className="font-semibold text-emerald-400">Cravings</span>
           </p>
         </div>
       </div>
     </main>
-  )
-}
+  );
+};
 
-export default MainPage
+export default MainPage;

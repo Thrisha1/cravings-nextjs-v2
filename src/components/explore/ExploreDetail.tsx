@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import InstaReelEmbed from "../InstaReelEmbeded";
 import SideActionButtons from "./SideActionButtons";
 import ScrollDownIndicator from "./ScrollDownIndicator";
@@ -41,6 +41,10 @@ const ExploreDetail = ({
   );
 
   const currentOffer = allOfferReels[currentIndex];
+
+   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
