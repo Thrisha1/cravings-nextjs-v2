@@ -15,7 +15,6 @@ const SideActionButtons = ({
   user: { id: string; role: string } | null;
 }) => {
 
-  console.log(commonOffer)
 
   const [isLiked, setIsLiked] = React.useState(
     commonOffer?.common_offers_liked_bies?.some(

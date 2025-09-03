@@ -33,6 +33,7 @@ export interface CommonOffer {
   insta_link: string | null;
   likes: number; //this is not using now
   no_of_likes?: number;
+  no_of_views?: number;
   image_url: string;
   image_urls?: string[];
   id: string;
@@ -45,6 +46,9 @@ export interface CommonOffer {
   };
   created_at?: string;
   common_offers_liked_bies?: {
+    user_id: string;
+  }[];
+  common_offers_viewed_bies?: {
     user_id: string;
   }[];
   geoData? : any;

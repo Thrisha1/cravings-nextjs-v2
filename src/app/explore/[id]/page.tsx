@@ -1,5 +1,5 @@
 import { getCommonOfferById } from "@/api/common_offers";
-import { getAuthCookie } from "@/app/auth/actions";
+import { getAuthCookie, getTempUserIdCookie } from "@/app/auth/actions";
 import DeleteExploreOfferBtn from "@/components/explore/DeleteExploreOfferBtn";
 import ExploreDetail from "@/components/explore/ExploreDetail";
 // import GeoAddress from "@/components/explore/geoAddress";
@@ -43,16 +43,18 @@ export async function generateMetadata({
 }) {
   const { id } = await params;
   const cookies = await getAuthCookie();
+  const tempId = await getTempUserIdCookie();
+
+  const userId = cookies?.id || tempId;
 
   const getOffer = unstable_cache(
     async (id: string) => {
       if (!id) {
         throw new Error("offer ID not found");
       }
-
       const offers = await fetchFromHasura(getCommonOfferById, {
         id: id,
-        user_id: cookies?.id || "",
+        user_id: userId,
       });
 
       if (offers.common_offers_by_pk === null) {
@@ -104,19 +106,26 @@ export async function generateMetadata({
 const page = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const authToken = (await cookies()).get("new_auth_token")?.value;
-  let geoData: any = null;
+  const tempId = (await cookies()).get("temp_user_id")?.value;
 
+  
+  let geoData: any = null;
+  
   let decrypted = authToken
-    ? (decryptText(authToken) as { id: string; role: string })
-    : null;
+  ? (decryptText(authToken) as { id: string; role: string })
+  : null;
+
+  const userId = decrypted?.id || tempId;
 
   const role = decrypted?.role || "user";
 
+
   const getCommonOffer = await unstable_cache(
     async () => {
+      
       return fetchFromHasura(getCommonOfferById, {
         id: id,
-        user_id: decrypted?.id || "",
+        user_id: userId,
       });
     },
     ["common-offers", id],

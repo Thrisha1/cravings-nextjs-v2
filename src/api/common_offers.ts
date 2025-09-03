@@ -184,9 +184,13 @@ query GetCommonOfferById($id: uuid!, $user_id: String) {
     image_urls
     partner_id
     no_of_likes
+    no_of_views
     district
     created_at
     common_offers_liked_bies(where: {user_id: {_eq: $user_id}}) {
+      user_id
+    }
+    common_offers_viewed_bies(where: {user_id: {_eq: $user_id}}) {
       user_id
     }
     partner {
@@ -210,9 +214,13 @@ query GetCommonOfferById($id: uuid!, $user_id: String) {
         image_urls
         partner_id
         no_of_likes
+        no_of_views
         district
         created_at
         common_offers_liked_bies(where: {user_id: {_eq: $user_id}}) {
+          user_id
+        }
+        common_offers_viewed_bies(where: {user_id: {_eq: $user_id}}) {
           user_id
         }
       }

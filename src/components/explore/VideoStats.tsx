@@ -5,12 +5,12 @@ import { formatCompactNumber } from "@/utils/formatNumber";
 import { useViewTracker } from "@/hooks/useViewTracker";
 
 const VideoStats = ({ commonOffer }: { commonOffer: CommonOffer }) => {
-  useViewTracker(commonOffer.id);
+  useViewTracker(commonOffer);
   return (
     <div className="mt-6 grid grid-cols-2 gap-3 max-w-xs mx-auto">
       <div className="bg-white rounded-xl p-4 text-center shadow-sm">
         <div className="text-orange-500 font-bold text-lg">
-          {formatCompactNumber(commonOffer?.view_count || 0)}
+          {formatCompactNumber(commonOffer?.no_of_views || 0)}
         </div>
         <div className="text-gray-600 text-sm">Views</div>
       </div>
