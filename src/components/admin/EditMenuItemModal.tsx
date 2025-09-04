@@ -14,7 +14,7 @@ import { ImageGridModal } from "../bulkMenuUpload/ImageGridModal";
 import { useAuthStore } from "@/store/authStore";
 import { useCategoryStore } from "@/store/categoryStore_hasura";
 import Img from "../Img";
-import { X } from "lucide-react";
+import { X, Edit } from "lucide-react";
 
 export interface Variant {
   name: string;
@@ -56,6 +56,7 @@ export function EditMenuItemForm({
     name: "",
     price: 0,
   });
+  const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
   const [showVariantForm, setShowVariantForm] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,8 +99,35 @@ export function EditMenuItemForm({
     setShowVariantForm(false);
   };
 
-  const removeVariant = (name: string) => {
-    setVariants(variants.filter(v => v.name !== name));
+  const updateVariant = () => {
+    if (editingVariantIndex === null || !newVariant.name || !newVariant.price) {
+      alert("Please fill both option name and price");
+      return;
+    }
+    
+    const updatedVariants = [...variants];
+    updatedVariants[editingVariantIndex] = { ...newVariant };
+    
+    setVariants(updatedVariants);
+    setNewVariant({ name: "", price: 0 });
+    setEditingVariantIndex(null);
+    setShowVariantForm(false);
+  };
+
+  const startEditingVariant = (index: number) => {
+    setEditingVariantIndex(index);
+    setNewVariant({ ...variants[index] });
+    setShowVariantForm(true);
+  };
+
+  const removeVariant = (index: number) => {
+    setVariants(variants.filter((_, i) => i !== index));
+  };
+
+  const cancelVariantEdit = () => {
+    setNewVariant({ name: "", price: 0 });
+    setEditingVariantIndex(null);
+    setShowVariantForm(false);
   };
 
   return (
@@ -198,7 +226,11 @@ export function EditMenuItemForm({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setShowVariantForm(!showVariantForm)}
+              onClick={() => {
+                setEditingVariantIndex(null);
+                setNewVariant({ name: "", price: 0 });
+                setShowVariantForm(!showVariantForm);
+              }}
             >
               {showVariantForm ? "Cancel" : "Add Option"}
             </Button>
@@ -218,7 +250,7 @@ export function EditMenuItemForm({
                 placeholder="Price in ₹"
                 value={newVariant.price}
                 onChange={(e) =>
-                  setNewVariant({ ...newVariant, price: parseFloat(e.target.value) })
+                  setNewVariant({ ...newVariant, price: parseFloat(e.target.value) || 0 })
                 }
               />
               <div className="flex justify-end gap-2">
@@ -226,16 +258,16 @@ export function EditMenuItemForm({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowVariantForm(false)}
+                  onClick={cancelVariantEdit}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="button"
                   size="sm"
-                  onClick={addVariant}
+                  onClick={editingVariantIndex !== null ? updateVariant : addVariant}
                 >
-                  Add
+                  {editingVariantIndex !== null ? "Update" : "Add"}
                 </Button>
               </div>
             </div>
@@ -243,20 +275,30 @@ export function EditMenuItemForm({
           
           {variants.length > 0 && (
             <div className="space-y-2">
-              {variants.map((variant) => (
-                <div key={variant.name} className="flex items-center justify-between p-2 border rounded">
+              {variants.map((variant, index) => (
+                <div key={index} className="flex items-center justify-between p-2 border rounded">
                   <div>
                     <p className="font-medium">{variant.name}</p>
                     <p className="text-sm">₹{variant.price}</p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeVariant(variant.name)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => startEditingVariant(index)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeVariant(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
