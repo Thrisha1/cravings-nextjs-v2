@@ -11,6 +11,7 @@ import {
   Menu,
   ListOrdered,
   Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +36,7 @@ import { MenuItem, useMenuStore } from "@/store/menuStore_hasura";
 import { Switch } from "../ui/switch";
 import { toast } from "sonner";
 import { deleteFileFromS3 } from "@/app/actions/aws-s3";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Accordion, AccordionContent, AccordionItem } from "../ui/accordion";
 import { AccordionTrigger } from "@radix-ui/react-accordion";
 import Img from "../Img";
@@ -96,6 +97,7 @@ export function MenuTab() {
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(
     {}
   );
+  const router = useRouter();
 
   useEffect(() => {
     if (userData?.id) {
@@ -448,11 +450,11 @@ export function MenuTab() {
         </div>
       ) : (
         <>
-          <div className="flex justify-end gap-2 mb-4">
+          <div className="flex justify-end gap-2 mb-4 flex-wrap">
             <Button
               onClick={() => setIsInlineItemOrdering(true)}
               variant="outline"
-              className="flex gap-2 text-xs sm:text-sm"
+              className="flex gap-2 text-xs sm:text-sm flex-1"
             >
               <ListOrdered className="h-4 w-4" />
               <span>Edit Item Order</span>
@@ -460,10 +462,18 @@ export function MenuTab() {
             <Button
               onClick={() => setIsCategoryEditing(true)}
               variant="outline"
-              className="flex gap-2 text-xs sm:text-sm"
+              className="flex gap-2 text-xs sm:text-sm flex-1"
             >
               <Pen className="h-4 w-4" />
               <span>Category Update</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="flex gap-2 text-xs sm:text-sm flex-1"
+              onClick={() => router.push("/admin/item-availability-manage")}
+            >
+              <Check className="h-4 w-4" />
+              <span>Availability Manage</span>
             </Button>
           </div>
 
