@@ -82,9 +82,9 @@ export default async function RootLayout({
       </head>
       <body className={`antialiased`}>
         <AuthInitializer />
-        {(user?.role === "user" || !user) && (
+        {/* {(user?.role === "user" || !user) && (
           <WhatsappGroupJoinAlertDialog isPetraz={isPetraz} />
-        )}
+        )} */}
         <Toaster richColors closeButton />
         {/* <Snow /> */}
         <Navbar userData={user} />
