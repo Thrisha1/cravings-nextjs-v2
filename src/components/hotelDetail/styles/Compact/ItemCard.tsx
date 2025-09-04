@@ -353,6 +353,8 @@ const ItemCard = ({
               const hasValidVariantOffer = variantOffer && typeof variantOffer.offer_price === "number";
               const originalVariantPrice = variant.price;
               const hasValidOriginalPrice = typeof originalVariantPrice === "number";
+              const showVariantAddButton = showAddButton && isOrderable;
+              
               return (
                 <div
                   key={variant.name}
@@ -360,7 +362,7 @@ const ItemCard = ({
                 >
                   <div className="grid">
                     <span className="font-semibold">{variant.name}</span>
-                    {shouldShowPrice && !item.is_price_as_per_size && (
+                    {shouldShowPrice && !item.is_price_as_per_size && showVariantAddButton && (
                       <div className="text-lg font-bold" style={{ color: styles?.accent || "#000" }}>
                         {hasValidVariantOffer ? (
                           <div className="flex items-center gap-2">
@@ -382,7 +384,7 @@ const ItemCard = ({
                       </div>
                     )}
                   </div>
-                  {showAddButton && (
+                  {showVariantAddButton ? (
                     <div className="flex gap-2 items-center justify-end">
                       {getVariantQuantity(variant.name) > 0 ? (
                         <div
@@ -412,6 +414,26 @@ const ItemCard = ({
                           Add
                         </div>
                       )}
+                    </div>
+                  ) : shouldShowPrice && !item.is_price_as_per_size && (
+                    <div className="text-lg font-bold" style={{ color: styles?.accent || "#000" }}>
+                      {hasValidVariantOffer ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-red-500">
+                            {hoteldata?.currency || "₹"} {variantOffer.offer_price}
+                          </span>
+                          {hasValidOriginalPrice &&
+                            originalVariantPrice > variantOffer.offer_price! && (
+                              <span className="line-through text-gray-400 text-sm font-light">
+                                {hoteldata?.currency || "₹"} {originalVariantPrice}
+                              </span>
+                            )}
+                        </div>
+                      ) : hasValidOriginalPrice ? (
+                        <span>
+                          {hoteldata?.currency || "₹"} {originalVariantPrice}
+                        </span>
+                      ) : null}
                     </div>
                   )}
                 </div>
